@@ -1,5 +1,5 @@
 # rep
-Front-end Semantic Repository in Support of SIR, SEM, SVR and STD
+Front-end Semantic Repository in Support of SIR, SEM, SVR and STD applications
 
 # technical description
 
