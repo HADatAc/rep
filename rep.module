@@ -1,0 +1,34 @@
+<?php
+/**
+ * Implements hook_theme
+ */
+function rep_theme($existing, $type, $theme, $path)
+{
+    return [
+        'list-page' => [
+            'variables' => array(
+                'items' => array(          
+                    'offset' => '',
+                    'first' => '',
+                    'last' => '',
+                    'previous' => '',
+                    'next' => '',
+                    'links' => array(),
+                    'title' => ''
+                )
+            )
+        ],
+    ];
+}
+
+use Drupal\Core\Path\AliasStorageInterface;
+
+/**
+ * Implements hook_update_N().
+ */
+function rep_update_8001() {
+
+  \Drupal::configFactory()->getEditable('system.site')->set('page.front', '/rep/list/instrument/_/_/1/12')->save();
+
+}
+

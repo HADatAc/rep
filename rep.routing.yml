@@ -1,0 +1,86 @@
+
+# Landing page
+
+
+# Main menu options 
+
+rep.describe_element:
+  path: 'rep/uri/{elementuri}'
+  defaults:
+    _form: '\Drupal\rep\Form\DescribeForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
+
+# Element URI 
+
+rep.element_uri:
+  path: 'rep/uriform'
+  defaults:
+    _form: '\Drupal\rep\Form\UriForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
+
+
+# Configuration option
+
+rep.admin_settings_custom:
+  path: 'admin/config/rep'
+  defaults:
+    _form: '\Drupal\rep\Form\REPSettingsForm'
+    _title: 'Semantic Repository Settings'
+  requirements:
+    _permission: 'administer site configuration'
+  options:
+    _admin_route: TRUE
+    no_cache: 'TRUE'
+
+rep.admin_ip_settings_custom:
+  path: 'admin/config/rep/ip'
+  defaults:
+    _form: '\Drupal\rep\Form\IPForm'
+    _title: 'Semantic Repository IP Settings'
+  requirements:
+    _permission: 'administer site IP configuration'
+  options:
+    _admin_route: TRUE
+    no_cache: 'TRUE'
+
+rep.admin_namespace_settings_custom:
+  path: 'admin/config/rep/namespace'
+  defaults:
+    _form: '\Drupal\rep\Form\REPNameSpaceForm'
+    _title: 'Semantic Repository NameSpace Management'
+  requirements:
+    _permission: 'administer site NameSpace configuration'
+  options:
+    _admin_route: TRUE
+    no_cache: 'TRUE'
+
+rep.repo_info:
+  path: 'rep/repo/info'
+  defaults:
+    _form: '\Drupal\rep\Form\RepoInfoForm'
+    _title: 'Current Repository Configuration'    
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
+
+# About
+
+rep.about:
+  path: 'rep/about'
+  defaults:
+    _form: '\Drupal\rep\Form\About'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
