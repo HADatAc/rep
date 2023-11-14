@@ -99,10 +99,11 @@ class FusekiAPIConnector {
     $endpoint = "/sirapi/api/".
       $elementType.
       "/keyword/total/".
-      rawurlencode($keyword)."/".
+      rawurlencode($keyword);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+    //dpm($api_url.$endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 

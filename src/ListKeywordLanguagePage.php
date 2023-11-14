@@ -62,12 +62,11 @@ class ListKeywordLanguagePage {
     $root_url = \Drupal::request()->getBaseUrl();
     $module = '';
     if ($elementtype != NULL && $page > 0 && $pagesize > 0) {
-      if ($elementtype == 'semanticvariable') {
-        $module = '/sem';
-      } else {
-        $module = '/sir';
+      $module = Utils::elementTypeModule($elementtype);
+      if ($module == NULL) {
+        return '';
       }
-      return $root_url . $module . REPGUI::LIST_PAGE . 
+      return $root_url . '/' . $module . REPGUI::LIST_PAGE . 
           $elementtype . '/' .
           $keyword . '/' .
           $language . '/' .

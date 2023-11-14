@@ -110,12 +110,12 @@ class Utils {
    */
   public static function selectBackUrl($element_type) {  
     $rt = NULL;
-     
-    if ($element_type == 'semanticvariable') {
+    $module = Utils::elementTypeModele($element_type); 
+    if ($module == 'sem') {
       if (\Drupal::moduleHandler()->moduleExists('sem')) {
         $rt = 'sem.select_element';
       }
-    } else {
+    } else if ($module == 'sir') {
       if (\Drupal::moduleHandler()->moduleExists('sir')) {
         $rt = 'sir.select_element';
       }
@@ -177,5 +177,17 @@ class Utils {
     }
     return $uri;
   }
+
+  public static function elementTypeModule($elementtype) {
+    $sir = ['instrument', 'detectorslot', 'detectorstem', 'detector', 'codebook', 'responseoptionslot', 'responseoption'];
+    $sem = ['semanticvariable','entity','attribute','unit'];
+    if (in_array($elementtype,$sir)) {
+      return 'sir';
+    } else if (in_array($elementtype,$sem)) {
+      return 'sem';
+    } 
+    return NULL;
+  }
+
 
 }

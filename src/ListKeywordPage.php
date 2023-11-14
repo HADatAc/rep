@@ -4,9 +4,9 @@ namespace Drupal\rep;
 
 use Drupal\rep\Vocabulary\REPGUI;
 
-class ListManagerEmailPage {
+class ListKeywordPage {
 
-  public static function exec($elementtype, $manageremail, $page, $pagesize) {
+  public static function exec($elementtype, $keyword, $page, $pagesize) {
     if ($elementtype == NULL || $page == NULL || $pagesize == NULL) {
         $resp = array();
         return $resp;
@@ -19,22 +19,30 @@ class ListManagerEmailPage {
       $offset = ($page - 1) * $pagesize;
     }
 
+    if ($keyword == NULL) {
+      $keyword = "_";
+    }
     $api = \Drupal::service('rep.api_connector');
-    $elements = $api->parseObjectResponse($api->listByManagerEmail($elementtype,$manageremail,$pagesize,$offset),'listByManagerEmail');
+    $elements = $api->parseObjectResponse($api->listByKeyword($elementtype,$keyword,$pagesize,$offset),'listByKeyword');
     return $elements;
 
   }
 
-  public static function total($elementtype, $manageremail) {
+  public static function total($elementtype, $keyword) {
     if ($elementtype == NULL) {
       return -1;
     }
+    if ($keyword == NULL) {
+      $keyword = "_";
+    }
+        
     $api = \Drupal::service('rep.api_connector');
-    $response = $api->listSizeByManagerEmail($elementtype,$manageremail);
+    
+    $response = $api->listSizeByKeyword($elementtype,$keyword);
     $listSize = -1;
-    if ($response != NULL) {
+    if ($response != null) {
       $obj = json_decode($response);
-      if ($obj != NULL && $obj->isSuccessful) {
+      if ($obj->isSuccessful) {
         $listSizeStr = $obj->body;
         $obj2 = json_decode($listSizeStr);
         $listSize = $obj2->total;
@@ -44,7 +52,7 @@ class ListManagerEmailPage {
 
   }
 
-  public static function link($elementtype, $page, $pagesize) {
+  public static function link($elementtype, $keyword, $page, $pagesize) {
     $root_url = \Drupal::request()->getBaseUrl();
     $module = '';
     if ($elementtype != NULL && $page > 0 && $pagesize > 0) {
@@ -52,8 +60,10 @@ class ListManagerEmailPage {
       if ($module == NULL) {
         return '';
       }
-     return $root_url . '/' . $module . REPGUI::SELECT_PAGE . 
+      return $root_url . '/' . $module . REPGUI::LIST_PAGE . 
           $elementtype . '/' .
+          $keyword . '/' .
+          $language . '/' .
           strval($page) . '/' . 
           strval($pagesize);
     }
