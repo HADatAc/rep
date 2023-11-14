@@ -46,8 +46,14 @@ class ListManagerEmailPage {
 
   public static function link($elementtype, $page, $pagesize) {
     $root_url = \Drupal::request()->getBaseUrl();
+    $module = '';
     if ($elementtype != NULL && $page > 0 && $pagesize > 0) {
-      return $root_url . repGUI::SELECT_PAGE . 
+      if ($elementtype == 'semanticvariable') {
+        $module = '/sem';
+      } else {
+        $module = '/sir';
+      }
+      return $root_url . $module . REPGUI::SELECT_PAGE . 
           $elementtype . '/' .
           strval($page) . '/' . 
           strval($pagesize);

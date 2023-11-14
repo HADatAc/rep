@@ -110,22 +110,27 @@ class Utils {
    */
   public static function selectBackUrl($element_type) {  
     $rt = NULL;
-    $rt = 'rep.about';
      
-    //if ($element_type == 'semanticvariable') {
-    //  $rt = 'sem.select_element';
-    //} else {
-    //  $rt = 'rep.select_element';
-    //}
+    if ($element_type == 'semanticvariable') {
+      if (\Drupal::moduleHandler()->moduleExists('sem')) {
+        $rt = 'sem.select_element';
+      }
+    } else {
+      if (\Drupal::moduleHandler()->moduleExists('sir')) {
+        $rt = 'sir.select_element';
+      }
+    }
 
     if ($rt == NULL) {
       return Url::fromRoute('rep.about');
     }
+
     $url = Url::fromRoute($rt);
     $url->setRouteParameter('elementtype', $element_type);
     $url->setRouteParameter('page', '1');
     $url->setRouteParameter('pagesize', '12');
     return $url;
+  
   }
 
   public static function namespaceUri($uri) {

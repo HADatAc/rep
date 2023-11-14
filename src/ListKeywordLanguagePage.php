@@ -60,8 +60,14 @@ class ListKeywordLanguagePage {
 
   public static function link($elementtype, $keyword, $language, $page, $pagesize) {
     $root_url = \Drupal::request()->getBaseUrl();
+    $module = '';
     if ($elementtype != NULL && $page > 0 && $pagesize > 0) {
-      return $root_url . repGUI::LIST_PAGE . 
+      if ($elementtype == 'semanticvariable') {
+        $module = '/sem';
+      } else {
+        $module = '/sir';
+      }
+      return $root_url . $module . REPGUI::LIST_PAGE . 
           $elementtype . '/' .
           $keyword . '/' .
           $language . '/' .
