@@ -429,7 +429,7 @@ class FusekiAPIConnector {
   }
 
   public function semanticVariableDel($semanticVariableUri) {
-    $endpoint = "/sirapi/api/semanticvariable/delete/".rawurlencode($semanticvariableUri);
+    $endpoint = "/sirapi/api/semanticvariable/delete/".rawurlencode($semanticVariableUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

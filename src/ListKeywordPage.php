@@ -63,7 +63,6 @@ class ListKeywordPage {
       return $root_url . '/' . $module . REPGUI::LIST_PAGE . 
           $elementtype . '/' .
           $keyword . '/' .
-          $language . '/' .
           strval($page) . '/' . 
           strval($pagesize);
     }

@@ -110,7 +110,7 @@ class Utils {
    */
   public static function selectBackUrl($element_type) {  
     $rt = NULL;
-    $module = Utils::elementTypeModele($element_type); 
+    $module = Utils::elementTypeModule($element_type); 
     if ($module == 'sem') {
       if (\Drupal::moduleHandler()->moduleExists('sem')) {
         $rt = 'sem.select_element';
