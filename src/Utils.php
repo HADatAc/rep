@@ -13,16 +13,6 @@ class Utils {
    */
   Const CONFIGNAME = "rep.settings";
 
-  public static function uriFromAutocomplete($field) {   
-    $uri = '';
-    if ($field === NULL || $field === '') {
-      return $uri;
-    }
-    preg_match('/\[([^\]]*)\]/', $field, $match);
-    $uri = $match[1];
-    return $uri;
-  }
-
   /**
    * 
    *  Returns the value of configuration parameter api_ulr
@@ -98,6 +88,36 @@ class Utils {
     $uid = \Drupal::currentUser()->id();
     $iid = time().rand(10000,99999).$uid;
     return $repoUri . $short . $iid;
+  }
+
+  /** 
+   *  During autocomplete, extracts the URI from the generated field shown in the form 
+   */
+
+  public static function uriFromAutocomplete($field) {   
+    $uri = '';
+    if ($field === NULL || $field === '') {
+      return $uri;
+    }
+    preg_match('/\[([^\]]*)\]/', $field, $match);
+    $uri = $match[1];
+    return $uri;
+  }
+
+  /** 
+   *  During autocomplete, from the URI and label of a property, generates the field to be show in the form.
+   *  The function will return an empty string if the uri is NULL. It will generate a field with no label is
+   *  just the label is NULL.
+   */
+
+   public static function fieldToAutocomplete($uri,$label) {
+    if ($uri == NULL) {
+      return '';
+    }
+    if ($label == NULL) {
+      $label = '';
+    }
+    return $label . ' [' . $uri . ']';
   }
 
   /**
