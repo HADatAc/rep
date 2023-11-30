@@ -199,7 +199,7 @@ class Utils {
   }
 
   public static function elementTypeModule($elementtype) {
-    $sir = ['instrument', 'detectorslot', 'detectorstem', 'detector', 'codebook', 'responseoptionslot', 'responseoption'];
+    $sir = ['instrument', 'detectorslot', 'detectorstem', 'detector', 'codebook', 'responseoptionslot', 'responseoption', 'annotationstem', 'annotation'];
     $sem = ['semanticvariable','entity','attribute','unit'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
