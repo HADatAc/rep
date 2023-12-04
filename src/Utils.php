@@ -69,6 +69,12 @@ class Utils {
       case "responseoption":
         $short = "RO";
         break;
+      case "annotationstem":
+        $short = "AS";
+        break;
+      case "annotation":
+        $short = "AN";
+        break;
       case "semanticvariable":
         $short = "SV";
         break;

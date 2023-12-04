@@ -183,13 +183,33 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   SUBCONTAINERS
+   */
+
+  public function subcontainerAdd($subcontainerJson) {
+    $endpoint = "/sirapi/api/subcontainer/create/".rawurlencode($subcontainerJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function subcontainerDel($subcontainerUri) {
+    $endpoint = "/sirapi/api/subcontainer/delete/".rawurlencode($subcontainerUri);    
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
    *  
    *    DETECTOR SLOTS
    * 
    */
-
+ 
   public function detectorslotList($instrumentUri) {
-    $endpoint = "/sirapi/api/slots/detector/byinstrument/".rawurlencode($instrumentUri);
+    $endpoint = "/sirapi/api/slots/detector/bycontainer/".rawurlencode($instrumentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -303,7 +323,7 @@ class FusekiAPIConnector {
   /**
    *   CODEBOOK
    */
-
+ 
   public function codebookList($useremail) {
     $endpoint = "/sirapi/api/codebook/manageremail/".rawurlencode($useremail);
     $method = 'GET';
@@ -376,6 +396,7 @@ class FusekiAPIConnector {
    *   RESPONSE OPTION
    */
 
+  
   public function responseOptionList($codebookUri) {
     $endpoint = "/sirapi/api/responseoption/bycodebook/".rawurlencode($codebookUri);
     $method = "GET";
@@ -383,7 +404,7 @@ class FusekiAPIConnector {
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
-
+ 
   public function responseOptionListByKeyword($keyword) {
     $endpoint = "/sirapi/api/responseoption/keyword/".rawurlencode($keyword);
     $method = 'GET';
@@ -411,6 +432,46 @@ class FusekiAPIConnector {
   public function responseOptionAttach($responseOptionUri,$responseOptionSlotUri) {
     $endpoint = "/sirapi/api/slots/responseoption/attach/".rawurlencode($responseOptionUri)."/".rawurlencode($responseOptionSlotUri);
     $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   ANNOTATION STEMS
+   */
+
+  public function annotationStemAdd($annotationStemJson) {
+    $endpoint = "/sirapi/api/annotationstem/create/".rawurlencode($annotationStemJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function annotationStemDel($annotationStemUri) {
+    $endpoint = "/sirapi/api/annotationstem/delete/".rawurlencode($annotationStemUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   ANNOTATION
+   */
+
+   public function annotationAdd($annotationJson) {
+    $endpoint = "/sirapi/api/annotation/create/".rawurlencode($annotationJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function annotationDel($annotationUri) {
+    $endpoint = "/sirapi/api/annotation/delete/".rawurlencode($annotationUri);
+    $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
@@ -544,6 +605,22 @@ class FusekiAPIConnector {
 
   public function generationActivityList() {
     $endpoint = "/sirapi/api/repo/table/generationactivities";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function instrumentPositionList() {
+    $endpoint = "/sirapi/api/repo/table/instrumentpositions";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function subcontainerPositionList() {
+    $endpoint = "/sirapi/api/repo/table/subcontainerpositions";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

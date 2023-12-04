@@ -16,6 +16,7 @@
     const DETECTOR_STEM                   = VSTOI::VSTOI . "DetectorStem";
     const INSTRUMENT                      = VSTOI::VSTOI . "Instrument";
     const QUESTIONNAIRE                   = VSTOI::VSTOI . "Questionnaire";
+    const SUBCONTAINER                    = VSTOI::VSTOI . "Subcontainer";
     const CODEBOOK                        = VSTOI::VSTOI . "Codebook";
     const ITEM                            = VSTOI::VSTOI . "Item";
     const PSYCHOMETRIC_QUESTIONNAIRE      = VSTOI::VSTOI . "PsychometricQuestionnaire";

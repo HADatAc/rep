@@ -56,4 +56,30 @@ class Tables {
     return $results;
   }
 
+  public function getInstrumentPositions() {
+    $APIservice = \Drupal::service('rep.api_connector');
+    $positions = $APIservice->parseObjectResponse($APIservice->instrumentPositionList(), 'instrumentPositionList');
+    if ($positions == NULL) {
+      return NULL;
+    }
+    $results = array();
+    foreach ($positions as $position) {
+      $results[$position->url] = $position->value;
+    }
+    return $results;
+  }
+
+  public function getSubcontainerPositions() {
+    $APIservice = \Drupal::service('rep.api_connector');
+    $positions = $APIservice->parseObjectResponse($APIservice->subcontainerPositionList(), 'subcontainerPositionList');
+    if ($positions == NULL) {
+      return NULL;
+    }
+    $results = array();
+    foreach ($positions as $position) {
+      $results[$position->url] = $position->value;
+    }
+    return $results;
+  }
+
 }
