@@ -58,7 +58,7 @@
           if ($this->getElement() != NULL) {
             //var_dump($this->getElement());
             //if ($this->getElement()->hascoTypeUri == VSTOI::INSTRUMENT) {
-            //  $this->setAssociates($api->parseObjectResponse($api->detectorslotList($this->getElement()->uri),'detectorslotList'));
+            //  $this->setAssociates($api->parseObjectResponse($api->containerslotList($this->getElement()->uri),'containerslotList'));
             //}
           }
         }
@@ -77,8 +77,8 @@
 
         } else {
           
-          $header = DetectorSlot::generateHeader();
-          $output = DetectorSlot::generateOutput($this->getAssociates());    
+          $header = ContainerSlot::generateHeader();
+          $output = ContainerSlot::generateOutput($this->getAssociates());    
 
           //$form['associates_detectors_header'] = [
           //  '#type' => 'item',

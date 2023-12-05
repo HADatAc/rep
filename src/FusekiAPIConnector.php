@@ -30,7 +30,7 @@ class FusekiAPIConnector {
    */
 
   public function getUri($uri) {
-    $endpoint = "/sirapi/api/uri/".rawurlencode($uri);
+    $endpoint = "/hascoapi/api/uri/".rawurlencode($uri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -38,7 +38,7 @@ class FusekiAPIConnector {
   }
 
   public function getUsage($uri) {
-    $endpoint = "/sirapi/api/usage/".rawurlencode($uri);
+    $endpoint = "/hascoapi/api/usage/".rawurlencode($uri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -46,7 +46,7 @@ class FusekiAPIConnector {
   }
 
   public function getDerivation($uri) {
-    $endpoint = "/sirapi/api/derivation/".rawurlencode($uri);
+    $endpoint = "/hascoapi/api/derivation/".rawurlencode($uri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -55,7 +55,7 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
   public function listByKeywordAndLanguage($elementType, $keyword, $language, $pageSize, $offset) {
-    $endpoint = "/sirapi/api/".
+    $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/".
       rawurlencode($keyword)."/".
@@ -70,7 +70,7 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
   public function listSizeByKeywordAndLanguage($elementType, $keyword, $language) {
-    $endpoint = "/sirapi/api/".
+    $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/total/".
       rawurlencode($keyword)."/".
@@ -82,7 +82,7 @@ class FusekiAPIConnector {
   }
 
   public function listByKeyword($elementType, $keyword, $pageSize, $offset) {
-    $endpoint = "/sirapi/api/".
+    $endpoint = "/hascoapi/api/".
       $elementType.
       "/keyword/".
       rawurlencode($keyword)."/".
@@ -96,7 +96,7 @@ class FusekiAPIConnector {
   }
 
   public function listSizeByKeyword($elementType, $keyword) {
-    $endpoint = "/sirapi/api/".
+    $endpoint = "/hascoapi/api/".
       $elementType.
       "/keyword/total/".
       rawurlencode($keyword);
@@ -109,7 +109,7 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
   public function listByManagerEmail($elementType, $manageremail, $pageSize, $offset) {
-    $endpoint = "/sirapi/api/".
+    $endpoint = "/hascoapi/api/".
       $elementType.
       "/manageremail/".
       $manageremail."/".
@@ -124,7 +124,7 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
   public function listSizeByManagerEmail($elementType, $manageremail, ) {
-    $endpoint = "/sirapi/api/".
+    $endpoint = "/hascoapi/api/".
       $elementType . 
       "/manageremail/total/" . 
       $manageremail;
@@ -138,27 +138,11 @@ class FusekiAPIConnector {
    *   INSTRUMENTS
    */
 
-  public function instrumentListAll() {
-    $endpoint = "/sirapi/api/instrument/all";
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
-  public function instrumentList($useremail) {
-    $endpoint = "/sirapi/api/instrument/manageremail/".rawurlencode($useremail);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
   public function instrumentRendering($type,$instrumentUri) {
     if ($type == 'fhir' || $type == 'rdf') {
-      $endpoint = "/sirapi/api/instrument/to".$type."/".rawurlencode($instrumentUri);
+      $endpoint = "/hascoapi/api/instrument/to".$type."/".rawurlencode($instrumentUri);
     } else {
-      $endpoint = "/sirapi/api/instrument/totext/".$type."/".rawurlencode($instrumentUri);
+      $endpoint = "/hascoapi/api/instrument/totext/".$type."/".rawurlencode($instrumentUri);
     }
     $method = "GET";
     $api_url = $this->getApiUrl();
@@ -167,7 +151,7 @@ class FusekiAPIConnector {
   }
 
   public function instrumentAdd($instrumentJson) {
-    $endpoint = "/sirapi/api/instrument/create/".rawurlencode($instrumentJson);
+    $endpoint = "/hascoapi/api/instrument/create/".rawurlencode($instrumentJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();    
@@ -175,7 +159,7 @@ class FusekiAPIConnector {
   }
 
   public function instrumentDel($instrumentUri) {
-    $endpoint = "/sirapi/api/instrument/delete/".rawurlencode($instrumentUri);    
+    $endpoint = "/hascoapi/api/instrument/delete/".rawurlencode($instrumentUri);    
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();    
@@ -187,15 +171,27 @@ class FusekiAPIConnector {
    */
 
   public function subcontainerAdd($subcontainerJson) {
-    $endpoint = "/sirapi/api/subcontainer/create/".rawurlencode($subcontainerJson);
+    $endpoint = "/hascoapi/api/subcontainer/create/".rawurlencode($subcontainerJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();    
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function subcontainerDel($subcontainerUri) {
-    $endpoint = "/sirapi/api/subcontainer/delete/".rawurlencode($subcontainerUri);    
+  /** 
+   *   SLOT ELEMENT
+   */
+
+   public function slotElements($containerUri) {
+    $endpoint = "/hascoapi/api/slotelements/bycontainer/".rawurlencode($containerUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function slotelementDel($slotelementUri) {
+    $endpoint = "/hascoapi/api/slotelement/delete/".rawurlencode($slotelementUri);    
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();    
@@ -204,36 +200,36 @@ class FusekiAPIConnector {
 
   /**
    *  
-   *    DETECTOR SLOTS
+   *    CONTAINER SLOTS
    * 
    */
  
-  public function detectorslotList($instrumentUri) {
-    $endpoint = "/sirapi/api/slots/detector/bycontainer/".rawurlencode($instrumentUri);
+  public function containerslotList($containerUri) {
+    $endpoint = "/hascoapi/api/slots/bycontainer/".rawurlencode($containerUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
-  public function detectorslotAdd($instrumentUri,$totalDetectorSlots) {
-    $endpoint = "/sirapi/api/slots/detector/create/".rawurlencode($instrumentUri)."/".rawurlencode($totalDetectorSlots);
+  public function containerslotAdd($containerUri,$totalContainerSlots) {
+    $endpoint = "/hascoapi/api/slots/container/create/".rawurlencode($containerUri)."/".rawurlencode($totalContainerSlots);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function detectorslotDel($detectorslotUri) {
-    $endpoint = "/sirapi/api/slots/detector/delete/".rawurlencode($detectorslotUri);
+  public function containerslotDel($containerUri) {
+    $endpoint = "/hascoapi/api/slots/container/delete/".rawurlencode($containerUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function detectorslotReset($detectorslotUri) {
-    $endpoint = "/sirapi/api/slots/detector/detach/".rawurlencode($detectorslotUri);    
+  public function containerslotReset($containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/detach/".rawurlencode($containerslotUri);    
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -244,24 +240,8 @@ class FusekiAPIConnector {
    *   DETECTOR STEMS
    */
 
-   public function detectorStemList($useremail) {
-    $endpoint = "/sirapi/api/detectorstem/manageremail/".rawurlencode($useremail);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
-  public function detectorStemListByKeyword($keyword) {
-    $endpoint = "/sirapi/api/detectorstem/keyword/".rawurlencode($keyword);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
   public function detectorStemAdd($detectorStemJson) {
-    $endpoint = "/sirapi/api/detectorstem/create/".rawurlencode($detectorStemJson);
+    $endpoint = "/hascoapi/api/detectorstem/create/".rawurlencode($detectorStemJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -269,7 +249,7 @@ class FusekiAPIConnector {
   }
 
   public function detectorStemDel($detectorStemUri) {
-    $endpoint = "/sirapi/api/detectorstem/delete/".rawurlencode($detectorStemUri);
+    $endpoint = "/hascoapi/api/detectorstem/delete/".rawurlencode($detectorStemUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -280,24 +260,8 @@ class FusekiAPIConnector {
    *   DETECTORS
    */
 
-  public function detectorList($useremail) {
-    $endpoint = "/sirapi/api/detector/manageremail/".rawurlencode($useremail);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
-  public function detectorListByKeyword($keyword) {
-    $endpoint = "/sirapi/api/detector/keyword/".rawurlencode($keyword);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
   public function detectorAdd($detectorJson) {
-    $endpoint = "/sirapi/api/detector/create/".rawurlencode($detectorJson);
+    $endpoint = "/hascoapi/api/detector/create/".rawurlencode($detectorJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -305,15 +269,15 @@ class FusekiAPIConnector {
   }
 
   public function detectorDel($detectorUri) {
-    $endpoint = "/sirapi/api/detector/delete/".rawurlencode($detectorUri);
+    $endpoint = "/hascoapi/api/detector/delete/".rawurlencode($detectorUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function detectorAttach($detectorUri,$detectorslotUri) {
-    $endpoint = "/sirapi/api/slots/detector/attach/".rawurlencode($detectorUri)."/".rawurlencode($detectorslotUri);
+  public function detectorAttach($detectorUri,$containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($detectorUri)."/".rawurlencode($containerslotUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -324,24 +288,8 @@ class FusekiAPIConnector {
    *   CODEBOOK
    */
  
-  public function codebookList($useremail) {
-    $endpoint = "/sirapi/api/codebook/manageremail/".rawurlencode($useremail);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
-  public function codebookListByKeyword($keyword) {
-    $endpoint = "/sirapi/api/codebook/keyword/".rawurlencode($keyword);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
   public function codebookAdd($codebookJson) {
-    $endpoint = "/sirapi/api/codebook/create/".rawurlencode($codebookJson);
+    $endpoint = "/hascoapi/api/codebook/create/".rawurlencode($codebookJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -349,7 +297,7 @@ class FusekiAPIConnector {
   }
 
   public function codebookDel($codebookUri) {
-    $endpoint = "/sirapi/api/codebook/delete/".rawurlencode($codebookUri);
+    $endpoint = "/hascoapi/api/codebook/delete/".rawurlencode($codebookUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -357,35 +305,35 @@ class FusekiAPIConnector {
   }
 
   /** 
-   *   RESPONSEOPTION SLOT
+   *   CODEBOOK SLOT
    */
 
-  public function responseOptionSlotList($codebookUri) {
-    $endpoint = "/sirapi/api/slots/responseoption/bycodebook/".rawurlencode($codebookUri);
+  public function codebookSlotList($codebookUri) {
+    $endpoint = "/hascoapi/api/slots/bycodebook/".rawurlencode($codebookUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
-  public function responseOptionSlotAdd($codebookUri,$totalCodebookSlots) {
-    $endpoint = "/sirapi/api/slots/responseoption/create/".rawurlencode($codebookUri)."/".rawurlencode($totalCodebookSlots);
+  public function codebookSlotAdd($codebookUri,$totalCodebookSlots) {
+    $endpoint = "/hascoapi/api/slots/codebook/create/".rawurlencode($codebookUri)."/".rawurlencode($totalCodebookSlots);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function responseOptionSlotDel($responseOptionSlotUri) {
-    $endpoint = "/sirapi/api/slots/responseoption/delete/".rawurlencode($responseOptionSlotUri);
+  public function codebookSlotDel($containerUri) {
+    $endpoint = "/hascoapi/api/slots/codebook/delete/".rawurlencode($containerUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data); 
   }
 
-  public function responseOptionSlotReset($responseOptionSlotUri) {
-    $endpoint = "/sirapi/api/slots/responseoption/detach/".rawurlencode($responseOptionSlotUri);    
+  public function codebookSlotReset($containerSlotUri) {
+    $endpoint = "/hascoapi/api/slots/codebook/detach/".rawurlencode($containerSlotUri);    
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -396,25 +344,8 @@ class FusekiAPIConnector {
    *   RESPONSE OPTION
    */
 
-  
-  public function responseOptionList($codebookUri) {
-    $endpoint = "/sirapi/api/responseoption/bycodebook/".rawurlencode($codebookUri);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
- 
-  public function responseOptionListByKeyword($keyword) {
-    $endpoint = "/sirapi/api/responseoption/keyword/".rawurlencode($keyword);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
   public function responseOptionAdd($responseoptionJSON) {
-    $endpoint = "/sirapi/api/responseoption/create/".rawurlencode($responseoptionJSON);
+    $endpoint = "/hascoapi/api/responseoption/create/".rawurlencode($responseoptionJSON);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -422,15 +353,15 @@ class FusekiAPIConnector {
   }
 
   public function responseOptionDel($responseOptionUri) {
-    $endpoint = "/sirapi/api/responseoption/delete/".rawurlencode($responseOptionUri);
+    $endpoint = "/hascoapi/api/responseoption/delete/".rawurlencode($responseOptionUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
-  public function responseOptionAttach($responseOptionUri,$responseOptionSlotUri) {
-    $endpoint = "/sirapi/api/slots/responseoption/attach/".rawurlencode($responseOptionUri)."/".rawurlencode($responseOptionSlotUri);
+  public function responseOptionAttach($responseOptionUri,$containerSlotUri) {
+    $endpoint = "/hascoapi/api/slots/codebook/attach/".rawurlencode($responseOptionUri)."/".rawurlencode($containerSlotUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -442,7 +373,7 @@ class FusekiAPIConnector {
    */
 
   public function annotationStemAdd($annotationStemJson) {
-    $endpoint = "/sirapi/api/annotationstem/create/".rawurlencode($annotationStemJson);
+    $endpoint = "/hascoapi/api/annotationstem/create/".rawurlencode($annotationStemJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -450,7 +381,7 @@ class FusekiAPIConnector {
   }
 
   public function annotationStemDel($annotationStemUri) {
-    $endpoint = "/sirapi/api/annotationstem/delete/".rawurlencode($annotationStemUri);
+    $endpoint = "/hascoapi/api/annotationstem/delete/".rawurlencode($annotationStemUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -462,7 +393,7 @@ class FusekiAPIConnector {
    */
 
    public function annotationAdd($annotationJson) {
-    $endpoint = "/sirapi/api/annotation/create/".rawurlencode($annotationJson);
+    $endpoint = "/hascoapi/api/annotation/create/".rawurlencode($annotationJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -470,7 +401,7 @@ class FusekiAPIConnector {
   }
 
   public function annotationDel($annotationUri) {
-    $endpoint = "/sirapi/api/annotation/delete/".rawurlencode($annotationUri);
+    $endpoint = "/hascoapi/api/annotation/delete/".rawurlencode($annotationUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -482,7 +413,7 @@ class FusekiAPIConnector {
    */
 
   public function semanticVariableAdd($semanticVariableJson) {
-    $endpoint = "/sirapi/api/semanticvariable/create/".rawurlencode($semanticVariableJson);
+    $endpoint = "/hascoapi/api/semanticvariable/create/".rawurlencode($semanticVariableJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -490,7 +421,7 @@ class FusekiAPIConnector {
   }
 
   public function semanticVariableDel($semanticVariableUri) {
-    $endpoint = "/sirapi/api/semanticvariable/delete/".rawurlencode($semanticVariableUri);
+    $endpoint = "/hascoapi/api/semanticvariable/delete/".rawurlencode($semanticVariableUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -502,7 +433,7 @@ class FusekiAPIConnector {
    */
 
   public function repoInfo() {
-    $endpoint = "/sirapi/api/repo";
+    $endpoint = "/hascoapi/api/repo";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -510,42 +441,42 @@ class FusekiAPIConnector {
   }
 
   public function repoInfoNewIP($api_url) {
-    $endpoint = "/sirapi/api/repo";
+    $endpoint = "/hascoapi/api/repo";
     $method = "GET";
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
   public function repoUpdateLabel($api_url, $label) {
-    $endpoint = "/sirapi/api/repo/label/".rawurlencode($label);
+    $endpoint = "/hascoapi/api/repo/label/".rawurlencode($label);
     $method = "GET";
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
   public function repoUpdateTitle($api_url, $title) {
-    $endpoint = "/sirapi/api/repo/title/".rawurlencode($title);
+    $endpoint = "/hascoapi/api/repo/title/".rawurlencode($title);
     $method = "GET";
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
   public function repoUpdateDescription($api_url, $description) {
-    $endpoint = "/sirapi/api/repo/description/".rawurlencode($description);
+    $endpoint = "/hascoapi/api/repo/description/".rawurlencode($description);
     $method = "GET";
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
   public function repoUpdateNamespace($api_url, $namespace, $baseUrl) {
-    $endpoint = "/sirapi/api/repo/namespace/default/".rawurlencode($namespace)."/".rawurlencode($baseUrl);
+    $endpoint = "/hascoapi/api/repo/namespace/default/".rawurlencode($namespace)."/".rawurlencode($baseUrl);
     $method = "GET";
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
   public function repoReloadNamespaceTriples() {
-    $endpoint = "/sirapi/api/repo/ont/load";
+    $endpoint = "/hascoapi/api/repo/ont/load";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -553,7 +484,7 @@ class FusekiAPIConnector {
   }
 
   public function repoDeleteNamespaceTriples() {
-    $endpoint = "/sirapi/api/repo/ont/delete";
+    $endpoint = "/hascoapi/api/repo/ont/delete";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -579,7 +510,7 @@ class FusekiAPIConnector {
    */
 
   public function namespaceList() {
-    $endpoint = "/sirapi/api/repo/table/namespaces";
+    $endpoint = "/hascoapi/api/repo/table/namespaces";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -587,7 +518,7 @@ class FusekiAPIConnector {
   }
 
   public function informantList() {
-    $endpoint = "/sirapi/api/repo/table/informants";
+    $endpoint = "/hascoapi/api/repo/table/informants";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -596,7 +527,7 @@ class FusekiAPIConnector {
   }
 
   public function languageList() {
-    $endpoint = "/sirapi/api/repo/table/languages";
+    $endpoint = "/hascoapi/api/repo/table/languages";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -604,7 +535,7 @@ class FusekiAPIConnector {
   }
 
   public function generationActivityList() {
-    $endpoint = "/sirapi/api/repo/table/generationactivities";
+    $endpoint = "/hascoapi/api/repo/table/generationactivities";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -612,7 +543,7 @@ class FusekiAPIConnector {
   }
 
   public function instrumentPositionList() {
-    $endpoint = "/sirapi/api/repo/table/instrumentpositions";
+    $endpoint = "/hascoapi/api/repo/table/instrumentpositions";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -620,7 +551,7 @@ class FusekiAPIConnector {
   }
 
   public function subcontainerPositionList() {
-    $endpoint = "/sirapi/api/repo/table/subcontainerpositions";
+    $endpoint = "/hascoapi/api/repo/table/subcontainerpositions";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

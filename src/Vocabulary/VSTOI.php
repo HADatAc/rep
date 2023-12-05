@@ -12,6 +12,8 @@
 
     const ANNOTATION                      = VSTOI::VSTOI . "Annotation";
     const ANNOTATION_STEM                 = VSTOI::VSTOI . "AnnotationStem";
+    const CONTAINER                       = VSTOI::VSTOI . "Container";
+    const CONTAINER_SLOT                  = VSTOI::VSTOI . "ContainerSlot";
     const DETECTOR                        = VSTOI::VSTOI . "Detector";
     const DETECTOR_STEM                   = VSTOI::VSTOI . "DetectorStem";
     const INSTRUMENT                      = VSTOI::VSTOI . "Instrument";

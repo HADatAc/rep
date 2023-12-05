@@ -16,16 +16,16 @@ class ListUsage {
     return $elements;
   }
 
-  public static function fromDetectorToHtml($detectorslots) {
+  public static function fromDetectorToHtml($containerslots) {
     $html = "<ul>";
-    if (sizeof($detectorslots) <= 0) {
+    if (sizeof($containerslots) <= 0) {
       $html .= "<li>NONE</li>";
     } else {
-      foreach ($detectorslots as $detectorslot) {
-        $instrument = ListUsage::getInstrument($detectorslot->belongsTo);
+      foreach ($containerslots as $containerslot) {
+        $instrument = ListUsage::getInstrument($containerslot->belongsTo);
         if ($instrument != NULL) {
-          //dpm($detectorslot);
-          $html .= "<li>Position " . $detectorslot->hasPriority . " in Questionnaire " . $instrument->label . " (" . Utils::repUriLink($instrument->uri) . ")</li>"; 
+          //dpm($containerslot);
+          $html .= "<li>Position " . $containerslot->hasPriority . " in Questionnaire " . $instrument->label . " (" . Utils::repUriLink($instrument->uri) . ")</li>"; 
         }
       }     
     }

@@ -5,6 +5,7 @@ namespace Drupal\rep;
 use Drupal\Core\Url;
 use Drupal\rep\Entity\Tables;
 use Drupal\rep\Vocabulary\REPGUI;
+use Drupal\rep\Constant;
 
 class Utils {
 
@@ -55,28 +56,31 @@ class Utils {
     }
     switch ($element_type) {
       case "instrument":
-        $short = "IN";
+        $short = Constant::PREFIX_INSTRUMENT;
+        break;
+      case "subcontainer":
+        $short = Constant::PREFIX_SUBCONTAINER;
         break;
       case "detectorstem":
-        $short = "DS";
+        $short = Constant::PREFIX_DETECTOR_STEM;
         break;
       case "detector":
-        $short = "DT";
+        $short = Constant::PREFIX_DETECTOR;
         break;
       case "codebook":
-        $short = "CB";
+        $short = Constant::PREFIX_CODEBOOK;
         break;
       case "responseoption":
-        $short = "RO";
+        $short = Constant::PREFIX_RESPONSE_OPTION;
         break;
       case "annotationstem":
-        $short = "AS";
+        $short = Constant::PREFIX_ANNOTATION_STEM;
         break;
       case "annotation":
-        $short = "AN";
+        $short = Constant::PREFIX_ANNOTATION;
         break;
       case "semanticvariable":
-        $short = "SV";
+        $short = Constant::PREFIX_SEMANTIC_VARIABLE;
         break;
       default:
         $short = NULL;
@@ -205,7 +209,7 @@ class Utils {
   }
 
   public static function elementTypeModule($elementtype) {
-    $sir = ['instrument', 'detectorslot', 'detectorstem', 'detector', 'codebook', 'responseoptionslot', 'responseoption', 'annotationstem', 'annotation'];
+    $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
     $sem = ['semanticvariable','entity','attribute','unit'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
