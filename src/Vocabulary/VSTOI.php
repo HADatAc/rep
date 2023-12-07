@@ -44,9 +44,31 @@
     const HAS_SHORT_NAME                  = VSTOI::VSTOI . "hasShortName";
     const HAS_STYLE                       = VSTOI::VSTOI . "hasStyle";
     const HAS_STATUS                      = VSTOI::VSTOI . "hasStatus";
-    const HAS_SIR_manager_EMAIL           = VSTOI::VSTOI . "hasSIRManagerEmail";
+    const HAS_SIR_MANAGER_EMAIL           = VSTOI::VSTOI . "hasSIRManagerEmail";
     const HAS_VERSION                     = VSTOI::VSTOI . "hasVersion";
     const OF_CODEBOOK                     = VSTOI::VSTOI . "ofCodebook";
+
+    /*
+     *    POSITIONS
+     */
+
+    const NOT_VISIBLE                     = VSTOI::VSTOI . "NotVisible";
+    const TOP_LEFT                        = VSTOI::VSTOI . "TopLeft";
+    const TOP_CENTER                      = VSTOI::VSTOI . "TopCenter";
+    const TOP_RIGHT                       = VSTOI::VSTOI . "TopRight";
+    const LINE_BELOW_TOP                  = VSTOI::VSTOI . "LineBelowTop";
+    const LINE_ABOVE_BOTTOM               = VSTOI::VSTOI . "LineAboveBottom";
+    const BOTTOM_LEFT                     = VSTOI::VSTOI . "BottomLeft";
+    const BOTTOM_CENTER                   = VSTOI::VSTOI . "BottomCenter";
+    const BOTTOM_RIGHT                    = VSTOI::VSTOI . "BottomRight";
+    const PAGE_TOP_LEFT                   = VSTOI::VSTOI . "PageTopLeft";
+    const PAGE_TOP_CENTER                 = VSTOI::VSTOI . "PageTopCenter";
+    const PAGE_TOP_RIGHT                  = VSTOI::VSTOI . "PageTopRight";
+    const PAGE_LINE_BELOW_TOP             = VSTOI::VSTOI . "PageLineBelowTop";
+    const PAGE_LINE_ABOVE_BOTTOM          = VSTOI::VSTOI . "PageLineAboveBottom";
+    const PAGE_BOTTOM_LEFT                = VSTOI::VSTOI . "PageBottomLeft";
+    const PAGE_BOTTOM_CENTER              = VSTOI::VSTOI . "PageBottomCenter";
+    const PAGE_BOTTOM_RIGHT               = VSTOI::VSTOI . "PageBottomRight";
 
 
   }
