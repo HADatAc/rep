@@ -1,0 +1,41 @@
+    
+rep.top_level:
+  title: Advanced
+  description: Manage Repository
+  route_name: rep.about
+  menu_name: main
+  weight: 100
+  requirements:
+    _permission: 'access content'
+    
+rep.uri_describe:
+  title: Describe URI
+  description: Describe URI
+  route_name: rep.element_uri
+  parent: rep.top_level
+  menu_name: main
+  weight: 1
+  requirements:
+    _permission: 'access content'
+    
+rep.about:
+  title: About
+  description: About
+  route_name: rep.about
+  parent: rep.top_level
+  menu_name: main
+  weight: 2
+  requirements:
+    _permission: 'access content'
+
+rep.admin_settings_link:
+  title: Configuration
+  description: Semantic Repository Settings
+  menu_name: main 
+  route_name: rep.admin_settings_custom
+  parent: rep.top_level
+  weight: 3
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
