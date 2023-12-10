@@ -178,6 +178,22 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
+  public function subcontainerDel($subcontainerUri) {
+    $endpoint = "/hascoapi/api/subcontainer/delete/".rawurlencode($subcontainerUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function subcontainerUpdate($json) {
+    $endpoint = "/hascoapi/api/subcontainer/update/".rawurlencode($json);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
   /** 
    *   SLOT ELEMENT
    */
@@ -204,14 +220,6 @@ class FusekiAPIConnector {
    * 
    */
  
-  public function containerslotList($containerUri) {
-    $endpoint = "/hascoapi/api/slots/bycontainer/".rawurlencode($containerUri);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
   public function containerslotAdd($containerUri,$totalContainerSlots) {
     $endpoint = "/hascoapi/api/slots/container/create/".rawurlencode($containerUri)."/".rawurlencode($totalContainerSlots);
     $method = "POST";
