@@ -424,7 +424,6 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data); 
   }
 
-
   /**
    *   SEMANTIC VARIABLE
    */
@@ -439,6 +438,46 @@ class FusekiAPIConnector {
 
   public function semanticVariableDel($semanticVariableUri) {
     $endpoint = "/hascoapi/api/semanticvariable/delete/".rawurlencode($semanticVariableUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  /**
+   *   SDD
+   */
+
+   public function sddAdd($sddJson) {
+    $endpoint = "/hascoapi/api/sdd/create/".rawurlencode($sddJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function sddDel($sddUri) {
+    $endpoint = "/hascoapi/api/sdd/delete/".rawurlencode($sddUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  /**
+   *   DATAFILE
+   */
+
+   public function datafileAdd($datafileJson) {
+    $endpoint = "/hascoapi/api/datafile/create/".rawurlencode($datafileJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function datafileDel($datafileUri) {
+    $endpoint = "/hascoapi/api/datafile/delete/".rawurlencode($datafileUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -595,6 +634,53 @@ class FusekiAPIConnector {
     ];
   }
 
+  public function uploadSDD($sdd) {
+
+    //dpm($sdd);
+    
+    // RETRIEVE FILE CONTENT FROM FID
+    $file_entity = \Drupal\file\Entity\File::load($sdd->dataFile->id);
+    if ($file_entity == NULL) {
+      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $sdd->dataFile->id . ']'));
+      return FALSE;
+    }
+    $file_uri = $file_entity->getFileUri();
+    $file_content = file_get_contents($file_uri);
+    if ($file_content == NULL) {
+      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $sdd->dataFile->id . ']'));
+      return FALSE;
+    }
+
+    // APPEND DATAFILE URI TO ENDPOINT'S URL
+    $endpoint = "/hascoapi/api/ingest/sdd/".rawurlencode($sdd->uri);
+
+    // MAKE CALL TO API ENDPOINT
+    $api_url = $this->getApiUrl();
+    $client = new Client();
+    try {
+      $res = $client->post($api_url.$endpoint, [
+        'headers' => [
+          'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ],
+        'body' => $file_content,
+      ]);
+      } 
+    catch(ConnectException $e){
+      $this->error="CON";
+      $this->error_message = "Connection error the following message: " . $e->getMessage();
+      return(NULL);
+    }
+    catch(ClientException $e){
+      $res = $e->getResponse();
+      if($res->getStatusCode() != '200') {
+        $this->error=$res->getStatusCode();
+        $this->error_message = "API request returned the following status code: " . $res->getStatusCode();
+        return(NULL);
+      }
+    } 
+    return($res->getBody()); 
+  }
+
   public function perform_http_request($method, $url, $data = false) {   
     $client = new Client();
     $res=NULL;
@@ -619,6 +705,10 @@ class FusekiAPIConnector {
     return($res->getBody()); 
   }   
 
+  /** 
+   *  If anything goes wrong, this method will return NULL and issue a Drupal error message fowrarding the message provided by 
+   *  the HASCO API. 
+   */
   public function parseObjectResponse($response, $methodCalled) {
     if ($this->error != NULL) {
       if ($this->error == 'CON') {
@@ -633,6 +723,10 @@ class FusekiAPIConnector {
         return NULL;
     }
     $obj = json_decode($response);
+    if ($obj == NULL) {
+      \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
+      return NULL; 
+    }
     if ($obj->isSuccessful) {
       return $obj->body;
     }

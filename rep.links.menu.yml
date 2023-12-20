@@ -17,14 +17,29 @@ rep.uri_describe:
   weight: 1
   requirements:
     _permission: 'access content'
-    
+
+rep.manage_datafile:
+  title: Manage Data Files
+  description: Manage Data Files
+  route_name: rep.select_element
+  route_parameters:
+    elementtype: 'datafile'
+    page: '1'
+    pagesize: '10'
+  parent: rep.top_level
+  menu_name: main
+  weight: 2
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
 rep.about:
   title: About
   description: About
   route_name: rep.about
   parent: rep.top_level
   menu_name: main
-  weight: 2
+  weight: 3
   requirements:
     _permission: 'access content'
 
@@ -34,7 +49,7 @@ rep.admin_settings_link:
   menu_name: main 
   route_name: rep.admin_settings_custom
   parent: rep.top_level
-  weight: 3
+  weight: 4
   requirements:
     _permission: 'access content'
     _role: 'authenticated'
