@@ -82,6 +82,15 @@ class Utils {
       case "semanticvariable":
         $short = Constant::PREFIX_SEMANTIC_VARIABLE;
         break;
+      case "semanticvariable":
+        $short = Constant::PREFIX_SDD;
+        break;
+      case "sdd":
+        $short = Constant::PREFIX_SDD;
+        break;
+      case "datafile":
+        $short = Constant::PREFIX_DATAFILE;
+        break;
       default:
         $short = NULL;
     }
@@ -149,6 +158,10 @@ class Utils {
       if (\Drupal::moduleHandler()->moduleExists('sir')) {
         $rt = 'sir.select_element';
       }
+    } else if ($module == 'rep') {
+      if (\Drupal::moduleHandler()->moduleExists('rep')) {
+        $rt = 'rep.select_element';
+      }
     }
 
     if ($rt == NULL) {
@@ -210,14 +223,16 @@ class Utils {
 
   public static function elementTypeModule($elementtype) {
     $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
-    $sem = ['semanticvariable','entity','attribute','unit'];
+    $sem = ['semanticvariable','entity','attribute','unit','sdd'];
+    $rep = ['datafile'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {
       return 'sem';
+    } else if (in_array($elementtype,$rep)) {
+      return 'rep';
     } 
     return NULL;
   }
-
 
 }

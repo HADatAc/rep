@@ -26,7 +26,18 @@ rep.element_uri:
   options:
     no_cache: 'TRUE'
 
+# Select Element
 
+rep.select_element:
+  path: 'rep/select/{elementtype}/{page}/{pagesize}'
+  defaults:
+    _form: '\Drupal\rep\Form\REPSelectForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
+    
 # Configuration option
 
 rep.admin_settings_custom:
@@ -84,3 +95,10 @@ rep.about:
   options:
     no_cache: 'TRUE'
 
+rep.help:
+  path: '/admin/help/semantics'
+  defaults:
+    _title: 'Semantics Package Help'
+    _controller: '\Drupal\rep\Controller\RepController::help'
+  requirements:
+    _permission: 'administer site configuration'
