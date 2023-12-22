@@ -25,6 +25,14 @@ function rep_theme($existing, $type, $theme, $path)
 }
 
 /**
+ * Implements hook_preprocess_HOOK() for block templates.
+ */
+function rep_preprocess_block(&$variables) {
+  // Add the core/drupal.dialog.ajax library.
+  $variables['#attached']['library'][] = 'core/drupal.dialog.ajax';
+}
+
+/**
  * Implements hook_help().
  */
 function rep_help($route_name, \Drupal\Core\Routing\RouteMatchInterface $route_match) {

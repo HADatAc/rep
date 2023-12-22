@@ -38,6 +38,27 @@ rep.select_element:
   options:
     no_cache: 'TRUE'
     
+
+# Data File
+
+rep.datafile_showlog:
+  path: 'rep/log/{datafileuri}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\DataFileController::showLog'
+    _title: "Data File's Log"
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+
+rep.datafile_download:
+  path: 'rep/download/{datafileuri}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\DataFileController::download'
+    _title: "Data File's Download"
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+
 # Configuration option
 
 rep.admin_settings_custom:
