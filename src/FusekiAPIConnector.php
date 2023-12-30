@@ -485,6 +485,66 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   STUDY
+   */
+
+   public function studyAdd($studyJson) {
+    $endpoint = "/hascoapi/api/study/create/".rawurlencode($studyJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function studyDel($studyUri) {
+    $endpoint = "/hascoapi/api/study/delete/".rawurlencode($studyUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   STUDY OBJECT COLLECTION
+   */
+
+   public function studyObjectCollectionAdd($studyObjectCollectionJson) {
+    $endpoint = "/hascoapi/api/studyobjectcollection/create/".rawurlencode($studyObjectCollectionJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function studyObjectCollectionDel($studyObjectCollectionUri) {
+    $endpoint = "/hascoapi/api/studyobjectcollection/delete/".rawurlencode($studyObjectCollectionUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   STUDY OBJECT 
+   */
+
+   public function studyObjectAdd($studyObjectJson) {
+    $endpoint = "/hascoapi/api/studyobject/create/".rawurlencode($studyObjectJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function studyObjectDel($studyObjectUri) {
+    $endpoint = "/hascoapi/api/studyobject/delete/".rawurlencode($studyObjectUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
    *   REPOSITORY
    */
 

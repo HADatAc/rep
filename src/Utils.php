@@ -91,6 +91,15 @@ class Utils {
       case "datafile":
         $short = Constant::PREFIX_DATAFILE;
         break;
+      case "study":
+        $short = Constant::PREFIX_STUDY;
+        break;
+      case "studyobjectcollection":
+        $short = Constant::PREFIX_STUDY_OBJECT_COLLECTION;
+        break;
+      case "studyobject":
+        $short = Constant::PREFIX_STUDY_OBJECT;
+        break;
       default:
         $short = NULL;
     }
@@ -162,6 +171,10 @@ class Utils {
       if (\Drupal::moduleHandler()->moduleExists('rep')) {
         $rt = 'rep.select_element';
       }
+    } else if ($module == 'std') {
+      if (\Drupal::moduleHandler()->moduleExists('std')) {
+        $rt = 'std.select_element';
+      }
     }
 
     if ($rt == NULL) {
@@ -225,12 +238,15 @@ class Utils {
     $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
+    $std = ['study','studyobjectcollection','studyobject'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {
       return 'sem';
     } else if (in_array($elementtype,$rep)) {
       return 'rep';
+    } else if (in_array($elementtype,$std)) {
+      return 'std';
     } 
     return NULL;
   }
