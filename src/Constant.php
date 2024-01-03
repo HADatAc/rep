@@ -20,8 +20,10 @@ class Constant {
   const PREFIX_SDD                        = "SD";
   const PREFIX_STUDY                      = "ST";
   const PREFIX_STUDY_OBJECT_COLLECTION    = "OC";
-  const PREFIX_STUDY_OBJEC                = "OB";
+  const PREFIX_STUDY_OBJECT               = "OB";
+  const PREFIX_STUDY_ROLE                 = "SR";
   const PREFIX_SUBCONTAINER               = "SC";
+  const PREFIX_VIRTUAL_COLUMN             = "VC";
 
   const FILE_STATUS_UNPROCESSED           = "UNPROCESSED";
   const FILE_STATUS_PROCESSED             = "PROCESSED";

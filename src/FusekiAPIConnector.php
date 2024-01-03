@@ -505,6 +505,26 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   STUDY ROLE 
+   */
+
+   public function studyRoleAdd($studyRoleJson) {
+    $endpoint = "/hascoapi/api/studyrole/create/".rawurlencode($studyRoleJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function studyRoleDel($studyRoleUri) {
+    $endpoint = "/hascoapi/api/studyrole/delete/".rawurlencode($studyRoleUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
    *   STUDY OBJECT COLLECTION
    */
 
@@ -524,6 +544,14 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
+  public function studyObjectCollectionsByStudy($studyUri) {
+    $endpoint = "/hascoapi/api/studyobjectcollection/bystudy/".rawurlencode($studyUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
   /**
    *   STUDY OBJECT 
    */
@@ -538,6 +566,34 @@ class FusekiAPIConnector {
 
   public function studyObjectDel($studyObjectUri) {
     $endpoint = "/hascoapi/api/studyobject/delete/".rawurlencode($studyObjectUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function virtualColumnsByStudy($studyUri) {
+    $endpoint = "/hascoapi/api/virtualcolumn/bystudy/".rawurlencode($studyUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   VIRTUAL COLUMN 
+   */
+
+   public function virtualColumnAdd($virtualColumnJson) {
+    $endpoint = "/hascoapi/api/virtualcolumn/create/".rawurlencode($virtualColumnJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function virtualColumnDel($virtualColumnUri) {
+    $endpoint = "/hascoapi/api/virtualcolumn/delete/".rawurlencode($virtualColumnUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -798,5 +854,6 @@ class FusekiAPIConnector {
     \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
     return NULL; 
   }
+
 
 }

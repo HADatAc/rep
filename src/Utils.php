@@ -94,11 +94,17 @@ class Utils {
       case "study":
         $short = Constant::PREFIX_STUDY;
         break;
+      case "studyrole":
+        $short = Constant::PREFIX_STUDY_ROLE;
+        break;
       case "studyobjectcollection":
         $short = Constant::PREFIX_STUDY_OBJECT_COLLECTION;
         break;
       case "studyobject":
         $short = Constant::PREFIX_STUDY_OBJECT;
+        break;
+      case "virtualcolumn":
+        $short = Constant::PREFIX_VIRTUAL_COLUMN;
         break;
       default:
         $short = NULL;
@@ -238,7 +244,7 @@ class Utils {
     $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
-    $std = ['study','studyobjectcollection','studyobject'];
+    $std = ['study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {
