@@ -28,4 +28,6 @@
 
     const DOWNLOAD            = "/sir/download/";
 
+    const MANAGE_STUDY_OBJECTS = "/std/manage/studyobjects/";
+
   }

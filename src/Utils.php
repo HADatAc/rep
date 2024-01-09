@@ -91,6 +91,7 @@ class Utils {
       case "datafile":
         $short = Constant::PREFIX_DATAFILE;
         break;
+      case "std":
       case "study":
         $short = Constant::PREFIX_STUDY;
         break;
@@ -244,7 +245,7 @@ class Utils {
     $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
-    $std = ['study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
+    $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {

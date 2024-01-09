@@ -572,8 +572,16 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function virtualColumnsByStudy($studyUri) {
-    $endpoint = "/hascoapi/api/virtualcolumn/bystudy/".rawurlencode($studyUri);
+  public function studyObjectsBySOCwithPage($socUri,$pageSize,$offset) {
+    $endpoint = "/hascoapi/api/studyobject/bysoc/".rawurlencode($socUri).'/'.$pageSize.'/'.$offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function sizeStudyObjectsBySOC($socUri) {
+    $endpoint = "/hascoapi/api/studyobject/bysoc/total/".rawurlencode($socUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -595,6 +603,14 @@ class FusekiAPIConnector {
   public function virtualColumnDel($virtualColumnUri) {
     $endpoint = "/hascoapi/api/virtualcolumn/delete/".rawurlencode($virtualColumnUri);
     $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function virtualColumnsByStudy($studyUri) {
+    $endpoint = "/hascoapi/api/virtualcolumn/bystudy/".rawurlencode($studyUri);
+    $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
@@ -750,25 +766,25 @@ class FusekiAPIConnector {
     ];
   }
 
-  public function uploadSDD($sdd) {
+  public function uploadTemplate($concept,$template) {
 
     //dpm($sdd);
     
     // RETRIEVE FILE CONTENT FROM FID
-    $file_entity = \Drupal\file\Entity\File::load($sdd->dataFile->id);
+    $file_entity = \Drupal\file\Entity\File::load($template->dataFile->id);
     if ($file_entity == NULL) {
-      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $sdd->dataFile->id . ']'));
+      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $template->dataFile->id . ']'));
       return FALSE;
     }
     $file_uri = $file_entity->getFileUri();
     $file_content = file_get_contents($file_uri);
     if ($file_content == NULL) {
-      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $sdd->dataFile->id . ']'));
+      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $template->dataFile->id . ']'));
       return FALSE;
     }
 
     // APPEND DATAFILE URI TO ENDPOINT'S URL
-    $endpoint = "/hascoapi/api/ingest/sdd/".rawurlencode($sdd->uri);
+    $endpoint = "/hascoapi/api/ingest/".$concept."/".rawurlencode($template->uri);
 
     // MAKE CALL TO API ENDPOINT
     $api_url = $this->getApiUrl();
