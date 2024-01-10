@@ -33,13 +33,43 @@ rep.manage_datafile:
     _permission: 'access content'
     _role: 'authenticated'
 
+rep.manage_people:
+  title: Manage People
+  description: Manage People
+  route_name: rep.select_element
+  route_parameters:
+    elementtype: 'person'
+    page: '1'
+    pagesize: '10'
+  parent: rep.top_level
+  menu_name: main
+  weight: 3
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.manage_organizations:
+  title: Manage Organizations
+  description: Manage Organizations
+  route_name: rep.select_element
+  route_parameters:
+    elementtype: 'organization'
+    page: '1'
+    pagesize: '10'
+  parent: rep.top_level
+  menu_name: main
+  weight: 4
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
 rep.about:
   title: About
   description: About
   route_name: rep.about
   parent: rep.top_level
   menu_name: main
-  weight: 3
+  weight: 5
   requirements:
     _permission: 'access content'
 
@@ -49,7 +79,7 @@ rep.admin_settings_link:
   menu_name: main 
   route_name: rep.admin_settings_custom
   parent: rep.top_level
-  weight: 4
+  weight: 6
   requirements:
     _permission: 'access content'
     _role: 'authenticated'

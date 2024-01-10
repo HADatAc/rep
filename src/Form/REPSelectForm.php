@@ -7,6 +7,8 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\rep\ListManagerEmailPage;
 use Drupal\rep\Entity\DataFile;
+use Drupal\rep\Entity\Person;
+use Drupal\rep\Entity\Organization;
 
 class REPSelectForm extends FormBase {
 
@@ -104,6 +106,18 @@ class REPSelectForm extends FormBase {
         $header = DataFile::generateHeader();
         $output = DataFile::generateOutput($this->getList());    
         break;
+      case "person":
+        $this->single_class_name = "Person";
+        $this->plural_class_name = "People";
+        $header = Person::generateHeader();
+        $output = Person::generateOutput($this->getList());    
+        break;
+      case "organization":
+        $this->single_class_name = "Organization";
+        $this->plural_class_name = "Organizations";
+        $header = Organization::generateHeader();
+        $output = Organization::generateOutput($this->getList());    
+        break;
       default:
         $this->single_class_name = "Object of Unknown Type";
         $this->plural_class_name = "Objects of Unknown Types";
@@ -118,23 +132,23 @@ class REPSelectForm extends FormBase {
       '#type' => 'item',
       '#title' => $this->t('<h4>' . $this->plural_class_name . ' maintained by <font color="DarkGreen">' . $this->manager_name . ' (' . $this->manager_email . ')</font></h4>'),
     ];
-    /** 
-    $form['add_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Add New ' . $this->single_class_name),
-      '#name' => 'add_element',
-    ];
-    $form['edit_selected_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Edit Selected ' . $this->single_class_name),
-      '#name' => 'edit_element',
-    ];
-    $form['delete_selected_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
-      '#name' => 'delete_element',
-    ];
-    */
+    if ($this->element_type == "person" || $this->element_type == "organization") {
+      $form['add_element'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Add New ' . $this->single_class_name),
+        '#name' => 'add_element',
+      ];
+      $form['edit_selected_element'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Edit Selected ' . $this->single_class_name),
+        '#name' => 'edit_element',
+      ];
+      $form['delete_selected_element'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
+        '#name' => 'delete_element',
+      ];
+    }
     $form['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
