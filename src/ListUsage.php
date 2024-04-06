@@ -24,7 +24,6 @@ class ListUsage {
       foreach ($containerslots as $containerslot) {
         $instrument = ListUsage::getInstrument($containerslot->belongsTo);
         if ($instrument != NULL) {
-          //dpm($containerslot);
           $html .= "<li>Position " . $containerslot->hasPriority . " in Questionnaire " . $instrument->label . " (" . Utils::repUriLink($instrument->uri) . ")</li>"; 
         }
       }     

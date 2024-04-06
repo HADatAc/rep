@@ -7,8 +7,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\rep\ListManagerEmailPage;
 use Drupal\rep\Entity\DataFile;
-use Drupal\rep\Entity\Person;
-use Drupal\rep\Entity\Organization;
 
 class REPSelectForm extends FormBase {
 
@@ -93,8 +91,6 @@ class REPSelectForm extends FormBase {
     // RETRIEVE ELEMENTS
     $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
 
-    //dpm($this->getList());
-
     $this->single_class_name = "";
     $this->plural_class_name = "";
     switch ($this->element_type) {
@@ -105,18 +101,6 @@ class REPSelectForm extends FormBase {
         $this->plural_class_name = "Data Files";
         $header = DataFile::generateHeader();
         $output = DataFile::generateOutput($this->getList());    
-        break;
-      case "person":
-        $this->single_class_name = "Person";
-        $this->plural_class_name = "People";
-        $header = Person::generateHeader();
-        $output = Person::generateOutput($this->getList());    
-        break;
-      case "organization":
-        $this->single_class_name = "Organization";
-        $this->plural_class_name = "Organizations";
-        $header = Organization::generateHeader();
-        $output = Organization::generateOutput($this->getList());    
         break;
       default:
         $this->single_class_name = "Object of Unknown Type";
@@ -132,23 +116,6 @@ class REPSelectForm extends FormBase {
       '#type' => 'item',
       '#title' => $this->t('<h4>' . $this->plural_class_name . ' maintained by <font color="DarkGreen">' . $this->manager_name . ' (' . $this->manager_email . ')</font></h4>'),
     ];
-    if ($this->element_type == "person" || $this->element_type == "organization") {
-      $form['add_element'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Add New ' . $this->single_class_name),
-        '#name' => 'add_element',
-      ];
-      $form['edit_selected_element'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Edit Selected ' . $this->single_class_name),
-        '#name' => 'edit_element',
-      ];
-      $form['delete_selected_element'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
-        '#name' => 'delete_element',
-      ];
-    }
     $form['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
@@ -201,10 +168,10 @@ class REPSelectForm extends FormBase {
 
     // ADD ELEMENT
     if ($button_name === 'add_element') {
-      if ($this->element_type == 'semanticvariable') {
-        $url = Url::fromRoute('sem.add_semantic_variable');
-      } 
-      $form_state->setRedirectUrl($url);
+      //if ($this->element_type == 'organization') {
+      //  $url = Url::fromRoute('rep.add_organization');
+      //} 
+      //$form_state->setRedirectUrl($url);
     }  
 
     // EDIT ELEMENT
@@ -215,9 +182,9 @@ class REPSelectForm extends FormBase {
         \Drupal::messenger()->addMessage(t("No more than one " . $this->single_class_name . " can be edited at once."));      
       } else {
         $first = array_shift($rows);
-        if ($this->element_type == 'semanticvariable') {
-          $url = Url::fromRoute('sem.edit_semantic_variable', ['semanticvariableuri' => base64_encode($first)]);
-        } 
+        //if ($this->element_type == 'organization') {
+        //  $url = Url::fromRoute('rep.edit_organization', ['organizationuri' => base64_encode($first)]);
+        //} 
         $form_state->setRedirectUrl($url);
       } 
     }
@@ -229,9 +196,6 @@ class REPSelectForm extends FormBase {
       } else {
         $api = \Drupal::service('rep.api_connector');
         foreach($rows as $uri) {
-          if ($this->element_type == 'semanticvariable') {
-            $api->semanticVariableDel($uri);
-          } 
           if ($this->element_type == 'sdd') {
             $api->sddDel($uri);
           } 

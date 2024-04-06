@@ -23,8 +23,6 @@ class DataFile {
 
   public static function generateOutput($list) {
     
-    //dpm($list);
-
     // ROOT URL
     $root_url = \Drupal::request()->getBaseUrl();
 

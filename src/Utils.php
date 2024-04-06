@@ -107,7 +107,13 @@ class Utils {
       case "virtualcolumn":
         $short = Constant::PREFIX_VIRTUAL_COLUMN;
         break;
-      default:
+      case "organization":
+        $short = Constant::PREFIX_ORGANIZATION;
+        break;
+      case "person":
+        $short = Constant::PREFIX_PERSON;
+        break;
+        default:
         $short = NULL;
     }
     if ($short == NULL) {
@@ -168,19 +174,23 @@ class Utils {
     $module = Utils::elementTypeModule($element_type); 
     if ($module == 'sem') {
       if (\Drupal::moduleHandler()->moduleExists('sem')) {
-        $rt = 'sem.select_element';
+        $rt = 'sem.search';
       }
     } else if ($module == 'sir') {
       if (\Drupal::moduleHandler()->moduleExists('sir')) {
-        $rt = 'sir.select_element';
+        $rt = 'sir.search';
       }
     } else if ($module == 'rep') {
       if (\Drupal::moduleHandler()->moduleExists('rep')) {
-        $rt = 'rep.select_element';
+        $rt = 'rep.search';
       }
     } else if ($module == 'std') {
       if (\Drupal::moduleHandler()->moduleExists('std')) {
-        $rt = 'std.select_element';
+        $rt = 'std.search';
+      }
+    } else if ($module == 'meugrafo') {
+      if (\Drupal::moduleHandler()->moduleExists('meugrafo')) {
+        $rt = 'meugrafo.search';
       }
     }
 
@@ -246,6 +256,7 @@ class Utils {
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
+    $meugrafo = ['organization','person'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {
@@ -254,6 +265,8 @@ class Utils {
       return 'rep';
     } else if (in_array($elementtype,$std)) {
       return 'std';
+    } else if (in_array($elementtype,$meugrafo)) {
+      return 'meugrafo';
     } 
     return NULL;
   }

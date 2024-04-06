@@ -26,7 +26,34 @@ rep.element_uri:
   options:
     no_cache: 'TRUE'
 
-# Select Element
+# Search
+
+rep.search:
+  path: 'rep/list/{elementtype}/{keyword}/{language}/{page}/{pagesize}'
+  defaults:
+    _form: '\Drupal\rep\Form\REPListForm'
+    elementtype: 'datafile'
+    keyword: '_'
+    language: '_'
+    page: '1'
+    pagesize: '12'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
+
+# List/Select Element
+
+rep.list_element:
+  path: 'rep/list/{elementtype}/{keyword}/{page}/{pagesize}'
+  defaults:
+    _form: '\Drupal\rep\Form\REPListForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
 
 rep.select_element:
   path: 'rep/select/{elementtype}/{page}/{pagesize}'

@@ -50,8 +50,7 @@
         $full_uri = Utils::plainUri($uri_decode);
         $api = \Drupal::service('rep.api_connector');
         $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
-        //dpm($this->getElement());
-
+        
         // RETRIEVE CONFIGURATION FROM CURRENT IP
         if ($this->getElement() != NULL) {
             $hascoType = $this->getElement()->hascoTypeUri;

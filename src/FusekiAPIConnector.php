@@ -91,7 +91,6 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    //dpm($endpoint);
     return $this->perform_http_request($method, $api_url.$endpoint, $data);   
   }
 
@@ -103,7 +102,6 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    //dpm($api_url.$endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
@@ -118,7 +116,6 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    //dpm($endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
@@ -617,6 +614,46 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   PERSON  
+   */
+
+   public function personAdd($personJson) {
+    $endpoint = "/hascoapi/api/person/create/".rawurlencode($personJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function personDel($personUri) {
+    $endpoint = "/hascoapi/api/person/delete/".rawurlencode($personUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   ORGANIZATION  
+   */
+
+   public function organizationAdd($organizationJson) {
+    $endpoint = "/hascoapi/api/organization/create/".rawurlencode($organizationJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function organizationDel($organizationUri) {
+    $endpoint = "/hascoapi/api/organization/delete/".rawurlencode($organizationUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
    *   REPOSITORY
    */
 
@@ -768,8 +805,6 @@ class FusekiAPIConnector {
 
   public function uploadTemplate($concept,$template) {
 
-    //dpm($sdd);
-    
     // RETRIEVE FILE CONTENT FROM FID
     $file_entity = \Drupal\file\Entity\File::load($template->dataFile->id);
     if ($file_entity == NULL) {

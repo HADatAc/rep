@@ -31,7 +31,6 @@ class ListDerivation {
     } else {
       foreach ($detectors as $detector) {
         if ($detector != NULL) {
-          //dpm($detector);
           $content = "(EMPTY)";
           $generation = "(UNKNOWN)";
           if ($detector->hasContent != NULL && $detector->hasContent != "") {

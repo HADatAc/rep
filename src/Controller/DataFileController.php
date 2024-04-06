@@ -52,7 +52,6 @@ class DataFileController extends ControllerBase {
         $log_content = str_replace("<br>", "\n", $dataFile->log);
       }  
     }
-    //dpm($dataFile);
 
     $form['log'] = [
       '#type' => 'textarea',
