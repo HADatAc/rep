@@ -116,6 +116,12 @@ class REPSelectForm extends FormBase {
       '#type' => 'item',
       '#title' => $this->t('<h4>' . $this->plural_class_name . ' maintained by <font color="DarkGreen">' . $this->manager_name . ' (' . $this->manager_email . ')</font></h4>'),
     ];
+    $form['delete_selected_element'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
+      '#name' => 'delete_element',
+      '#attributes' => ['onclick' => 'if(!confirm("Really Delete?")){return false;}'],
+    ];
     $form['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
@@ -195,12 +201,19 @@ class REPSelectForm extends FormBase {
         \Drupal::messenger()->addMessage(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));      
       } else {
         $api = \Drupal::service('rep.api_connector');
+        $success = TRUE;
         foreach($rows as $uri) {
-          if ($this->element_type == 'sdd') {
-            $api->sddDel($uri);
+          if ($this->element_type == 'datafile') {
+            $resp = $api->parseObjectResponse($api->datafileDel($uri),'datafileDel');
+            if ($resp == NULL) {
+              \Drupal::messenger()->addMessage(t("Failed to delete the following " . $this->$single_class_name . ": " . $uri));      
+              $success = FALSE;
+            }
           } 
         }
-        \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));      
+        if ($success) {
+          \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));      
+        }
       }
     }  
 

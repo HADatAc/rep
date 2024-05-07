@@ -42,11 +42,16 @@ class DataFile {
         $filename = $element->filename;
       }
       $id = ' ';
+      $downloadLink = '';
+      $download = ' ';
       if ($element->id != NULL && $element->id != '') {
         $id = $element->id;
         $file_entity = \Drupal\file\Entity\File::load($element->id);
         if ($file_entity != NULL) {
           $id .= " (available)";
+          $downloadLink = $root_url.REPGUI::DATAFILE_DOWNLOAD.base64_encode($element->uri);
+          $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm" role="button" disabled>Get It</a>';
+          //dpm($file_entity);
         } else {
           $id .= " (unavailable)";
         }
@@ -72,10 +77,8 @@ class DataFile {
                'data-dialog-type="modal" '.
                'data-dialog-options=\'{"width": 700}\' role="button">Read</a>';
       } else {
-        $log = '<a href="#link" class="btn btn-primary btn-sm" role="button">Read</a>';
+        $log = ' ';
       }
-      $downloadLink = $root_url.REPGUI::DATAFILE_DOWNLOAD.base64_encode($element->uri);
-      $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm" role="button" disabled>Get It</a>';
       $encodedUri = rawurlencode(rawurlencode($element->uri));
       $output[$element->uri] = [
         'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),     

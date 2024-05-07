@@ -7,6 +7,7 @@
     const HASCO                   = "http://hadatac.org/ont/hasco/";
 
     const DATAFILE                = HASCO::HASCO . "DataFile";
+    const KNOWLEDGE_GRAPH         = HASCO::HASCO . "KnowledgeGraph";
     const MANAGED_ONTOLOGY        = HASCO::HASCO . "ManagedOntology";
     const ONTOLOGY                = HASCO::HASCO . "Ontology";
     const SDD                     = HASCO::HASCO . "SDD";

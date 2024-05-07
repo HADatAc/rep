@@ -654,6 +654,26 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   KGR
+   */
+
+   public function kgrAdd($kgrJson) {
+    $endpoint = "/hascoapi/api/kgr/create/".rawurlencode($kgrJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function kgrDel($kgrUri) {
+    $endpoint = "/hascoapi/api/kgr/delete/".rawurlencode($kgrUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  /**
    *   REPOSITORY
    */
 
