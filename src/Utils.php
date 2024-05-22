@@ -107,6 +107,9 @@ class Utils {
       case "virtualcolumn":
         $short = Constant::PREFIX_VIRTUAL_COLUMN;
         break;
+      case "place":
+        $short = Constant::PREFIX_PLACE;
+        break;
       case "organization":
         $short = Constant::PREFIX_ORGANIZATION;
         break;
@@ -256,7 +259,7 @@ class Utils {
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
-    $meugrafo = ['kgr','organization','person'];
+    $meugrafo = ['kgr','place','organization','person'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {

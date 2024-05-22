@@ -614,19 +614,19 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   PERSON  
+   *   PLACE  
    */
 
-   public function personAdd($personJson) {
-    $endpoint = "/hascoapi/api/person/create/".rawurlencode($personJson);
+   public function placeAdd($placeJson) {
+    $endpoint = "/hascoapi/api/place/create/".rawurlencode($placeJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function personDel($personUri) {
-    $endpoint = "/hascoapi/api/person/delete/".rawurlencode($personUri);
+  public function placeDel($placeUri) {
+    $endpoint = "/hascoapi/api/place/delete/".rawurlencode($placeUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -647,6 +647,26 @@ class FusekiAPIConnector {
 
   public function organizationDel($organizationUri) {
     $endpoint = "/hascoapi/api/organization/delete/".rawurlencode($organizationUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   PERSON  
+   */
+
+   public function personAdd($personJson) {
+    $endpoint = "/hascoapi/api/person/create/".rawurlencode($personJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function personDel($personUri) {
+    $endpoint = "/hascoapi/api/person/delete/".rawurlencode($personUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
