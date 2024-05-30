@@ -18,6 +18,7 @@ class Constant {
   const PREFIX_ORGANIZATION               = "OR";
   const PREFIX_PERSON                     = "PS";
   const PREFIX_PLACE                      = "PL";
+  const PREFIX_POSTAL_ADDRESS             = "PA";
   const PREFIX_RESPONSE_OPTION            = "RO";
   const PREFIX_SEMANTIC_VARIABLE          = "SV";
   const PREFIX_SDD                        = "SD";

@@ -5,6 +5,7 @@
  use Drupal\Core\Form\FormBase;
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\rep\Utils;
+ use Drupal\rep\Entity\GenericObject;
  use Drupal\rep\Vocabulary\REPGUI;
  use Drupal\rep\Vocabulary\VSTOI;
 
@@ -12,7 +13,7 @@
 
     protected $element;
 
-    protected $associates;
+//    protected $associates;
   
     public function getElement() {
       return $this->element;
@@ -22,13 +23,13 @@
       return $this->element = $object; 
     }
   
-    public function getAssociates() {
-      return $this->associates;
-    }
+//    public function getAssociates() {
+//      return $this->associates;
+//    }
   
-    public function setAssociates($obj) {
-      return $this->associates = $obj; 
-    }
+//    public function setAssociates($obj) {
+//      return $this->associates = $obj; 
+//    }
   
     /**
      * {@inheritdoc}
@@ -56,6 +57,8 @@
         if ($finalUri != NULL) {
           $this->setElement($api->parseObjectResponse($finalUri,'getUri'));
           if ($this->getElement() != NULL) {
+            $objectProperties = GenericObject::inspectObject($this->getElement());
+            //dpm($this->getElement());
             //var_dump($this->getElement());
             //if ($this->getElement()->hascoTypeUri == VSTOI::INSTRUMENT) {
             //  $this->setAssociates($api->parseObjectResponse($api->containerslotList($this->getElement()->uri),'containerslotList'));
@@ -68,17 +71,27 @@
           '#title' => '<h3>Associated Elements</h3>',
         ];
 
-        if ($this->getAssociates() == NULL || sizeof($this->getAssociates()) <= 0) {
-
-          $form['associates_table'] = [
-            '#type' => 'item',
-            '#title' => t('<ul><li>NONE</li></ul>'),
+        foreach ($objectProperties['objects'] as $propertyName => $propertyValue) {
+          // Add a textfield element for each property
+          $form[$propertyName] = [
+            '#type' => 'textfield',
+            '#title' => $this->t($propertyName),
+            '#default_value' => $propertyValue->label, // Set default value
+            '#disabled' => TRUE,
           ];
+        }
+        
+      //if ($this->getAssociates() == NULL || sizeof($this->getAssociates()) <= 0) {
 
-        } else {
+        //  $form['associates_table'] = [
+        //    '#type' => 'item',
+        //    '#title' => t('<ul><li>NONE</li></ul>'),
+        //  ];
+
+        //} else {
           
-          $header = ContainerSlot::generateHeader();
-          $output = ContainerSlot::generateOutput($this->getAssociates());    
+          //$header = ContainerSlot::generateHeader();
+          //$output = ContainerSlot::generateOutput($this->getAssociates());    
 
           //$form['associates_detectors_header'] = [
           //  '#type' => 'item',
@@ -86,14 +99,14 @@
           //];
   
             // PUT FORM TOGETHER
-          $form['associates_table'] = [
-            '#type' => 'table',
-            '#header' => $header,
-            '#rows' => $output,
-            '#empty' => t('No associated items'),
-          ];
+        //  $form['associates_table'] = [
+        //    '#type' => 'table',
+        //    '#header' => $header,
+        //    '#rows' => $output,
+        //    '#empty' => t('No associated items'),
+        //  ];
 
-        }
+        //}
     
         return $form;        
 

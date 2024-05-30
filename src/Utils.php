@@ -116,6 +116,9 @@ class Utils {
       case "person":
         $short = Constant::PREFIX_PERSON;
         break;
+      case "postaladdress":
+        $short = Constant::PREFIX_POSTAL_ADDRESS;
+        break;
       default:
         $short = NULL;
     }
@@ -259,7 +262,7 @@ class Utils {
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
-    $meugrafo = ['kgr','place','organization','person'];
+    $meugrafo = ['kgr','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {

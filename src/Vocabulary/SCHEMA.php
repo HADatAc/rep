@@ -13,6 +13,7 @@
     const CITY                              = SCHEMA::SCHEMA . "City";
     const COUNTRY                           = SCHEMA::SCHEMA . "Country";
     const PLACE                             = SCHEMA::SCHEMA . "Place";
+    const POSTAL_ADDRESS                    = SCHEMA::SCHEMA . "PostalAddress";
     const STATE                             = SCHEMA::SCHEMA . "State";
 
     /*

@@ -674,6 +674,26 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   POSTAL ADDRESS  
+   */
+
+   public function postalAddressAdd($postalAddressJson) {
+    $endpoint = "/hascoapi/api/postaladdress/create/".rawurlencode($postalAddressJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function postalAddressDel($postalAddressUri) {
+    $endpoint = "/hascoapi/api/postaladdress/delete/".rawurlencode($postalAddressUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
    *   KGR
    */
 

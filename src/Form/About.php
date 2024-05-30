@@ -33,7 +33,7 @@ class About extends FormBase {
         
         $form['rep_home'] = [
             '#type' => 'item',
-            '#title' => '<h3>About this website</h3>' . 
+            '#title' => '<h2>About this website</h2>' . 
                 'This is an instance of the <a href="http://hadatac.org/rep/">Semantic Instrument Repository (rep)</a> environment ' . 
                 'developed by <a href="http://hadatac.org/">HADatAc.org</a> community.<br>',
         ];
@@ -43,16 +43,34 @@ class About extends FormBase {
             '#title' => 'This repository currently hosts a knowledge graph about the following:<br>',
         ];
 
-        $totals = '<ul>';
+        $totals = '<h3>Instrument Elements</h3>';
+        $totals .= '<ul>';
         $totals .=  '<li> ' . About::total('instrument') . ' <a href="'.Utils::selectBackUrl('instrument')->toString().'">instrument(s)</a></li>'; 
         $totals .=  '<li> ' . About::total('detectorstem') . ' <a href="'.Utils::selectBackUrl('detectorstem')->toString().'">detector stem(s)</a></li>';
         $totals .=  '<li> ' . About::total('detector') . ' <a href="'.Utils::selectBackUrl('detector')->toString().'">detector(s)</a></li>';
         $totals .=  '<li> ' . About::total('codebook') . ' <a href="'.Utils::selectBackUrl('codebook')->toString().'">codebook(s)</a></li>';
         $totals .=  '<li> ' . About::total('responseoption') . ' <a href="'.Utils::selectBackUrl('responseoption')->toString().'">response option(s)</a></li>';
+        $totals .= '</ul>';
+        $totals .= '<h3>Semantic Elements</h3>';
+        $totals .= '<ul>';
         $totals .=  '<li> ' . About::total('semanticvariable') . ' <a href="'.Utils::selectBackUrl('semanticvariable')->toString().'">semantic variable(s)</a></li>'; 
         $totals .=  '<li> ' . About::total('entity') . ' <a href="'.Utils::selectBackUrl('entity')->toString().'">entity(ies)</a></li>';
         $totals .=  '<li> ' . About::total('attribute') . ' <a href="'.Utils::selectBackUrl('attribute')->toString().'">attribute(s)</a></li>';
         $totals .=  '<li> ' . About::total('unit') . ' <a href="'.Utils::selectBackUrl('unit')->toString().'">unit(s)</a></li>';
+        $totals .= '</ul>';
+        $totals .= '<h3>Study Elements</h3>';
+        $totals .= '<ul>';
+        $totals .=  '<li> ' . About::total('study') . ' <a href="'.Utils::selectBackUrl('study')->toString().'">study(ies)</a></li>'; 
+        $totals .=  '<li> ' . About::total('studyrole') . ' <a href="'.Utils::selectBackUrl('studyrole')->toString().'">studyrole(s)</a></li>';
+        $totals .=  '<li> ' . About::total('studyobjectcollection') . ' <a href="'.Utils::selectBackUrl('studyobjectcollection')->toString().'">studyobjectcollection(s)</a></li>'; 
+        $totals .=  '<li> ' . About::total('studyobject') . ' <a href="'.Utils::selectBackUrl('studyobject')->toString().'">studyobject(s)</a></li>';
+        $totals .= '</ul>';
+        $totals .= '<h3>Social/Organizational Elements</h3>';
+        $totals .= '<ul>';
+        $totals .=  '<li> ' . About::total('place') . ' <a href="'.Utils::selectBackUrl('place')->toString().'">place(s)</a></li>';
+        $totals .=  '<li> ' . About::total('organization') . ' <a href="'.Utils::selectBackUrl('organization')->toString().'">organization(s)</a></li>';
+        $totals .=  '<li> ' . About::total('person') . ' <a href="'.Utils::selectBackUrl('person')->toString().'">person(s)</a></li>';
+        $totals .=  '<li> ' . About::total('postaladdress') . ' <a href="'.Utils::selectBackUrl('postaladdress')->toString().'">postaladdress(es)</a></li>';
         $totals .= '</ul>';
         $form['rep_content_totals'] = [
             '#type' => 'item',

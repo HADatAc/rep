@@ -13,6 +13,7 @@
  use Drupal\rep\ListUsage;
  use Drupal\rep\Utils;
  use Drupal\rep\Entity\Tables;
+ use Drupal\rep\Entity\GenericObject;
  use Drupal\rep\Vocabulary\REPGUI;
  use Drupal\rep\Vocabulary\VSTOI;
 
@@ -50,7 +51,16 @@
         $full_uri = Utils::plainUri($uri_decode);
         $api = \Drupal::service('rep.api_connector');
         $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
+
+        $objectProperties = GenericObject::inspectObject($this->getElement());
+
+        //if ($objectProperties !== null) {
+        //    dpm($objectProperties);
+        //} else {
+        //    dpm("The provided variable is not an object.");
+        //}
         
+
         // RETRIEVE CONFIGURATION FROM CURRENT IP
         if ($this->getElement() != NULL) {
             $hascoType = $this->getElement()->hascoTypeUri;
@@ -72,54 +82,19 @@
 
         $form['header1'] = [
             '#type' => 'item',
-            '#title' => '<h3>Core Properties</h3>',
+            '#title' => '<h3>Data Properties</h3>',
         ];
 
-        if ($hascoType == VSTOI::INSTRUMENT) {
-            $form['element_label'] = [
-                '#type' => 'item',
-                '#title' => '<b>Short Name</b>: ' . $shortName,
+        foreach ($objectProperties['literals'] as $propertyName => $propertyValue) {
+            // Add a textfield element for each property
+            $form[$propertyName] = [
+              '#type' => 'textfield',
+              '#title' => $this->t($propertyName),
+              '#default_value' => $propertyValue, // Set default value
+              '#disabled' => TRUE,
             ];
-        }
-
-        if ($hascoType == VSTOI::INSTRUMENT || $hascoType == VSTOI::CODEBOOK) {
-            $form['element_name'] = [
-                '#type' => 'item',
-                '#title' => '<b>Full Name</b>: ' . $name,
-            ];
-        }
-
-        if ($hascoType == VSTOI::DETECTOR || $hascoType == VSTOI::RESPONSE_OPTION) {
-            $form['element_content'] = [
-                '#type' => 'item',
-                '#title' => '<b>Content</b>: ' . $this->getElement()->hasContent,
-            ];
-        }
-
-        if ($this->getElement() != NULL) {
-
-            $languages = $tables->getLanguages();
-            $lang = "";
-            if ($this->getElement()->hasLanguage != NULL && $this->getElement()->hasLanguage != "") {
-                $lang = $languages[$this->getElement()->hasLanguage];
-            }
-
-            $form['element_description'] = [
-                '#type' => 'item',
-                '#title' => '<b>Description</b>: ' . $this->getElement()->comment,
-            ];
-
-            $form['element_version'] = [
-                '#type' => 'item',
-                '#title' => '<b>Version</b>: ' . $this->getElement()->hasVersion,
-            ];
-
-            $form['element_language'] = [
-                '#type' => 'item',
-                '#title' => '<b>Language</b>: ' . $lang,
-            ];
-
-        }
+          }
+          
 
         $form['submit'] = [
             '#type' => 'submit',
