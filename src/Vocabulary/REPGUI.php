@@ -14,6 +14,8 @@
      */
     const SELECT_PAGE         = "/select/";
 
+    const PROPERTY_PAGE       = "/property/";
+
     /**
      *   Show the log page of a data file 
      */

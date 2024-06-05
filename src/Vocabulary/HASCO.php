@@ -13,6 +13,7 @@
     const SDD                     = HASCO::HASCO . "SDD";
     const SDD_ATTRIBUTE           = HASCO::HASCO . "SDDAttribute";
     const SDD_OBJECT              = HASCO::HASCO . "SDDObject";
+    const STD                     = HASCO::HASCO . "STD";
     const SEMANTIC_VARIABLE       = HASCO::HASCO . "SemanticVariable";
     const STUDY                   = HASCO::HASCO . "Study";
     const STUDY_OBJECT            = HASCO::HASCO . "StudyObject";

@@ -48,7 +48,7 @@ rep.search:
 rep.list_element:
   path: 'rep/list/{elementtype}/{keyword}/{page}/{pagesize}'
   defaults:
-    _form: '\Drupal\rep\Form\REPListForm'
+    _form: '\Drupal\rep\Form\REPInfiniteListForm'
   requirements:
     _permission: 'access content'
     _custom_access_check: 'TRUE'    

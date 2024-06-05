@@ -7,6 +7,19 @@ rep_js_css:
     - core/jquery
     - core/drupal
     - core/jquery.once
+infinitescroll:
+  version: 1.x
+  js:
+    js/infinitescroll.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupal.ajax
+scrollable_table:
+  version: 1.x
+  css:
+    theme:
+      css/scrollable_table.css: {}
 fontawesome5:
   version: 1.0
   css:

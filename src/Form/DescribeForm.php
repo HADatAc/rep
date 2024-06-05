@@ -54,6 +54,8 @@
 
         $objectProperties = GenericObject::inspectObject($this->getElement());
 
+        //($objectProperties);
+
         //if ($objectProperties !== null) {
         //    dpm($objectProperties);
         //} else {
@@ -87,12 +89,22 @@
 
         foreach ($objectProperties['literals'] as $propertyName => $propertyValue) {
             // Add a textfield element for each property
+            if ($propertyValue !== NULL && $propertyValue !== "") {
+                $prettyName = DescribeForm::prettyProperty($propertyName);
+                $form[$propertyName] = [
+                    '#type' => 'markup',
+                    '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
+                ];
+            }
+
+            /*
             $form[$propertyName] = [
               '#type' => 'textfield',
               '#title' => $this->t($propertyName),
               '#default_value' => $propertyValue, // Set default value
               '#disabled' => TRUE,
             ];
+            */
           }
           
 
@@ -102,8 +114,8 @@
             '#name' => 'back',
         ];
         $form['space'] = [
-            '#type' => 'item',
-            '#value' => $this->t('<br><br>'),
+            '#type' => 'markup',
+            '#markup' => $this->t("<br><br>"),
         ];
 
         return $form;
@@ -120,5 +132,19 @@
         $url = Url::fromRoute('rep.about');
         $form_state->setRedirectUrl($url);
     }
+
+    public static function prettyProperty($input) {
+        // Remove "has" from the string
+        $inputWithoutHas = str_replace('has', '', $input);
+        
+        // Add a space before each capital letter (excluding the first character)
+        $stringWithSpaces = preg_replace('/(?<!^)([A-Z])/', ' $1', $inputWithoutHas);
+    
+        // Capitalize the first term
+        $result = ucfirst($stringWithSpaces);
+        
+        return $result;
+      }
+  
 
  }

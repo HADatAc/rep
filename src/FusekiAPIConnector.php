@@ -633,6 +633,26 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
+  public function getContains($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/place/contains/".
+      rawurlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalContains($uri) {
+    $endpoint = "/hascoapi/api/place/contains/total/".
+      rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
   /**
    *   ORGANIZATION  
    */
@@ -651,6 +671,26 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getSubOrganizations($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/organization/suborganizations/".
+      urlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalSubOrganizations($uri) {
+    $endpoint = "/hascoapi/api/organization/suborganizations/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
   }
 
   /**
@@ -966,5 +1006,35 @@ class FusekiAPIConnector {
     return NULL; 
   }
 
+  /** 
+   *  If anything goes wrong, this method will return NULL and issue a Drupal error message forwarding the message provided by 
+   *  the HASCO API. 
+   */
+  public function parseTotalResponse($response, $methodCalled) {
+    if ($this->error != NULL) {
+      if ($this->error == 'CON') {
+        \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
+      } else {
+        \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
+      }
+      return NULL;
+    }
+    if ($response == NULL || $response == "") {
+        \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
+        return NULL;
+    }
+    $totalValue = -1;
+    $obj = json_decode($response);
+    if ($obj == NULL) {
+      \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
+      return NULL; 
+    }
+    if ($obj->isSuccessful) {
+      $totalStr = $obj->body;
+      $obj2 = json_decode($totalStr);
+      $totalValue = $obj2->total;
+    }
+    return $totalValue;
+  }
 
 }

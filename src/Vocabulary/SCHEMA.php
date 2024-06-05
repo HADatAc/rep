@@ -21,6 +21,9 @@
      */
 
     const HAS_URL                           = SCHEMA::SCHEMA . "url";
-
+    const CONTAINED_IN_PLACE                = SCHEMA::SCHEMA . "containedInPlace";
+    const CONTAINS_PLACE                    = SCHEMA::SCHEMA . "containsPlace";
+    const PARENT_ORGANIZATION               = SCHEMA::SCHEMA . "parentOrganization";
+    const SUB_ORGANIZATION                  = SCHEMA::SCHEMA . "subOrganization";
 
   }

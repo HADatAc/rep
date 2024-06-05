@@ -4,7 +4,10 @@ namespace Drupal\rep;
 
 use Drupal\Core\Url;
 use Drupal\rep\Entity\Tables;
+use Drupal\rep\Vocabulary\FOAF;
+use Drupal\rep\Vocabulary\HASCO;
 use Drupal\rep\Vocabulary\REPGUI;
+use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Constant;
 
 class Utils {
@@ -227,13 +230,6 @@ class Utils {
     return $uri;
   }
 
-  public static function repUriLink($uri) {
-    $root_url = \Drupal::request()->getBaseUrl();
-    $uriFinal = Utils::namespaceUri($uri);
-    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'">' . $uriFinal . '</a>';
-    return $link;
-  }
-
   public static function plainUri($uri) {
     if ($uri == NULL) {
       return NULL;
@@ -257,6 +253,20 @@ class Utils {
     return $uri;
   }
 
+  public static function repUriLink($uri) {
+    $root_url = \Drupal::request()->getBaseUrl();
+    $uriFinal = Utils::namespaceUri($uri);
+    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'">' . $uriFinal . '</a>';
+    return $link;
+  }
+
+  public static function link($label,$uri) {
+    $root_url = \Drupal::request()->getBaseUrl();
+    $uriFinal = Utils::namespaceUri($uri);
+    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'">' . $label . '</a>';
+    return $link;
+  }
+
   public static function elementTypeModule($elementtype) {
     $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
@@ -272,6 +282,18 @@ class Utils {
     } else if (in_array($elementtype,$std)) {
       return 'std';
     } else if (in_array($elementtype,$meugrafo)) {
+      return 'meugrafo';
+    } 
+    return NULL;
+  }
+
+  public static function elementModule($element) {
+    //dpm($element);
+    $std = [HASCO::STD,HASCO::STUDY,HASCO::STUDY_ROLE,HASCO::STUDY_OBJECT_COLLECTION,HASCO::STUDY_OBJECT, HASCO::VIRTUAL_COLUMN];
+    $meugrafo = [FOAF::PERSON, FOAF::ORGANIZATION, SCHEMA::PLACE, SCHEMA::POSTAL_ADDRESS];
+    if (in_array($element->hascoTypeUri,$std)) {
+      return 'std';
+    } else if (in_array($element->hascoTypeUri,$meugrafo)) {
       return 'meugrafo';
     } 
     return NULL;

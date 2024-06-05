@@ -108,6 +108,7 @@ class REPSelectForm extends FormBase {
     }
 
     // PUT FORM TOGETHER
+    $form['#attached']['library'][] = 'rep/scrollable_table';
     $form['page_title'] = [
       '#type' => 'item',
       '#title' => $this->t('<h3>Manage ' . $this->plural_class_name . '</h3>'),
@@ -122,7 +123,11 @@ class REPSelectForm extends FormBase {
       '#name' => 'delete_element',
       '#attributes' => ['onclick' => 'if(!confirm("Really Delete?")){return false;}'],
     ];
-    $form['element_table'] = [
+    $form['my_tableselect_wrapper'] = array(
+      '#type' => 'container',
+      '#attributes' => array('class' => array('my-tableselect-wrapper')),
+    );
+    $form['my_tableselect_wrapper']['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
       '#options' => $output,
