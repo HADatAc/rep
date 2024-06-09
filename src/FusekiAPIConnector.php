@@ -131,6 +131,14 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
+  public function uningestMT($metadataTemplateUri) {
+    $endpoint = "/hascoapi/api/uningest/mt/" . rawurlencode($metadataTemplateUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
   /**
    *   INSTRUMENTS
    */
