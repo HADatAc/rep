@@ -3,15 +3,17 @@
 namespace Drupal\rep;
 
 use Drupal\Core\Url;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\rep\Entity\Tables;
 use Drupal\rep\Vocabulary\FOAF;
 use Drupal\rep\Vocabulary\HASCO;
 use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Constant;
-
+  
 class Utils {
-
+  
   /**
    * Settings Variable.
    */
@@ -94,7 +96,9 @@ class Utils {
       case "datafile":
         $short = Constant::PREFIX_DATAFILE;
         break;
-      case "std":
+      case "dsg":
+        $short = Constant::PREFIX_DSG;
+        break;
       case "study":
         $short = Constant::PREFIX_STUDY;
         break;

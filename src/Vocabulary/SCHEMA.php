@@ -20,6 +20,7 @@
      *    PROPERTIES
      */
 
+    const HAS_ADDRESS                       = SCHEMA::SCHEMA . "address";
     const HAS_URL                           = SCHEMA::SCHEMA . "url";
     const CONTAINED_IN_PLACE                = SCHEMA::SCHEMA . "containedInPlace";
     const CONTAINS_PLACE                    = SCHEMA::SCHEMA . "containsPlace";

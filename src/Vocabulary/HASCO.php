@@ -6,6 +6,8 @@
 
     const HASCO                   = "http://hadatac.org/ont/hasco/";
 
+    // CLASSES
+
     const DATAFILE                = HASCO::HASCO . "DataFile";
     const KNOWLEDGE_GRAPH         = HASCO::HASCO . "KnowledgeGraph";
     const MANAGED_ONTOLOGY        = HASCO::HASCO . "ManagedOntology";
@@ -15,6 +17,7 @@
     const SDD_OBJECT              = HASCO::HASCO . "SDDObject";
     const STD                     = HASCO::HASCO . "STD";
     const SEMANTIC_VARIABLE       = HASCO::HASCO . "SemanticVariable";
+    const DSG                     = HASCO::HASCO . "DSG";
     const STUDY                   = HASCO::HASCO . "Study";
     const STUDY_OBJECT            = HASCO::HASCO . "StudyObject";
     const STUDY_OBJECT_COLLECTION = HASCO::HASCO . "StudyObjectCollection";
@@ -22,4 +25,7 @@
     const VALUE                   = HASCO::HASCO . "Value";
     const VIRTUAL_COLUMN          = HASCO::HASCO . "VirtualColumn";
 
+    // PROPERTIES
+
+    const IS_MEMBER_OF            = HASCO::HASCO . "isMemberOf";
   }

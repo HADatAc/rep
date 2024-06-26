@@ -490,6 +490,27 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   DSG
+   */
+
+   public function dsgAdd($dsgJson) {
+    $endpoint = "/hascoapi/api/dsg/create/".rawurlencode($dsgJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    //dpm($api_url.$endpoint);
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function dsgDel($dsgUri) {
+    $endpoint = "/hascoapi/api/dsg/delete/".rawurlencode($dsgUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
    *   STUDY
    */
 
@@ -507,6 +528,26 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getSOCs($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/study/socs/".
+      urlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalSOCs($uri) {
+    $endpoint = "/hascoapi/api/study/socs/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
   }
 
   /**
@@ -642,7 +683,7 @@ class FusekiAPIConnector {
   }
 
   public function getContains($uri, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/place/contains/".
+    $endpoint = "/hascoapi/api/place/contains/place/".
       rawurlencode($uri)."/".
       $pageSize."/".
       $offset;
@@ -653,7 +694,7 @@ class FusekiAPIConnector {
   }
 
   public function getTotalContains($uri) {
-    $endpoint = "/hascoapi/api/place/contains/total/".
+    $endpoint = "/hascoapi/api/place/contains/place/total/".
       rawurlencode($uri);
     $method = "GET";
     $api_url = $this->getApiUrl();
@@ -701,6 +742,26 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);  
   }
 
+  public function getAffiliations($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/organization/affiliations/".
+      urlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalAffiliations($uri) {
+    $endpoint = "/hascoapi/api/organization/affiliations/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
   /**
    *   PERSON  
    */
@@ -739,6 +800,48 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getContainsPostalAddress($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/place/contains/postaladdress/".
+      rawurlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalContainsPostalAddress($uri) {
+    $endpoint = "/hascoapi/api/place/contains/postaladdress/total/".
+      rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getContainsElement($uri, $elementtype, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/place/contains/element/".
+      rawurlencode($uri)."/".
+      $elementtype."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalContainsElement($uri, $elementtype) {
+    $endpoint = "/hascoapi/api/place/contains/element/total/".
+      rawurlencode($uri)."/".
+      $elementtype;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
   }
 
   /**

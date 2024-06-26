@@ -12,6 +12,7 @@ class Constant {
   const PREFIX_ANNOTATION_STEM            = "AS";
   const PREFIX_CODEBOOK                   = "CB";
   const PREFIX_DATAFILE                   = "DF";
+  const PREFIX_DESIGN                     = "DG";
   const PREFIX_DETECTOR_STEM              = "DS";
   const PREFIX_DETECTOR                   = "DT";
   const PREFIX_INSTRUMENT                 = "IN";
@@ -33,5 +34,7 @@ class Constant {
   const FILE_STATUS_PROCESSED             = "PROCESSED";
   const FILE_STATUS_WORKING               = "WORKING";
 
+  const TOT_PER_PAGE                      = 6;
+  const TOT_SOCS_PER_PAGE                 = 20;
 
 }
