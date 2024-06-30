@@ -54,6 +54,7 @@
           $this->setElement($api->parseObjectResponse($finalUri,'getUri'));
           if ($this->getElement() != NULL) {
             $objectProperties = GenericObject::inspectObject($this->getElement());
+            //dpm($objectProperties);
           }
         }
 

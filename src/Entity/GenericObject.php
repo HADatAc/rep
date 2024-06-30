@@ -92,7 +92,7 @@ class GenericObject {
     }
     if (is_object($propertyValue)) {
       $propertyMap['objects'][$propertyName] = $propertyValue;
-    } elseif ($propertyName === 'label' || $propertyName === 'typeLabel' || $propertyName === 'hascoTypeLabel') {
+    } elseif ($propertyName === 'label' || $propertyName === 'title' || $propertyName === 'typeLabel' || $propertyName === 'hascoTypeLabel') {
       $propertyMap['types'][$propertyName] = $propertyValue;
     } elseif ($propertyName === 'hasSIRManagerEmail' || $propertyName === 'typeNamespace' || $propertyName === 'uriNamespace') {
       $propertyMap['provenance'][$propertyName] = $propertyValue;

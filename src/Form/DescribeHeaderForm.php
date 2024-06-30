@@ -67,8 +67,10 @@
         
         } else {
 
-          if ($this->getElement()->typeLabel === NULL && $this->getElement()->hascoTypeLabel === NULL) {
-            $type = "";
+          if (($this->getElement()->typeLabel === NULL || $this->getElement()->typeLabel === "") && 
+              ($this->getElement()->hascoTypeLabel === NULL || $this->getElement()->hascoTypeLabel === "")) {
+            $parts = explode('/', $this->getElement()->typeUri);
+            $type = end($parts);
           } else if ($this->getElement()->typeLabel === NULL) {
             $type = $this->getElement()->hascoTypeLabel;
           } else if ($this->getElement()->hascoTypeLabel === NULL) {
@@ -86,7 +88,7 @@
 
           $form['type'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<h3>" . $type . "</h3><br>"),
+            '#markup' => $this->t("<h3>" . ucfirst($type) . "</h3><br>"),
           ];
 
           $form['element_uri'] = [
@@ -98,14 +100,19 @@
             '#type' => 'markup',
             '#markup' => $this->t("<b>Type URI</b>: " . $this->getElement()->typeUri . "<br><br>"),
           ];
-        
+
+          if (isset($this->getElement()->title)) {
+            $form['element_title'] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>Title</b>: " . $this->getElement()->title . "<br><br>"),
+            ];
+          }
+
         }
     
         return $form;        
 
     }
-
-
 
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
