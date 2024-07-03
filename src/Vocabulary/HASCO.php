@@ -18,10 +18,14 @@
     const STD                     = HASCO::HASCO . "STD";
     const SEMANTIC_VARIABLE       = HASCO::HASCO . "SemanticVariable";
     const DSG                     = HASCO::HASCO . "DSG";
+    const SAMPLE_COLLECTION       = HASCO::HASCO . "SampleCollection";
+    const SPACE_COLLECTION        = HASCO::HASCO . "SpaceCollection";
     const STUDY                   = HASCO::HASCO . "Study";
     const STUDY_OBJECT            = HASCO::HASCO . "StudyObject";
     const STUDY_OBJECT_COLLECTION = HASCO::HASCO . "StudyObjectCollection";
     const STUDY_ROLE              = HASCO::HASCO . "StudyRole";
+    const SUBJECT_GROUP           = HASCO::HASCO . "SubjectGroup";
+    const TIME_COLLECTION         = HASCO::HASCO . "TimeCollection";
     const VALUE                   = HASCO::HASCO . "Value";
     const VIRTUAL_COLUMN          = HASCO::HASCO . "VirtualColumn";
 

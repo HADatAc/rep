@@ -64,6 +64,10 @@ class DataFile {
           $filestatus = '<b><font style="color:#008000;">'.Constant::FILE_STATUS_PROCESSED.'</font></b>';
         } else if ($element->fileStatus == Constant::FILE_STATUS_WORKING) {
           $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_WORKING.'</font></b>';
+        } else if ($element->fileStatus == Constant::FILE_STATUS_PROCESSED_STD) {
+          $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_PROCESSED_STD.'</font></b>';
+        } else if ($element->fileStatus == Constant::FILE_STATUS_WORKING_STD) {
+          $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_WORKING_STD.'</font></b>';
         } 
       };
       $lastTime = ' ';

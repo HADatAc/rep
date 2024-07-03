@@ -102,7 +102,14 @@
         '#title' => '<b>Manager Email</b>: ' . $manager,
     ];
 
-    if ($hascoType == VSTOI::INSTRUMENT || $hascoType == VSTOI::DETECTOR) {
+    if (isset($this->getElement()->namedGraph)) {
+      $form['named_graph'] = [
+        '#type' => 'item',
+        '#title' => '<b>Named Graph</b>: ' . $this->getElement()->namedGraph,
+      ];
+    }
+
+  if ($hascoType == VSTOI::INSTRUMENT || $hascoType == VSTOI::DETECTOR) {
 
       $derivations = $tables->getGenerationActivities();
       if ($this->getSource() != NULL) {

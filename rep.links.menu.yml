@@ -7,6 +7,16 @@ rep.top_level:
   weight: 100
   requirements:
     _permission: 'access content'
+
+rp.kg:
+  title: Knowledge Graph
+  description: Manage Knowledge Graph
+  route_name: rep.about
+  menu_name: main
+  weight: 10
+  requirements:
+    _permission: 'access content'
+    
     
 rep.uri_describe:
   title: Describe URI

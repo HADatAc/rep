@@ -530,7 +530,16 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function getSOCs($uri, $pageSize, $offset) {
+  public function getStudyVCs($uri) {
+    $endpoint = "/hascoapi/api/study/virtualcolumns/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getStudySOCs($uri, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/study/socs/".
       urlencode($uri)."/".
       $pageSize."/".
@@ -541,8 +550,26 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);  
   }
 
-  public function getTotalSOCs($uri) {
+  public function getTotalStudyVCs($uri) {
+    $endpoint = "/hascoapi/api/study/virtualcolumns/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalStudySOCs($uri) {
     $endpoint = "/hascoapi/api/study/socs/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalStudySOs($uri) {
+    $endpoint = "/hascoapi/api/study/studyobjects/total/".
       urlencode($uri);
     $method = "GET";
     $api_url = $this->getApiUrl();
@@ -1017,9 +1044,9 @@ class FusekiAPIConnector {
   public function uploadTemplate($concept,$template) {
 
     // RETRIEVE FILE CONTENT FROM FID
-    $file_entity = \Drupal\file\Entity\File::load($template->dataFile->id);
+    $file_entity = \Drupal\file\Entity\File::load($template->hasDataFile->id);
     if ($file_entity == NULL) {
-      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $template->dataFile->id . ']'));
+      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $template->hasDataFile->id . ']'));
       return FALSE;
     }
     $file_uri = $file_entity->getFileUri();

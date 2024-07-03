@@ -52,7 +52,7 @@
 
           $form['type'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<h3>(UNKNOWN TYPE)<h3><br>"),
+            '#markup' => $this->t("<h3>(UNKNOWN TYPE)</h3><br>"),
           ];
 
           $form['element_uri'] = [

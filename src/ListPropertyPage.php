@@ -33,7 +33,7 @@ class ListPropertyPage {
       $elements = $api->parseObjectResponse($api->getAffiliations($element->uri,$pagesize,$offset),'getAffiliations');
       return $elements;
     } else if ($element->uri != NULL && $property == HASCO::IS_MEMBER_OF) {
-      $elements = $api->parseObjectResponse($api->getSOCs($element->uri,$pagesize,$offset),'getSOCs');
+      $elements = $api->parseObjectResponse($api->getStudySOCs($element->uri,$pagesize,$offset),'getStudySOCs');
       return $elements;
     } else if ($element->uri != NULL && $property == SCHEMA::HAS_ADDRESS && $elementtype == NULL) {
       $elements = $api->parseObjectResponse($api->getContainsPostalAddress($element->uri,$pagesize,$offset),'getContainsPostalAddress');
@@ -57,7 +57,7 @@ class ListPropertyPage {
     } else if ($property == FOAF::MEMBER) {
       $response = $api->getTotalAffiliations($element->uri);
     } else if ($property == HASCO::IS_MEMBER_OF) {
-      $response = $api->getTotalSOCs($element->uri);
+      $response = $api->getTotalStudySOCs($element->uri);
     } else if ($property == SCHEMA::HAS_ADDRESS && $elementtype == NULL) {
       $response = $api->getTotalContainsPostalAddress($element->uri);
     } else if ($property == SCHEMA::HAS_ADDRESS && $elementtype != NULL) {

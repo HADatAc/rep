@@ -8,6 +8,7 @@
  use Drupal\rep\Form\Associates\AssocOrganization;
  use Drupal\rep\Form\Associates\AssocPlace;
  use Drupal\rep\Form\Associates\AssocStudy;
+ use Drupal\rep\Form\Associates\AssocStudyObjectCollection;
  use Drupal\rep\Entity\GenericObject;
  use Drupal\rep\Vocabulary\FOAF;
  use Drupal\rep\Vocabulary\HASCO;
@@ -55,6 +56,7 @@
           if ($this->getElement() != NULL) {
             $objectProperties = GenericObject::inspectObject($this->getElement());
             //dpm($objectProperties);
+            //dpm($this->getElement());
           }
         }
 
@@ -84,8 +86,9 @@
         } else if ($this->getElement()->hascoTypeUri === FOAF::ORGANIZATION) {
           AssocOrganization::process($this->getElement(), $form, $form_state);
         } else if ($this->getElement()->hascoTypeUri === HASCO::STUDY) {
-          //dpm($this->getElement());
           AssocStudy::process($this->getElement(), $form, $form_state);
+        } else if ($this->getElement()->hascoTypeUri === HASCO::STUDY_OBJECT_COLLECTION) {
+          AssocStudyObjectCollection::process($this->getElement(), $form, $form_state);
         }
 
         return $form;        

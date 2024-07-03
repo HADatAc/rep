@@ -32,9 +32,12 @@ class Constant {
 
   const FILE_STATUS_UNPROCESSED           = "UNPROCESSED";
   const FILE_STATUS_PROCESSED             = "PROCESSED";
+  const FILE_STATUS_PROCESSED_STD         = "PROCESSED_STD";
   const FILE_STATUS_WORKING               = "WORKING";
+  const FILE_STATUS_WORKING_STD           = "WORKING_STD";
 
   const TOT_PER_PAGE                      = 6;
-  const TOT_SOCS_PER_PAGE                 = 20;
+  const TOT_OBJS_PER_PAGE                 = 20;
+  const TOT_SOCS_PER_PAGE                 = 40;
 
 }

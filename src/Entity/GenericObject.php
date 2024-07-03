@@ -96,7 +96,7 @@ class GenericObject {
       $propertyMap['types'][$propertyName] = $propertyValue;
     } elseif ($propertyName === 'hasSIRManagerEmail' || $propertyName === 'typeNamespace' || $propertyName === 'uriNamespace') {
       $propertyMap['provenance'][$propertyName] = $propertyValue;
-    } elseif ($propertyName === 'uri' || $propertyName === 'typeUri' || $propertyName === 'hascoTypeUri') {
+    } elseif ($propertyName === 'uri' || $propertyName === 'typeUri' || $propertyName === 'hascoTypeUri' || $propertyName === 'namedGraph') {
       $propertyMap['hascoUris'][$propertyName] = $propertyValue;
     } elseif (is_string($propertyValue) && GenericObject::isUri($propertyValue) && $propertyName !== 'hasIdentifier') {
       $propertyMap['uris'][$propertyName] = $propertyValue;
