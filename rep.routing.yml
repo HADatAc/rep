@@ -65,6 +65,43 @@ rep.select_element:
   options:
     no_cache: 'TRUE'
     
+rep.select_mt_element:
+  path: 'rep/select/mt/{elementtype}/{page}/{pagesize}/{studyuri}'
+  defaults:
+    _form: '\Drupal\rep\Form\REPSelectMTForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
+
+# MT CRUD options
+
+rep.add_mt:
+  path: 'rep/manage/addmt/{elementtype}/{studyuri}'
+  defaults:
+    _form: '\Drupal\rep\Form\AddMTForm'
+    # _title: 'Add Metadata Template'    
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
+    parameters:
+      studyuri:
+        type: string
+        default: null
+
+rep.edit_mt:
+  path: 'std/manage/editmt/{elementtype}/{elementuri}'
+  defaults:
+    _form: '\Drupal\rep\Form\EditMTForm'
+    # _title: 'Edit Metadata Template'    
+  requirements:
+    _permission: 'access content'  
+    _custom_access_check: 'TRUE'      
+  options:
+    no_cache: 'TRUE'
 
 # Data File
 

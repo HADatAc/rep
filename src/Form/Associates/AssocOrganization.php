@@ -3,6 +3,7 @@
 namespace Drupal\rep\Form\Associates;
 
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\rep\Vocabulary\FOAF;
 use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\ListPropertyPage;

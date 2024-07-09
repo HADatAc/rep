@@ -9,9 +9,12 @@
     // CLASSES
 
     const DATAFILE                = HASCO::HASCO . "DataFile";
+    const DATA_ACQUISITION        = HASCO::HASCO . "DataAcquisition";
     const KNOWLEDGE_GRAPH         = HASCO::HASCO . "KnowledgeGraph";
     const MANAGED_ONTOLOGY        = HASCO::HASCO . "ManagedOntology";
     const ONTOLOGY                = HASCO::HASCO . "Ontology";
+    const INS                     = HASCO::HASCO . "INS";
+    const DD                      = HASCO::HASCO . "DD";
     const SDD                     = HASCO::HASCO . "SDD";
     const SDD_ATTRIBUTE           = HASCO::HASCO . "SDDAttribute";
     const SDD_OBJECT              = HASCO::HASCO . "SDDObject";

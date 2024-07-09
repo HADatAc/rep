@@ -14,6 +14,8 @@
      */
     const SELECT_PAGE          = "/select/";
 
+    const SELECT_PAGE_BYSTUDY  = "/selectbystudy/";
+
     const PROPERTY_PAGE        = "/property/";
 
     /**

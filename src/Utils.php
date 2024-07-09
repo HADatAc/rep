@@ -48,18 +48,11 @@ class Utils {
     return NULL;
   }
 
-  /**
-   * 
-   *  Generates a new URI for a given $element_type
-   * 
-   * @var string
-   * 
-   */
-  public static function uriGen($element_type) {
-    if ($element_type == NULL) {
+  public static function elementPrefix($elementType) {
+    if ($elementType == NULL) {
       return NULL;
     }
-    switch ($element_type) {
+    switch ($elementType) {
       case "instrument":
         $short = Constant::PREFIX_INSTRUMENT;
         break;
@@ -129,9 +122,21 @@ class Utils {
       default:
         $short = NULL;
     }
-    if ($short == NULL) {
+    return $short;
+  }
+
+  /**
+   * 
+   *  Generates a new URI for a given $elementType
+   * 
+   * @var string
+   * 
+   */
+  public static function uriGen($elementType) {
+    if ($elementType == NULL) {
       return NULL;
     }
+    $short = Utils::elementPrefix($elementType);
     $repoUri = Utils::configRepositoryURI();
     if ($repoUri == NULL) {
       return NULL;

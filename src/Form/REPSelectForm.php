@@ -232,4 +232,17 @@ class REPSelectForm extends FormBase {
 
   }
   
+  /**
+   * {@inheritdoc}
+   */   
+  public static function backSelect($elementType) {
+    $url = Url::fromRoute('rep.select_element');
+    $url->setRouteParameter('elementtype', $elementType);
+    $url->setRouteParameter('page', 0);
+    $url->setRouteParameter('pagesize', 12);
+    return $url;
+  }
+  
+
+
 }

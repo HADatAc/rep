@@ -131,12 +131,61 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
+  public function listByManagerEmailByStudy($studyuri, $elementType, $manageremail, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremailbystudy/".
+      rawurlencode($studyuri)."/".
+      $manageremail."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
+  public function listSizeByManagerEmailByStudy($studyuri, $elementType, $manageremail, ) {
+    $endpoint = "/hascoapi/api/".
+      $elementType . 
+      "/manageremailbystudy/total/" . 
+      $studyuri."/".
+      $manageremail;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
   public function uningestMT($metadataTemplateUri) {
     $endpoint = "/hascoapi/api/uningest/mt/" . rawurlencode($metadataTemplateUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function elementAdd($elementType, $elementJson) {
+    $endpoint = "/hascoapi/api/" . 
+      $elementType . 
+      "/create/".
+      rawurlencode($elementJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function elementDel($elementType, $elementUri) {
+    $endpoint = "/hascoapi/api/" . 
+      $elementType . 
+      "/delete/" . 
+      rawurlencode($elementUri);    
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
   /**
@@ -450,26 +499,6 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   SDD
-   */
-
-   public function sddAdd($sddJson) {
-    $endpoint = "/hascoapi/api/sdd/create/".rawurlencode($sddJson);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function sddDel($sddUri) {
-    $endpoint = "/hascoapi/api/sdd/delete/".rawurlencode($sddUri);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
-  /**
    *   DATAFILE
    */
 
@@ -487,27 +516,6 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
-  /**
-   *   DSG
-   */
-
-   public function dsgAdd($dsgJson) {
-    $endpoint = "/hascoapi/api/dsg/create/".rawurlencode($dsgJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    //dpm($api_url.$endpoint);
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function dsgDel($dsgUri) {
-    $endpoint = "/hascoapi/api/dsg/delete/".rawurlencode($dsgUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
   /**
@@ -869,26 +877,6 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  /**
-   *   KGR
-   */
-
-   public function kgrAdd($kgrJson) {
-    $endpoint = "/hascoapi/api/kgr/create/".rawurlencode($kgrJson);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function kgrDel($kgrUri) {
-    $endpoint = "/hascoapi/api/kgr/delete/".rawurlencode($kgrUri);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
   /**
