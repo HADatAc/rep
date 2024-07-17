@@ -4,6 +4,8 @@ namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Drupal\rep\Utils;
 use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\HASCO;
@@ -26,7 +28,7 @@ class AddMTForm extends FormBase {
   protected $studyUri;
   
   protected $study;
-  
+
   public function getElementType() {
     return $this->elementType;
   }
@@ -70,9 +72,7 @@ class AddMTForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $fixstd=NULL, $studyuri = NULL) {
-
-    // dpm('fixstd='.$fixstd);
+  public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $studyuri = NULL, $fixstd = NULL) {
 
     $api = \Drupal::service('rep.api_connector');
 
@@ -86,7 +86,9 @@ class AddMTForm extends FormBase {
         $study = $api->parseObjectResponse($api->getUri($this->getStudyUri()),'getUri');
         if ($study == NULL) {
           \Drupal::messenger()->addMessage(t("Failed to retrieve Study."));
-          $form_state->setRedirectUrl(REPSelectMTForm::backSelect($this->getElementType(),'none'));
+          $response = new RedirectResponse($this->backUrl['rep.add_mt']);
+          $response->send();
+          return;
         } else {
           $this->setStudy($study);
         }
@@ -96,8 +98,11 @@ class AddMTForm extends FormBase {
     // HANDLE ELEMENT TYPE
     if ($elementtype == NULL || $elementtype == '') {
       \Drupal::messenger()->addError(t("Metadata Template type cannot be empty."));
-      $form_state->setRedirectUrl(REPSelectMTForm::backSelect($this->getElementType(),$this->getStudyUri()));
+      $response = new RedirectResponse($this->backUrl['rep.add_mt']);
+      $response->send();
+      return;
     }
+
     if ($elementtype == 'dsg') {
       $this->setElementName('DSG');
       $this->setElementTypeUri(HASCO::DSG);
@@ -118,7 +123,7 @@ class AddMTForm extends FormBase {
       $this->setElementTypeUri(HASCO::KGR);
     } else {
       \Drupal::messenger()->addError(t("<b>".$elementtype . "</b> is not a valid Metadata Template type."));
-      $form_state->setRedirectUrl(REPSelectMTForm::backSelect($this->getElementtype(),$this->getStudyUri()));
+      self::backUrl();
     }
 
     $this->setElementType($elementtype);
@@ -225,7 +230,7 @@ class AddMTForm extends FormBase {
     $button_name = $triggering_element['#name'];
 
     if ($button_name === 'back') {
-      $form_state->setRedirectUrl(REPSelectMTForm::backSelect($this->getElementType(),$this->getStudyUri()));
+      self::backUrl();
       return;
     } 
 
@@ -249,11 +254,14 @@ class AddMTForm extends FormBase {
       $newMTUri = str_replace("DF",Utils::elementPrefix($this->getElementType()),$newDataFileUri);
       $mtJSON = '{"uri":"'. $newMTUri .'",'.
           '"typeUri":"'.$this->getElementTypeUri().'",'.
-          '"hascoTypeUri":"'.$this->getElementTypeUri().'",'.
-          '"label":"'.$form_state->getValue('mt_name').'",'.
+          '"hascoTypeUri":"'.$this->getElementTypeUri().'",';
+      if ($this->getElementType() == 'da') {
+        $mtJSON .= '"isMemberOfUri":"'.$this->getStudy()->uri.'",';
+      }
+      $mtJSON .= '"label":"'.$form_state->getValue('mt_name').'",'.
           '"hasDataFileUri":"'.$newDataFileUri.'",'.          
-          '"hasVersion":"'.$form_state->getValue('mt_version').'",';
-      $mtJSON .= '"comment":"'.$form_state->getValue('mt_comment').'",'.
+          '"hasVersion":"'.$form_state->getValue('mt_version').'",'.
+          '"comment":"'.$form_state->getValue('mt_comment').'",'.
           '"hasSIRManagerEmail":"'.$useremail.'"}';
 
       // Check if a file was uploaded.
@@ -276,16 +284,27 @@ class AddMTForm extends FormBase {
         } else {
           \Drupal::messenger()->addError(t("Something went wrong while adding " . $this->getElementName() . "."));      
         }
-        $form_state->setRedirectUrl(REPSelectMTForm::backSelect($this->getElementType(),$this->getStudyUri()));
+        self::backUrl();
         return;
       }
 
     } catch(\Exception $e) {
       \Drupal::messenger()->addError(t("An error occurred while adding an ". $this->getElementName() . ": ".$e->getMessage()));
-      $form_state->setRedirectUrl(REPSelectMTForm::backSelect($this->getElementType(),$this->getStudyUri()));
+      self::backUrl();
       return;
     }
 
   }
+
+  function backUrl() {
+    $uid = \Drupal::currentUser()->id();
+    $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.add_mt');
+    if ($previousUrl) {
+      $response = new RedirectResponse($previousUrl);
+      $response->send();
+      return;
+    }
+  }
+
 
 }

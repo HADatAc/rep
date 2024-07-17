@@ -10,6 +10,7 @@
  use Drupal\Core\Form\FormBase;
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\Core\Url;
+ use Symfony\Component\HttpFoundation\RedirectResponse;
  use Drupal\rep\ListUsage;
  use Drupal\rep\Utils;
  use Drupal\rep\Entity\Tables;
@@ -129,8 +130,10 @@
      * {@inheritdoc}
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
-        $url = Url::fromRoute('rep.about');
-        $form_state->setRedirectUrl($url);
+        //$url = Url::fromRoute('rep.about');
+        //$form_state->setRedirectUrl($url);
+        self::backUrl();
+        return;
     }
 
     public static function prettyProperty($input) {
@@ -146,5 +149,14 @@
         return $result;
       }
   
-
+      function backUrl() {
+        $uid = \Drupal::currentUser()->id();
+        $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.describe_element');
+        if ($previousUrl) {
+          $response = new RedirectResponse($previousUrl);
+          $response->send();
+          return;
+        }
+      }
+      
  }

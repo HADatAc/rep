@@ -34,6 +34,8 @@
 
     const MANAGE_STUDY         = "/std/manage/managestudy/";
 
+    const DELETE_STUDY         = "/std/manage/deletestudy/";
+
     const MANAGE_STUDY_OBJECTS = "/std/manage/studyobjects/";
 
   }

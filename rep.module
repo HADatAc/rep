@@ -1,6 +1,45 @@
 <?php
 
+use Drupal\Core\Database\Database;
 use Drupal\Core\Path\AliasStorageInterface;
+
+/**
+ * Implements hook_install().
+ */
+function rep_install() {
+  // Define the schema for user_tracking table.
+  $schema['user_tracking'] = [
+    'description' => 'Stores user session history',
+    'fields' => [
+      'uid' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => 'User ID',
+      ],
+      'previous_url' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Previous URL',
+      ],
+      'current_url' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Current URL',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => 'Timestamp when the entry was created',
+      ],
+    ],
+    'primary key' => ['uid', 'current_url'],
+  ];
+
+  // Create the table.
+  Database::getConnection()->schema()->createTable('user_tracking', $schema['user_tracking']);
+}
 
 /**
  * Implements hook_theme

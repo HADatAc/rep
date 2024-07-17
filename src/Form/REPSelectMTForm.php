@@ -243,19 +243,33 @@ class REPSelectMTForm extends FormBase {
 
     // ADD ELEMENT
     if ($button_name === 'add_element') {
-      $url = Url::fromRoute('rep.add_mt', ['elementtype' => $this->element_type, 'fixstd' => 'F', 'studyuri' => 'none']);
+      $uid = \Drupal::currentUser()->id();
+      $previousUrl = \Drupal::request()->getRequestUri();
+      Utils::trackingStoreUrls($uid, $previousUrl, 'rep.add_mt');
+      $url = Url::fromRoute('rep.add_mt', [
+        'elementtype' => $this->element_type, 
+        'studyuri' => 'none', 
+        'fixstd' => 'F',
+      ]);
       $form_state->setRedirectUrl($url);
     }  
 
     // EDIT ELEMENT
     if ($button_name === 'edit_element') {
       if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addMessage(t("Select the exact " . $this->single_class_name . " to be edited."));      
+        \Drupal::messenger()->addWarning(t("Select the exact " . $this->single_class_name . " to be edited."));      
       } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addMessage(t("No more than one " . $this->single_class_name . " can be edited at once."));      
+        \Drupal::messenger()->addWarning(t("No more than one " . $this->single_class_name . " can be edited at once."));      
       } else {
         $first = array_shift($rows);
-        $url = Url::fromRoute('rep.edit_mt', ['elementtype' => $this->element_type, 'elementuri' => base64_encode($first)]);
+        $uid = \Drupal::currentUser()->id();
+        $previousUrl = \Drupal::request()->getRequestUri();
+        Utils::trackingStoreUrls($uid, $previousUrl, 'rep.edit_mt');
+          $url = Url::fromRoute('rep.edit_mt', [
+          'elementtype' => $this->element_type, 
+          'elementuri' => base64_encode($first), 
+          'fixstd' => 'F',
+        ]);
         $form_state->setRedirectUrl($url);
       } 
     }
@@ -263,7 +277,7 @@ class REPSelectMTForm extends FormBase {
     // DELETE ELEMENT
     if ($button_name === 'delete_element') {
       if (sizeof($rows) <= 0) {
-        \Drupal::messenger()->addMessage(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));      
+        \Drupal::messenger()->addWarning(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));      
       } else {
         $api = \Drupal::service('rep.api_connector');
         foreach($rows as $uri) {
@@ -344,7 +358,7 @@ class REPSelectMTForm extends FormBase {
           \Drupal::messenger()->addError(t("Selected " . $this->single_class_name . " FAILED to be uningested."));      
           return;
         }
-        $newDSG->savePreservedMT();
+        $newMT->savePreservedMT($this->element_type);
         \Drupal::messenger()->addMessage(t("Selected " . $this->single_class_name . " has been uningested."));      
         return;
       }

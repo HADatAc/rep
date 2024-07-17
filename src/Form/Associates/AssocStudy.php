@@ -289,8 +289,8 @@ class AssocStudy {
               Utils::namespaceUri($soc->uri).'</a>'),         
             'soc_label' => $soc->label,     
             'soc_grounding_label' => $soc->groundingLabel,
-            'soc_reference' => $soc->socreference,     
-            'soc_role_label' => $soc->roleLabel,     
+            'soc_reference' => $soc->virtualColumn->socreference,     
+            'soc_role_label' => $soc->virtualColumn->label,     
             'soc_has_scope' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->hasScopeUri).'">'.
             Utils::namespaceUri($soc->hasScopeUri).'</a>'),     
             'soc_has_space_scopes' => $spaceScopes,     

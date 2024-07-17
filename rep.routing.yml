@@ -1,6 +1,8 @@
 
 # Landing page
 
+rep.home:
+  path: '/'
 
 # Main menu options 
 
@@ -43,6 +45,17 @@ rep.search:
   options:
     no_cache: 'TRUE'
 
+# BackUrl
+
+rep.back_url:
+  path: 'rep/backurl/{previousurl}/{currenturl}/{currentroute}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\BackUrlController::previous'
+    _title: "Record previous URL"
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+
 # List/Select Element
 
 rep.list_element:
@@ -78,7 +91,7 @@ rep.select_mt_element:
 # MT CRUD options
 
 rep.add_mt:
-  path: 'rep/manage/addmt/{elementtype}/{studyuri}'
+  path: 'rep/manage/addmt/{elementtype}/{studyuri}/{fixstd}'
   defaults:
     _form: '\Drupal\rep\Form\AddMTForm'
     # _title: 'Add Metadata Template'    
@@ -93,7 +106,7 @@ rep.add_mt:
         default: null
 
 rep.edit_mt:
-  path: 'std/manage/editmt/{elementtype}/{elementuri}'
+  path: 'std/manage/editmt/{elementtype}/{elementuri}/{fixstd}'
   defaults:
     _form: '\Drupal\rep\Form\EditMTForm'
     # _title: 'Edit Metadata Template'    

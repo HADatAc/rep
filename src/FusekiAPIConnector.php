@@ -558,6 +558,24 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);  
   }
 
+  public function getTotalStudyDAs($uri) {
+    $endpoint = "/hascoapi/api/study/dataacquisitions/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalStudyRoles($uri) {
+    $endpoint = "/hascoapi/api/study/studyroles/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
   public function getTotalStudyVCs($uri) {
     $endpoint = "/hascoapi/api/study/virtualcolumns/total/".
       urlencode($uri);

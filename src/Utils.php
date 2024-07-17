@@ -3,6 +3,7 @@
 namespace Drupal\rep;
 
 use Drupal\Core\Url;
+use Drupal\Core\Database\Database;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\rep\Entity\Tables;
@@ -28,6 +29,11 @@ class Utils {
   public static function configApiUrl() {   
     $config = \Drupal::config(Utils::CONFIGNAME);           
     return $config->get("api_url");
+  }
+
+  public static function baseUrl() {   
+    $request = \Drupal::request();
+    return $request->getScheme() . '://' . $request->getHost();
   }
 
   /**
@@ -306,6 +312,98 @@ class Utils {
       return 'meugrafo';
     } 
     return NULL;
+  }
+
+  public static function associativeArrayToString($array) {
+    if ($array == NULL) {
+      return array();
+    }
+    $str = implode(', ', array_map(
+      function ($key, $value) {
+          return $key . '=' . $value;
+      },
+      array_keys($array),
+      $array
+    ));    
+    return $str;
+  }
+
+  public static function stringToAssociativeArray($str) {
+    //dpm("Utils.stringToAssociativeArray: received=".$str);
+    $array = [];
+
+    // Check if input string is empty or null
+    if (empty($str)) {
+        return $array;
+    }
+
+    // Split the string by ', ' to get key-value pairs
+    $keyValuePairs = explode(', ', $str);
+    //dpm("Utils.stringToAssociativeArray: produced folllowing keyValuePairs");
+    //dpm($keyValuePairs);
+
+    foreach ($keyValuePairs as $pair) {
+        // Split each pair by '=' to separate key and value
+        $parts = explode('=', $pair, 2); // Limit to 2 to handle values containing '='
+
+        // Ensure both key and value are present
+        if (count($parts) === 2) {
+            $key = $parts[0];
+            $value = $parts[1];
+
+            // Decode the value if it's URL-encoded
+            //$value = urldecode($value);
+
+            // Assign key-value pair to the array
+            $array[$key] = $value;
+        }
+    }
+
+    return $array;
+  }
+
+  /**
+   * Stores the user ID, previous URL, and current URL in the custom database table.
+   */
+  public static function trackingStoreUrls($uid, $previous_url, $current_url) {
+    //dpm("Tracking Store URLs: currentIrl=[" . $current_url . "] previousUrl=[" . $previous_url . "]");
+    $connection = Database::getConnection();
+    $connection->merge('user_tracking')
+      ->key(['uid' => $uid, 'current_url' => $current_url])
+      ->fields([
+        'uid' => $uid,
+        'previous_url' => $previous_url,
+        'current_url' => $current_url,
+        'created' => time(),
+      ])
+      ->execute();
+  }
+
+  /**
+   * Retrieves the previous URL for the given user ID and removes the current URL entry.
+   */
+  public static function trackingGetPreviousUrl($uid, $current_url) {
+    //dpm("Tracking Previuous URLs: currentIrl=[" . $current_url . "] previousUrl=[" . $previous_url . "]");
+    $connection = Database::getConnection();
+    $query = $connection->select('user_tracking', 'ut')
+      ->fields('ut', ['previous_url'])
+      ->condition('uid', $uid)
+      ->condition('current_url', $current_url)
+      ->orderBy('created', 'DESC')
+      ->range(0, 1); // Get the most recent entry
+
+    $result = $query->execute()->fetchField();
+    //dpm("Tracking Previuous URLs: previousUrl=[" . $result . "]");
+    
+    // Remove the current_url entry
+    if ($result) {
+      $connection->delete('user_tracking')
+        ->condition('uid', $uid)
+        ->condition('current_url', $current_url)
+        ->execute();
+    }
+
+    return $result;
   }
 
 }
