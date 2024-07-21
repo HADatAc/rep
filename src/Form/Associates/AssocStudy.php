@@ -273,16 +273,22 @@ class AssocStudy {
     if ($socs != NULL) {
       foreach ($socs as $soc) {
         if ($soc->uri != NULL && $soc->uri != "") {
-          $linkObjects = $root_url.REPGUI::MANAGE_STUDY_OBJECTS.base64_encode($soc->uri);
+          $linkObjects = $root_url.REPGUI::VIEW_STUDY_OBJECTS.base64_encode($soc->uri);
           $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm" '.
             ' role="button">View Objects</a>';
           $spaceScopes = ' '; 
-          if ($soc->spaceScopeUris != array()) {
-            // DO SOMETHING WITH SPACE SCOPES
+          if ($soc->spaceScopes != NULL && !empty($soc->spaceScopes)) {
+            foreach ($soc->spaceScopes as $spaceSoc) {
+              $spaceScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($spaceSoc->uri).'">'.
+                $spaceSoc->label.'</a> ';
+            }         
           }
           $timeScopes = ' ';  
-          if ($soc->timeScopeUris != array()) {
-            // DO SOMETHING WITH TIME SCOPES
+          if ($soc->timeScopes != NULL && !empty($soc->timeScopes)) {
+            foreach ($soc->timeScopes as $timeSoc) {
+              $timeScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeSoc->uri).'">'.
+                $timeSoc->label.'</a> ';
+            }         
           }
           $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
@@ -292,9 +298,9 @@ class AssocStudy {
             'soc_reference' => $soc->virtualColumn->socreference,     
             'soc_role_label' => $soc->virtualColumn->label,     
             'soc_has_scope' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->hasScopeUri).'">'.
-            Utils::namespaceUri($soc->hasScopeUri).'</a>'),     
-            'soc_has_space_scopes' => $spaceScopes,     
-            'soc_has_time_scopes' => $timeScopes,     
+            $soc->label.'</a>'),     
+            'soc_has_space_scopes' => t($spaceScopes),     
+            'soc_has_time_scopes' => t($timeScopes),     
             'soc_operations' => t($button),     
           ];
         }
@@ -310,25 +316,24 @@ class AssocStudy {
     if ($socs != NULL) {
       foreach ($socs as $soc) {
         if ($soc->uri != NULL && $soc->uri != "") {
-          $linkObjects = $root_url.REPGUI::MANAGE_STUDY_OBJECTS.base64_encode($soc->uri);
+          $linkObjects = $root_url.REPGUI::VIEW_STUDY_OBJECTS.base64_encode($soc->uri);
           $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm" '.
             ' role="button">View Objects</a>';
-          $spaceScopes = ' '; 
-          if ($soc->spaceScopeUris != array()) {
-            // DO SOMETHING WITH SPACE SCOPES
-          }
-          $timeScopes = ' ';  
-          if ($soc->timeScopeUris != array()) {
-            // DO SOMETHING WITH TIME SCOPES
-          }
-          $output[$soc->uri] = [
+            $timeScopes = ' ';  
+            if ($soc->timeScopes != NULL && !empty($soc->timeScopes)) {
+              foreach ($soc->timeScopes as $timeSoc) {
+                $timeScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeSoc->uri).'">'.
+                  $timeSoc->label.'</a> ';
+              }         
+            }
+            $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              Utils::namespaceUri($soc->uri).'</a>'),         
+              $soc->label.'</a>'),         
             'soc_label' => $soc->label,     
             'soc_grounding_label' => $soc->groundingLabel,
             'soc_reference' => $soc->socreference,     
             'soc_role_label' => $soc->roleLabel,     
-            'soc_has_space_scopes' => $spaceScopes,     
+            'soc_has_space_scopes' => t($spaceScopes),     
             'soc_operations' => t($button),     
           ];
         }
@@ -344,25 +349,24 @@ class AssocStudy {
     if ($socs != NULL) {
       foreach ($socs as $soc) {
         if ($soc->uri != NULL && $soc->uri != "") {
-          $linkObjects = $root_url.REPGUI::MANAGE_STUDY_OBJECTS.base64_encode($soc->uri);
+          $linkObjects = $root_url.REPGUI::VIEW_STUDY_OBJECTS.base64_encode($soc->uri);
           $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm" '.
             ' role="button">View Objects</a>';
-          $spaceScopes = ' '; 
-          if ($soc->spaceScopeUris != array()) {
-            // DO SOMETHING WITH SPACE SCOPES
-          }
-          $timeScopes = ' ';  
-          if ($soc->timeScopeUris != array()) {
-            // DO SOMETHING WITH TIME SCOPES
-          }
-          $output[$soc->uri] = [
+            $timeScopes = ' ';  
+            if ($soc->timeScopes != NULL && !empty($soc->timeScopes)) {
+              foreach ($soc->timeScopes as $timeSoc) {
+                $timeScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeSoc->uri).'">'.
+                  $timeSoc->label.'</a> ';
+              }         
+            }
+            $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              Utils::namespaceUri($soc->uri).'</a>'),         
+              $soc->label.'</a>'),         
             'soc_label' => $soc->label,     
             'soc_grounding_label' => $soc->groundingLabel,
             'soc_reference' => $soc->socreference,     
             'soc_role_label' => $soc->roleLabel,     
-            'soc_has_time_scopes' => $timeScopes,     
+            'soc_has_time_scopes' => t($timeScopes),     
             'soc_operations' => t($button),     
           ];
         }

@@ -27,6 +27,7 @@ class GenericObject {
       'hascoUris' => [],
       'uris' => [],
       'objects' => [],
+      'arrays' => [],
       'urisWithoutObjects' => [],
       'provenance' => []
     ];
@@ -92,6 +93,8 @@ class GenericObject {
     }
     if (is_object($propertyValue)) {
       $propertyMap['objects'][$propertyName] = $propertyValue;
+    } elseif (is_array($propertyValue)) {
+      $propertyMap['arrays'][$propertyName] = $propertyValue;
     } elseif ($propertyName === 'label' || $propertyName === 'title' || $propertyName === 'typeLabel' || $propertyName === 'hascoTypeLabel') {
       $propertyMap['types'][$propertyName] = $propertyValue;
     } elseif ($propertyName === 'hasSIRManagerEmail' || $propertyName === 'typeNamespace' || $propertyName === 'uriNamespace') {

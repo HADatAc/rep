@@ -14,6 +14,9 @@ class StudyObject {
       'element_soc_name' => t('SOC Name'),
       'element_original_id' => t('Original ID'),
       'element_entity' => t('Entity Type'),
+      'element_domain_scope' => t('Domain Scope'),
+      'element_time_scope' => t('Time Scope'),
+      'element_space_scope' => t('Space Scope'),
     ];
   
   }
@@ -41,13 +44,25 @@ class StudyObject {
         $originalId = $element->originalId;
       }
       $socLabel = ' ';
-      if ($element->studyObjectCollection != NULL &&
-          $element->studyObjectCollection->label != NULL) {
-        $socLabel = $element->studyObjectCollection->label;
+      if ($element->isMemberOf != NULL &&
+          $element->isMemberOf->label != NULL) {
+        $socLabel = $element->isMemberOf->label;
       }
       $typeLabel = ' ';
       if ($element->typeLabel != NULL) {
         $typeLabel = $element->typeLabel;
+      }
+      $domainScope = ' ';
+      if ($element->scopeUris != NULL && count($element->scopeUris) > 0) {
+        $domainScope = implode(', ', $element->scopeUris);
+      }
+      $timeScope = ' ';
+      if ($element->timeScopeUris != NULL && count($element->timeScopeUris) > 0) {
+        $timeScope = implode(', ', $element->timeScopeUris);
+      }
+      $spaceScope = ' ';
+      if ($element->spaceScopeUris != NULL && count($element->spaceScopeUris) > 0) {
+        $spaceScope = implode(', ', $element->spaceScopeUris);
       }
       $root_url = \Drupal::request()->getBaseUrl();
       $encodedUri = rawurlencode(rawurlencode($element->uri));
@@ -56,6 +71,9 @@ class StudyObject {
         'element_soc_name' => t($socLabel),     
         'element_original_id' => t($originalId),     
         'element_entity' => t($typeLabel),     
+        'element_domain_scope' => t($domainScope),     
+        'element_time_scope' => t($timeScope),     
+        'element_space_scope' => t($spaceScope),     
       ];
     }
     return $output;

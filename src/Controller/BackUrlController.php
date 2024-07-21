@@ -18,13 +18,13 @@ class BackUrlController extends ControllerBase {
       $response->send();
       return;
     }    
+
     $baseUrl = Utils::baseUrl();
     $previousUrl = base64_decode($previousurl);
     $currentUrl = base64_decode($currenturl);
-    //$previousUrl = $previousurl;
-    //$currentUrl = $currenturl;
     $url = Url::fromUri($baseUrl.$currentUrl)->toString();
     //dpm('Previous: ['.$previousUrl.']  Current: ['.$url.']');
+
     $uid = \Drupal::currentUser()->id();
     Utils::trackingStoreUrls($uid, $previousUrl, $currentroute);
     $response = new RedirectResponse($url);

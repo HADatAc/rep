@@ -150,7 +150,33 @@ class FusekiAPIConnector {
     $endpoint = "/hascoapi/api/".
       $elementType . 
       "/manageremailbystudy/total/" . 
-      $studyuri."/".
+      rawurlencode($studyuri)."/".
+      $manageremail;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function listByManagerEmailBySOC($socuri, $elementType, $manageremail, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremailbysoc/".
+      rawurlencode($socuri)."/".
+      $manageremail."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function listSizeByManagerEmailBySOC($socuri, $elementType, $manageremail, ) {
+    $endpoint = "/hascoapi/api/".
+      $elementType . 
+      "/manageremailbysoc/total/" . 
+      rawurlencode($socuri)."/".
       $manageremail;
     $method = 'GET';
     $api_url = $this->getApiUrl();
@@ -654,22 +680,6 @@ class FusekiAPIConnector {
   /**
    *   STUDY OBJECT 
    */
-
-   public function studyObjectAdd($studyObjectJson) {
-    $endpoint = "/hascoapi/api/studyobject/create/".rawurlencode($studyObjectJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function studyObjectDel($studyObjectUri) {
-    $endpoint = "/hascoapi/api/studyobject/delete/".rawurlencode($studyObjectUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
 
   public function studyObjectsBySOCwithPage($socUri,$pageSize,$offset) {
     $endpoint = "/hascoapi/api/studyobject/bysoc/".rawurlencode($socUri).'/'.$pageSize.'/'.$offset;

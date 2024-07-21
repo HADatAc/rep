@@ -15,6 +15,7 @@
     const SELECT_PAGE          = "/select/";
 
     const SELECT_PAGE_BYSTUDY  = "/selectbystudy/";
+    const SELECT_PAGE_BYSOC    = "/selectbysoc/";
 
     const PROPERTY_PAGE        = "/property/";
 
@@ -36,6 +37,7 @@
 
     const DELETE_STUDY         = "/std/manage/deletestudy/";
 
+    const VIEW_STUDY_OBJECTS   = "/std/view/studyobjects/";
     const MANAGE_STUDY_OBJECTS = "/std/manage/studyobjects/";
 
   }

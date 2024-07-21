@@ -80,7 +80,34 @@
             ];
           }
         }
-        
+
+        foreach ($objectProperties['arrays'] as $propertyName => $propertyValue) {
+
+          if (!empty($propertyValue)) {
+            // THIS IS THE PROCESSING OF GENERAL ARRAY PROPERTIES
+            $prettyName = DescribeForm::prettyProperty($propertyName);
+            // Render array elements as a bullet list.
+            $list_items = '<ul>';
+            foreach ($propertyValue as $item) {
+              $item_str = '';
+              if (is_object($item)) {
+                $item_str = $item->uri;
+              } elseif (is_array($item)) {
+                $item_str = implode(', ',$item);
+              } else {
+                $item_str = $item;
+              }
+              $list_items .= '<li>' . $item_str . '</li>';
+            }
+            $list_items .= '</ul>';
+
+            $form[$propertyName] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>".$prettyName . "</b>: " . $list_items ."<br>"),
+            ];
+          }
+        }
+
         if ($this->getElement()->hascoTypeUri === SCHEMA::PLACE) {
           AssocPlace::process($this->getElement(), $form, $form_state);
         } else if ($this->getElement()->hascoTypeUri === FOAF::ORGANIZATION) {

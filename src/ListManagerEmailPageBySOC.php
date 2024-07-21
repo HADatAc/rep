@@ -4,10 +4,10 @@ namespace Drupal\rep;
 
 use Drupal\rep\Vocabulary\REPGUI;
 
-class ListManagerEmailPageByStudy {
+class ListManagerEmailPageBySOC {
 
-  public static function exec($studyuri, $elementtype, $manageremail, $page, $pagesize) {
-    if ($studyuri == NULL || $elementtype == NULL || $page == NULL || $pagesize == NULL) {
+  public static function exec($socuri, $elementtype, $manageremail, $page, $pagesize) {
+    if ($socuri == NULL || $elementtype == NULL || $page == NULL || $pagesize == NULL) {
         $resp = array();
         return $resp;
     }
@@ -20,17 +20,17 @@ class ListManagerEmailPageByStudy {
     }
 
     $api = \Drupal::service('rep.api_connector');
-    $elements = $api->parseObjectResponse($api->listByManagerEmailByStudy($studyuri,$elementtype,$manageremail,$pagesize,$offset),'listByManagerEmail');
+    $elements = $api->parseObjectResponse($api->listByManagerEmailBySOC($socuri,$elementtype,$manageremail,$pagesize,$offset),'listByManagerEmailBySOC');
     return $elements;
 
   }
 
-  public static function total($studyuri, $elementtype, $manageremail) {
-    if ($studyuri == NULL || $elementtype == NULL) {
+  public static function total($socuri, $elementtype, $manageremail) {
+    if ($socuri == NULL || $elementtype == NULL) {
       return -1;
     }
     $api = \Drupal::service('rep.api_connector');
-    $response = $api->listSizeByManagerEmailByStudy($studyuri,$elementtype,$manageremail);
+    $response = $api->listSizeByManagerEmailBySOC($socuri,$elementtype,$manageremail);
     $listSize = -1;
     if ($response != NULL) {
       $obj = json_decode($response);
@@ -44,16 +44,16 @@ class ListManagerEmailPageByStudy {
 
   }
 
-  public static function link($studyuri, $elementtype, $page, $pagesize) {
+  public static function link($socuri, $elementtype, $page, $pagesize) {
     $root_url = \Drupal::request()->getBaseUrl();
     $module = '';
-    if ($studyuri != NULL && $elementtype != NULL && $page > 0 && $pagesize > 0) {
+    if ($socuri != NULL && $elementtype != NULL && $page > 0 && $pagesize > 0) {
       $module = Utils::elementTypeModule($elementtype);
       if ($module == NULL) {
         return '';
       }
-     return $root_url . '/' . $module . REPGUI::SELECT_PAGE_BYSTUDY . 
-          base64_encode($studyuri) . '/' . 
+     return $root_url . '/' . $module . REPGUI::SELECT_PAGE_BYSOC . 
+          base64_encode($socuri) . '/' . 
           $elementtype . '/' .
           strval($page) . '/' . 
           strval($pagesize);
