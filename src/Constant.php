@@ -12,6 +12,7 @@ class Constant {
   const PREFIX_ANNOTATION_STEM            = "AS";
   const PREFIX_CODEBOOK                   = "CB";
   const PREFIX_DATAFILE                   = "DF";
+  const PREFIX_DA                         = "DA";
   const PREFIX_DSG                        = "DG";
   const PREFIX_DETECTOR_STEM              = "DS";
   const PREFIX_DETECTOR                   = "DT";

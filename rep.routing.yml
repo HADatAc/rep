@@ -13,8 +13,6 @@ rep.describe_element:
   requirements:
     _permission: 'access content'
     _custom_access_check: 'TRUE'    
-  options:
-    no_cache: 'TRUE'
 
 # Element URI 
 
@@ -56,6 +54,17 @@ rep.back_url:
     _permission: 'access content'
     _custom_access_check: 'TRUE'    
 
+# Delete Element
+
+rep.delete_element:
+  path: 'rep/manage/deleteelement/{elementtype}/{elementuri}/{currenturl}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\DeleteElementController::exec'
+    _title: "Delete Element"
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'  
+
 # List/Select Element
 
 rep.list_element:
@@ -79,7 +88,7 @@ rep.select_element:
     no_cache: 'TRUE'
     
 rep.select_mt_element:
-  path: 'rep/select/mt/{elementtype}/{page}/{pagesize}/{studyuri}'
+  path: 'rep/select/mt/{elementtype}/{mode}/{page}/{pagesize}/{studyuri}'
   defaults:
     _form: '\Drupal\rep\Form\REPSelectMTForm'
   requirements:
@@ -200,3 +209,22 @@ rep.help:
     _controller: '\Drupal\rep\Controller\RepController::help'
   requirements:
     _permission: 'administer site configuration'
+
+# AUTOCOMPLETE
+
+rep.dd_autocomplete:
+  path: '/rep/dd/autocomplete'
+  defaults:
+    _controller: '\Drupal\rep\Controller\JsonApiDDController::handleAutocomplete'
+    _format: json
+  requirements:
+    _permission: 'access content'
+
+rep.sdd_autocomplete:
+  path: '/rep/sdd/autocomplete'
+  defaults:
+    _controller: '\Drupal\rep\Controller\JsonApiSDDController::handleAutocomplete'
+    _format: json
+  requirements:
+    _permission: 'access content'
+

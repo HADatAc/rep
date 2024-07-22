@@ -157,6 +157,20 @@ class EditMTForm extends FormBase {
       $study = Utils::fieldToAutocomplete($this->getStudy()->uri,$this->getStudy()->label);
     }
 
+    $dd = ' ';
+    if ($this->getMT()->hasDD != NULL &&
+        $this->getMT()->hasDD->uri != NULL &&
+        $this->getMT()->hasDD->label != NULL) {
+      $dd = Utils::fieldToAutocomplete($this->getMT()->hasDD->uri,$this->getMT()->hasDD->label);
+    }
+
+    $sdd = ' ';
+    if ($this->getMT()->hasSDD != NULL &&
+        $this->getMT()->hasSDD->uri != NULL &&
+        $this->getMT()->hasSDD->label != NULL) {
+      $sdd = Utils::fieldToAutocomplete($this->getMT()->hasSDD->uri,$this->getMT()->hasSDD->label);
+    }
+
     $form['page_title'] = [
       '#type' => 'item',
       '#title' => $this->t('<h1>Edit ' . $this->getElementName() . '</h1>'),
@@ -184,6 +198,22 @@ class EditMTForm extends FormBase {
       '#title' => $this->t('Name'),
       '#default_value' => $this->getMT()->label,
     ];
+
+    if ($this->getElementType() == 'da') {
+      $form['mt_dd'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Data Dictionary (DD)'),
+        '#default_value' => $dd,
+        '#autocomplete_route_name' => 'rep.dd_autocomplete',
+      ];
+      $form['mt_sdd'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Semantic Data Dictionary (SDD)'),
+        '#default_value' => $sdd,
+        '#autocomplete_route_name' => 'rep.sdd_autocomplete',
+      ];
+    }
+
     $form['mt_version'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Version'),
@@ -237,13 +267,27 @@ class EditMTForm extends FormBase {
 
     $useremail = \Drupal::currentUser()->getEmail();
 
-    //dpm($this->getMT());
+    $ddUri = NULL;
+    if ($form_state->getValue('mt_dd') != NULL && $form_state->getValue('mt_dd') != '') {
+      $ddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_dd'));
+    } 
+
+    $sddUri = NULL;
+    if ($form_state->getValue('mt_sdd') != NULL && $form_state->getValue('mt_sdd') != '') {
+      $sddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_sdd'));
+    } 
 
     $mtJSON = '{"uri":"'. $this->getMT()->uri .'",'.
       '"typeUri":"'. $this->getMT()->typeUri .'",'.
       '"hascoTypeUri":"'. $this->getMT()->hascoTypeUri .'",';
     if ($this->getElementType() == 'da') {
       $mtJSON .= '"isMemberOfUri":"'.$this->getStudy()->uri.'",';
+    }
+    if ($ddUri != NULL) {
+      $mtJSON .= '"hasDDUri":"'.$ddUri.'",';
+    }
+    if ($sddUri != NULL) {
+      $mtJSON .= '"hasSDDUri":"'.$sddUri.'",';
     }
     $mtJSON .= '"label":"'.$form_state->getValue('mt_name').'",'.
       '"hasDataFileUri":"'.$this->getMT()->hasDataFile->uri.'",'.          

@@ -232,6 +232,7 @@ class AssocStudy {
       'soc_has_scope' => t('Has Scope'),
       'soc_has_space_scopes' => t('Has Space Scopes'),
       'soc_has_time_scopes' => t('Has Time Scopes'),
+      'soc_num_objects' => t('#Objects'),
       'soc_operations' => t('Operations'),
     ];
     return $header;
@@ -246,6 +247,7 @@ class AssocStudy {
       'soc_reference' => t('Reference'),
       'soc_role_label' => t('Role Label'),
       'soc_has_space_scopes' => t('Has Space Scopes'),
+      'soc_num_objects' => t('#Objects'),
       'soc_operations' => t('Operations'),
     ];
     return $header;
@@ -260,6 +262,7 @@ class AssocStudy {
       'soc_reference' => t('Reference'),
       'soc_role_label' => t('Role Label'),
       'soc_has_time_scopes' => t('Has Time Scopes'),
+      'soc_num_objects' => t('#Objects'),
       'soc_operations' => t('Operations'),
     ];
     return $header;
@@ -294,13 +297,14 @@ class AssocStudy {
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
               Utils::namespaceUri($soc->uri).'</a>'),         
             'soc_label' => $soc->label,     
-            'soc_grounding_label' => $soc->groundingLabel,
+            'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,     
             'soc_role_label' => $soc->virtualColumn->label,     
             'soc_has_scope' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->hasScopeUri).'">'.
             $soc->label.'</a>'),     
             'soc_has_space_scopes' => t($spaceScopes),     
             'soc_has_time_scopes' => t($timeScopes),     
+            'soc_num_objects' => $soc->numOfObjects,     
             'soc_operations' => t($button),     
           ];
         }
@@ -330,10 +334,11 @@ class AssocStudy {
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
               $soc->label.'</a>'),         
             'soc_label' => $soc->label,     
-            'soc_grounding_label' => $soc->groundingLabel,
-            'soc_reference' => $soc->socreference,     
-            'soc_role_label' => $soc->roleLabel,     
+            'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
+            'soc_reference' => $soc->virtualColumn->socreference,     
+            'soc_role_label' => $soc->virtualColumn->label,     
             'soc_has_space_scopes' => t($spaceScopes),     
+            'soc_num_objects' => $soc->numOfObjects,     
             'soc_operations' => t($button),     
           ];
         }
@@ -363,10 +368,11 @@ class AssocStudy {
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
               $soc->label.'</a>'),         
             'soc_label' => $soc->label,     
-            'soc_grounding_label' => $soc->groundingLabel,
-            'soc_reference' => $soc->socreference,     
-            'soc_role_label' => $soc->roleLabel,     
+            'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
+            'soc_reference' => $soc->virtualColumn->socreference,     
+            'soc_role_label' => $soc->virtualColumn->label,     
             'soc_has_time_scopes' => t($timeScopes),     
+            'soc_num_objects' => $soc->numOfObjects,     
             'soc_operations' => t($button),     
           ];
         }

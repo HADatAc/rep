@@ -69,14 +69,21 @@
 
           // PROCESS EMBEDDED OBJECTS
           if ($propertyName === 'hasAddress') {  
+
             $this->processPropertyAddress($propertyValue, $form, $form_state);
+
           } else {
 
             // THIS IS THE PROCESSING OF GENERAL OBJECT PROPERTIES
             $prettyName = DescribeForm::prettyProperty($propertyName);
+            $link = ' ';
+            if (isset($propertyValue->label) && isset($propertyValue->uri) &&
+               ($propertyValue->label != NULL) && ($propertyValue->uri != NULL)) {
+              $link = Utils::link($propertyValue->label,$propertyValue->uri);
+            }
             $form[$propertyName] = [
               '#type' => 'markup',
-              '#markup' => $this->t("<b>".$prettyName . "</b>: " . Utils::link($propertyValue->label,$propertyValue->uri)."<br><br>"),
+              '#markup' => $this->t("<b>".$prettyName . "</b>: " . $link ."<br><br>"),
             ];
           }
         }

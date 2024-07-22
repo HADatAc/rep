@@ -31,11 +31,21 @@ class REPSelectMTForm extends FormBase {
 
   public $plural_class_name;
 
+  protected $mode;
+
   protected $list;
 
   protected $list_size;
 
   protected $studyuri;
+
+  public function getMode() {
+    return $this->mode;
+  }
+
+  public function setMode($mode) {
+    return $this->mode = $mode; 
+  }
 
   public function getList() {
     return $this->list;
@@ -56,7 +66,7 @@ class REPSelectMTForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $elementtype=NULL, $page=NULL, $pagesize=NULL, $studyuri=NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, $elementtype=NULL, $mode = NULL, $page=NULL, $pagesize=NULL, $studyuri=NULL) {
 
     // OPTIONAL STUDYURI
     if ($studyuri == NULL) {
@@ -64,7 +74,10 @@ class REPSelectMTForm extends FormBase {
     }
     $this->studyuri = $studyuri;
 
-    // dpm("Studyuri = " . $studyuri);
+    // GET MODE
+    if ($mode != NULL) {
+      $this->setMode($mode);
+    }
 
     // GET MANAGER EMAIL
     $this->manager_email = \Drupal::currentUser()->getEmail();
@@ -125,7 +138,11 @@ class REPSelectMTForm extends FormBase {
         $this->single_class_name = "DA";
         $this->plural_class_name = "DAs";
         $header = MetadataTemplate::generateHeader();
-        $output = MetadataTemplate::generateOutput('da',$this->getList());    
+        if ($mode == 'table') {
+          $output = MetadataTemplate::generateOutput('da',$this->getList());    
+        } else {
+          $output = MetadataTemplate::generateOutput('da',$this->getList());    
+        }
         break;
       case "dd":
         $this->single_class_name = "DD";
@@ -158,45 +175,71 @@ class REPSelectMTForm extends FormBase {
       '#value' => $this->t('Add New ' . $this->single_class_name),
       '#name' => 'add_element',
     ];
-    $form['edit_selected_element'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Edit Selected ' . $this->single_class_name),
-        '#name' => 'edit_element',
-    ];
-    $form['delete_selected_element'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
-        '#name' => 'delete_element',
-        '#attributes' => ['onclick' => 'if(!confirm("Really Delete?")){return false;}'],
+    if ($mode == 'table') {
+      $form['edit_selected_element'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Edit Selected ' . $this->single_class_name),
+          '#name' => 'edit_element',
       ];
-    $form['ingest_mt'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Ingest Selected ' . $this->single_class_name),
-        '#name' => 'ingest_mt',
-        '#attributes' => [
-            'class' => ['use-ajax'],
-            'data-dialog-type' => 'modal',
-            'data-dialog-options' => Json::encode(['width' => 700, 'height' => 400]),
-        ],  
-    ];
-    $form['uningest_mt'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Uningest Selected ' . $this->plural_class_name),
-        '#name' => 'uningest_mt',
-    ];  
-    $form['space1'] = [
-      '#type' => 'item',
-      '#value' => $this->t('<br>'),
-    ];
+      $form['delete_selected_element'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
+          '#name' => 'delete_element',
+          '#attributes' => ['onclick' => 'if(!confirm("Really Delete?")){return false;}'],
+        ];
+      $form['ingest_mt'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Ingest Selected ' . $this->single_class_name),
+          '#name' => 'ingest_mt',
+          '#attributes' => [
+              'class' => ['use-ajax'],
+              'data-dialog-type' => 'modal',
+              'data-dialog-options' => Json::encode(['width' => 700, 'height' => 400]),
+          ],  
+      ];
+      $form['uningest_mt'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Uningest Selected ' . $this->plural_class_name),
+          '#name' => 'uningest_mt',
+      ];  
+      $form['space1'] = [
+        '#type' => 'item',
+        '#value' => $this->t('<br>'),
+      ];
+    }
 
-    // Add elements as table
-    $form['element_table'] = [
-      '#type' => 'tableselect',
-      '#header' => $header,
-      '#options' => $output,
-      '#js_select' => FALSE,
-      '#empty' => t('No ' . $this->plural_class_name . ' found'),
-    ];
+    //if ($mode == 'card') {
+
+      // Add elements as table
+      $form['element_table'] = [
+        '#type' => 'tableselect',
+        '#header' => $header,
+        '#options' => $output,
+        '#js_select' => FALSE,
+        '#empty' => t('No ' . $this->plural_class_name . ' found'),
+      ];
+
+    /*
+    } else {
+
+      // Loop through $output and creates two cards per row
+      $index = 0;
+      foreach (array_chunk($output, 2, true) as $row) {
+          $index++;
+          $form['row_' . $index] = [
+              '#type' => 'container',
+              '#attributes' => [
+                  'class' => ['row', 'mb-3'],
+              ],
+          ];
+          $indexCard = 0;
+          foreach ($row as $uri => $card) {
+              $indexCard++;
+              $form['row_' . $index]['element_' . $indexCard] = $card;     
+          }
+      }
+
+    }*/
 
     $form['pager'] = [
         '#theme' => 'list-page',

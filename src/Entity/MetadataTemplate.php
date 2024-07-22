@@ -2,11 +2,14 @@
 
 namespace Drupal\rep\Entity;
 
+use Drupal\Core\Url;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Drupal\rep\Vocabulary\HASCO;
 use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Entity\DataFile;
 use Drupal\rep\Constant;
 use Drupal\rep\Utils;
+
 
 class MetadataTemplate {
 
@@ -199,5 +202,194 @@ class MetadataTemplate {
 
     } catch(\Exception $e) {}
   } 
+
+  public static function generateOutputAsCards($elementType, $list) {
+    $output = [];
+
+    // ROOT URL
+    $root_url = \Drupal::request()->getBaseUrl();
+
+    if ($list == NULL) {
+        return $output;
+    }
+
+    $index = 0;
+    foreach ($list as $element) {
+      $index++; 
+      $uri = $element->uri ?? '';
+      $label = $element->label ?? '';
+      $title = $element->title ?? '';
+
+      $urlComponents = parse_url($uri);
+
+      if (isset($urlComponents['scheme']) && isset($urlComponents['host'])) {
+        $url = Url::fromUri($uri);
+      } else { 
+        $url = '';
+      }
+
+      if ($element->uri != NULL && $element->uri != "") {
+        $previousUrl = base64_encode(\Drupal::request()->getRequestUri());
+
+        $view_da_str = base64_encode(Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($element->uri)])->toString());
+        $view_da_route = 'rep.describe_element';
+        $view_da = Url::fromRoute('rep.back_url', [
+          'previousurl' => $previousUrl,
+          'currenturl' => $view_da_str,
+          'currentroute' => 'rep.describe_element'
+        ]);
+
+        $edit_da_str = base64_encode(Url::fromRoute('rep.edit_mt', [
+          'elementtype' => 'da',
+          'elementuri' => base64_encode($element->uri),
+          'fixstd' => 'T',
+        ])->toString());
+        $edit_da = Url::fromRoute('rep.back_url', [
+          'previousurl' => $previousUrl,
+          'currenturl' => $edit_da_str,
+          'currentroute' => 'rep.edit_mt'
+        ]);
+
+        $delete_da = Url::fromRoute('rep.delete_element', [
+          'elementtype' => 'da',
+          'elementuri' => base64_encode($element->uri),
+          'currenturl' => $previousUrl,
+        ]);
+
+        $download_da = Url::fromRoute('rep.datafile_download', [
+          'datafileuri' => base64_encode($element->hasDataFile->uri),
+        ]);
+
+      }
+
+      if ($element->hasDataFile->filename != NULL && 
+        $element->hasDataFile->filename != '') {
+        $filename = $element->hasDataFile->filename;
+      }
+      if ($element->hasDataFile->fileStatus != NULL && 
+          $element->hasDataFile->fileStatus != '') {
+        if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
+          $filestatus = '<b><font style="color:#ff0000;">'.Constant::FILE_STATUS_UNPROCESSED.'</font></b>';
+        } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED) {
+          $filestatus = '<b><font style="color:#008000;">'.Constant::FILE_STATUS_PROCESSED.'</font></b>';
+        } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING) {
+          $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_WORKING.'</font></b>';
+        } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED_STD) {
+          $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_PROCESSED_STD.'</font></b>';
+        } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING_STD) {
+          $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_WORKING_STD.'</font></b>';
+          } else {
+          $filestatus = ' ';
+        }
+      }
+
+      $dd = '(none)';
+      if (isset($element->hasDD) && $element->hasDD != NULL) {
+        $dd = $element->hasDD->label . ' (' . $element->hasDD->hasDataFile->filename . ') [<b>' . $element->hasDD->hasDataFile->fileStatus . '</b>] '; 
+      }
+      $sdd = '(none)';
+      if (isset($element->hasSDD) && $element->hasSDD != NULL) {
+        $sdd = $element->hasSDD->label . ' (' . $element->hasSDD->hasDataFile->filename . ') [<b>' . $element->hasSDD->hasDataFile->fileStatus . '</b>] '; 
+      }
+
+      $properties = ' ';
+      if ($elementType == 'da') {
+        $properties = '<p class="card-text">'. 
+          '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' . 
+          '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' [' . $filestatus . ']<br><br>' . 
+          'Documentation: <br>' .
+          '&nbsp;&nbsp;&nbsp;<b>Data Dictionary</b>: ' . $dd . '<br>' . 
+          '&nbsp;&nbsp;&nbsp;<b>Semantic Data Dictionary</b>: ' . $sdd . '<br>' . 
+          '</p>';
+      } else {
+        $properties = '<p class="card-text">'. 
+          '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' . 
+          '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' (' . $filestatus . ')<br>' . 
+          '</p>';
+      }
+
+      $ingest_da = '';
+      $uningest_da = '';
+
+      $output[$index] = [
+        '#type' => 'container', // Use container instead of html_tag for better semantics
+        '#attributes' => [
+            'class' => ['card', 'mb-3'],
+        ],
+        '#prefix' => '<div class="col-md-6">',
+        '#suffix' => '</div>', 
+        'card_body_'.$index => [
+            '#type' => 'container', // Use container for the card body
+            '#attributes' => [
+                'class' => ['card-body'],
+            ],
+            'title' => [
+                '#markup' => '<h5 class="card-title">' . $label . '</h5><br>',
+            ],
+            'text' => [
+                '#markup' => $properties,
+            ],
+            'link1_'.$index => [
+              '#type' => 'link',
+              '#title' => 'View',
+              '#url' => $view_da, 
+              '#attributes' => [
+                'class' => ['btn', 'btn-sm', 'btn-secondary'],
+                'style' => 'margin-right: 10px;',
+              ],
+            ],
+            'link2_'.$index => [
+              '#type' => 'link',
+              '#title' => 'Edit',
+              '#url' => $edit_da, 
+              '#attributes' => [
+                'class' => ['btn', 'btn-sm', 'btn-secondary'],
+                'style' => 'margin-right: 10px;',
+              ],
+            ],
+            'link3_'.$index => [
+              '#type' => 'link',
+              '#title' => 'Delete',
+              '#url' => $delete_da, 
+              '#attributes' => [
+                'onclick' => 'if(!confirm("Really Delete?")){return false;}',
+                'class' => ['btn', 'btn-sm', 'btn-secondary'],
+                'style' => 'margin-right: 10px;',
+              ],
+            ],
+            'link4_'.$index => [
+              '#type' => 'link',
+              '#title' => 'Download',
+              '#url' => $download_da, 
+              '#attributes' => [
+                'onclick' => 'if(!confirm("Really Download?")){return false;}',
+                'class' => ['btn', 'btn-sm', 'btn-secondary'],
+                'style' => 'margin-right: 10px;',
+              ],
+            ],
+            'link5_'.$index => [
+              '#type' => 'link',
+              '#title' => 'Ingest',
+              '#url' => $view_da, 
+              '#attributes' => [
+                'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
+                'style' => 'margin-right: 10px;',
+              ],
+            ],
+            'link6_'.$index => [
+              '#type' => 'link',
+              '#title' => 'Uningest',
+              '#url' => $view_da, 
+              '#attributes' => [
+                'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
+              ],
+            ],
+        ],
+      ];
+    
+    }
+
+    return $output;
+  }
 
 }

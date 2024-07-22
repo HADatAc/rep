@@ -181,6 +181,21 @@ class AddMTForm extends FormBase {
         ],
       ];      
     }
+
+    if ($this->getElementType() == 'da') {
+      $form['mt_dd'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Data Dictionary (DD)'),
+        #'#default_value' => $study,
+        '#autocomplete_route_name' => 'rep.dd_autocomplete',
+      ];
+      $form['mt_sdd'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Semantic Data Dictionary (SDD)'),
+        '#autocomplete_route_name' => 'rep.sdd_autocomplete',
+      ];
+    }
+
     $form['mt_version'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Version'),
@@ -241,6 +256,17 @@ class AddMTForm extends FormBase {
       $file_entity = \Drupal\file\Entity\File::load($fileId[0]);
       $filename = $file_entity->getFilename();
 
+      $ddUri = NULL;
+      if ($form_state->getValue('mt_dd') != NULL && $form_state->getValue('mt_dd') != '') {
+        $ddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_dd'));
+      } 
+
+      $sddUri = NULL;
+      if ($form_state->getValue('mt_sdd') != NULL && $form_state->getValue('mt_sdd') != '') {
+        $sddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_sdd'));
+      } 
+
+      // DATAFILE JSON
       $newDataFileUri = Utils::uriGen('datafile');
       $datafileJSON = '{"uri":"'. $newDataFileUri .'",'.
           '"typeUri":"'.HASCO::DATAFILE.'",'.
@@ -251,12 +277,19 @@ class AddMTForm extends FormBase {
           '"fileStatus":"'.Constant::FILE_STATUS_UNPROCESSED.'",'.          
           '"hasSIRManagerEmail":"'.$useremail.'"}';
 
+      // MT JSON
       $newMTUri = str_replace("DF",Utils::elementPrefix($this->getElementType()),$newDataFileUri);
       $mtJSON = '{"uri":"'. $newMTUri .'",'.
           '"typeUri":"'.$this->getElementTypeUri().'",'.
           '"hascoTypeUri":"'.$this->getElementTypeUri().'",';
       if ($this->getElementType() == 'da') {
         $mtJSON .= '"isMemberOfUri":"'.$this->getStudy()->uri.'",';
+      }
+      if ($ddUri != NULL) {
+        $mtJSON .= '"hasDDUri":"'.$ddUri.'",';
+      }
+      if ($sddUri != NULL) {
+        $mtJSON .= '"hasSDDUri":"'.$sddUri.'",';
       }
       $mtJSON .= '"label":"'.$form_state->getValue('mt_name').'",'.
           '"hasDataFileUri":"'.$newDataFileUri.'",'.          
