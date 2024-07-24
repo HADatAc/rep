@@ -359,17 +359,17 @@ class REPSelectMTForm extends FormBase {
         $study = $api->parseObjectResponse($api->getUri($first),'getUri');
         if ($study == NULL) {
           \Drupal::messenger()->addError(t("Failed to retrieve datafile to be ingested."));
-          $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->studyuri));
+          $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
           return;
         } 
         $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $study),'uploadTemplate');
         if ($msg == NULL) {
           \Drupal::messenger()->addError(t("Selected " . $this->single_class_name . " FAILED to be submitted for ingestion."));      
-          $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->studyuri));
+          $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
           return;
         }
         \Drupal::messenger()->addMessage(t("Selected " . $this->single_class_name . " has been submitted for ingestion."));      
-        $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->studyuri));
+        $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
         return;
       }
     }  
@@ -418,9 +418,10 @@ class REPSelectMTForm extends FormBase {
   /**
    * {@inheritdoc}
    */   
-  public static function backSelect($elementType, $studyuri) {
+  public static function backSelect($elementType, $mode, $studyuri) {
     $url = Url::fromRoute('rep.select_mt_element');
     $url->setRouteParameter('elementtype', $elementType);
+    $url->setRouteParameter('mode', $mode);
     $url->setRouteParameter('page', 0);
     $url->setRouteParameter('pagesize', 12);
     if ($studyuri == NULL || $studyuri != '' || $studyuri == ' ') { 

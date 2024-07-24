@@ -189,7 +189,7 @@ class MetadataTemplate {
 
         // ADD MT
         $mtRaw = $api->elementAdd($elementType, $mtJSON);
-        if ($dsg != NULL) {
+        if ($mtRaw != NULL) {
           $msg2 = $api->parseObjectResponse($mtRaw,'elementAdd');
         } 
       }

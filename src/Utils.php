@@ -86,6 +86,9 @@ class Utils {
       case "semanticvariable":
         $short = Constant::PREFIX_SEMANTIC_VARIABLE;
         break;
+      case "ins":
+        $short = Constant::PREFIX_INS;
+        break;
       case "sdd":
         $short = Constant::PREFIX_SDD;
         break;

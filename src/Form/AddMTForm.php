@@ -128,6 +128,9 @@ class AddMTForm extends FormBase {
 
     $this->setElementType($elementtype);
 
+    dpm("Element type: " . $this->getElementType());
+
+
     $study = ' ';
     if ($this->getStudy() != NULL &&
         $this->getStudy()->uri != NULL &&
