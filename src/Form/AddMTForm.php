@@ -128,7 +128,7 @@ class AddMTForm extends FormBase {
 
     $this->setElementType($elementtype);
 
-    dpm("Element type: " . $this->getElementType());
+    //dpm("Element type: " . $this->getElementType());
 
 
     $study = ' ';

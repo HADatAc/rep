@@ -71,7 +71,7 @@ class GenericObject {
 
       return $propertyMap;
     } catch (ReflectionException $e) {
-        dpm('Reflection error: @message', ['@message' => $e->getMessage()]);
+        //dpm('Reflection error: @message', ['@message' => $e->getMessage()]);
         //\Drupal::logger('rep')->error('Reflection error: @message', ['@message' => $e->getMessage()]);
         return null;
     } 

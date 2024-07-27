@@ -42,6 +42,17 @@ function rep_install() {
 }
 
 /**
+ * Implements hook_form_alter().
+ */
+function rep_form_alter(&$form, &$form_state, $form_id) {
+    // Check if the form ID matches your configuration form.
+    if ($form_id == 'rep_form_namespace') { 
+        // Remove the default "Save configuration" button.
+        unset($form['actions']['submit']);
+    }
+}
+
+/**
  * Implements hook_theme
  */
 function rep_theme($existing, $type, $theme, $path)

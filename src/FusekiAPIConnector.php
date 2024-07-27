@@ -962,6 +962,14 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
+  public function repoDeleteSelectedNamespace($namespace) {
+    $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($namespace);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
   public function repoDeleteNamespaceTriples() {
     $endpoint = "/hascoapi/api/repo/ont/delete";
     $method = "GET";
