@@ -50,43 +50,70 @@
             '#title' => t("<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>"),
           ];
 
+          $form['type'] = [
+            '#type' => 'markup',
+            '#markup' => $this->t("<h3>(UNKNOWN TYPE)</h3><br>"),
+          ];
+
           $form['element_uri'] = [
-            '#type' => 'textfield',
-            '#title' => '<b>URI</b>',
-            '#default_value' => $full_uri,
-            '#disabled' => TRUE,
+            '#type' => 'markup',
+            '#markup' => $this->t("<b>URI</b>: " . $full_uri . "<br><br>"),
           ];
 
           $form['element_type'] = [
-            '#type' => 'textfield',
-            '#title' => '<b>Type</b>',
-            '#default_value' => 'NONE',
-            '#disabled' => TRUE,
+            '#type' => 'markup',
+            '#markup' => $this->t("<b>Type</b>: NONE<br><br>"),
           ];
         
         } else {
 
+          if (($this->getElement()->typeLabel === NULL || $this->getElement()->typeLabel === "") && 
+              ($this->getElement()->hascoTypeLabel === NULL || $this->getElement()->hascoTypeLabel === "")) {
+            $parts = explode('/', $this->getElement()->typeUri);
+            $type = end($parts);
+          } else if ($this->getElement()->typeLabel === NULL) {
+            $type = $this->getElement()->hascoTypeLabel;
+          } else if ($this->getElement()->hascoTypeLabel === NULL) {
+            $type = $this->getElement()->typeLabel;
+          } else if ($this->getElement()->typeLabel == $this->getElement()->hascoTypeLabel) {
+            $type = $this->getElement()->typeLabel;
+          } else {
+            $type = $this->getElement()->typeLabel . " (" . $this->getElement()->hascoTypeLabel . ")";
+          }
+
+          $form['name'] = [
+            '#type' => 'markup',
+            '#markup' => $this->t("<h1>" . $this->getElement()->label . "</h1><br>"),
+          ];
+
+          $form['type'] = [
+            '#type' => 'markup',
+            '#markup' => $this->t("<h3>" . ucfirst($type) . "</h3><br>"),
+          ];
+
           $form['element_uri'] = [
-            '#type' => 'textfield',
-            '#title' => '<b>URI</b>',
-            '#default_value' => $this->getElement()->uri,
-            '#disabled' => TRUE,
+            '#type' => 'markup',
+            '#markup' => $this->t("<b>URI</b>: " . $this->getElement()->uri . "<br><br>"),
           ];
 
           $form['element_type'] = [
-            '#type' => 'textfield',
-            '#title' => '<b>Type</b>',
-            '#default_value' => $this->getElement()->typeUri,
-            '#disabled' => TRUE,
+            '#type' => 'markup',
+            '#markup' => $this->t("<b>Type URI</b>: " . $this->getElement()->typeUri . "<br><br>"),
           ];
-        
+
+          if (isset($this->getElement()->title)) {
+            $form['element_title'] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>Title</b>: " . $this->getElement()->title . "<br><br>"),
+            ];
+          }
+
         }
     
         return $form;        
 
     }
 
-    
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
      

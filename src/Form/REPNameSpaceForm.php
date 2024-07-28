@@ -85,6 +85,12 @@
             '#name' => 'delete',
           ];
       
+        $form['delete_namespace'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Delete Selected NameSpaces'),
+        '#name' => 'del_selected',
+        ];
+      
         $form['filler_2'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
@@ -135,9 +141,22 @@
      * {@inheritdoc}
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
+
+        // RETRIEVE TRIGGERING BUTTON
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
     
+        // RETRIEVE SELECTED ROWS, IF ANY
+        $selected_rows = $form_state->getValue('element_table');
+        $rows = [];
+        foreach ($selected_rows as $index => $selected) {
+            if ($selected) {
+                $rows[$index] = $index;
+            }
+        }
+        
+        // BUTTON ACTIONS
+
         if ($button_name === 'back') {
           $form_state->setRedirectUrl(Url::fromRoute('rep.admin_settings_custom'));
           return;
@@ -159,6 +178,20 @@
           return;
         } 
                 
+        if ($button_name === 'del_selected') {
+            if (sizeof($rows) <= 0) {
+                \Drupal::messenger()->addWarning(t("At least one NameSpace needs to be selected for deletion."));      
+            } else {
+                foreach($rows as $abbrev) {
+                    $message = ' ';
+                    $message = $APIservice->parseObjectResponse($APIservice->repoDeleteSelectedNamespace($abbrev),'repoDeleteSelectedNamespace');
+                    \Drupal::messenger()->addMessage(t($message));
+                }
+                $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+                return;
+            } 
+        }
+                  
     }
 
  }

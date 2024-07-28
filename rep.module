@@ -1,6 +1,56 @@
 <?php
 
+use Drupal\Core\Database\Database;
 use Drupal\Core\Path\AliasStorageInterface;
+
+/**
+ * Implements hook_install().
+ */
+function rep_install() {
+  // Define the schema for user_tracking table.
+  $schema['user_tracking'] = [
+    'description' => 'Stores user session history',
+    'fields' => [
+      'uid' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => 'User ID',
+      ],
+      'previous_url' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Previous URL',
+      ],
+      'current_url' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Current URL',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => 'Timestamp when the entry was created',
+      ],
+    ],
+    'primary key' => ['uid', 'current_url'],
+  ];
+
+  // Create the table.
+  Database::getConnection()->schema()->createTable('user_tracking', $schema['user_tracking']);
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function rep_form_alter(&$form, &$form_state, $form_id) {
+    // Check if the form ID matches your configuration form.
+    if ($form_id == 'rep_form_namespace') { 
+        // Remove the default "Save configuration" button.
+        unset($form['actions']['submit']);
+    }
+}
 
 /**
  * Implements hook_theme
@@ -22,6 +72,14 @@ function rep_theme($existing, $type, $theme, $path)
             )
         ],
     ];
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for block templates.
+ */
+function rep_preprocess_block(&$variables) {
+  // Add the core/drupal.dialog.ajax library.
+  $variables['#attached']['library'][] = 'core/drupal.dialog.ajax';
 }
 
 /**

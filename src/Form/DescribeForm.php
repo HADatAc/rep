@@ -10,9 +10,11 @@
  use Drupal\Core\Form\FormBase;
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\Core\Url;
+ use Symfony\Component\HttpFoundation\RedirectResponse;
  use Drupal\rep\ListUsage;
  use Drupal\rep\Utils;
  use Drupal\rep\Entity\Tables;
+ use Drupal\rep\Entity\GenericObject;
  use Drupal\rep\Vocabulary\REPGUI;
  use Drupal\rep\Vocabulary\VSTOI;
 
@@ -50,7 +52,19 @@
         $full_uri = Utils::plainUri($uri_decode);
         $api = \Drupal::service('rep.api_connector');
         $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
+
         //dpm($this->getElement());
+
+        $objectProperties = GenericObject::inspectObject($this->getElement());
+
+        //($objectProperties);
+
+        //if ($objectProperties !== null) {
+        //    dpm($objectProperties);
+        //} else {
+        //    dpm("The provided variable is not an object.");
+        //}
+        
 
         // RETRIEVE CONFIGURATION FROM CURRENT IP
         if ($this->getElement() != NULL) {
@@ -73,54 +87,29 @@
 
         $form['header1'] = [
             '#type' => 'item',
-            '#title' => '<h3>Core Properties</h3>',
+            '#title' => '<h3>Data Properties</h3>',
         ];
 
-        if ($hascoType == VSTOI::INSTRUMENT) {
-            $form['element_label'] = [
-                '#type' => 'item',
-                '#title' => '<b>Short Name</b>: ' . $shortName,
-            ];
-        }
-
-        if ($hascoType == VSTOI::INSTRUMENT || $hascoType == VSTOI::CODEBOOK) {
-            $form['element_name'] = [
-                '#type' => 'item',
-                '#title' => '<b>Full Name</b>: ' . $name,
-            ];
-        }
-
-        if ($hascoType == VSTOI::DETECTOR || $hascoType == VSTOI::RESPONSE_OPTION) {
-            $form['element_content'] = [
-                '#type' => 'item',
-                '#title' => '<b>Content</b>: ' . $this->getElement()->hasContent,
-            ];
-        }
-
-        if ($this->getElement() != NULL) {
-
-            $languages = $tables->getLanguages();
-            $lang = "";
-            if ($this->getElement()->hasLanguage != NULL && $this->getElement()->hasLanguage != "") {
-                $lang = $languages[$this->getElement()->hasLanguage];
+        foreach ($objectProperties['literals'] as $propertyName => $propertyValue) {
+            // Add a textfield element for each property
+            if ($propertyValue !== NULL && $propertyValue !== "") {
+                $prettyName = DescribeForm::prettyProperty($propertyName);
+                $form[$propertyName] = [
+                    '#type' => 'markup',
+                    '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
+                ];
             }
 
-            $form['element_description'] = [
-                '#type' => 'item',
-                '#title' => '<b>Description</b>: ' . $this->getElement()->comment,
+            /*
+            $form[$propertyName] = [
+              '#type' => 'textfield',
+              '#title' => $this->t($propertyName),
+              '#default_value' => $propertyValue, // Set default value
+              '#disabled' => TRUE,
             ];
-
-            $form['element_version'] = [
-                '#type' => 'item',
-                '#title' => '<b>Version</b>: ' . $this->getElement()->hasVersion,
-            ];
-
-            $form['element_language'] = [
-                '#type' => 'item',
-                '#title' => '<b>Language</b>: ' . $lang,
-            ];
-
-        }
+            */
+          }
+          
 
         $form['submit'] = [
             '#type' => 'submit',
@@ -128,8 +117,8 @@
             '#name' => 'back',
         ];
         $form['space'] = [
-            '#type' => 'item',
-            '#value' => $this->t('<br><br>'),
+            '#type' => 'markup',
+            '#markup' => $this->t("<br><br>"),
         ];
 
         return $form;
@@ -143,8 +132,33 @@
      * {@inheritdoc}
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
-        $url = Url::fromRoute('rep.about');
-        $form_state->setRedirectUrl($url);
+        //$url = Url::fromRoute('rep.about');
+        //$form_state->setRedirectUrl($url);
+        self::backUrl();
+        return;
     }
 
+    public static function prettyProperty($input) {
+        // Remove "has" from the string
+        $inputWithoutHas = str_replace('has', '', $input);
+        
+        // Add a space before each capital letter (excluding the first character)
+        $stringWithSpaces = preg_replace('/(?<!^)([A-Z])/', ' $1', $inputWithoutHas);
+    
+        // Capitalize the first term
+        $result = ucfirst($stringWithSpaces);
+        
+        return $result;
+      }
+  
+      function backUrl() {
+        $uid = \Drupal::currentUser()->id();
+        $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.describe_element');
+        if ($previousUrl) {
+          $response = new RedirectResponse($previousUrl);
+          $response->send();
+          return;
+        }
+      }
+      
  }

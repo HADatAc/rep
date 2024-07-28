@@ -28,26 +28,26 @@ class Ontology {
     foreach ($list as $ontology) {
 
       $abbrev = ' ';
-      if ($ontology->abbreviation != NULL) {
-        $abbrev = $ontology->abbreviation;
+      if ($ontology->label != NULL) {
+        $abbrev = $ontology->label;
       }
       $uri = ' ';
       if ($ontology->uri != NULL) {
         $uri = $ontology->uri;
       }
       $url = ' ';
-      if ($ontology->name != NULL) {
-        $url = $ontology->url;
+      if ($ontology->source != NULL) {
+        $url = $ontology->source;
       }
       $mimeType = ' ';
-      if ($ontology->mimeType != NULL) {
-        $mimeType = $ontology->mimeType;
+      if ($ontology->sourceMime != NULL) {
+        $mimeType = $ontology->sourceMime;
       }
       $triples = ' ';
       if ($ontology->numberOfLoadedTriples != NULL) {
         $triples = $ontology->numberOfLoadedTriples;
       }
-      $output[$ontology->uri] = [
+      $output[$ontology->label] = [
         'ontology_abbrev' => $abbrev,     
         'ontology_uri' => t('<a href="'.$uri.'">'.$uri.'</a>'),     
         'ontology_name' => $url,

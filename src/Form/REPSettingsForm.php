@@ -157,6 +157,21 @@
         if(strlen($form_state->getValue('site_name')) < 1) {
             $form_state->setErrorByName('site_name', $this->t("Please inform repository's full name."));
         }
+        if(strlen($form_state->getValue('repository_domain_url')) < 1) {
+            $form_state->setErrorByName('repository_domain_url', $this->t("Please inform repository's Domain URL."));
+        } else {
+            if ((strtolower(substr($form_state->getValue('repository_domain_url'), 0, 7)) !== "http://") &&  
+                (strtolower(substr($form_state->getValue('repository_domain_url'), 0, 8)) !== "https://")) {
+                $form_state->setErrorByName('repository_domain_url', $this->t("Domain URL must start with 'http://' or 'https://'."));
+            } 
+        }
+        if(strlen($form_state->getValue('repository_domain_namespace')) < 1) {
+            $form_state->setErrorByName('repository_domain_namespace', $this->t("Please inform repository's Domain Namespace."));
+        } else if (strlen($form_state->getValue('repository_domain_namespace')) > 10) {
+            $form_state->setErrorByName('repository_domain_namespace', $this->t("Domain Namespace cannot have more than 10 characters"));
+        } else if (!preg_match('/^[a-zA-Z0-9\-]+$/', $form_state->getValue('repository_domain_namespace'))) {
+            $form_state->setErrorByName('repository_domain_namespace', $this->t("Domain Namespace can only have letters, numbers and '-'."));
+        }
    }
      
     /**

@@ -1,12 +1,32 @@
     
 rep.top_level:
-  title: Advanced
+  title: Repository
   description: Manage Repository
   route_name: rep.about
   menu_name: main
   weight: 100
   requirements:
     _permission: 'access content'
+
+rp.kg:
+  title: Knowledge Graph
+  description: Manage Knowledge Graph
+  route_name: rep.about
+  menu_name: main
+  weight: 10
+  requirements:
+    _permission: 'access content'
+    
+    
+rp.dpl:
+  title: Deployment Elements
+  description: Manage Deployments
+  route_name: '<none>'
+  menu_name: main
+  weight: 90
+  requirements:
+    _permission: 'access content'
+    
     
 rep.uri_describe:
   title: Describe URI
@@ -28,7 +48,7 @@ rep.manage_datafile:
     pagesize: '10'
   parent: rep.top_level
   menu_name: main
-  weight: 2
+  weight: 3
   requirements:
     _permission: 'access content'
     _role: 'authenticated'
@@ -39,7 +59,7 @@ rep.about:
   route_name: rep.about
   parent: rep.top_level
   menu_name: main
-  weight: 3
+  weight: 6
   requirements:
     _permission: 'access content'
 
@@ -49,7 +69,7 @@ rep.admin_settings_link:
   menu_name: main 
   route_name: rep.admin_settings_custom
   parent: rep.top_level
-  weight: 4
+  weight: 7
   requirements:
     _permission: 'access content'
     _role: 'authenticated'

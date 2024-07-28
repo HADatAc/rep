@@ -91,8 +91,6 @@ class REPSelectForm extends FormBase {
     // RETRIEVE ELEMENTS
     $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
 
-    //dpm($this->getList());
-
     $this->single_class_name = "";
     $this->plural_class_name = "";
     switch ($this->element_type) {
@@ -110,6 +108,7 @@ class REPSelectForm extends FormBase {
     }
 
     // PUT FORM TOGETHER
+    //$form['#attached']['library'][] = 'rep/scrollable_table';
     $form['page_title'] = [
       '#type' => 'item',
       '#title' => $this->t('<h3>Manage ' . $this->plural_class_name . '</h3>'),
@@ -118,23 +117,17 @@ class REPSelectForm extends FormBase {
       '#type' => 'item',
       '#title' => $this->t('<h4>' . $this->plural_class_name . ' maintained by <font color="DarkGreen">' . $this->manager_name . ' (' . $this->manager_email . ')</font></h4>'),
     ];
-    /** 
-    $form['add_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Add New ' . $this->single_class_name),
-      '#name' => 'add_element',
-    ];
-    $form['edit_selected_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Edit Selected ' . $this->single_class_name),
-      '#name' => 'edit_element',
-    ];
     $form['delete_selected_element'] = [
       '#type' => 'submit',
       '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
       '#name' => 'delete_element',
+      '#attributes' => ['onclick' => 'if(!confirm("Really Delete?")){return false;}'],
     ];
-    */
+    //$form['my_tableselect_wrapper'] = array(
+    //  '#type' => 'container',
+    //  '#attributes' => array('class' => array('my-tableselect-wrapper')),
+    //);
+    //$form['my_tableselect_wrapper']['element_table'] = [
     $form['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
@@ -187,10 +180,10 @@ class REPSelectForm extends FormBase {
 
     // ADD ELEMENT
     if ($button_name === 'add_element') {
-      if ($this->element_type == 'semanticvariable') {
-        $url = Url::fromRoute('sem.add_semantic_variable');
-      } 
-      $form_state->setRedirectUrl($url);
+      //if ($this->element_type == 'organization') {
+      //  $url = Url::fromRoute('rep.add_organization');
+      //} 
+      //$form_state->setRedirectUrl($url);
     }  
 
     // EDIT ELEMENT
@@ -201,9 +194,9 @@ class REPSelectForm extends FormBase {
         \Drupal::messenger()->addMessage(t("No more than one " . $this->single_class_name . " can be edited at once."));      
       } else {
         $first = array_shift($rows);
-        if ($this->element_type == 'semanticvariable') {
-          $url = Url::fromRoute('sem.edit_semantic_variable', ['semanticvariableuri' => base64_encode($first)]);
-        } 
+        //if ($this->element_type == 'organization') {
+        //  $url = Url::fromRoute('rep.edit_organization', ['organizationuri' => base64_encode($first)]);
+        //} 
         $form_state->setRedirectUrl($url);
       } 
     }
@@ -214,15 +207,19 @@ class REPSelectForm extends FormBase {
         \Drupal::messenger()->addMessage(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));      
       } else {
         $api = \Drupal::service('rep.api_connector');
+        $success = TRUE;
         foreach($rows as $uri) {
-          if ($this->element_type == 'semanticvariable') {
-            $api->semanticVariableDel($uri);
-          } 
-          if ($this->element_type == 'sdd') {
-            $api->sddDel($uri);
+          if ($this->element_type == 'datafile') {
+            $resp = $api->parseObjectResponse($api->datafileDel($uri),'datafileDel');
+            if ($resp == NULL) {
+              \Drupal::messenger()->addMessage(t("Failed to delete the following " . $this->$single_class_name . ": " . $uri));      
+              $success = FALSE;
+            }
           } 
         }
-        \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));      
+        if ($success) {
+          \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));      
+        }
       }
     }  
 
@@ -235,4 +232,17 @@ class REPSelectForm extends FormBase {
 
   }
   
+  /**
+   * {@inheritdoc}
+   */   
+  public static function backSelect($elementType) {
+    $url = Url::fromRoute('rep.select_element');
+    $url->setRouteParameter('elementtype', $elementType);
+    $url->setRouteParameter('page', 0);
+    $url->setRouteParameter('pagesize', 12);
+    return $url;
+  }
+  
+
+
 }

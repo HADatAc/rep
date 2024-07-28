@@ -91,7 +91,6 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    //dpm($endpoint);
     return $this->perform_http_request($method, $api_url.$endpoint, $data);   
   }
 
@@ -103,7 +102,6 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    //dpm($api_url.$endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
@@ -118,7 +116,6 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    //dpm($endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
@@ -132,6 +129,89 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function listByManagerEmailByStudy($studyuri, $elementType, $manageremail, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremailbystudy/".
+      rawurlencode($studyuri)."/".
+      $manageremail."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
+  public function listSizeByManagerEmailByStudy($studyuri, $elementType, $manageremail, ) {
+    $endpoint = "/hascoapi/api/".
+      $elementType . 
+      "/manageremailbystudy/total/" . 
+      rawurlencode($studyuri)."/".
+      $manageremail;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function listByManagerEmailBySOC($socuri, $elementType, $manageremail, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremailbysoc/".
+      rawurlencode($socuri)."/".
+      $manageremail."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function listSizeByManagerEmailBySOC($socuri, $elementType, $manageremail, ) {
+    $endpoint = "/hascoapi/api/".
+      $elementType . 
+      "/manageremailbysoc/total/" . 
+      rawurlencode($socuri)."/".
+      $manageremail;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function uningestMT($metadataTemplateUri) {
+    $endpoint = "/hascoapi/api/uningest/mt/" . rawurlencode($metadataTemplateUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function elementAdd($elementType, $elementJson) {
+    $endpoint = "/hascoapi/api/" . 
+      $elementType . 
+      "/create/".
+      rawurlencode($elementJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function elementDel($elementType, $elementUri) {
+    $endpoint = "/hascoapi/api/" . 
+      $elementType . 
+      "/delete/" . 
+      rawurlencode($elementUri);    
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
   /**
@@ -445,26 +525,6 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   SDD
-   */
-
-   public function sddAdd($sddJson) {
-    $endpoint = "/hascoapi/api/sdd/create/".rawurlencode($sddJson);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function sddDel($sddUri) {
-    $endpoint = "/hascoapi/api/sdd/delete/".rawurlencode($sddUri);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
-  /**
    *   DATAFILE
    */
 
@@ -482,6 +542,369 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  /**
+   *   STUDY
+   */
+
+   public function studyAdd($studyJson) {
+    $endpoint = "/hascoapi/api/study/create/".rawurlencode($studyJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function studyDel($studyUri) {
+    $endpoint = "/hascoapi/api/study/delete/".rawurlencode($studyUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getStudyVCs($uri) {
+    $endpoint = "/hascoapi/api/study/virtualcolumns/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getStudySOCs($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/study/socs/".
+      urlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalStudyDAs($uri) {
+    $endpoint = "/hascoapi/api/study/dataacquisitions/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalStudyRoles($uri) {
+    $endpoint = "/hascoapi/api/study/studyroles/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalStudyVCs($uri) {
+    $endpoint = "/hascoapi/api/study/virtualcolumns/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalStudySOCs($uri) {
+    $endpoint = "/hascoapi/api/study/socs/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalStudySOs($uri) {
+    $endpoint = "/hascoapi/api/study/studyobjects/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  /**
+   *   STUDY ROLE 
+   */
+
+   public function studyRoleAdd($studyRoleJson) {
+    $endpoint = "/hascoapi/api/studyrole/create/".rawurlencode($studyRoleJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function studyRoleDel($studyRoleUri) {
+    $endpoint = "/hascoapi/api/studyrole/delete/".rawurlencode($studyRoleUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   STUDY OBJECT COLLECTION
+   */
+
+   public function studyObjectCollectionAdd($studyObjectCollectionJson) {
+    $endpoint = "/hascoapi/api/studyobjectcollection/create/".rawurlencode($studyObjectCollectionJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function studyObjectCollectionDel($studyObjectCollectionUri) {
+    $endpoint = "/hascoapi/api/studyobjectcollection/delete/".rawurlencode($studyObjectCollectionUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function studyObjectCollectionsByStudy($studyUri) {
+    $endpoint = "/hascoapi/api/studyobjectcollection/bystudy/".rawurlencode($studyUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   STUDY OBJECT 
+   */
+
+  public function studyObjectsBySOCwithPage($socUri,$pageSize,$offset) {
+    $endpoint = "/hascoapi/api/studyobject/bysoc/".rawurlencode($socUri).'/'.$pageSize.'/'.$offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function sizeStudyObjectsBySOC($socUri) {
+    $endpoint = "/hascoapi/api/studyobject/bysoc/total/".rawurlencode($socUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   VIRTUAL COLUMN 
+   */
+
+   public function virtualColumnAdd($virtualColumnJson) {
+    $endpoint = "/hascoapi/api/virtualcolumn/create/".rawurlencode($virtualColumnJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function virtualColumnDel($virtualColumnUri) {
+    $endpoint = "/hascoapi/api/virtualcolumn/delete/".rawurlencode($virtualColumnUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function virtualColumnsByStudy($studyUri) {
+    $endpoint = "/hascoapi/api/virtualcolumn/bystudy/".rawurlencode($studyUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   PLACE  
+   */
+
+   public function placeAdd($placeJson) {
+    $endpoint = "/hascoapi/api/place/create/".rawurlencode($placeJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function placeDel($placeUri) {
+    $endpoint = "/hascoapi/api/place/delete/".rawurlencode($placeUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getContains($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/place/contains/place/".
+      rawurlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalContains($uri) {
+    $endpoint = "/hascoapi/api/place/contains/place/total/".
+      rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  /**
+   *   ORGANIZATION  
+   */
+
+   public function organizationAdd($organizationJson) {
+    $endpoint = "/hascoapi/api/organization/create/".rawurlencode($organizationJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function organizationDel($organizationUri) {
+    $endpoint = "/hascoapi/api/organization/delete/".rawurlencode($organizationUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getSubOrganizations($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/organization/suborganizations/".
+      urlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalSubOrganizations($uri) {
+    $endpoint = "/hascoapi/api/organization/suborganizations/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getAffiliations($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/organization/affiliations/".
+      urlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalAffiliations($uri) {
+    $endpoint = "/hascoapi/api/organization/affiliations/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  /**
+   *   PERSON  
+   */
+
+   public function personAdd($personJson) {
+    $endpoint = "/hascoapi/api/person/create/".rawurlencode($personJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function personDel($personUri) {
+    $endpoint = "/hascoapi/api/person/delete/".rawurlencode($personUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   POSTAL ADDRESS  
+   */
+
+   public function postalAddressAdd($postalAddressJson) {
+    $endpoint = "/hascoapi/api/postaladdress/create/".rawurlencode($postalAddressJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function postalAddressDel($postalAddressUri) {
+    $endpoint = "/hascoapi/api/postaladdress/delete/".rawurlencode($postalAddressUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getContainsPostalAddress($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/place/contains/postaladdress/".
+      rawurlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalContainsPostalAddress($uri) {
+    $endpoint = "/hascoapi/api/place/contains/postaladdress/total/".
+      rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getContainsElement($uri, $elementtype, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/place/contains/element/".
+      rawurlencode($uri)."/".
+      $elementtype."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalContainsElement($uri, $elementtype) {
+    $endpoint = "/hascoapi/api/place/contains/element/total/".
+      rawurlencode($uri)."/".
+      $elementtype;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
   }
 
   /**
@@ -533,6 +956,14 @@ class FusekiAPIConnector {
 
   public function repoReloadNamespaceTriples() {
     $endpoint = "/hascoapi/api/repo/ont/load";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function repoDeleteSelectedNamespace($namespace) {
+    $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($namespace);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -634,25 +1065,23 @@ class FusekiAPIConnector {
     ];
   }
 
-  public function uploadSDD($sdd) {
+  public function uploadTemplate($concept,$template) {
 
-    //dpm($sdd);
-    
     // RETRIEVE FILE CONTENT FROM FID
-    $file_entity = \Drupal\file\Entity\File::load($sdd->dataFile->id);
+    $file_entity = \Drupal\file\Entity\File::load($template->hasDataFile->id);
     if ($file_entity == NULL) {
-      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $sdd->dataFile->id . ']'));
+      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $template->hasDataFile->id . ']'));
       return FALSE;
     }
     $file_uri = $file_entity->getFileUri();
     $file_content = file_get_contents($file_uri);
     if ($file_content == NULL) {
-      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $sdd->dataFile->id . ']'));
+      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $template->dataFile->id . ']'));
       return FALSE;
     }
 
     // APPEND DATAFILE URI TO ENDPOINT'S URL
-    $endpoint = "/hascoapi/api/ingest/sdd/".rawurlencode($sdd->uri);
+    $endpoint = "/hascoapi/api/ingest/".$concept."/".rawurlencode($template->uri);
 
     // MAKE CALL TO API ENDPOINT
     $api_url = $this->getApiUrl();
@@ -737,6 +1166,37 @@ class FusekiAPIConnector {
     }    
     \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
     return NULL; 
+  }
+
+  /** 
+   *  If anything goes wrong, this method will return NULL and issue a Drupal error message forwarding the message provided by 
+   *  the HASCO API. 
+   */
+  public function parseTotalResponse($response, $methodCalled) {
+    if ($this->error != NULL) {
+      if ($this->error == 'CON') {
+        \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
+      } else {
+        \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
+      }
+      return NULL;
+    }
+    if ($response == NULL || $response == "") {
+        \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
+        return NULL;
+    }
+    $totalValue = -1;
+    $obj = json_decode($response);
+    if ($obj == NULL) {
+      \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
+      return NULL; 
+    }
+    if ($obj->isSuccessful) {
+      $totalStr = $obj->body;
+      $obj2 = json_decode($totalStr);
+      $totalValue = $obj2->total;
+    }
+    return $totalValue;
   }
 
 }

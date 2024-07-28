@@ -5,14 +5,20 @@
  use Drupal\Core\Form\FormBase;
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\rep\Utils;
+ use Drupal\rep\Form\Associates\AssocOrganization;
+ use Drupal\rep\Form\Associates\AssocPlace;
+ use Drupal\rep\Form\Associates\AssocStudy;
+ use Drupal\rep\Form\Associates\AssocStudyObjectCollection;
+ use Drupal\rep\Entity\GenericObject;
+ use Drupal\rep\Vocabulary\FOAF;
+ use Drupal\rep\Vocabulary\HASCO;
  use Drupal\rep\Vocabulary\REPGUI;
+ use Drupal\rep\Vocabulary\SCHEMA;
  use Drupal\rep\Vocabulary\VSTOI;
 
  class DescribeAssociatesForm extends FormBase {
 
-    protected $element;
-
-    protected $associates;
+  protected $element;
   
     public function getElement() {
       return $this->element;
@@ -20,14 +26,6 @@
   
     public function setElement($object) {
       return $this->element = $object; 
-    }
-  
-    public function getAssociates() {
-      return $this->associates;
-    }
-  
-    public function setAssociates($obj) {
-      return $this->associates = $obj; 
     }
   
     /**
@@ -40,7 +38,7 @@
     /**
      * {@inheritdoc}
      */
-    public function buildForm(array $form, FormStateInterface $form_state){
+    public function buildForm(array $form, FormStateInterface $form_state) {
 
         // RETRIEVE PARAMETERS FROM HTML REQUEST
         $request = \Drupal::request();
@@ -56,10 +54,9 @@
         if ($finalUri != NULL) {
           $this->setElement($api->parseObjectResponse($finalUri,'getUri'));
           if ($this->getElement() != NULL) {
-            //var_dump($this->getElement());
-            //if ($this->getElement()->hascoTypeUri == VSTOI::INSTRUMENT) {
-            //  $this->setAssociates($api->parseObjectResponse($api->containerslotList($this->getElement()->uri),'containerslotList'));
-            //}
+            $objectProperties = GenericObject::inspectObject($this->getElement());
+            //dpm($objectProperties);
+            //dpm($this->getElement());
           }
         }
 
@@ -68,38 +65,96 @@
           '#title' => '<h3>Associated Elements</h3>',
         ];
 
-        if ($this->getAssociates() == NULL || sizeof($this->getAssociates()) <= 0) {
+        foreach ($objectProperties['objects'] as $propertyName => $propertyValue) {
 
-          $form['associates_table'] = [
-            '#type' => 'item',
-            '#title' => t('<ul><li>NONE</li></ul>'),
-          ];
+          // PROCESS EMBEDDED OBJECTS
+          if ($propertyName === 'hasAddress') {  
 
-        } else {
-          
-          $header = ContainerSlot::generateHeader();
-          $output = ContainerSlot::generateOutput($this->getAssociates());    
+            $this->processPropertyAddress($propertyValue, $form, $form_state);
 
-          //$form['associates_detectors_header'] = [
-          //  '#type' => 'item',
-          //  '#title' => '<h4>Items</h4>',
-          //];
-  
-            // PUT FORM TOGETHER
-          $form['associates_table'] = [
-            '#type' => 'table',
-            '#header' => $header,
-            '#rows' => $output,
-            '#empty' => t('No associated items'),
-          ];
+          } else {
 
+            // THIS IS THE PROCESSING OF GENERAL OBJECT PROPERTIES
+            $prettyName = DescribeForm::prettyProperty($propertyName);
+            $link = ' ';
+            if (isset($propertyValue->label) && isset($propertyValue->uri) &&
+               ($propertyValue->label != NULL) && ($propertyValue->uri != NULL)) {
+              $link = Utils::link($propertyValue->label,$propertyValue->uri);
+            }
+            $form[$propertyName] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>".$prettyName . "</b>: " . $link ."<br><br>"),
+            ];
+          }
         }
-    
-        return $form;        
 
+        foreach ($objectProperties['arrays'] as $propertyName => $propertyValue) {
+
+          if (!empty($propertyValue)) {
+            // THIS IS THE PROCESSING OF GENERAL ARRAY PROPERTIES
+            $prettyName = DescribeForm::prettyProperty($propertyName);
+            // Render array elements as a bullet list.
+            $list_items = '<ul>';
+            foreach ($propertyValue as $item) {
+              $item_str = '';
+              if (is_object($item)) {
+                $item_str = $item->uri;
+              } elseif (is_array($item)) {
+                $item_str = implode(', ',$item);
+              } else {
+                $item_str = $item;
+              }
+              $list_items .= '<li>' . $item_str . '</li>';
+            }
+            $list_items .= '</ul>';
+
+            $form[$propertyName] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>".$prettyName . "</b>: " . $list_items ."<br>"),
+            ];
+          }
+        }
+
+        if ($this->getElement()->hascoTypeUri === SCHEMA::PLACE) {
+          AssocPlace::process($this->getElement(), $form, $form_state);
+        } else if ($this->getElement()->hascoTypeUri === FOAF::ORGANIZATION) {
+          AssocOrganization::process($this->getElement(), $form, $form_state);
+        } else if ($this->getElement()->hascoTypeUri === HASCO::STUDY) {
+          AssocStudy::process($this->getElement(), $form, $form_state);
+        } else if ($this->getElement()->hascoTypeUri === HASCO::STUDY_OBJECT_COLLECTION) {
+          AssocStudyObjectCollection::process($this->getElement(), $form, $form_state);
+        }
+
+        return $form;        
     }
 
-    
+    public function processPropertyAddress($addressObject, array &$form, FormStateInterface $form_state) {
+      $addressProperties = GenericObject::inspectObject($addressObject);
+      $form['beginAddress'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("<b>Postal Address</b>:<br><ul>"),
+      ];
+      $excludedLiterals = ['label','typeLabel','hascoTypeLabel'];
+      foreach ($addressProperties['literals'] as $propertyNameAddress => $propertyValueAddress) {
+        if (!in_array($propertyNameAddress,$excludedLiterals)) {
+          $form[$propertyNameAddress] = [
+            '#type' => 'markup',
+            '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . $propertyValueAddress. "<br>"),
+          ];
+        }
+      }
+      foreach ($addressProperties['objects'] as $propertyNameAddress => $propertyValueAddress) {
+        $form[$propertyNameAddress] = [
+          '#type' => 'markup',
+          '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . Utils::link($propertyValueAddress->label,$propertyValueAddress->uri) . "<br>"),
+        ];
+      }
+      $form['endAddress'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("</ul>"),
+      ];
+    }
+
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
      
