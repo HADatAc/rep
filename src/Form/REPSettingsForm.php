@@ -46,6 +46,19 @@
         if ($config->get("rep_home")!= NULL) {
             $home = $config->get("rep_home");
         }
+
+        $form['namespace_submit'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Manage NameSpaces'),
+            '#name' => 'namespace',
+        ];
+      
+        $form['preferred_names_submit'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Preferred Names'),
+            '#name' => 'preferred',
+        ];
+      
         $form['rep_home'] = [
             '#type' => 'checkbox',
             '#title' => 'Do you want rep to be the home (first page) of the Drupal?',
@@ -134,12 +147,6 @@
             '#title' => $this->t('<br>'),
         ];
       
-        $form['namespace_submit'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Manage NameSpaces'),
-            '#name' => 'namespace',
-        ];
-      
         $form['filler_2'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
@@ -186,7 +193,12 @@
           return;
         } 
         
-        $config = $this->config(static::CONFIGNAME);
+        if ($button_name === 'preferred') {
+          $form_state->setRedirectUrl(Url::fromRoute('rep.admin_preferred_names_custom'));
+          return;
+        } 
+          
+          $config = $this->config(static::CONFIGNAME);
         
         //save confs
         $config->set("rep_home", $form_state->getValue('rep_home'));

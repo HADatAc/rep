@@ -184,6 +184,32 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
+  public function listByManagerEmailByContainer($containeruri, $elementType, $manageremail, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremailbycontainer/".
+      rawurlencode($containeruri)."/".
+      $manageremail."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function listSizeByManagerEmailByContainer($containeruri, $elementType, $manageremail, ) {
+    $endpoint = "/hascoapi/api/".
+      $elementType . 
+      "/manageremailbycontainer/total/" . 
+      rawurlencode($containeruri)."/".
+      $manageremail;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
   public function uningestMT($metadataTemplateUri) {
     $endpoint = "/hascoapi/api/uningest/mt/" . rawurlencode($metadataTemplateUri);
     $method = 'GET';

@@ -46,11 +46,24 @@ function rep_install() {
  */
 function rep_form_alter(&$form, &$form_state, $form_id) {
     // Check if the form ID matches your configuration form.
-    if ($form_id == 'rep_form_namespace') { 
+    if ($form_id == 'rep_form_namespace' || 
+        $form_id == 'rep_form_preferred_names') { 
         // Remove the default "Save configuration" button.
-        unset($form['actions']['submit']);
+      unset($form['actions']['submit']);
     }
 }
+
+/**
+ * Implements hook_menu_alter().
+ */
+/*
+function rep_menu_alter(&$items) {
+  // Change the title of the menu item with path 'node/1/edit'.
+  if (isset($items['node/1/edit'])) {
+    $items['node/1/edit']['title'] = 'Edit Article';
+  }
+}
+*/
 
 /**
  * Implements hook_theme

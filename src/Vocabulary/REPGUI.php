@@ -14,6 +14,7 @@
      */
     const SELECT_PAGE          = "/select/";
 
+    const SELECT_PAGE_BYCONTAINER  = "/selectbycontainer/";
     const SELECT_PAGE_BYSTUDY  = "/selectbystudy/";
     const SELECT_PAGE_BYSOC    = "/selectbysoc/";
 

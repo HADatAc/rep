@@ -17,6 +17,7 @@ class Constant {
   const PREFIX_DETECTOR_STEM              = "DS";
   const PREFIX_DETECTOR                   = "DT";
   const PREFIX_INSTRUMENT                 = "IN";
+  const PREFIX_INS                        = "IS";
   const PREFIX_ORGANIZATION               = "OR";
   const PREFIX_PERSON                     = "PS";
   const PREFIX_PLACE                      = "PL";

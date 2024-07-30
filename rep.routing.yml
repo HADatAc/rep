@@ -180,6 +180,17 @@ rep.admin_namespace_settings_custom:
     _admin_route: TRUE
     no_cache: 'TRUE'
 
+rep.admin_preferred_names_custom:
+  path: 'admin/config/rep/preferred'
+  defaults:
+    _form: '\Drupal\rep\Form\REPPreferredNamesForm'
+    _title: 'Semantic Repository Preferred Names Management'
+  requirements:
+    _permission: 'administer site Preferred Names configuration'
+  options:
+    _admin_route: TRUE
+    no_cache: 'TRUE'
+
 rep.repo_info:
   path: 'rep/repo/info'
   defaults:
