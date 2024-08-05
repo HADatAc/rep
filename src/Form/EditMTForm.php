@@ -145,7 +145,7 @@ class EditMTForm extends FormBase {
       return;
     }
 
-    if ($this->getMT()->isMemberOf != NULL) {
+    if (isset($this->getMT()->isMemberOf) && $this->getMT()->isMemberOf != NULL) {
       $this->setStudy($this->getMT()->isMemberOf);
       $this->setStudyUri($this->getMT()->isMemberOfUri);
     }
@@ -158,14 +158,16 @@ class EditMTForm extends FormBase {
     }
 
     $dd = ' ';
-    if ($this->getMT()->hasDD != NULL &&
+    if (isset($this->getMT()->hasDD) &&
+        $this->getMT()->hasDD != NULL &&
         $this->getMT()->hasDD->uri != NULL &&
         $this->getMT()->hasDD->label != NULL) {
       $dd = Utils::fieldToAutocomplete($this->getMT()->hasDD->uri,$this->getMT()->hasDD->label);
     }
 
     $sdd = ' ';
-    if ($this->getMT()->hasSDD != NULL &&
+    if (isset($this->getMT()->hasSDD) &&
+        $this->getMT()->hasSDD != NULL &&
         $this->getMT()->hasSDD->uri != NULL &&
         $this->getMT()->hasSDD->label != NULL) {
       $sdd = Utils::fieldToAutocomplete($this->getMT()->hasSDD->uri,$this->getMT()->hasSDD->label);

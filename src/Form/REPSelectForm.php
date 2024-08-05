@@ -226,7 +226,7 @@ class REPSelectForm extends FormBase {
 
     // BACK TO MAIN PAGE
     if ($button_name === 'back') {
-      $url = Url::fromRoute('sem.search');
+      $url = Url::fromRoute('rep.home');
       $form_state->setRedirectUrl($url);
     }  
 

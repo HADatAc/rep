@@ -222,7 +222,7 @@ class Utils {
     }
 
     if ($rt == NULL) {
-      return Url::fromRoute('rep.about');
+      return Url::fromRoute('rep.home');
     }
 
     $url = Url::fromRoute($rt);

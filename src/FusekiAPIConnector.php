@@ -312,14 +312,6 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
-  public function slotelementDel($slotelementUri) {
-    $endpoint = "/hascoapi/api/slotelement/delete/".rawurlencode($slotelementUri);    
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
   /**
    *  
    *    CONTAINER SLOTS
@@ -1035,7 +1027,6 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    var_dump($api_url.$endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 

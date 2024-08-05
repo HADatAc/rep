@@ -20,10 +20,8 @@ class About extends FormBase {
      * {@inheritdoc}
      */
     public function getFormId() {
-        return "rep_about";
-        
+        return "rep_about";   
     }
-
 
      /**
      * {@inheritdoc}
@@ -33,78 +31,72 @@ class About extends FormBase {
         
         $form['rep_home'] = [
             '#type' => 'item',
-            '#title' => '<h2>About this website</h2>' . 
-                'This is an instance of the <a href="http://hadatac.org/software/hascoapp/">HAScO App</a> knowledge repository ' . 
+            '#title' => '<br>This is an instance of the <a href="http://hadatac.org/software/hascoapp/">HAScO App</a> knowledge repository ' . 
                 'developed by <a href="http://hadatac.org/">HADatAc.org</a> community.<br>',
         ];
 
-        $form['rep_content1'] = [
-            '#type' => 'item',
-            '#title' => 'This repository currently hosts a knowledge graph about the following:<br>',
-        ];
-
-        $totals = '<h3>Instrument Elements</h3>';
-        $totals .= '<ul>';
-        $totals .=  '<li> ' . About::total('ins') . ' <a href="'.Utils::selectBackUrl('ins')->toString().'">INS(s)</a> (MT)</li>'; 
-        $totals .=  '<li> ' . About::total('instrument') . ' <a href="'.Utils::selectBackUrl('instrument')->toString().'">instrument(s)</a></li>'; 
-        $totals .=  '<li> ' . About::total('detectorstem') . ' <a href="'.Utils::selectBackUrl('detectorstem')->toString().'">detector stem(s)</a></li>';
-        $totals .=  '<li> ' . About::total('detector') . ' <a href="'.Utils::selectBackUrl('detector')->toString().'">detector(s)</a></li>';
-        $totals .=  '<li> ' . About::total('codebook') . ' <a href="'.Utils::selectBackUrl('codebook')->toString().'">codebook(s)</a></li>';
-        $totals .=  '<li> ' . About::total('responseoption') . ' <a href="'.Utils::selectBackUrl('responseoption')->toString().'">response option(s)</a></li>';
-        $totals .=  '<li> ' . About::total('annotationstem') . ' <a href="'.Utils::selectBackUrl('annotationstem')->toString().'">annotation stem(s)</a></li>';
-        $totals .=  '<li> ' . About::total('annotation') . ' <a href="'.Utils::selectBackUrl('annotation')->toString().'">annotation(s)</a></li>';
-        $totals .= '</ul>';
-        $totals .= '<h3>Semantic Elements</h3>';
-        $totals .= '<ul>';
-        $totals .=  '<li> ' . About::total('sdd') . ' <a href="'.Utils::selectBackUrl('sdd')->toString().'">semantic data dictionary(ies)</a> (MT)</li>';
-        $totals .=  '<li> ' . About::total('semanticvariable') . ' <a href="'.Utils::selectBackUrl('semanticvariable')->toString().'">semantic variable(s)</a></li>'; 
-        $totals .=  '<li> ' . About::total('entity') . ' <a href="'.Utils::selectBackUrl('entity')->toString().'">entity(ies)</a></li>';
-        $totals .=  '<li> ' . About::total('attribute') . ' <a href="'.Utils::selectBackUrl('attribute')->toString().'">attribute(s)</a></li>';
-        $totals .=  '<li> ' . About::total('unit') . ' <a href="'.Utils::selectBackUrl('unit')->toString().'">unit(s)</a></li>';
-        $totals .= '</ul>';
-        $totals .= '<h3>Study Elements</h3>';
-        $totals .= '<ul>';
-        $totals .=  '<li> ' . About::total('dd') . ' <a href="'.Utils::selectBackUrl('dd')->toString().'">data dictionary(ies)</a> (MT)</li>'; 
-        $totals .=  '<li> ' . About::total('da') . ' <a href="'.Utils::selectBackUrl('da')->toString().'">dataset\'s data file(s)</a> (MT)</li>'; 
-        $totals .=  '<li> ' . About::total('study') . ' <a href="'.Utils::selectBackUrl('study')->toString().'">study(ies)</a></li>'; 
-        $totals .=  '<li> ' . About::total('studyrole') . ' <a href="'.Utils::selectBackUrl('studyrole')->toString().'">studyrole(s)</a></li>';
-        $totals .=  '<li> ' . About::total('virtualcolumn') . ' <a href="'.Utils::selectBackUrl('virtualcolumn')->toString().'">virtualcolumn(s)</a></li>';
-        $totals .=  '<li> ' . About::total('studyobjectcollection') . ' <a href="'.Utils::selectBackUrl('studyobjectcollection')->toString().'">studyobjectcollection(s)</a></li>'; 
-        $totals .=  '<li> ' . About::total('studyobject') . ' <a href="'.Utils::selectBackUrl('studyobject')->toString().'">studyobject(s)</a></li>';
-        $totals .= '</ul>';
-        $totals .= '<h3>Social/Organizational Elements</h3>';
-        $totals .= '<ul>';
-        $totals .=  '<li> ' . About::total('kgr') . ' <a href="'.Utils::selectBackUrl('kgr')->toString().'">KGR(s)</a> (MT)</li>';
-        $totals .=  '<li> ' . About::total('place') . ' <a href="'.Utils::selectBackUrl('place')->toString().'">place(s)</a></li>';
-        $totals .=  '<li> ' . About::total('organization') . ' <a href="'.Utils::selectBackUrl('organization')->toString().'">organization(s)</a></li>';
-        $totals .=  '<li> ' . About::total('person') . ' <a href="'.Utils::selectBackUrl('person')->toString().'">person(s)</a></li>';
-        $totals .=  '<li> ' . About::total('postaladdress') . ' <a href="'.Utils::selectBackUrl('postaladdress')->toString().'">postaladdress(es)</a></li>';
-        $totals .= '</ul>';
-        $form['rep_content_totals'] = [
-            '#type' => 'item',
-            '#title' => $totals,
-        ];
-        $form['rep_content2'] = [
-            '#type' => 'item',
-            '#title' => 'In this instance, the knowledge graph is based on content coming from the following ontologies:<br>',
-        ];
-
- 
-        $ontologies = '<ul>';
-        $tables = new Tables;
-        $namespaces = $tables->getNamespaces();
-        if ($namespaces != NULL) {
-          foreach ($namespaces as $abbrev => $ns) {
-             $ontologies .= '<li><a href="'. $ns .'">'. $ns . '</a> ('. $abbrev . ')</li>';
-          }
-        } else {
-            $ontologies .= '<li>No NAMESPACE information available at the moment</li>';
+        $rep_status = '<font color="Red"><b>IS UNAVAILABLE</b></font>';
+        if (\Drupal::moduleHandler()->moduleExists('rep')) {
+            $rep_status = '<font color="Green"><b>IS AVAILABLE</b></font>';
         }
-        $ontologies .= '</ul>';
-        $form['rep_ontologies_totals'] = [
-            '#type' => 'item',
-            '#title' => $ontologies,
+
+        $sir_status = '<span style="color: red; font-weight: bold; !important;">IS UNAVAILABLE</span>';
+        if (\Drupal::moduleHandler()->moduleExists('sir')) {
+            $sir_status = '<span style="color: green; font-weight: bold; !important;"><b>IS AVAILABLE</b></span>';
+        }
+
+        $sem_status = '<span style="color: red;"><b>IS UNAVAILABLE</b></span>';
+        if (\Drupal::moduleHandler()->moduleExists('sem')) {
+            $sem_status = '<span style="color: green; font-weight: bold; !important;"><b>IS AVAILABLE</b></span>';
+        }
+
+        $std_status = '<span style="color: red; font-weight: bold; !important;">IS UNAVAILABLE</span>';
+        if (\Drupal::moduleHandler()->moduleExists('std')) {
+            $std_status = '<span style="color: green; font-weight: bold; !important;"><b>IS AVAILABLE</b></span>';
+        }
+
+        $form['rep_content1'] = [
+            '#type' => 'markup',
+            '#markup' => 'The HASCO App is a <b>Semantic Repository</b> for handling Scientific Evidence in the form of RDF knowledge, including data. ' . 
+                'The repository is composed of a back-end API called HASCO and a Drupal-based front end based on a number of Drupal modules.<br><br>' . 
+                'These are the HASCO App components:<br><br>'.
+                '<ul>' . 
+                '  <li>Back end component</li>' . 
+                '     <ul>' .
+                '       <li>HASCOAPI - A comprehensive back-end solution and API for managing HASCO concepts in RDF.  HASCO is the HADatAc.org\'s Human-Aware Science Ontology.</li>' .
+                '     </ul><br>' .
+                '  <li>Front-end components</li>' .
+                '     <ul>',
         ];
+
+        $form['rep_status'] = [
+            '#type' => 'item',
+            '#title' => $this->t('<li>REP - A Drupal module responsible for connecting HASCO App front-end capabilities to the HASCO API. ' . 
+                                 'In this repository, REP module ' . $rep_status . '</li> '),
+        ];
+        $form['sir_status'] = [
+            '#type' => 'item',
+            '#title' => $this->t('<li>SIR - A Drupal module that provides front-end capabilities for managing instruments and questionnaires using the HASCOAPI. ' . 
+                                 'In this repository, SIR module ' . $sir_status . '</li> '),
+        ];
+        $form['sem_status'] = [
+            '#type' => 'item',
+            '#title' => $this->t('<li>SEM - A Drupal module that provides front-end capabilities for managing data dictionaries, codebooks and semantic variables using the HASCOAPI. ' . 
+                                 'In this repository, SEM module ' . $sem_status . '</li> '),
+        ];
+        $form['std_status'] = [
+            '#type' => 'item',
+            '#title' => $this->t('<li>STD - A Drupal module that provides front-end capabilities for managing scientific studies using the HASCOAPI. ' . 
+                                 'In this repository, STD module ' . $std_status . '</li> '),
+        ];
+
+        $form['rep_content2'] = [
+            '#type' => 'markup',
+            '#markup' => '     </ul>' .
+                         '</ul>',
+        ];  
+
+      
         $form['rep_newline1'] = [
             '#type' => 'item',
             '#title' => '<br><br>',
@@ -116,7 +108,7 @@ class About extends FormBase {
         ];
         $form['rep_newline2'] = [
             '#type' => 'item',
-            '#title' => '<br><br><br>',
+            '#title' => '<br><br>',
         ];
       
         return $form;
@@ -132,11 +124,10 @@ class About extends FormBase {
       $button_name = $triggering_element['#name'];
 
       if ($button_name === 'back') {
-        $url = Url::fromRoute('rep.about');
+        $url = Url::fromRoute('rep.home');
         $form_state->setRedirectUrl($url);
         return;
       } 
-
     }
 
     public static function total($elementtype) {

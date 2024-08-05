@@ -2,7 +2,11 @@
 # Landing page
 
 rep.home:
-  path: '/'
+  path: 'rep'
+  defaults:
+    _form: '\Drupal\rep\Form\LandingPage'
+  requirements:
+    _permission: 'access content'
 
 # Main menu options 
 

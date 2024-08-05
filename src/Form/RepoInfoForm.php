@@ -108,7 +108,7 @@
      * {@inheritdoc}
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
-        $url = Url::fromRoute('rep.about');
+        $url = Url::fromRoute('rep.home');
         $form_state->setRedirectUrl($url);
     }
 
