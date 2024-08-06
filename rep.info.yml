@@ -2,5 +2,7 @@ name: Semantic Repository
 description: Underlying repository for managing knowledge graphs about a broad range of concepts 
 package: Semantic Tools
 core_version_requirement: ^8 || ^9
+dependencies:
+  - drupal:key
 type: module 
 configure: rep.admin_settings

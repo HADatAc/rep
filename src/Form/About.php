@@ -45,6 +45,11 @@ class About extends FormBase {
             $sir_status = '<span style="color: green; font-weight: bold; !important;"><b>IS AVAILABLE</b></span>';
         }
 
+        $dpl_status = '<span style="color: red; font-weight: bold; !important;">IS UNAVAILABLE</span>';
+        if (\Drupal::moduleHandler()->moduleExists('dpl')) {
+            $dpl_status = '<span style="color: green; font-weight: bold; !important;"><b>IS AVAILABLE</b></span>';
+        }
+
         $sem_status = '<span style="color: red;"><b>IS UNAVAILABLE</b></span>';
         if (\Drupal::moduleHandler()->moduleExists('sem')) {
             $sem_status = '<span style="color: green; font-weight: bold; !important;"><b>IS AVAILABLE</b></span>';
@@ -78,6 +83,11 @@ class About extends FormBase {
             '#type' => 'item',
             '#title' => $this->t('<li>SIR - A Drupal module that provides front-end capabilities for managing instruments and questionnaires using the HASCOAPI. ' . 
                                  'In this repository, SIR module ' . $sir_status . '</li> '),
+        ];
+        $form['dpl_status'] = [
+            '#type' => 'item',
+            '#title' => $this->t('<li>DPL - A Drupal module that provides front-end capabilities for managing deployment elements like deployments, platforms and streams using the HASCOAPI. ' . 
+                                 'In this repository, DPL module ' . $dpl_status . '</li> '),
         ];
         $form['sem_status'] = [
             '#type' => 'item',

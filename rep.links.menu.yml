@@ -35,7 +35,7 @@ rep.uri_describe:
 # DEPLOYMENT ELEMENTS
 #
 
-rep.dpl:
+rep.top_dpl:
   title: Deployment Elements
   description: Manage Deployments
   route_name: '<none>'
@@ -51,13 +51,11 @@ rep.dpl:
 rep.top_level:
   title: Repository
   description: Manage Repository
-  route_name: rep.about
+  route_name: rep.home
   menu_name: main
   weight: 100
   requirements:
     _permission: 'access content'
-
-
 
 rep.manage_datafile:
   title: Manage Data Files
