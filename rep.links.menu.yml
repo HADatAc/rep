@@ -31,18 +31,6 @@ rep.uri_describe:
   requirements:
     _permission: 'access content'
     
-#
-# DEPLOYMENT ELEMENTS
-#
-
-rep.top_dpl:
-  title: Deployment Elements
-  description: Manage Deployments
-  route_name: '<none>'
-  menu_name: main
-  weight: 90
-  requirements:
-    _permission: 'access content'
         
 #
 # REPOSITORY
