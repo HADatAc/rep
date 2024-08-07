@@ -7,6 +7,7 @@
 
 namespace Drupal\rep\Form;
 
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\URL;
@@ -100,19 +101,28 @@ class LandingPage extends FormBase {
                 '#markup' => '<div class="card"><div class="card-body">' . $totalsStudy . '</div></div>',
             ),
         );
+
         
-        $image_path = drupal_get_path('module', 'rep') . '/images/hasco_cycle.png';
+        $module_handler = \Drupal::service('module_handler');
+
+        $module_path = "";
+        // Check if the module 'rep' is enabled.
+        if ($module_handler->moduleExists('rep')) {
+            $module_path = $module_handler->getModule('rep')->getPath();
+        }
+
+        $image_path = './' . $module_path . '/images/hasco_cycle.png';
 
         //
         // SECOND COLUMN: MAIN IMAGE
         // 
-
+        
         $form['row']['column2'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-4')),
             'card' => array(
                 '#type' => 'markup',
-                '#markup' => '<img src="' . file_create_url($image_path) . '" alt="HASCO Cycle" />',
+                '#markup' => '<img src="' . $image_path . '" alt="HASCO Cycle" />',
             ),
         );
 
