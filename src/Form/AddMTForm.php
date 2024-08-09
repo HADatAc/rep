@@ -5,6 +5,7 @@ namespace Drupal\rep\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Drupal\file\FileInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Drupal\rep\Utils;
 use Drupal\rep\Constant;
@@ -303,7 +304,7 @@ class AddMTForm extends FormBase {
       // Check if a file was uploaded.
       if ($file_entity) {
         // Set the status to FILE_STATUS_PERMANENT.
-        $file_entity->set('status', FILE_STATUS_PERMANENT);
+        $file_entity->set('status', FileInterface::STATUS_PERMANENT);
         $file_entity->save();
         \Drupal::messenger()->addMessage(t('File uploaded successfully.'));
 

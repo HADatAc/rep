@@ -12,17 +12,18 @@
 
     const ANNOTATION                      = VSTOI::VSTOI . "Annotation";
     const ANNOTATION_STEM                 = VSTOI::VSTOI . "AnnotationStem";
+    const CODEBOOK                        = VSTOI::VSTOI . "Codebook";
     const CONTAINER                       = VSTOI::VSTOI . "Container";
     const CONTAINER_SLOT                  = VSTOI::VSTOI . "ContainerSlot";
     const DETECTOR                        = VSTOI::VSTOI . "Detector";
     const DETECTOR_STEM                   = VSTOI::VSTOI . "DetectorStem";
     const INSTRUMENT                      = VSTOI::VSTOI . "Instrument";
-    const QUESTIONNAIRE                   = VSTOI::VSTOI . "Questionnaire";
-    const SUBCONTAINER                    = VSTOI::VSTOI . "Subcontainer";
-    const CODEBOOK                        = VSTOI::VSTOI . "Codebook";
     const ITEM                            = VSTOI::VSTOI . "Item";
+    const PLATFORM                        = VSTOI::VSTOI . "Platform";
     const PSYCHOMETRIC_QUESTIONNAIRE      = VSTOI::VSTOI . "PsychometricQuestionnaire";
+    const QUESTIONNAIRE                   = VSTOI::VSTOI . "Questionnaire";
     const RESPONSE_OPTION                 = VSTOI::VSTOI . "ResponseOption";
+    const SUBCONTAINER                    = VSTOI::VSTOI . "Subcontainer";
 
     /*
      *    PROPERTIES

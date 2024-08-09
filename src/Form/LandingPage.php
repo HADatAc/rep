@@ -80,12 +80,14 @@ class LandingPage extends FormBase {
         
         $form['row']['column1']['filler'] = [
             '#type' => 'markup',
-            '#markup' => '<br><br><br><br><br><br><br>',
+            '#markup' => '<br><br><br><br>',
         ];
 
         $totalsStudy = '<h3>Study Elements</h3>';
         $totalsStudy .= '<ul>';
-        $totalsStudy .=  '<li> ' . About::total('dd') . ' <a href="'.Utils::selectBackUrl('dd')->toString().'">data dictionary(ies)</a> (MT)</li>'; 
+        $totalsStudy .=  '<li> ' . About::total('dsg') . ' <a href="'.Utils::selectBackUrl('dsg')->toString().'">DSG(s)</a> (MT)</li>';
+        $totalsStudy .=  '<li> ' . About::total('dd') . ' <a href="'.Utils::selectBackUrl('dd')->toString().'">DDs</a> (MT)</li>'; 
+        $totalsStudy .=  '<li> ' . About::total('sdd') . ' <a href="'.Utils::selectBackUrl('sdd')->toString().'">SDD(s)</a> (MT)</li>';
         $totalsStudy .=  '<li> ' . About::total('study') . ' <a href="'.Utils::selectBackUrl('study')->toString().'">study(ies)</a></li>'; 
         $totalsStudy .=  '<li> ' . About::total('studyrole') . ' <a href="'.Utils::selectBackUrl('studyrole')->toString().'">studyrole(s)</a></li>';
         $totalsStudy .=  '<li> ' . About::total('virtualcolumn') . ' <a href="'.Utils::selectBackUrl('virtualcolumn')->toString().'">virtualcolumn(s)</a></li>';
@@ -122,7 +124,7 @@ class LandingPage extends FormBase {
             '#attributes' => array('class' => array('col-md-4')),
             'card' => array(
                 '#type' => 'markup',
-                '#markup' => '<img src="' . $image_path . '" alt="HASCO Cycle" />',
+                '#markup' => '<img src="' . $image_path . '" alt="HASCO Cycle" style="width:100%;" border="0" />',
             ),
         );
 
@@ -139,10 +141,10 @@ class LandingPage extends FormBase {
         $totalsDeploy .= '<ul>';
         $totalsDeploy .=  '<li> ' . About::total('dp2') . ' <a href="'.Utils::selectBackUrl('dp2')->toString().'">DP2(s)</a> (MT)</li>';
         $totalsDeploy .=  '<li> ' . About::total('str') . ' <a href="'.Utils::selectBackUrl('str')->toString().'">STR(s)</a> (MT)</li>';
-        $totalsDeploy .=  '<li> ' . About::total('Platforms') . ' <a href="'.Utils::selectBackUrl('platform')->toString().'">Platform(s)</a></li>';
-        $totalsDeploy .=  '<li> ' . About::total('Platform Instances') . ' <a href="'.Utils::selectBackUrl('platforminstance')->toString().'">Platform Instance(s)</a></li>';
-        $totalsDeploy .=  '<li> ' . About::total('Deployments') . ' <a href="'.Utils::selectBackUrl('deployment')->toString().'">Deployment(s)</a></li>';
-        $totalsDeploy .=  '<li> ' . About::total('Streams') . ' <a href="'.Utils::selectBackUrl('stream')->toString().'">Stream(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('platform') . ' <a href="'.Utils::selectBackUrl('platform')->toString().'">Platform(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('platforminstance') . ' <a href="'.Utils::selectBackUrl('platforminstance')->toString().'">Platform Instance(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('deployment') . ' <a href="'.Utils::selectBackUrl('deployment')->toString().'">Deployment(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('stream') . ' <a href="'.Utils::selectBackUrl('stream')->toString().'">Stream(s)</a></li>';
         $totalsDeploy  .= '</ul>';
 
         $form['row']['column3']['card3'] = array(
@@ -156,7 +158,7 @@ class LandingPage extends FormBase {
 
         $form['row']['column3']['filler'] = [
             '#type' => 'markup',
-            '#markup' => '<br><br><br><br><br>',
+            '#markup' => '<br><br><br>',
         ];
 
         $totalsData = '<h3>Data Elements</h3>';

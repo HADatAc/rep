@@ -13,14 +13,18 @@ class Constant {
   const PREFIX_CODEBOOK                   = "CB";
   const PREFIX_DATAFILE                   = "DF";
   const PREFIX_DA                         = "DA";
-  const PREFIX_DSG                        = "DG";
+  const PREFIX_DD                         = "DD";
+  const PREFIX_DP2                        = "D2";
+  const PREFIX_DEPLOYMENT                 = "DP";
   const PREFIX_DETECTOR_STEM              = "DS";
   const PREFIX_DETECTOR                   = "DT";
+  const PREFIX_DSG                        = "DG";
   const PREFIX_INSTRUMENT                 = "IN";
   const PREFIX_INS                        = "IS";
   const PREFIX_ORGANIZATION               = "OR";
   const PREFIX_PERSON                     = "PS";
   const PREFIX_PLACE                      = "PL";
+  const PREFIX_PLATFORM                   = "PF";
   const PREFIX_POSTAL_ADDRESS             = "PA";
   const PREFIX_RESPONSE_OPTION            = "RO";
   const PREFIX_SEMANTIC_VARIABLE          = "SV";
@@ -28,7 +32,9 @@ class Constant {
   const PREFIX_STUDY                      = "ST";
   const PREFIX_STUDY_OBJECT_COLLECTION    = "OC";
   const PREFIX_STUDY_OBJECT               = "OB";
-  const PREFIX_STUDY_ROLE                 = "SR";
+  const PREFIX_STUDY_ROLE                 = "RL";
+  const PREFIX_STR                        = "SR";
+  const PREFIX_STREAM                     = "SM";
   const PREFIX_SUBCONTAINER               = "SC";
   const PREFIX_VIRTUAL_COLUMN             = "VC";
 

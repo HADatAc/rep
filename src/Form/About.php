@@ -11,7 +11,8 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\URL;
 use Drupal\rep\Utils;
-use Drupal\rep\ListKeywordLanguagePage;
+//use Drupal\rep\ListKeywordLanguagePage;
+use Drupal\rep\ListKeywordPage;
 use Drupal\rep\Entity\Tables;
 
 class About extends FormBase {
@@ -141,7 +142,8 @@ class About extends FormBase {
     }
 
     public static function total($elementtype) {
-        return ListKeywordLanguagePage::total($elementtype, NULL, NULL);
+        //return ListKeywordLanguagePage::total($elementtype, NULL, NULL);
+        return ListKeywordPage::total($elementtype, NULL, NULL);
     }
 
 }
