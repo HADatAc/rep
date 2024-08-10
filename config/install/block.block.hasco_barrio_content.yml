@@ -1,0 +1,23 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - system
+  theme:
+    - hasco_barrio
+id: hasco_barrio_content
+theme: hasco_barrio
+region: content
+weight: -3
+provider: null
+plugin: system_main_block
+settings:
+  id: system_main_block
+  label: 'Main page content'
+  label_display: '0'
+  provider: system
+visibility:
+  request_path:
+    id: request_path
+    negate: true
+    pages: '/rep/uri/*'

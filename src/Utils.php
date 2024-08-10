@@ -227,7 +227,7 @@ class Utils {
       }
     } else if ($module == 'dpl') {
       if (\Drupal::moduleHandler()->moduleExists('dpl')) {
-        $rt = 'dpl.search';
+        $rt = 'dpl.search_deployment';
       }
     } else if ($module == 'rep') {
       if (\Drupal::moduleHandler()->moduleExists('rep')) {
@@ -284,10 +284,12 @@ class Utils {
     $tables = new Tables;
     $namespaces = $tables->getNamespaces();
 
-    foreach ($namespaces as $abbrev => $ns) {
-      if ($potentialNs == $abbrev) {
-        $match = $potentialNs . ":";
-        return str_replace($match, $ns ,$uri);
+    if ($namespaces != NULL) {
+      foreach ($namespaces as $abbrev => $ns) {
+        if ($potentialNs == $abbrev) {
+          $match = $potentialNs . ":";
+          return str_replace($match, $ns ,$uri);
+        }
       }
     }
     return $uri;
