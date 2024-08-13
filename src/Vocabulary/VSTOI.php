@@ -16,10 +16,14 @@
     const CONTAINER                       = VSTOI::VSTOI . "Container";
     const CONTAINER_SLOT                  = VSTOI::VSTOI . "ContainerSlot";
     const DETECTOR                        = VSTOI::VSTOI . "Detector";
+    const DETECTOR_INSTANCE               = VSTOI::VSTOI . "DetectorInstance";
     const DETECTOR_STEM                   = VSTOI::VSTOI . "DetectorStem";
+    const INSTANCE                        = VSTOI::VSTOI . "Instance";
     const INSTRUMENT                      = VSTOI::VSTOI . "Instrument";
+    const INSTRUMENT_INSTANCE             = VSTOI::VSTOI . "InstrumentInstance";
     const ITEM                            = VSTOI::VSTOI . "Item";
     const PLATFORM                        = VSTOI::VSTOI . "Platform";
+    const PLATFORM_INSTANCE               = VSTOI::VSTOI . "PlatformInstance";
     const PSYCHOMETRIC_QUESTIONNAIRE      = VSTOI::VSTOI . "PsychometricQuestionnaire";
     const QUESTIONNAIRE                   = VSTOI::VSTOI . "Questionnaire";
     const RESPONSE_OPTION                 = VSTOI::VSTOI . "ResponseOption";

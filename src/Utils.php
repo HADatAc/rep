@@ -83,6 +83,9 @@ class Utils {
       case "detector":
         $short = Constant::PREFIX_DETECTOR;
         break;
+      case "detectorinstance":
+        $short = Constant::PREFIX_DETECTOR_INSTANCE;
+        break;
       case "detectorstem":
         $short = Constant::PREFIX_DETECTOR_STEM;
         break;
@@ -94,6 +97,9 @@ class Utils {
         break;
       case "instrument":
         $short = Constant::PREFIX_INSTRUMENT;
+        break;
+      case "instrumentinstance":
+        $short = Constant::PREFIX_INSTRUMENT_INSTANCE;
         break;
       case "kgr":
         $short = Constant::PREFIX_KGR;
@@ -109,6 +115,9 @@ class Utils {
         break;
       case "platform":
         $short = Constant::PREFIX_PLATFORM;
+        break;
+      case "platforminstance":
+        $short = Constant::PREFIX_PLATFORM_INSTANCE;
         break;
       case "postaladdress":
         $short = Constant::PREFIX_POSTAL_ADDRESS;

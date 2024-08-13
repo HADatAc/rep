@@ -141,10 +141,12 @@ class LandingPage extends FormBase {
         $totalsDeploy .= '<ul>';
         $totalsDeploy .=  '<li> ' . About::total('dp2') . ' <a href="'.Utils::selectBackUrl('dp2')->toString().'">DP2(s)</a> (MT)</li>';
         $totalsDeploy .=  '<li> ' . About::total('str') . ' <a href="'.Utils::selectBackUrl('str')->toString().'">STR(s)</a> (MT)</li>';
-        $totalsDeploy .=  '<li> ' . About::total('platform') . ' <a href="'.Utils::selectBackUrl('platform')->toString().'">Platform(s)</a></li>';
-        $totalsDeploy .=  '<li> ' . About::total('platforminstance') . ' <a href="'.Utils::selectBackUrl('platforminstance')->toString().'">Platform Instance(s)</a></li>';
-        $totalsDeploy .=  '<li> ' . About::total('deployment') . ' <a href="'.Utils::selectBackUrl('deployment')->toString().'">Deployment(s)</a></li>';
-        $totalsDeploy .=  '<li> ' . About::total('stream') . ' <a href="'.Utils::selectBackUrl('stream')->toString().'">Stream(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('platform') . ' <a href="'.Utils::selectBackUrl('platform')->toString().'">platform(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('platforminstance') . ' <a href="'.Utils::selectBackUrl('platforminstance')->toString().'">platform instance(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('instrumentinstance') . ' <a href="'.Utils::selectBackUrl('instrumentinstance')->toString().'">instrument instance(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('detectorinstance') . ' <a href="'.Utils::selectBackUrl('deploymentinstance')->toString().'">detector instance(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('deployment') . ' <a href="'.Utils::selectBackUrl('deployment')->toString().'">deployment(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('stream') . ' <a href="'.Utils::selectBackUrl('stream')->toString().'">stream(s)</a></li>';
         $totalsDeploy  .= '</ul>';
 
         $form['row']['column3']['card3'] = array(
@@ -158,7 +160,7 @@ class LandingPage extends FormBase {
 
         $form['row']['column3']['filler'] = [
             '#type' => 'markup',
-            '#markup' => '<br><br><br>',
+            '#markup' => '<br>',
         ];
 
         $totalsData = '<h3>Data Elements</h3>';
