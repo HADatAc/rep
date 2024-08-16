@@ -523,6 +523,32 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   DEPLOYMENT
+   */
+
+   public function deploymentByStateEmail($state, $email, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/deployment/".
+      $state."/".
+      $email."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+  }
+
+  public function deploymentSizeByStateEmail($state, $email) {
+    $endpoint = "/hascoapi/api/deployment/total/".
+      $state."/".
+      $email."/";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+  }
+
+  /**
    *   SEMANTIC VARIABLE
    */
 

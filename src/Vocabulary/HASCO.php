@@ -11,7 +11,6 @@
     const DATAFILE                = HASCO::HASCO . "DataFile";
     const DATA_ACQUISITION        = HASCO::HASCO . "DataAcquisition";
     const DD                      = HASCO::HASCO . "DD";
-    const DEPLOYMENT              = HASCO::HASCO . "Deployment";
     const DP2                     = HASCO::HASCO . "DP2";
     const DSG                     = HASCO::HASCO . "DSG";
     const INS                     = HASCO::HASCO . "INS";

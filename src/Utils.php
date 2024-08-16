@@ -199,6 +199,14 @@ class Utils {
     return $uri;
   }
 
+  public static function labelFromAutocomplete($field) {
+    $index = strpos($field, '[');
+    if ($index == false) {
+      return "";
+    }
+    return substr($field, 0, $index);
+  }
+
   /** 
    *  During autocomplete, from the URI and label of a property, generates the field to be show in the form.
    *  The function will return an empty string if the uri is NULL. It will generate a field with no label is

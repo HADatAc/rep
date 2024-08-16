@@ -15,6 +15,7 @@
     const CODEBOOK                        = VSTOI::VSTOI . "Codebook";
     const CONTAINER                       = VSTOI::VSTOI . "Container";
     const CONTAINER_SLOT                  = VSTOI::VSTOI . "ContainerSlot";
+    const DEPLOYMENT                      = VSTOI::VSTOI . "Deployment";
     const DETECTOR                        = VSTOI::VSTOI . "Detector";
     const DETECTOR_INSTANCE               = VSTOI::VSTOI . "DetectorInstance";
     const DETECTOR_STEM                   = VSTOI::VSTOI . "DetectorStem";
