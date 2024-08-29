@@ -101,6 +101,34 @@ rep.select_mt_element:
   options:
     no_cache: 'TRUE'
 
+# Tree support
+
+rep.browse_tree:
+  path: 'rep/browsetree/{nodeuri}'
+  defaults:
+    _form: '\Drupal\rep\Form\TreeForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
+
+rep.get_child:
+  path: '/rep/getchildren'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getChildren'
+    _title: 'Get Children'
+  requirements:
+    _permission: 'access content'
+
+rep.get_node:
+  path: '/rep/getnode'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getNode'
+    _title: 'Get Node'
+  requirements:
+    _permission: 'access content'
+
 # MT CRUD options
 
 rep.add_mt:

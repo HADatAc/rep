@@ -20,6 +20,14 @@ scrollable_table:
   css:
     theme:
       css/scrollable_table.css: {}
+rep_tree:
+  version: VERSION
+  css:
+    css/rep_tree.css: {}
+  js:
+    js/rep_tree.js: {}
+  dependencies:
+    - core/jquery
 fontawesome5:
   version: 1.0
   css:

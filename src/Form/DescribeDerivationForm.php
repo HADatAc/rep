@@ -76,7 +76,10 @@
       $this->setCodebook(NULL); 
     } else {
       $hascoType = $this->getElement()->hascoTypeUri;
-      $manager = $this->getElement()->hasSIRManagerEmail;
+      $manager = ' ';
+      if (isset($this->getElement()->hasSIRManagerEmail) && $this->getElement()->hasSIRManagerEmail != NULL) {
+        $manager = $this->getElement()->hasSIRManagerEmail;
+      }
       if ($hascoType == VSTOI::DETECTOR) {
         if ($this->getElement()->wasDerivedFrom != NULL) {
             $this->setSource($api->parseObjectResponse($api->getUri($this->getElement()->wasDerivedFrom),'getUri'));

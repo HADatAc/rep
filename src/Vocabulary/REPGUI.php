@@ -42,5 +42,6 @@
     const MANAGE_STUDY_OBJECTS = "/std/manage/studyobjects/";
 
     const MANAGE_DEPLOYMENTS   = "/dpl/manage/deployments/";
+    const MANAGE_STREAMS       = "/dpl/manage/streams/";
 
   }

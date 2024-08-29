@@ -60,6 +60,32 @@ rep.manage_datafile:
     _permission: 'access content'
     _role: 'authenticated'
 
+rep.browse_attributes:
+  title: Browse Attributes
+  description: Browse Attributes
+  route_name: rep.browse_tree
+  route_parameters:
+    nodeuri: 'aHR0cDovL3NlbWFudGljc2NpZW5jZS5vcmcvcmVzb3VyY2UvU0lPXzAwMDYxNA=='
+  parent: rep.top_level
+  menu_name: main
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.browse_entities:
+  title: Browse Entities
+  description: Browse Entities
+  route_name: rep.browse_tree
+  route_parameters:
+    nodeuri: 'aHR0cDovL3NlbWFudGljc2NpZW5jZS5vcmcvcmVzb3VyY2UvU0lPXzAwMDc3Ng=='
+  parent: rep.top_level
+  menu_name: main
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
 rep.about:
   title: About
   description: About

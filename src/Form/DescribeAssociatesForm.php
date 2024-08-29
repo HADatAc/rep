@@ -5,14 +5,19 @@
  use Drupal\Core\Form\FormBase;
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\rep\Utils;
+ use Drupal\rep\Form\Associates\AssocDeployment;
  use Drupal\rep\Form\Associates\AssocOrganization;
  use Drupal\rep\Form\Associates\AssocPlace;
+ use Drupal\rep\Form\Associates\AssocPlatform;
+ use Drupal\rep\Form\Associates\AssocPlatforminstance;
+ use Drupal\rep\Form\Associates\AssocStream;
  use Drupal\rep\Form\Associates\AssocStudy;
  use Drupal\rep\Form\Associates\AssocStudyObjectCollection;
  use Drupal\rep\Entity\GenericObject;
  use Drupal\rep\Vocabulary\FOAF;
  use Drupal\rep\Vocabulary\HASCO;
  use Drupal\rep\Vocabulary\REPGUI;
+ use Drupal\rep\Vocabulary\OWL;
  use Drupal\rep\Vocabulary\SCHEMA;
  use Drupal\rep\Vocabulary\VSTOI;
 
@@ -115,14 +120,24 @@
           }
         }
 
-        if ($this->getElement()->hascoTypeUri === SCHEMA::PLACE) {
-          AssocPlace::process($this->getElement(), $form, $form_state);
+        if ($this->getElement()->hascoTypeUri === VSTOI::DEPLOYMENT) {
+          AssocDeployment::process($this->getElement(), $form, $form_state);
         } else if ($this->getElement()->hascoTypeUri === FOAF::ORGANIZATION) {
           AssocOrganization::process($this->getElement(), $form, $form_state);
+        } else if ($this->getElement()->hascoTypeUri === SCHEMA::PLACE) {
+          AssocPlace::process($this->getElement(), $form, $form_state);
+        } else if ($this->getElement()->hascoTypeUri === VSTOI::PLATFORM) {
+          AssocPlatform::process($this->getElement(), $form, $form_state);
+        } else if ($this->getElement()->hascoTypeUri === VSTOI::PLATFORM_INSTANCE) {
+          AssocPlatformInstance::process($this->getElement(), $form, $form_state);
+        } else if ($this->getElement()->hascoTypeUri === HASCO::STREAM) {
+          AssocStream::process($this->getElement(), $form, $form_state);
         } else if ($this->getElement()->hascoTypeUri === HASCO::STUDY) {
           AssocStudy::process($this->getElement(), $form, $form_state);
         } else if ($this->getElement()->hascoTypeUri === HASCO::STUDY_OBJECT_COLLECTION) {
           AssocStudyObjectCollection::process($this->getElement(), $form, $form_state);
+        } else if ($this->getElement()->typeUri === OWL::CLAZZ) {
+          $this->processClass($form, $form_state);
         }
 
         return $form;        
@@ -155,6 +170,21 @@
       ];
     }
 
+    public function processClass(array &$form, FormStateInterface $form_state) {
+      $api = \Drupal::service('rep.api_connector');
+      if ($this->getElement() != NULL & $this->getElement()->uri != NULL) {
+        $hascoTypeRaw = $api->getHascoType($this->getElement()->uri);
+        if ($hascoTypeRaw != NULL) {
+          $hascoTypeJSON = $api->parseObjectResponse($hascoTypeRaw,'hascoTypeRaw');
+          $response = json_decode($hascoTypeJSON, true);  
+          $hascoType = $response['hascoType'] ?? null;      
+          if ($hascoType != NULL && $hascoType == VSTOI::PLATFORM) {
+            AssocPlatform::process($this->getElement(), $form, $form_state);
+          }
+        }
+      }
+    }
+     
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
      
