@@ -104,7 +104,7 @@ rep.select_mt_element:
 # Tree support
 
 rep.browse_tree:
-  path: 'rep/browsetree/{nodeuri}'
+  path: 'rep/hierarchy/{mode}/{elementtype}'
   defaults:
     _form: '\Drupal\rep\Form\TreeForm'
   requirements:

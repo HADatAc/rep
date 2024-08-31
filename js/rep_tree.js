@@ -96,40 +96,6 @@
                 // Perform the action for selecting the node
             });
             
-            async function hashUriToShortString(uri, length = 5) {
-                // Encode the URI as a Uint8Array
-                const encoder = new TextEncoder();
-                const data = encoder.encode(uri);
-    
-                // Generate the SHA-256 hash
-                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-    
-                // Convert the hash to a hexadecimal string
-                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    
-                // Convert the hexadecimal string to a base62 string
-                const base62 = base62Encode(hashHex);
-    
-                // Truncate to the desired length
-                return base62.slice(0, length);
-            }
-    
-            // Base62 encoding function
-            function base62Encode(hex) {
-                const base62Chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-                let decimal = BigInt('0x' + hex);
-                let base62 = '';
-                
-                while (decimal > 0) {
-                    const remainder = Number(decimal % 62n);
-                    base62 = base62Chars[remainder] + base62;
-                    decimal = decimal / 62n;
-                }
-                
-                return base62.padStart(hex.length, '0');
-            }
-
         }
     };
 })(jQuery, Drupal);

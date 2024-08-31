@@ -65,7 +65,8 @@ rep.browse_attributes:
   description: Browse Attributes
   route_name: rep.browse_tree
   route_parameters:
-    nodeuri: 'aHR0cDovL3NlbWFudGljc2NpZW5jZS5vcmcvcmVzb3VyY2UvU0lPXzAwMDYxNA=='
+    mode: 'browse'
+    elementtype: 'attribute'
   parent: rep.top_level
   menu_name: main
   weight: 7
@@ -73,12 +74,27 @@ rep.browse_attributes:
     _permission: 'access content'
     _role: 'authenticated'
 
-rep.browse_entities:
-  title: Browse Entities
-  description: Browse Entities
+rep.select_instruments:
+  title: Select Instruments
+  description: Select Instruments
   route_name: rep.browse_tree
   route_parameters:
-    nodeuri: 'aHR0cDovL3NlbWFudGljc2NpZW5jZS5vcmcvcmVzb3VyY2UvU0lPXzAwMDc3Ng=='
+    mode: 'select'
+    elementtype: 'instrument'
+  parent: rep.top_level
+  menu_name: main
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.browse_instruments:
+  title: Browse Instruments
+  description: Browse Instruments
+  route_name: rep.browse_tree
+  route_parameters:
+    mode: 'browse'
+    elementtype: 'instrument'
   parent: rep.top_level
   menu_name: main
   weight: 7

@@ -4,10 +4,22 @@ namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\rep\Vocabulary\SIO;
+use Drupal\rep\Vocabulary\VSTOI;
 
 class TreeForm extends FormBase {
 
+  protected $elementType;
+
   protected $rootNode;
+
+  public function getElementType() {
+    return $this->elementType;
+  }
+
+  public function setElementType($elementType) {
+    return $this->elementType = $elementType; 
+  }
 
   public function getRootNode() {
     return $this->rootNode;
@@ -27,14 +39,55 @@ class TreeForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $nodeuri = NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, $mode=NULL, $elementtype=NULL) {
     $api = \Drupal::service('rep.api_connector');
 
+    // Retrieve mode
+    if ($mode == NULL || $mode == '') {
+      \Drupal::messenger()->addError(t("A mode is required to inspect a concept hierarchy."));
+      return [];
+    }
+    if ($mode != 'browse' && $mode != 'select') {
+      \Drupal::messenger()->addError(t("A valid mode is required to inspect a concept hierarchy."));
+      return [];
+    }
+
+    // Retrieve element type
+    if ($elementtype == NULL || $elementtype == '') {
+      \Drupal::messenger()->addError(t("An element type is required to inspect a concept hierarchy."));
+      return [];
+    }
+    $this->setElementType($elementtype);
+    if ($this->getElementType() == 'attribute') {
+      $elementName = "Attribute";
+      $nodeUri = SIO::ATTRIBUTE;
+    } else if ($this->getElementType() == 'entity') {
+      $elementName = "Entity";
+      $nodeUri = SIO::ENTITY;
+    } else if ($this->getElementType() == 'unit') {
+      $elementName = "Unit";
+      $nodeUri = SIO::UNIT;
+    } else if ($this->getElementType() == 'platform') {
+      $elementName = "Platform";
+      $nodeUri = VSTOI::PLATFORM;
+    } else if ($this->getElementType() == 'instrument') {
+      $elementName = "Instrument";
+      $nodeUri = VSTOI::INSTRUMENT;
+    } else if ($this->getElementType() == 'detector') {
+      $elementName = "Detector";
+      $nodeUri = VSTOI::DETECTOR;
+    } else if ($this->getElementType() == 'detectorstem') {
+      $elementName = "Detector Stem";
+      $nodeUri = VSTOI::DETECTOR_STEM;
+    } else {
+      \Drupal::messenger()->addError(t("No valid element type has been provided."));
+      return [];
+    }
+
     // Retrieve root node
-    $uri_decode = base64_decode($nodeuri);
-    $this->setRootNode($api->parseObjectResponse($api->getUri($uri_decode), 'getUri'));
+    $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
     if ($this->getRootNode() == NULL) {
-        \Drupal::messenger()->addError(t("Failed to retrieve root node " . $uri_decode . "."));
+        \Drupal::messenger()->addError(t("Failed to retrieve root node " . $nodeUri . "."));
         return [];
     }
 
@@ -44,7 +97,7 @@ class TreeForm extends FormBase {
     // Form elements
     $form['title'] = [
         '#type' => 'markup',
-        '#markup' => '<h1>Browse Tree</h1>',
+        '#markup' => '<h3>' . $elementName . ' Hierarchy</h3>',
     ];
 
     $form['action_reset'] = [
