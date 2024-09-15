@@ -128,6 +128,9 @@ class Utils {
       case "sdd":
         $short = Constant::PREFIX_SDD;
         break;
+      case "semanticdatadictionary":
+        $short = Constant::PREFIX_SEMANTIC_DATA_DICTIONARY;
+        break;
       case "semanticvariable":
         $short = Constant::PREFIX_SEMANTIC_VARIABLE;
         break;
