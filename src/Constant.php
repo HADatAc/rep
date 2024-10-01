@@ -28,6 +28,7 @@ class Constant {
   const PREFIX_PLACE                      = "PLC";
   const PREFIX_PLATFORM                   = "PF0";
   const PREFIX_PLATFORM_INSTANCE          = "PFI";
+  const PREFIX_POSSIBLE_VALUE             = "PSV";
   const PREFIX_POSTAL_ADDRESS             = "PAD";
   const PREFIX_RESPONSE_OPTION            = "ROP";
   const PREFIX_SDD                        = "SDD";

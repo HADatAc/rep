@@ -53,7 +53,7 @@
     $api = \Drupal::service('rep.api_connector');
     $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
 
-    //dpm($this->getElement());
+    dpm($this->getElement());
 
     $objectProperties = GenericObject::inspectObject($this->getElement());
 

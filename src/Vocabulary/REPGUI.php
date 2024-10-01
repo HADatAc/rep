@@ -38,7 +38,8 @@
 
     const DELETE_STUDY         = "/std/manage/deletestudy/";
 
-    const ADD_SEMANTIC_DATA_DICTIONARY  = "/sem/manage/addsemanticdatadictionary/";
+    const ADD_SEMANTIC_DATA_DICTIONARY   = "/sem/manage/addsemanticdatadictionary/";
+    const EDIT_SEMANTIC_DATA_DICTIONARY  = "/sem/manage/editsemanticdatadictionary/";
 
     const VIEW_STUDY_OBJECTS   = "/std/view/studyobjects/";
     const MANAGE_STUDY_OBJECTS = "/std/manage/studyobjects/";

@@ -17,6 +17,7 @@
     const KNOWLEDGE_GRAPH               = HASCO::HASCO . "KnowledgeGraph";
     const MANAGED_ONTOLOGY              = HASCO::HASCO . "ManagedOntology";
     const ONTOLOGY                      = HASCO::HASCO . "Ontology";
+    const POSSIBLE_VALUE                = HASCO::HASCO . "PossibleValue";
     const SAMPLE_COLLECTION             = HASCO::HASCO . "SampleCollection";
     const SDD                           = HASCO::HASCO . "SDD";
     const SDD_ATTRIBUTE                 = HASCO::HASCO . "SDDAttribute";
