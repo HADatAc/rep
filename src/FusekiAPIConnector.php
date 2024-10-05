@@ -1092,6 +1092,14 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
+  public function repoResetNamespaces() {
+    $endpoint = "/hascoapi/api/repo/namespace/reset/";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
   public function repoReloadNamespaceTriples() {
     $endpoint = "/hascoapi/api/repo/ont/load";
     $method = "GET";
@@ -1100,8 +1108,16 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function repoDeleteSelectedNamespace($namespace) {
-    $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($namespace);
+  public function repoDeleteSelectedNamespace($abbreviation) {
+    $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($abbreviation);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function repoCreateNamespace($json) {
+    $endpoint = "/hascoapi/api/repo/namespace/create/".rawurlencode($json);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

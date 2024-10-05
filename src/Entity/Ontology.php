@@ -12,6 +12,7 @@ class Ontology {
     return $header = [
       'ontology_abbrev' => t('Abbrev'),
       'ontology_uri' => t('NameSpace'),
+      'ontology_in_memory' => t('In-Memory'),
       'ontology_name' => t('Source URL'),
       'ontology_mime_type' => t('MIME Type'),
       'ontology_triples' => t('Triples'),
@@ -35,6 +36,10 @@ class Ontology {
       if ($ontology->uri != NULL) {
         $uri = $ontology->uri;
       }
+      $in_memory = "no";
+      if ($ontology->permanent) {
+        $in_memory = "yes";
+      }
       $url = ' ';
       if ($ontology->source != NULL) {
         $url = $ontology->source;
@@ -49,7 +54,8 @@ class Ontology {
       }
       $output[$ontology->label] = [
         'ontology_abbrev' => $abbrev,     
-        'ontology_uri' => t('<a href="'.$uri.'">'.$uri.'</a>'),     
+        'ontology_uri' => t('<a href="'.$uri.'">'.$uri.'</a>'),  
+        'ontology_in_memory' => $in_memory,   
         'ontology_name' => $url,
         'ontology_mime_type' => $mimeType,
         'ontology_triples' => $triples,

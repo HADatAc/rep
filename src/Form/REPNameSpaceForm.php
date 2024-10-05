@@ -83,13 +83,25 @@
             '#type' => 'submit',
             '#value' => $this->t('Delete Triples from All NameSpaces with URL'),
             '#name' => 'delete',
-          ];
-      
-        $form['delete_namespace'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Delete Selected NameSpaces'),
-        '#name' => 'del_selected',
         ];
+      
+        $form['update_namespace'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Update Selected NameSpaces'),
+            '#name' => 'upd_selected',
+        ];
+          
+        $form['delete_namespace'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Delete Selected NameSpaces'),
+            '#name' => 'del_selected',
+        ];
+      
+        //$form['reset_namespace'] = [
+        //    '#type' => 'submit',
+        //    '#value' => $this->t('Reset NameSpaces'),
+        //    '#name' => 'reset',
+        //];
       
         $form['filler_2'] = [
             '#type' => 'item',
@@ -178,19 +190,45 @@
           return;
         } 
                 
+        if ($button_name === 'upd_selected') {
+            if (sizeof($rows) != 1) {
+                \Drupal::messenger()->addWarning(t("Select the exact NameSpace to be updated."));      
+            } else {
+                $firstKey = array_key_first($rows);
+                $abbrev = $rows[$firstKey];
+                //dpm($abbrev);
+                $url = Url::fromRoute('rep.update_namespace_settings_custom', ['abbreviation' => $abbrev]);
+                $form_state->setRedirectUrl($url);
+                return;
+            } 
+        }
+                  
         if ($button_name === 'del_selected') {
             if (sizeof($rows) <= 0) {
                 \Drupal::messenger()->addWarning(t("At least one NameSpace needs to be selected for deletion."));      
             } else {
                 foreach($rows as $abbrev) {
-                    $message = ' ';
-                    $message = $APIservice->parseObjectResponse($APIservice->repoDeleteSelectedNamespace($abbrev),'repoDeleteSelectedNamespace');
-                    \Drupal::messenger()->addMessage(t($message));
+                    if ($form['element_table']['#options'][$abbrev]['ontology_in_memory'] == 'yes') {
+                        \Drupal::messenger()->addWarning(t("An in-memory ontology cannot be deleted."));      
+                        return;
+                    } else {
+                        $message = ' ';
+                        $message = $APIservice->parseObjectResponse($APIservice->repoDeleteSelectedNamespace($abbrev),'repoDeleteSelectedNamespace');
+                        \Drupal::messenger()->addMessage(t($message));
+                    }
                 }
                 $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
                 return;
             } 
         }
+                  
+        //if ($button_name === 'reset') {
+        //    $message = ' ';
+        //    $message = $APIservice->parseObjectResponse($APIservice->repoResetNamespaces(),'repoResetNamespaces');
+        //    \Drupal::messenger()->addMessage(t($message));
+        //    $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+        //    return;
+        //}
                   
     }
 
