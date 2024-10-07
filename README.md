@@ -10,7 +10,7 @@ rep deployment requires the availability of a Drupal instance (version 10 or abo
 
 * upload rep code
   * in the admin menu, go to `Extend` > `Add New Module` > `Add from a URL`
-  * paste the following link from github: `https://github.com/HADatAc/sir/archive/refs/heads/main.zip`
+  * paste the following link from github: `https://github.com/HADatAc/rep/archive/refs/heads/main.zip`
 * upload module dependencies. See below a list of current rep dependencies:
   * <i>Key</i> (https://www.drupal.org/project/key)
 * go to `Extend` and install both rep and its dependencies
@@ -28,7 +28,7 @@ User needs to have administrative privileges on Drupal to be able to setup rep
     * Select type `Authentication`
     * Select provider `Configuration`
 * Step 2: setup rep
-  * go to `Main Menu` > `Advanced` > `Configuration` (or alternativelly `[drupal_url]/admin/config/sir`)
+  * go to `Main Menu` > `Advanced` > `Configuration` (or alternativelly `[drupal_url]/admin/config/rep`)
     * Check whether or not you want rep search page to be the main page of your website
     * Provide a short name
     * Provide a full name - used as the website's title
