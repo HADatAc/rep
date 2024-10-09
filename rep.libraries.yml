@@ -28,8 +28,3 @@ rep_tree:
     js/rep_tree.js: {}
   dependencies:
     - core/jquery
-fontawesome5:
-  version: 1.0
-  css:
-    component:
-      //use.fontawesome.com/releases/v5.15.4/css/all.css: {}

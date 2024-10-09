@@ -91,6 +91,9 @@
             '#type' => 'submit',
             '#value' => $this->t('Back'),
             '#name' => 'back',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'back-button'],
+            ],
         ];
         $form['space'] = [
             '#type' => 'label',
@@ -103,7 +106,7 @@
 
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
-     
+
     /**
      * {@inheritdoc}
      */

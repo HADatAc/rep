@@ -3,3 +3,244 @@ th {
     font-size:12pt;
     font-weight: bold;
   }
+
+
+button.add-element-button {
+  position: relative;
+  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.add-element-button::before {
+  content: "\f067"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.edit-element-button {
+  position: relative;
+  padding-left: 2.1rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.edit-element-button::before {
+  content: "\f044"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 400; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.delete-element-button {
+  position: relative;
+  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.delete-element-button::before {
+  content: "\f2ed"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 400; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.back-button {
+  position: relative;
+  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.back-button::before {
+  content: "\f100"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.search-button {
+  position: relative;
+  padding-left: 2.6rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.search-button::before {
+  content: "\f002"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.save-button {
+  position: relative;
+  padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.save-button::before {
+  content: "\f0c7"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.cancel-button {
+  position: relative;
+  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.cancel-button::before {
+  content: "\f00d"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.back_parent-button {
+  position: relative;
+  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.back_parent-button::before {
+  content: "\f0e2"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.derive-button {
+  position: relative;
+  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.derive-button::before {
+  content: "\f074"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+button.reset-button {
+  position: relative;
+  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.reset-button::before {
+  content: "\f51a"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.manage_slotelements-button {
+  position: relative;
+  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.manage_slotelements-button::before {
+  content: "\f802"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.ingest_mt-button {
+  position: relative;
+  padding-left: 2.1rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.ingest_mt-button::before {
+  content: "\f063"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.uningest_mt-element-button {
+  position: relative;
+  padding-left: 2.1rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.uningest_mt-element-button::before {
+  content: "\f062"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.manage_codebookslots-button {
+  position: relative;
+  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.manage_codebookslots-button::before {
+  content: "\f0ae"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.manage_annotations-button {
+  position: relative;
+  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.manage_annotations-button::before {
+  content: "\f31c"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.manage_annotation_placement {
+  position: relative;
+  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.manage_annotation_placement::before {
+  content: "\f658"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}

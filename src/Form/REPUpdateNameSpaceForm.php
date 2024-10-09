@@ -38,15 +38,15 @@
     }
 
     protected $nameSpace;
-  
+
     public function getNameSpace() {
       return $this->nameSpace;
     }
-  
+
     public function setNameSpace($nameSpace) {
-      return $this->nameSpace = $nameSpace; 
+      return $this->nameSpace = $nameSpace;
     }
-  
+
     /**
      * {@inheritdoc}
      */
@@ -59,16 +59,16 @@
             self::backUrl();
             return;
         };
-    
+
         // ESTABLISH API SERVICE
-        $api = \Drupal::service('rep.api_connector');  
-        
+        $api = \Drupal::service('rep.api_connector');
+
         $namespace_list = $api->namespaceList();
         if ($namespace_list == NULL) {
             \Drupal::messenger()->addError(t("Namespace list is EMPTY."));
             self::backUrl();
             return;
-  
+
         } else {
             $obj = json_decode($namespace_list);
             if ($obj->isSuccessful) {
@@ -77,14 +77,14 @@
                     foreach ($list as $ns) {
                         if ($ns->label == $abbreviation) {
                             $this->setNameSpace($ns);
-                            break;                            
+                            break;
                         }
                     }
                 }
             }
             if ($this->getNameSpace() == NULL) {
                 \Drupal::messenger()->addError(t("Could not find Namespace [" . $abbreviation . "]"));
-                self::backUrl();    
+                self::backUrl();
             }
             if ($this->getNameSpace()->permanent) {
                 \Drupal::messenger()->addError(t("An In-Memory Namespace cannot be updated online. These can be updated in Namespaces.java in the API source code."));
@@ -120,13 +120,13 @@
             '#title' => $this->t('Namespace'),
             '#default_value' => $this->getNameSpace()->uri,
             '#disabled' => $disabled,
-        ];         
+        ];
         $form['namespace_source_url'] = [
             '#type' => 'textfield',
             '#title' => $this->t('Source URL'),
             '#default_value' => $source,
             '#disabled' => $disabled,
-        ];         
+        ];
         $form['namespace_mime_type'] = [
             '#type' => 'select',
             '#title' => $this->t('MIME Type'),
@@ -139,19 +139,25 @@
                 '#type' => 'submit',
                 '#value' => $this->t('Update'),
                 '#name' => 'save',
+                '#attributes' => [
+                  'class' => ['btn', 'btn-primary', 'save-button'],
+                ],
             ];
         }
         $form['cancel_submit'] = [
             '#type' => 'submit',
             '#value' => $this->t('Cancel'),
             '#name' => 'back',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'cancel-button'],
+            ],
         ];
         $form['bottom_space'] = [
             '#type' => 'item',
             '#title' => t('<br><br>'),
         ];
-    
-        $form['actions']['submit']['#access'] = 'FALSE'; 
+
+        $form['actions']['submit']['#access'] = 'FALSE';
 
         return Parent::buildForm($form, $form_state);
     }
@@ -170,7 +176,7 @@
             }
         }
     }
-     
+
     /**
      * {@inheritdoc}
      */
@@ -179,12 +185,12 @@
         $submitted_values = $form_state->cleanValues()->getValues();
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
-    
+
         if ($button_name === 'back') {
           self::backUrl();
           return;
-        } 
-    
+        }
+
         try {
           $nsJson = '{"uri":"'.$form_state->getValue('namespace_uri').'",'.
             '"label":"'.$form_state->getValue('namespace_abbreviation').'",'.
@@ -194,28 +200,28 @@
             '"permanent":"'.$this->getNameSpace()->permanent.'",'.
             '"source":"'.$form_state->getValue('namespace_source_url').'",'.
             '"sourceMime":"'.$form_state->getValue('namespace_mime_type').'"}';
-    
+
           // UPDATE BY DELETING AND CREATING
           $api = \Drupal::service('rep.api_connector');
           $api->repoDeleteSelectedNamespace($this->getNameSpace()->label);
-          $updatedNamespace = $api->repoCreateNamespace($nsJson);    
+          $updatedNamespace = $api->repoCreateNamespace($nsJson);
           //dpm($nsJson);
           \Drupal::messenger()->addMessage(t("Namespace has been updated successfully."));
           self::backUrl();
           return;
-    
+
         } catch(\Exception $e) {
           \Drupal::messenger()->addError(t("An error occurred while updating selected Namespace: ".$e->getMessage()));
           self::backUrl();
           return;
         }
     }
- 
+
     function backUrl() {
         $url = Url::fromRoute('rep.admin_namespace_settings_custom')->toString();
         $response = new RedirectResponse($url);
         $response->send();
         return;
     }
- 
+
 }
