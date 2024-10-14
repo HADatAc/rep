@@ -19,11 +19,11 @@
     public function getElementUri() {
       return $this->elementUri;
     }
-  
+
     public function setElementUri($uri) {
-      return $this->elementUri = $uri; 
+      return $this->elementUri = $uri;
     }
-  
+
     /**
      * {@inheritdoc}
      */
@@ -48,14 +48,17 @@
         ];
         $form['note1'] = [
             '#type' => 'item',
-            '#title' => $this->t('The provided value can be in plain URI format (something like <b>http://example.com/mydomain/concept</b>). ' . 
-                'The provided value can also be based on a known namespace prefix (something like <b>myproject:concept</b>). ' . 
+            '#title' => $this->t('The provided value can be in plain URI format (something like <b>http://example.com/mydomain/concept</b>). ' .
+                'The provided value can also be based on a known namespace prefix (something like <b>myproject:concept</b>). ' .
                 'If using a prefix it needs to be a prefix registered in this repository.'),
         ];
         $form['submit_describe'] = [
             '#type' => 'submit',
             '#value' => $this->t('Describe'),
             '#name' => 'describe',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'describe-button'],
+            ],
         ];
         $form['space1'] = [
             '#type' => 'item',
@@ -65,6 +68,9 @@
             '#type' => 'submit',
             '#value' => $this->t('Back'),
             '#name' => 'back',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'back-button'],
+            ],
         ];
         $form['space2'] = [
             '#type' => 'markup',
@@ -77,7 +83,7 @@
 
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
-     
+
     /**
      * {@inheritdoc}
      */
@@ -85,20 +91,20 @@
         $submitted_values = $form_state->cleanValues()->getValues();
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
-    
+
         if ($button_name === 'back') {
             $url = Url::fromRoute('rep.home');
             $form_state->setRedirectUrl($url);
             return;
-        } 
-    
+        }
+
         if ($button_name === 'describe') {
             $newUri = Utils::plainUri($form_state->getValue('element_uri'));
             $url = Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($newUri)]);
             $form_state->setRedirectUrl($url);
             return;
-        } 
-      
+        }
+
         $url = Url::fromRoute('rep.home');
         $form_state->setRedirectUrl($url);
         return;

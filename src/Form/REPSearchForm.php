@@ -32,7 +32,7 @@ class REPSearchForm extends FormBase {
   }
 
   public function setElementType($type) {
-    return $this->elementtype = $type; 
+    return $this->elementtype = $type;
   }
 
   public function getKeyword() {
@@ -40,7 +40,7 @@ class REPSearchForm extends FormBase {
   }
 
   public function setKeyword($kw) {
-    return $this->keyword = $kw; 
+    return $this->keyword = $kw;
   }
 
   public function getPage() {
@@ -48,7 +48,7 @@ class REPSearchForm extends FormBase {
   }
 
   public function setPage($pg) {
-    return $this->page = $pg; 
+    return $this->page = $pg;
   }
 
   public function getPageSize() {
@@ -56,7 +56,7 @@ class REPSearchForm extends FormBase {
   }
 
   public function setPageSize($pgsize) {
-    return $this->pagesize = $pgsize; 
+    return $this->pagesize = $pgsize;
   }
 
   /**
@@ -111,6 +111,9 @@ class REPSearchForm extends FormBase {
     $form['search_submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Search'),
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'search-button'],
+      ],
     ];
 
     return $form;
@@ -124,7 +127,7 @@ class REPSearchForm extends FormBase {
       $form_state->setErrorByName('search_element_type', $this->t('Please select an element type'));
     }
   }
-  
+
   /**
    * {@inheritdoc}
    */

@@ -21,7 +21,7 @@ class About extends FormBase {
      * {@inheritdoc}
      */
     public function getFormId() {
-        return "rep_about";   
+        return "rep_about";
     }
 
      /**
@@ -29,10 +29,10 @@ class About extends FormBase {
      */
 
      public function buildForm(array $form, FormStateInterface $form_state){
-        
+
         $form['rep_home'] = [
             '#type' => 'item',
-            '#title' => '<br>This is an instance of the <a href="http://hadatac.org/software/hascoapp/">HAScO App</a> knowledge repository ' . 
+            '#title' => '<br>This is an instance of the <a href="http://hadatac.org/software/hascoapp/">HAScO App</a> knowledge repository ' .
                 'developed by <a href="http://hadatac.org/">HADatAc.org</a> community.<br>',
         ];
 
@@ -63,11 +63,11 @@ class About extends FormBase {
 
         $form['rep_content1'] = [
             '#type' => 'markup',
-            '#markup' => 'The HASCO App is a <b>Semantic Repository</b> for handling Scientific Evidence in the form of RDF knowledge, including data. ' . 
-                'The repository is composed of a back-end API called HASCO and a Drupal-based front end based on a number of Drupal modules.<br><br>' . 
+            '#markup' => 'The HASCO App is a <b>Semantic Repository</b> for handling Scientific Evidence in the form of RDF knowledge, including data. ' .
+                'The repository is composed of a back-end API called HASCO and a Drupal-based front end based on a number of Drupal modules.<br><br>' .
                 'These are the HASCO App components:<br><br>'.
-                '<ul>' . 
-                '  <li>Back end component</li>' . 
+                '<ul>' .
+                '  <li>Back end component</li>' .
                 '     <ul>' .
                 '       <li>HASCOAPI - A comprehensive back-end solution and API for managing HASCO concepts in RDF.  HASCO is the HADatAc.org\'s Human-Aware Science Ontology.</li>' .
                 '     </ul><br>' .
@@ -77,27 +77,27 @@ class About extends FormBase {
 
         $form['rep_status'] = [
             '#type' => 'item',
-            '#title' => $this->t('<li>REP - A Drupal module responsible for connecting HASCO App front-end capabilities to the HASCO API. ' . 
+            '#title' => $this->t('<li>REP - A Drupal module responsible for connecting HASCO App front-end capabilities to the HASCO API. ' .
                                  'In this repository, REP module ' . $rep_status . '</li> '),
         ];
         $form['sir_status'] = [
             '#type' => 'item',
-            '#title' => $this->t('<li>SIR - A Drupal module that provides front-end capabilities for managing instruments and questionnaires using the HASCOAPI. ' . 
+            '#title' => $this->t('<li>SIR - A Drupal module that provides front-end capabilities for managing instruments and questionnaires using the HASCOAPI. ' .
                                  'In this repository, SIR module ' . $sir_status . '</li> '),
         ];
         $form['dpl_status'] = [
             '#type' => 'item',
-            '#title' => $this->t('<li>DPL - A Drupal module that provides front-end capabilities for managing deployment elements like deployments, platforms and streams using the HASCOAPI. ' . 
+            '#title' => $this->t('<li>DPL - A Drupal module that provides front-end capabilities for managing deployment elements like deployments, platforms and streams using the HASCOAPI. ' .
                                  'In this repository, DPL module ' . $dpl_status . '</li> '),
         ];
         $form['sem_status'] = [
             '#type' => 'item',
-            '#title' => $this->t('<li>SEM - A Drupal module that provides front-end capabilities for managing data dictionaries, codebooks and semantic variables using the HASCOAPI. ' . 
+            '#title' => $this->t('<li>SEM - A Drupal module that provides front-end capabilities for managing data dictionaries, codebooks and semantic variables using the HASCOAPI. ' .
                                  'In this repository, SEM module ' . $sem_status . '</li> '),
         ];
         $form['std_status'] = [
             '#type' => 'item',
-            '#title' => $this->t('<li>STD - A Drupal module that provides front-end capabilities for managing scientific studies using the HASCOAPI. ' . 
+            '#title' => $this->t('<li>STD - A Drupal module that provides front-end capabilities for managing scientific studies using the HASCOAPI. ' .
                                  'In this repository, STD module ' . $std_status . '</li> '),
         ];
 
@@ -105,9 +105,9 @@ class About extends FormBase {
             '#type' => 'markup',
             '#markup' => '     </ul>' .
                          '</ul>',
-        ];  
+        ];
 
-      
+
         $form['rep_newline1'] = [
             '#type' => 'item',
             '#title' => '<br><br>',
@@ -116,16 +116,19 @@ class About extends FormBase {
             '#type' => 'submit',
             '#value' => $this->t('Back'),
             '#name' => 'back',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'back-button'],
+            ],
         ];
         $form['rep_newline2'] = [
             '#type' => 'item',
             '#title' => '<br><br>',
         ];
-      
+
         return $form;
 
      }
-     
+
     /**
     * {@inheritdoc}
     */
@@ -138,7 +141,7 @@ class About extends FormBase {
         $url = Url::fromRoute('rep.home');
         $form_state->setRedirectUrl($url);
         return;
-      } 
+      }
     }
 
     public static function total($elementtype) {

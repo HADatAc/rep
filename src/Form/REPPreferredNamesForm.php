@@ -67,12 +67,15 @@
         $form['filler'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
-        ];      
+        ];
 
         $form['back_submit'] = [
             '#type' => 'submit',
             '#value' => $this->t('Back to rep Settings'),
             '#name' => 'back',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'back-button'],
+            ],
         ];
 
         return Parent::buildForm($form, $form_state);
@@ -81,12 +84,12 @@
     public function validateForm(array &$form, FormStateInterface $form_state) {
         if(strlen($form_state->getValue('preferred_instrument')) < 1) {
             $form_state->setErrorByName('preferred_instrument', $this->t("Please inform a preferred name for instruments."));
-        }       
+        }
         if(strlen($form_state->getValue('preferred_detector')) < 1) {
             $form_state->setErrorByName('preferred_detector', $this->t("Please inform a preferred name for detectors."));
-        }    
+        }
     }
-     
+
     /**
      * {@inheritdoc}
      */
@@ -94,26 +97,26 @@
 
         // ACCESS CONFIGURATION STATE
         $config = $this->config(static::CONFIGNAME);
-        
+
         // RETRIEVE TRIGGERING BUTTON
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
-        
+
         //save confs
-        if ($form_state->getValue('preferred_instrument') != null && 
-            $form_state->getValue('preferred_instrument') != "" && 
-            $form_state->getValue('preferred_detector') != null && 
-            $form_state->getValue('preferred_detector') != "") { 
+        if ($form_state->getValue('preferred_instrument') != null &&
+            $form_state->getValue('preferred_instrument') != "" &&
+            $form_state->getValue('preferred_detector') != null &&
+            $form_state->getValue('preferred_detector') != "") {
           $config->set("preferred_instrument", $form_state->getValue('preferred_instrument'));
           $config->set("preferred_detector", $form_state->getValue('preferred_detector'));
           $config->save();
         }
-                
+
         // BUTTON ACTIONS
         if ($button_name === 'back') {
             $form_state->setRedirectUrl(Url::fromRoute('rep.admin_settings_custom'));
             return;
-        } 
+        }
     }
 
  }

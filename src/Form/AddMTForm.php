@@ -21,13 +21,13 @@ class AddMTForm extends FormBase {
   }
 
   protected $elementType;
-  
+
   protected $elementName;
-  
+
   protected $elementTypeUri;
-  
+
   protected $studyUri;
-  
+
   protected $study;
 
   public function getElementType() {
@@ -35,7 +35,7 @@ class AddMTForm extends FormBase {
   }
 
   public function setElementType($type) {
-    return $this->elementType = $type; 
+    return $this->elementType = $type;
   }
 
   public function getElementName() {
@@ -43,7 +43,7 @@ class AddMTForm extends FormBase {
   }
 
   public function setElementName($name) {
-    return $this->elementName = $name; 
+    return $this->elementName = $name;
   }
 
   public function getElementTypeUri() {
@@ -51,7 +51,7 @@ class AddMTForm extends FormBase {
   }
 
   public function setElementTypeUri($typeUri) {
-    return $this->elementTypeUri = $typeUri; 
+    return $this->elementTypeUri = $typeUri;
   }
 
   public function getStudyUri() {
@@ -59,7 +59,7 @@ class AddMTForm extends FormBase {
   }
 
   public function setStudyUri($studyUri) {
-    return $this->studyUri = $studyUri; 
+    return $this->studyUri = $studyUri;
   }
 
   public function getStudy() {
@@ -67,7 +67,7 @@ class AddMTForm extends FormBase {
   }
 
   public function setStudy($study) {
-    return $this->study = $study; 
+    return $this->study = $study;
   }
 
   /**
@@ -95,7 +95,7 @@ class AddMTForm extends FormBase {
         }
       }
     }
-    
+
     // HANDLE ELEMENT TYPE
     if ($elementtype == NULL || $elementtype == '') {
       \Drupal::messenger()->addError(t("Metadata Template type cannot be empty."));
@@ -183,7 +183,7 @@ class AddMTForm extends FormBase {
         '#upload_validators' => [
           'file_validate_extensions' => ['xlsx'],
         ],
-      ];      
+      ];
     }
 
     if ($this->getElementType() == 'da') {
@@ -214,11 +214,17 @@ class AddMTForm extends FormBase {
       '#type' => 'submit',
       '#value' => $this->t('Save'),
       '#name' => 'save',
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'save-button'],
+      ],
     ];
     $form['cancel_submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Cancel'),
       '#name' => 'back',
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'cancel-button'],
+      ],
     ];
     $form['bottom_space'] = [
       '#type' => 'item',
@@ -251,7 +257,7 @@ class AddMTForm extends FormBase {
     if ($button_name === 'back') {
       self::backUrl();
       return;
-    } 
+    }
 
     try {
       $useremail = \Drupal::currentUser()->getEmail();
@@ -263,12 +269,12 @@ class AddMTForm extends FormBase {
       $ddUri = NULL;
       if ($form_state->getValue('mt_dd') != NULL && $form_state->getValue('mt_dd') != '') {
         $ddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_dd'));
-      } 
+      }
 
       $sddUri = NULL;
       if ($form_state->getValue('mt_sdd') != NULL && $form_state->getValue('mt_sdd') != '') {
         $sddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_sdd'));
-      } 
+      }
 
       // DATAFILE JSON
       $newDataFileUri = Utils::uriGen('datafile');
@@ -276,9 +282,9 @@ class AddMTForm extends FormBase {
           '"typeUri":"'.HASCO::DATAFILE.'",'.
           '"hascoTypeUri":"'.HASCO::DATAFILE.'",'.
           '"label":"'.$form_state->getValue('mt_name').'",'.
-          '"filename":"'.$filename.'",'.          
-          '"id":"'.$fileId[0].'",'.          
-          '"fileStatus":"'.Constant::FILE_STATUS_UNPROCESSED.'",'.          
+          '"filename":"'.$filename.'",'.
+          '"id":"'.$fileId[0].'",'.
+          '"fileStatus":"'.Constant::FILE_STATUS_UNPROCESSED.'",'.
           '"hasSIRManagerEmail":"'.$useremail.'"}';
 
       // MT JSON
@@ -296,7 +302,7 @@ class AddMTForm extends FormBase {
         $mtJSON .= '"hasSDDUri":"'.$sddUri.'",';
       }
       $mtJSON .= '"label":"'.$form_state->getValue('mt_name').'",'.
-          '"hasDataFileUri":"'.$newDataFileUri.'",'.          
+          '"hasDataFileUri":"'.$newDataFileUri.'",'.
           '"hasVersion":"'.$form_state->getValue('mt_version').'",'.
           '"comment":"'.$form_state->getValue('mt_comment').'",'.
           '"hasSIRManagerEmail":"'.$useremail.'"}';
@@ -317,9 +323,9 @@ class AddMTForm extends FormBase {
         $msg2 = $api->parseObjectResponse($api->elementAdd($this->getElementType(),$mtJSON),'elementAdd');
 
         if ($msg1 != NULL && $msg2 != NULL) {
-          \Drupal::messenger()->addMessage(t($this->getElementName() . " has been added successfully."));      
+          \Drupal::messenger()->addMessage(t($this->getElementName() . " has been added successfully."));
         } else {
-          \Drupal::messenger()->addError(t("Something went wrong while adding " . $this->getElementName() . "."));      
+          \Drupal::messenger()->addError(t("Something went wrong while adding " . $this->getElementName() . "."));
         }
         self::backUrl();
         return;

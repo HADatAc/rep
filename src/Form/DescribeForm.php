@@ -31,7 +31,7 @@
   }
 
   public function setElement($obj) {
-    return $this->element = $obj; 
+    return $this->element = $obj;
   }
 
   /**
@@ -53,7 +53,7 @@
     $api = \Drupal::service('rep.api_connector');
     $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
 
-    dpm($this->getElement());
+    //dpm($this->getElement());
 
     $objectProperties = GenericObject::inspectObject($this->getElement());
 
@@ -64,7 +64,7 @@
     //} else {
     //    dpm("The provided variable is not an object.");
     //}
-    
+
 
     // RETRIEVE CONFIGURATION FROM CURRENT IP
     if ($this->getElement() != NULL) {
@@ -82,7 +82,7 @@
       $message = "<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>";
     }
 
-    // Instantiate tables 
+    // Instantiate tables
     $tables = new Tables;
 
     $form['header1'] = [
@@ -100,11 +100,14 @@
         ];
       }
     }
-      
+
     $form['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Back'),
       '#name' => 'back',
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'back-button'],
+      ],
     ];
     $form['space'] = [
       '#type' => 'markup',
@@ -117,7 +120,7 @@
 
   public function validateForm(array &$form, FormStateInterface $form_state) {
   }
-    
+
   /**
    * {@inheritdoc}
    */
@@ -129,13 +132,13 @@
   public static function prettyProperty($input) {
     // Remove "has" from the string
     $inputWithoutHas = str_replace('has', '', $input);
-    
+
     // Add a space before each capital letter (excluding the first character)
     $stringWithSpaces = preg_replace('/(?<!^)([A-Z])/', ' $1', $inputWithoutHas);
 
     // Capitalize the first term
     $result = ucfirst($stringWithSpaces);
-    
+
     return $result;
   }
 
@@ -148,5 +151,5 @@
       return;
     }
   }
-      
+
  }

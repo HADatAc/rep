@@ -18,7 +18,7 @@ class TreeForm extends FormBase {
   }
 
   public function setElementType($elementType) {
-    return $this->elementType = $elementType; 
+    return $this->elementType = $elementType;
   }
 
   public function getRootNode() {
@@ -26,7 +26,7 @@ class TreeForm extends FormBase {
   }
 
   public function setRootNode($rootNode) {
-    return $this->rootNode = $rootNode; 
+    return $this->rootNode = $rootNode;
   }
 
   /**
@@ -103,6 +103,9 @@ class TreeForm extends FormBase {
     $form['action_reset'] = [
       '#type' => 'submit',
       '#value' => $this->t('Reset Tree'),
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'reset-button'],
+      ],
     ];
 
     // Form elements
@@ -115,8 +118,8 @@ class TreeForm extends FormBase {
         '#type' => 'markup',
         '#markup' => '<div id="tree-root" data-initial-uri="' . $this->getRootNode()->uri . '">'
             . '<ul>'
-            . '<li class="node" data-uri="' . $this->getRootNode()->uri . '" '  
-            . ' data-node-id="' . $this->getRootNode()->nodeId . '">' 
+            . '<li class="node" data-uri="' . $this->getRootNode()->uri . '" '
+            . ' data-node-id="' . $this->getRootNode()->nodeId . '">'
             . $this->getRootNode()->label
             . '<ul id="children-node-' . $this->getRootNode()->nodeId . '"></ul>'
             . '</li>'
