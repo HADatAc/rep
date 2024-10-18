@@ -16,7 +16,7 @@ class AssocStudyObjectCollection {
   public static function process($element, array &$form, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
     $t = \Drupal::service('string_translation');
-    
+
     /*
     *    SOC's STUDY OBJECTS
     */
@@ -43,7 +43,7 @@ class AssocStudyObjectCollection {
           $link = ListPropertyPage::link($element,HASCO::IS_MEMBER_OF,NULL,1,20);
           $form['objs']['more_objects'] = [
             '#type' => 'markup',
-            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
                         'data-dialog-type="modal" '.
                         'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
           ];
@@ -54,6 +54,6 @@ class AssocStudyObjectCollection {
         ];
       }
     }
-    return $form;        
+    return $form;
   }
-}        
+}
