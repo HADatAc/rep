@@ -80,6 +80,7 @@ button.back-button {
   transform: translateY(-50%);
 }
 
+a.search-button,
 button.search-button {
   position: relative;
   padding-left: 2.6rem; /* Ajuste conforme necessário para dar espaço ao ícone */
@@ -299,6 +300,7 @@ button.bookmark-button {
   transform: translateY(-50%);
 }
 
+a.download-button,
 button.download-button {
   position: relative;
   padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
@@ -396,12 +398,108 @@ button.describe-button {
   transform: translateY(-50%);
 }
 
+button.card-view-button {
+  position: relative;
+  padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.card-view-button::before {
+  content: "\f2bb"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 400; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.45rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.table-view-button {
+  position: relative;
+  padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.table-view-button::before {
+  content: "\f03a"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.55rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.load-more-button {
+  position: relative;
+  padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.load-more-button::before {
+  content: "\f110"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+a.read-button,
+button.read-button {
+  position: relative;
+  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.read-button::before {
+  content: "\f0c6"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+a.more-button,
+button.more-button {
+  position: relative;
+  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.more-button::before {
+  content: "\f101"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+a.view-button,
+button.view-button {
+  position: relative;
+  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.view-button::before {
+  content: "\f06e"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 /* TABS */
 .form-control.nav-link {
-  color: rgb(127, 137, 137) !important; /* Define a cor do texto como preto */
+  color: rgb(45, 48, 48) !important; /* Define a cor do texto como preto */
   border:2px solid #dddddd !important;
+  background-color: #57a7d8 !important;
 }
 
 .form-control.nav-link.active {
   color: white !important; /* Define a cor do texto como preto */
+  background-color: #055a8e !important;
+  font-weight: 500;
 }

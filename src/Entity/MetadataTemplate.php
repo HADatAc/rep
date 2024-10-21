@@ -72,6 +72,7 @@ class MetadataTemplate {
 
     //dpm($list);
 
+
     // ROOT URL
     $root_url = \Drupal::request()->getBaseUrl();
 
@@ -127,7 +128,7 @@ class MetadataTemplate {
         }
         if (isset($element->hasDataFile->log) && $element->hasDataFile->log != NULL) {
           $link = $root_url.REPGUI::DATAFILE_LOG.base64_encode($element->hasDataFile->uri);
-          $log = '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+          $log = '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm read-button" '.
                  'data-dialog-type="modal" '.
                  'data-dialog-options=\'{"width": 700}\' role="button">Read</a>';
 
@@ -138,7 +139,7 @@ class MetadataTemplate {
           $file_entity = \Drupal\file\Entity\File::load($element->hasDataFile->id);
           if ($file_entity != NULL) {
             $downloadLink = $root_url.REPGUI::DATAFILE_DOWNLOAD.base64_encode($element->hasDataFile->uri);
-            $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm" role="button" disabled>Get It</a>';
+            $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm download-button" role="button" disabled>Get It</a>';
           }
         }
       }
@@ -152,6 +153,7 @@ class MetadataTemplate {
         'element_download' => t($download),
       ];
     }
+
     return $output;
   }
 
