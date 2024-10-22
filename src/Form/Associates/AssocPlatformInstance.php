@@ -16,7 +16,7 @@ class AssocPlatformInstance {
   public static function process($element, array &$form, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
     $t = \Drupal::service('string_translation');
-    
+
     /*
      *    PLATFORM INSTANCE's (ACTIVE) DEPLOYMENTS
      */
@@ -45,7 +45,7 @@ class AssocPlatformInstance {
           $link = ListPropertyPage::link($element,HASCO::IS_MEMBER_OF,NULL,1,20);
           $form['deployments']['more_deployments'] = [
             '#type' => 'markup',
-            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
                         'data-dialog-type="modal" '.
                         'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
           ];
@@ -56,12 +56,12 @@ class AssocPlatformInstance {
         ];
       }
     }
-    
+
     /*
      *    PLATFORM INSTANCE's STREAMS
      */
 
-    return $form;        
+    return $form;
   }
 
-}        
+}
