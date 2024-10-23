@@ -14,7 +14,7 @@ class DeleteElementController extends ControllerBase {
    */
   public function exec($elementtype, $elementuri, $currenturl) {
     if ($elementuri == NULL || $currenturl == NULL) {
-      $response = new RedirectResponse(Url::fromRoute('rep.about')->toString());
+      $response = new RedirectResponse(Url::fromRoute('rep.home')->toString());
       $response->send();
       return;
     }    

@@ -9,6 +9,7 @@ use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Entity\DataFile;
 use Drupal\rep\Constant;
 use Drupal\rep\Utils;
+use Drupal\Core\Render\Markup;
 
 
 class MetadataTemplate {
@@ -34,7 +35,7 @@ class MetadataTemplate {
     $this->preservedMT->typeUri = $mt->typeUri;
     $this->preservedMT->hascoTypeUri = $mt->hascoTypeUri;
     $this->preservedMT->hasDataFileUri = $mt->hasDataFileUri;
-    $this->preservedMT->comment = $mt->comment;          
+    $this->preservedMT->comment = $mt->comment;
     $this->preservedMT->hasSIRManagerEmail = $mt->hasSIRManagerEmail;
   }
 
@@ -64,7 +65,7 @@ class MetadataTemplate {
       'element_log' => t('Log'),
       'element_download' => t('Download'),
     ];
-  
+
   }
 
   public static function generateOutput($elementType, $list) {
@@ -104,11 +105,11 @@ class MetadataTemplate {
         //$api = \Drupal::service('rep.api_connector');
         //$dataFile = $api->parseObjectResponse($api->getUri($element->hasDataFile),'getUri');
 
-        if ($element->hasDataFile->filename != NULL && 
+        if ($element->hasDataFile->filename != NULL &&
             $element->hasDataFile->filename != '') {
           $filename = $element->hasDataFile->filename;
         }
-        if ($element->hasDataFile->fileStatus != NULL && 
+        if ($element->hasDataFile->fileStatus != NULL &&
             $element->hasDataFile->fileStatus != '') {
           if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
             $filestatus = '<b><font style="color:#ff0000;">'.Constant::FILE_STATUS_UNPROCESSED.'</font></b>';
@@ -129,22 +130,22 @@ class MetadataTemplate {
           $log = '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
                  'data-dialog-type="modal" '.
                  'data-dialog-options=\'{"width": 700}\' role="button">Read</a>';
-  
+
           //$log = '<a href="'.$link.'" class="btn btn-primary btn-sm" role="button">Read</a>';
-        } 
+        }
         $downloadLink = '';
         if ($element->hasDataFile->id != NULL && $element->hasDataFile->id != '') {
           $file_entity = \Drupal\file\Entity\File::load($element->hasDataFile->id);
           if ($file_entity != NULL) {
             $downloadLink = $root_url.REPGUI::DATAFILE_DOWNLOAD.base64_encode($element->hasDataFile->uri);
             $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm" role="button" disabled>Get It</a>';
-          } 
-        }  
+          }
+        }
       }
       $encodedUri = rawurlencode(rawurlencode($element->uri));
       $output[$element->uri] = [
-        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),     
-        'element_name' => t($label),    
+        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+        'element_name' => t($label),
         'element_filename' => $filename,
         'element_status' => t($filestatus),
         'element_log' => t($log),
@@ -165,16 +166,16 @@ class MetadataTemplate {
           '"typeUri":"'.HASCO::DATAFILE.'",'.
           '"hascoTypeUri":"'.HASCO::DATAFILE.'",'.
           '"label":"'.$this->getPreservedDF()->label.'",'.
-          '"filename":"'.$this->getPreservedDF()->filename.'",'.          
-          '"id":"'.$this->getPreservedDF()->id.'",'.          
-          '"fileStatus":"'.Constant::FILE_STATUS_UNPROCESSED.'",'.          
+          '"filename":"'.$this->getPreservedDF()->filename.'",'.
+          '"id":"'.$this->getPreservedDF()->id.'",'.
+          '"fileStatus":"'.Constant::FILE_STATUS_UNPROCESSED.'",'.
           '"hasSIRManagerEmail":"'.$this->getPreservedDF()->hasSIRManagerEmail.'"}';
 
       $mtJSON = '{"uri":"'. $this->getPreservedMT()->uri .'",'.
           '"typeUri":"'.$this->getPreservedMT()->typeUri.'",'.
           '"hascoTypeUri":"'.$this->getPreservedMT()->hascoTypeUri.'",'.
           '"label":"'.$this->getPreservedMT()->label.'",'.
-          '"hasDataFileUri":"'.$this->getPreservedMT()->hasDataFileUri.'",'.          
+          '"hasDataFileUri":"'.$this->getPreservedMT()->hasDataFileUri.'",'.
           '"comment":"'.$this->getPreservedMT()->comment.'",'.
           '"hasSIRManagerEmail":"'.$this->getPreservedMT()->hasSIRManagerEmail.'"}';
 
@@ -191,17 +192,17 @@ class MetadataTemplate {
         $mtRaw = $api->elementAdd($elementType, $mtJSON);
         if ($mtRaw != NULL) {
           $msg2 = $api->parseObjectResponse($mtRaw,'elementAdd');
-        } 
+        }
       }
 
       if ($msg1 != NULL && $msg2 != NULL) {
-        return TRUE;      
+        return TRUE;
       } else {
         return FALSE;
       }
 
     } catch(\Exception $e) {}
-  } 
+  }
 
   public static function generateOutputAsCards($elementType, $list) {
     $output = [];
@@ -215,7 +216,7 @@ class MetadataTemplate {
 
     $index = 0;
     foreach ($list as $element) {
-      $index++; 
+      $index++;
       $uri = $element->uri ?? '';
       $label = $element->label ?? '';
       $title = $element->title ?? '';
@@ -224,7 +225,7 @@ class MetadataTemplate {
 
       if (isset($urlComponents['scheme']) && isset($urlComponents['host'])) {
         $url = Url::fromUri($uri);
-      } else { 
+      } else {
         $url = '';
       }
 
@@ -262,11 +263,11 @@ class MetadataTemplate {
 
       }
 
-      if ($element->hasDataFile->filename != NULL && 
+      if ($element->hasDataFile->filename != NULL &&
         $element->hasDataFile->filename != '') {
         $filename = $element->hasDataFile->filename;
       }
-      if ($element->hasDataFile->fileStatus != NULL && 
+      if ($element->hasDataFile->fileStatus != NULL &&
           $element->hasDataFile->fileStatus != '') {
         if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
           $filestatus = '<b><font style="color:#ff0000;">'.Constant::FILE_STATUS_UNPROCESSED.'</font></b>';
@@ -285,26 +286,26 @@ class MetadataTemplate {
 
       $dd = '(none)';
       if (isset($element->hasDD) && $element->hasDD != NULL) {
-        $dd = $element->hasDD->label . ' (' . $element->hasDD->hasDataFile->filename . ') [<b>' . $element->hasDD->hasDataFile->fileStatus . '</b>] '; 
+        $dd = $element->hasDD->label . ' (' . $element->hasDD->hasDataFile->filename . ') [<b>' . $element->hasDD->hasDataFile->fileStatus . '</b>] ';
       }
       $sdd = '(none)';
       if (isset($element->hasSDD) && $element->hasSDD != NULL) {
-        $sdd = $element->hasSDD->label . ' (' . $element->hasSDD->hasDataFile->filename . ') [<b>' . $element->hasSDD->hasDataFile->fileStatus . '</b>] '; 
+        $sdd = $element->hasSDD->label . ' (' . $element->hasSDD->hasDataFile->filename . ') [<b>' . $element->hasSDD->hasDataFile->fileStatus . '</b>] ';
       }
 
       $properties = ' ';
       if ($elementType == 'da') {
-        $properties = '<p class="card-text">'. 
-          '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' . 
-          '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' [' . $filestatus . ']<br><br>' . 
+        $properties = '<p class="card-text">'.
+          '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' .
+          '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' [' . $filestatus . ']<br><br>' .
           'Documentation: <br>' .
-          '&nbsp;&nbsp;&nbsp;<b>Data Dictionary</b>: ' . $dd . '<br>' . 
-          '&nbsp;&nbsp;&nbsp;<b>Semantic Data Dictionary</b>: ' . $sdd . '<br>' . 
+          '&nbsp;&nbsp;&nbsp;<b>Data Dictionary</b>: ' . $dd . '<br>' .
+          '&nbsp;&nbsp;&nbsp;<b>Semantic Data Dictionary</b>: ' . $sdd . '<br>' .
           '</p>';
       } else {
-        $properties = '<p class="card-text">'. 
-          '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' . 
-          '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' (' . $filestatus . ')<br>' . 
+        $properties = '<p class="card-text">'.
+          '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' .
+          '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' (' . $filestatus . ')<br>' .
           '</p>';
       }
 
@@ -317,7 +318,7 @@ class MetadataTemplate {
             'class' => ['card', 'mb-3'],
         ],
         '#prefix' => '<div class="col-md-6">',
-        '#suffix' => '</div>', 
+        '#suffix' => '</div>',
         'card_body_'.$index => [
             '#type' => 'container', // Use container for the card body
             '#attributes' => [
@@ -331,8 +332,8 @@ class MetadataTemplate {
             ],
             'link1_'.$index => [
               '#type' => 'link',
-              '#title' => 'View',
-              '#url' => $view_da, 
+              '#title' => Markup::create('<i class="fa-solid fa-eye"></i> View'),
+              '#url' => $view_da,
               '#attributes' => [
                 'class' => ['btn', 'btn-sm', 'btn-secondary'],
                 'style' => 'margin-right: 10px;',
@@ -340,8 +341,8 @@ class MetadataTemplate {
             ],
             'link2_'.$index => [
               '#type' => 'link',
-              '#title' => 'Edit',
-              '#url' => $edit_da, 
+              '#title' => Markup::create('<i class="fa-solid fa-pen-to-square"></i> Edit'),
+              '#url' => $edit_da,
               '#attributes' => [
                 'class' => ['btn', 'btn-sm', 'btn-secondary'],
                 'style' => 'margin-right: 10px;',
@@ -349,18 +350,18 @@ class MetadataTemplate {
             ],
             'link3_'.$index => [
               '#type' => 'link',
-              '#title' => 'Delete',
-              '#url' => $delete_da, 
+              '#title' => Markup::create('<i class="fa-solid fa-trash-can"></i> Delete'),
+              '#url' => $delete_da,
               '#attributes' => [
                 'onclick' => 'if(!confirm("Really Delete?")){return false;}',
-                'class' => ['btn', 'btn-sm', 'btn-secondary'],
+                'class' => ['btn', 'btn-sm', 'btn-secondary', 'btn-danger'],
                 'style' => 'margin-right: 10px;',
               ],
             ],
             'link4_'.$index => [
               '#type' => 'link',
-              '#title' => 'Download',
-              '#url' => $download_da, 
+              '#title' => Markup::create('<i class="fa-solid fa-download"></i> Download'),
+              '#url' => $download_da,
               '#attributes' => [
                 'onclick' => 'if(!confirm("Really Download?")){return false;}',
                 'class' => ['btn', 'btn-sm', 'btn-secondary'],
@@ -369,8 +370,8 @@ class MetadataTemplate {
             ],
             'link5_'.$index => [
               '#type' => 'link',
-              '#title' => 'Ingest',
-              '#url' => $view_da, 
+              '#title' => Markup::create('<i class="fa-solid fa-arrow-down"></i> Ingest'),
+              '#url' => $view_da,
               '#attributes' => [
                 'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
                 'style' => 'margin-right: 10px;',
@@ -378,15 +379,15 @@ class MetadataTemplate {
             ],
             'link6_'.$index => [
               '#type' => 'link',
-              '#title' => 'Uningest',
-              '#url' => $view_da, 
+              '#title' => Markup::create('<i class="fa-solid fa-arrow-up"></i> Uningest'),
+              '#url' => $view_da,
               '#attributes' => [
                 'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
               ],
             ],
         ],
       ];
-    
+
     }
 
     return $output;

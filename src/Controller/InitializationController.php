@@ -3,6 +3,7 @@
 namespace Drupal\rep\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Url;
 use Drupal\rep\Controller\UtilsController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,10 +44,11 @@ class InitializationController extends ControllerBase{
     //  }
     //}
 
-    $root_url = \Drupal::request()->getBaseUrl();
-    $redirect = new RedirectResponse($root_url . '/rep/about');
+    //$root_url = \Drupal::request()->getBaseUrl();
+    //$redirect = new RedirectResponse($root_url . '/rep/about');
+    $url = Url::fromRoute('rep.home')->toString();
   
-    return $redirect;
+    return new RedirectResponse($url);
 
   }
 

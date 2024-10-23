@@ -29,7 +29,7 @@ class EditMTForm extends FormBase {
   }
 
   public function setElementType($elementType) {
-    return $this->elementType = $elementType; 
+    return $this->elementType = $elementType;
   }
 
   public function getElementName() {
@@ -37,7 +37,7 @@ class EditMTForm extends FormBase {
   }
 
   public function setElementName($name) {
-    return $this->elementName = $name; 
+    return $this->elementName = $name;
   }
 
   public function getMTUri() {
@@ -45,7 +45,7 @@ class EditMTForm extends FormBase {
   }
 
   public function setMTUri($uri) {
-    return $this->mtUri = $uri; 
+    return $this->mtUri = $uri;
   }
 
   public function getMT() {
@@ -53,7 +53,7 @@ class EditMTForm extends FormBase {
   }
 
   public function setMT($mt) {
-    return $this->mt = $mt; 
+    return $this->mt = $mt;
   }
 
   public function getStudyUri() {
@@ -61,7 +61,7 @@ class EditMTForm extends FormBase {
   }
 
   public function setStudyUri($studyUri) {
-    return $this->studyUri = $studyUri; 
+    return $this->studyUri = $studyUri;
   }
 
   public function getStudy() {
@@ -69,7 +69,7 @@ class EditMTForm extends FormBase {
   }
 
   public function setStudy($study) {
-    return $this->study = $study; 
+    return $this->study = $study;
   }
 
   /**
@@ -103,7 +103,7 @@ class EditMTForm extends FormBase {
         }
       }
     }
-    
+
     if ($elementtype == NULL) {
       \Drupal::messenger()->addError(t("An elementType is required to retrieve a metadata template."));
       self::backUrl();
@@ -145,7 +145,7 @@ class EditMTForm extends FormBase {
       return;
     }
 
-    if ($this->getMT()->isMemberOf != NULL) {
+    if (isset($this->getMT()->isMemberOf) && $this->getMT()->isMemberOf != NULL) {
       $this->setStudy($this->getMT()->isMemberOf);
       $this->setStudyUri($this->getMT()->isMemberOfUri);
     }
@@ -158,14 +158,16 @@ class EditMTForm extends FormBase {
     }
 
     $dd = ' ';
-    if ($this->getMT()->hasDD != NULL &&
+    if (isset($this->getMT()->hasDD) &&
+        $this->getMT()->hasDD != NULL &&
         $this->getMT()->hasDD->uri != NULL &&
         $this->getMT()->hasDD->label != NULL) {
       $dd = Utils::fieldToAutocomplete($this->getMT()->hasDD->uri,$this->getMT()->hasDD->label);
     }
 
     $sdd = ' ';
-    if ($this->getMT()->hasSDD != NULL &&
+    if (isset($this->getMT()->hasSDD) &&
+        $this->getMT()->hasSDD != NULL &&
         $this->getMT()->hasSDD->uri != NULL &&
         $this->getMT()->hasSDD->label != NULL) {
       $sdd = Utils::fieldToAutocomplete($this->getMT()->hasSDD->uri,$this->getMT()->hasSDD->label);
@@ -228,11 +230,17 @@ class EditMTForm extends FormBase {
       '#type' => 'submit',
       '#value' => $this->t('Update'),
       '#name' => 'save',
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'save-button'],
+      ],
     ];
     $form['cancel_submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Cancel'),
       '#name' => 'back',
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'cancel-button'],
+      ],
     ];
     $form['bottom_space'] = [
       '#type' => 'item',
@@ -263,19 +271,19 @@ class EditMTForm extends FormBase {
     if ($button_name === 'back') {
       self::backUrl();
       return;
-    } 
+    }
 
     $useremail = \Drupal::currentUser()->getEmail();
 
     $ddUri = NULL;
     if ($form_state->getValue('mt_dd') != NULL && $form_state->getValue('mt_dd') != '') {
       $ddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_dd'));
-    } 
+    }
 
     $sddUri = NULL;
     if ($form_state->getValue('mt_sdd') != NULL && $form_state->getValue('mt_sdd') != '') {
       $sddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_sdd'));
-    } 
+    }
 
     $mtJSON = '{"uri":"'. $this->getMT()->uri .'",'.
       '"typeUri":"'. $this->getMT()->typeUri .'",'.
@@ -290,7 +298,7 @@ class EditMTForm extends FormBase {
       $mtJSON .= '"hasSDDUri":"'.$sddUri.'",';
     }
     $mtJSON .= '"label":"'.$form_state->getValue('mt_name').'",'.
-      '"hasDataFileUri":"'.$this->getMT()->hasDataFile->uri.'",'.          
+      '"hasDataFileUri":"'.$this->getMT()->hasDataFile->uri.'",'.
       '"hasVersion":"'.$form_state->getValue('mt_version').'",'.
       '"comment":"'.$form_state->getValue('mt_comment').'",'.
       '"hasSIRManagerEmail":"'.$useremail.'"}';

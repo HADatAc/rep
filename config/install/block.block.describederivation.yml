@@ -1,4 +1,3 @@
-uuid: c7c651a8-b0ca-4167-8870-b933e5730378
 langcode: en
 status: true
 dependencies:
@@ -6,9 +5,9 @@ dependencies:
     - rep
     - system
   theme:
-    - bootstrap_barrio_subtheme
+    - hasco_barrio
 id: describederivation
-theme: bootstrap_barrio_subtheme
+theme: hasco_barrio
 region: content
 weight: 0
 provider: null

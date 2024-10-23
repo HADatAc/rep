@@ -1,6 +1,11 @@
-name: Semantic Repository
-description: Underlying repository for managing knowledge graphs about a broad range of concepts 
+name: 'Semantic Repository'
+description: 'Underlying repository for managing knowledge graphs about a broad range of concepts'
 package: Semantic Tools
-core_version_requirement: ^8 || ^9
-type: module 
+core_version_requirement: ^9 || ^10
+dependencies:
+  - drupal:key
+type: module
+version: '0.7.0'
 configure: rep.admin_settings
+libraries:
+  - rep/rep_js_css

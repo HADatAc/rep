@@ -1,40 +1,47 @@
-    
-rep.top_level:
-  title: Repository
-  description: Manage Repository
-  route_name: rep.about
-  menu_name: main
-  weight: 100
-  requirements:
-    _permission: 'access content'
+#
+# KNOWLEDGE GRAPH
+#
 
-rp.kg:
+rep.kg:
   title: Knowledge Graph
-  description: Manage Knowledge Graph
-  route_name: rep.about
+  description: Knowledge graph's search and exploration
+  route_name: rep.home
   menu_name: main
   weight: 10
   requirements:
     _permission: 'access content'
     
-    
-rp.dpl:
-  title: Deployment Elements
-  description: Manage Deployments
-  route_name: '<none>'
+rep.dashboard:
+  title: Dashboard
+  description: Knowledge graph's dashboad
+  route_name: rep.home
+  parent: rep.kg
   menu_name: main
-  weight: 90
+  weight: 10
   requirements:
     _permission: 'access content'
     
-    
 rep.uri_describe:
   title: Describe URI
-  description: Describe URI
+  description: Use URI to retrieve descriptions of knowledge graph's elements
   route_name: rep.element_uri
-  parent: rep.top_level
+  parent: rep.kg
   menu_name: main
-  weight: 1
+  weight: 100
+  requirements:
+    _permission: 'access content'
+    
+        
+#
+# REPOSITORY
+#
+
+rep.top_level:
+  title: Repository
+  description: Manage Repository
+  route_name: rep.home
+  menu_name: main
+  weight: 100
   requirements:
     _permission: 'access content'
 
@@ -49,6 +56,48 @@ rep.manage_datafile:
   parent: rep.top_level
   menu_name: main
   weight: 3
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.browse_attributes:
+  title: Browse Attributes
+  description: Browse Attributes
+  route_name: rep.browse_tree
+  route_parameters:
+    mode: 'browse'
+    elementtype: 'attribute'
+  parent: rep.top_level
+  menu_name: main
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.select_instruments:
+  title: Select Instruments
+  description: Select Instruments
+  route_name: rep.browse_tree
+  route_parameters:
+    mode: 'select'
+    elementtype: 'instrument'
+  parent: rep.top_level
+  menu_name: main
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.browse_instruments:
+  title: Browse Instruments
+  description: Browse Instruments
+  route_name: rep.browse_tree
+  route_parameters:
+    mode: 'browse'
+    elementtype: 'instrument'
+  parent: rep.top_level
+  menu_name: main
+  weight: 7
   requirements:
     _permission: 'access content'
     _role: 'authenticated'

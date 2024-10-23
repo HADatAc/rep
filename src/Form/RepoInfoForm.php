@@ -91,6 +91,9 @@
             '#type' => 'submit',
             '#value' => $this->t('Back'),
             '#name' => 'back',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'back-button'],
+            ],
         ];
         $form['space'] = [
             '#type' => 'label',
@@ -103,12 +106,12 @@
 
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
-     
+
     /**
      * {@inheritdoc}
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
-        $url = Url::fromRoute('rep.about');
+        $url = Url::fromRoute('rep.home');
         $form_state->setRedirectUrl($url);
     }
 

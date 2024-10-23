@@ -1,0 +1,83 @@
+(function ($, Drupal) {
+    Drupal.behaviors.tree = {
+      attach: function (context, settings) {
+        // Initialize tree container only once
+        $('#tree-container', context).each(function () {
+          loadTree();  // Load the initial tree
+        });
+  
+        // Event delegation for dynamic loading
+        $(document).on('click', '.node', function () {
+          const nodeUri = $(this).data('uri');
+          const childrenContainer = $('#children-' + encodeURIComponent(nodeUri));
+  
+          if (childrenContainer.html() === '') {
+            $.ajax({
+              url: 'http://localhost/rep/getchildren', // Ensure the URL is correct
+              type: 'GET',
+              data: { nodeUri: nodeUri },
+              dataType: 'json',
+              success: function (data) {
+                // Log the data to inspect its structure
+                console.log('Received data:', data);
+  
+                if (Array.isArray(data) && data.length > 0) {
+                  const html = renderTreeNodes(data);
+                  childrenContainer.html(html);
+                } else {
+                  console.log('No children available for URI:', nodeUri);
+                  childrenContainer.html('<p>No children available.</p>');
+                }
+              },
+              error: function (jqXHR, textStatus, errorThrown) {
+                console.error('Failed to fetch data:', textStatus, errorThrown);
+              }
+            });
+          }
+        });
+  
+        function loadTree() {
+          $.ajax({
+            url: 'http://localhost/rep/getchildren', // Ensure the URL is correct
+            type: 'GET',
+            data: { nodeUri: 'http://semanticscience.org/resource/SIO_000614' },
+            dataType: 'json',
+            success: function (data) {
+              $('#tree-container').html(renderTreeNodes(data));
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+              console.error('Failed to load initial tree:', textStatus, errorThrown);
+            }
+          });
+        }
+  
+        function renderTreeNodes(nodes) {
+          let html = '<ul>';
+  
+          function renderNode(node) {
+            let nodeHtml = '<li>';
+            nodeHtml += '<span class="node" data-uri="' + encodeURIComponent(node.uri) + '">' + (node.label || node.name) + '</span>';
+            if (node.children && node.children.length > 0) {
+              nodeHtml += '<div class="children" id="children-' + encodeURIComponent(node.uri) + '">';
+              nodeHtml += '<ul>';
+              node.children.forEach(function (child) {
+                nodeHtml += renderNode(child); // Recursively render children
+              });
+              nodeHtml += '</ul>';
+              nodeHtml += '</div>';
+            }
+            nodeHtml += '</li>';
+            return nodeHtml;
+          }
+  
+          nodes.forEach(function (node) {
+            html += renderNode(node); // Render each top-level node
+          });
+  
+          html += '</ul>';
+          return html;
+        }
+      }
+    };
+  })(jQuery, Drupal);
+  

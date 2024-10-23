@@ -53,6 +53,23 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
+  public function getChildren($uri) {
+    $endpoint = "/hascoapi/api/children/".
+      rawurlencode($uri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function getHascoType($uri) {
+    $endpoint = "/hascoapi/api/hascotype/".rawurlencode($uri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
   public function listByKeywordAndLanguage($elementType, $keyword, $language, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
@@ -184,6 +201,32 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
+  public function listByManagerEmailByContainer($containeruri, $elementType, $manageremail, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremailbycontainer/".
+      rawurlencode($containeruri)."/".
+      $manageremail."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function listSizeByManagerEmailByContainer($containeruri, $elementType, $manageremail, ) {
+    $endpoint = "/hascoapi/api/".
+      $elementType . 
+      "/manageremailbycontainer/total/" . 
+      rawurlencode($containeruri)."/".
+      $manageremail;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
   public function uningestMT($metadataTemplateUri) {
     $endpoint = "/hascoapi/api/uningest/mt/" . rawurlencode($metadataTemplateUri);
     $method = 'GET';
@@ -214,159 +257,55 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  /**
-   *   INSTRUMENTS
-   */
-
-  public function instrumentRendering($type,$instrumentUri) {
-    if ($type == 'fhir' || $type == 'rdf') {
-      $endpoint = "/hascoapi/api/instrument/to".$type."/".rawurlencode($instrumentUri);
-    } else {
-      $endpoint = "/hascoapi/api/instrument/totext/".$type."/".rawurlencode($instrumentUri);
-    }
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
-  public function instrumentAdd($instrumentJson) {
-    $endpoint = "/hascoapi/api/instrument/create/".rawurlencode($instrumentJson);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function instrumentDel($instrumentUri) {
-    $endpoint = "/hascoapi/api/instrument/delete/".rawurlencode($instrumentUri);    
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  /**
-   *   SUBCONTAINERS
-   */
-
-  public function subcontainerAdd($subcontainerJson) {
-    $endpoint = "/hascoapi/api/subcontainer/create/".rawurlencode($subcontainerJson);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function subcontainerDel($subcontainerUri) {
-    $endpoint = "/hascoapi/api/subcontainer/delete/".rawurlencode($subcontainerUri);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function subcontainerUpdate($json) {
-    $endpoint = "/hascoapi/api/subcontainer/update/".rawurlencode($json);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();   
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  /** 
-   *   SLOT ELEMENT
-   */
-
-   public function slotElements($containerUri) {
-    $endpoint = "/hascoapi/api/slotelements/bycontainer/".rawurlencode($containerUri);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
-  }
-
-  public function slotelementDel($slotelementUri) {
-    $endpoint = "/hascoapi/api/slotelement/delete/".rawurlencode($slotelementUri);    
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  /**
-   *  
-   *    CONTAINER SLOTS
+  /****************************************************************************** 
+   *
+   *                             E L E M E N T S
    * 
-   */
- 
-  public function containerslotAdd($containerUri,$totalContainerSlots) {
-    $endpoint = "/hascoapi/api/slots/container/create/".rawurlencode($containerUri)."/".rawurlencode($totalContainerSlots);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
+   ******************************************************************************/ 
 
-  public function containerslotDel($containerUri) {
-    $endpoint = "/hascoapi/api/slots/container/delete/".rawurlencode($containerUri);
+  /**
+   *   ANNOTATION
+   */
+
+   public function annotationAdd($annotationJson) {
+    $endpoint = "/hascoapi/api/annotation/create/".rawurlencode($annotationJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function containerslotReset($containerslotUri) {
-    $endpoint = "/hascoapi/api/slots/container/detach/".rawurlencode($containerslotUri);    
+  public function annotationDel($annotationUri) {
+    $endpoint = "/hascoapi/api/annotation/delete/".rawurlencode($annotationUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function annotationByContainerAndPosition($containerUri,$positionUri) {
+    $endpoint = "/hascoapi/api/annotationsbycontainerposition/".rawurlencode($containerUri)."/".rawurlencode($positionUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
   }
 
   /**
-   *   DETECTOR STEMS
+   *   ANNOTATION STEMS
    */
 
-  public function detectorStemAdd($detectorStemJson) {
-    $endpoint = "/hascoapi/api/detectorstem/create/".rawurlencode($detectorStemJson);
+   public function annotationStemAdd($annotationStemJson) {
+    $endpoint = "/hascoapi/api/annotationstem/create/".rawurlencode($annotationStemJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function detectorStemDel($detectorStemUri) {
-    $endpoint = "/hascoapi/api/detectorstem/delete/".rawurlencode($detectorStemUri);
+  public function annotationStemDel($annotationStemUri) {
+    $endpoint = "/hascoapi/api/annotationstem/delete/".rawurlencode($annotationStemUri);
     $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  /**
-   *   DETECTORS
-   */
-
-  public function detectorAdd($detectorJson) {
-    $endpoint = "/hascoapi/api/detector/create/".rawurlencode($detectorJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function detectorDel($detectorUri) {
-    $endpoint = "/hascoapi/api/detector/delete/".rawurlencode($detectorUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function detectorAttach($detectorUri,$containerslotUri) {
-    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($detectorUri)."/".rawurlencode($containerslotUri);
-    $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
@@ -376,7 +315,7 @@ class FusekiAPIConnector {
    *   CODEBOOK
    */
  
-  public function codebookAdd($codebookJson) {
+   public function codebookAdd($codebookJson) {
     $endpoint = "/hascoapi/api/codebook/create/".rawurlencode($codebookJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
@@ -428,6 +367,385 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
+  /**
+   *  
+   *    CONTAINER SLOTS
+   * 
+   */
+ 
+  public function containerslotAdd($containerUri,$totalContainerSlots) {
+    $endpoint = "/hascoapi/api/slots/container/create/".rawurlencode($containerUri)."/".rawurlencode($totalContainerSlots);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function containerslotDel($containerUri) {
+    $endpoint = "/hascoapi/api/slots/container/delete/".rawurlencode($containerUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function containerslotReset($containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/detach/".rawurlencode($containerslotUri);    
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   DATAFILE
+   */
+
+   public function datafileAdd($datafileJson) {
+    $endpoint = "/hascoapi/api/datafile/create/".rawurlencode($datafileJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function datafileDel($datafileUri) {
+    $endpoint = "/hascoapi/api/datafile/delete/".rawurlencode($datafileUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  /**
+   *   DEPLOYMENT
+   */
+
+   public function deploymentByStateEmail($state, $email, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/deployment/".
+      $state."/".
+      $email."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+  }
+
+  public function deploymentSizeByStateEmail($state, $email) {
+    $endpoint = "/hascoapi/api/deployment/total/".
+      $state."/".
+      $email."/";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+  }
+
+  public function deploymentsByPlatformInstanceWithPage($platformInstanceUri,$pageSize,$offset) {
+    $endpoint = "/hascoapi/api/deploymentbyplatforminstance/".
+      rawurlencode($platformInstanceUri).'/'.
+      $pageSize.'/'.
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function sizeDeploymentsByPlatformInstance($platformInstanceUri) {
+    $endpoint = "/hascoapi/api/deploymentbyplatforminstance/total/".
+      rawurlencode($platformInstanceUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   DETECTORS
+   */
+
+  public function detectorAdd($detectorJson) {
+    $endpoint = "/hascoapi/api/detector/create/".rawurlencode($detectorJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function detectorDel($detectorUri) {
+    $endpoint = "/hascoapi/api/detector/delete/".rawurlencode($detectorUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function detectorAttach($detectorUri,$containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($detectorUri)."/".rawurlencode($containerslotUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   DETECTOR STEMS
+   */
+
+   public function detectorStemAdd($detectorStemJson) {
+    $endpoint = "/hascoapi/api/detectorstem/create/".rawurlencode($detectorStemJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function detectorStemDel($detectorStemUri) {
+    $endpoint = "/hascoapi/api/detectorstem/delete/".rawurlencode($detectorStemUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   INSTRUMENTS
+   */
+
+   public function instrumentRendering($type,$instrumentUri) {
+    if ($type == 'fhir' || $type == 'rdf') {
+      $endpoint = "/hascoapi/api/instrument/to".$type."/".rawurlencode($instrumentUri);
+    } else {
+      $endpoint = "/hascoapi/api/instrument/totext/".$type."/".rawurlencode($instrumentUri);
+    }
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  public function instrumentAdd($instrumentJson) {
+    $endpoint = "/hascoapi/api/instrument/create/".rawurlencode($instrumentJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function instrumentDel($instrumentUri) {
+    $endpoint = "/hascoapi/api/instrument/delete/".rawurlencode($instrumentUri);    
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   ORGANIZATION  
+   */
+
+   public function organizationAdd($organizationJson) {
+    $endpoint = "/hascoapi/api/organization/create/".rawurlencode($organizationJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function organizationDel($organizationUri) {
+    $endpoint = "/hascoapi/api/organization/delete/".rawurlencode($organizationUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getSubOrganizations($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/organization/suborganizations/".
+      urlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalSubOrganizations($uri) {
+    $endpoint = "/hascoapi/api/organization/suborganizations/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getAffiliations($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/organization/affiliations/".
+      urlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalAffiliations($uri) {
+    $endpoint = "/hascoapi/api/organization/affiliations/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  /**
+   *   PERSON  
+   */
+
+   public function personAdd($personJson) {
+    $endpoint = "/hascoapi/api/person/create/".rawurlencode($personJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function personDel($personUri) {
+    $endpoint = "/hascoapi/api/person/delete/".rawurlencode($personUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   PLACE  
+   */
+
+   public function placeAdd($placeJson) {
+    $endpoint = "/hascoapi/api/place/create/".rawurlencode($placeJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function placeDel($placeUri) {
+    $endpoint = "/hascoapi/api/place/delete/".rawurlencode($placeUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getContains($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/place/contains/place/".
+      rawurlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalContains($uri) {
+    $endpoint = "/hascoapi/api/place/contains/place/total/".
+      rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  /**
+   *   PLATFORM INSTANCE
+   */
+
+   public function platforminstancesByPlatformwithPage($platformUri,$pageSize,$offset) {
+    $endpoint = "/hascoapi/api/platforminstance/byplatform/".rawurlencode($platformUri).'/'.$pageSize.'/'.$offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    //dpm($api_url.$endpoint);
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function sizePlatforminstancesByPlatform($platformUri) {
+    $endpoint = "/hascoapi/api/platforminstance/byplatform/total/".rawurlencode($platformUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
+   *   POSTAL ADDRESS  
+   */
+
+   public function postalAddressAdd($postalAddressJson) {
+    $endpoint = "/hascoapi/api/postaladdress/create/".rawurlencode($postalAddressJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function postalAddressDel($postalAddressUri) {
+    $endpoint = "/hascoapi/api/postaladdress/delete/".rawurlencode($postalAddressUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function getContainsPostalAddress($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/place/contains/postaladdress/".
+      rawurlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalContainsPostalAddress($uri) {
+    $endpoint = "/hascoapi/api/place/contains/postaladdress/total/".
+      rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getContainsElement($uri, $elementtype, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/place/contains/element/".
+      rawurlencode($uri)."/".
+      $elementtype."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalContainsElement($uri, $elementtype) {
+    $endpoint = "/hascoapi/api/place/contains/element/total/".
+      rawurlencode($uri)."/".
+      $elementtype;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
   /** 
    *   RESPONSE OPTION
    */
@@ -457,58 +775,10 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   ANNOTATION STEMS
-   */
-
-  public function annotationStemAdd($annotationStemJson) {
-    $endpoint = "/hascoapi/api/annotationstem/create/".rawurlencode($annotationStemJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function annotationStemDel($annotationStemUri) {
-    $endpoint = "/hascoapi/api/annotationstem/delete/".rawurlencode($annotationStemUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  /**
-   *   ANNOTATION
-   */
-
-   public function annotationAdd($annotationJson) {
-    $endpoint = "/hascoapi/api/annotation/create/".rawurlencode($annotationJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function annotationDel($annotationUri) {
-    $endpoint = "/hascoapi/api/annotation/delete/".rawurlencode($annotationUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function annotationByContainerAndPosition($containerUri,$positionUri) {
-    $endpoint = "/hascoapi/api/annotationsbycontainerposition/".rawurlencode($containerUri)."/".rawurlencode($positionUri);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
-  }
-
-  /**
    *   SEMANTIC VARIABLE
    */
 
-  public function semanticVariableAdd($semanticVariableJson) {
+   public function semanticVariableAdd($semanticVariableJson) {
     $endpoint = "/hascoapi/api/semanticvariable/create/".rawurlencode($semanticVariableJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
@@ -524,24 +794,44 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 
-  /**
-   *   DATAFILE
+  /** 
+   *   SLOT ELEMENT
    */
 
-   public function datafileAdd($datafileJson) {
-    $endpoint = "/hascoapi/api/datafile/create/".rawurlencode($datafileJson);
-    $method = "POST";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function datafileDel($datafileUri) {
-    $endpoint = "/hascoapi/api/datafile/delete/".rawurlencode($datafileUri);
-    $method = "POST";
+   public function slotElements($containerUri) {
+    $endpoint = "/hascoapi/api/slotelements/bycontainer/".rawurlencode($containerUri);
+    $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+  }
+
+  /**
+   *   STREAM
+   */
+
+   public function streamByStateEmailDeployment($state, $email, $deploymenturi, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/stream/".
+      $state."/".
+      $email."/".
+      rawurlencode($deploymenturi)."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+  }
+
+  public function streamSizeByStateEmailDeployment($state, $email, $deploymenturi) {
+    $endpoint = "/hascoapi/api/stream/total/".
+      $state."/".
+      $email."/".
+      rawurlencode($deploymenturi);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
   }
 
   /**
@@ -698,6 +988,34 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   SUBCONTAINERS
+   */
+
+   public function subcontainerAdd($subcontainerJson) {
+    $endpoint = "/hascoapi/api/subcontainer/create/".rawurlencode($subcontainerJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function subcontainerDel($subcontainerUri) {
+    $endpoint = "/hascoapi/api/subcontainer/delete/".rawurlencode($subcontainerUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();    
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function subcontainerUpdate($json) {
+    $endpoint = "/hascoapi/api/subcontainer/update/".rawurlencode($json);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  /**
    *   VIRTUAL COLUMN 
    */
 
@@ -725,191 +1043,11 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  /**
-   *   PLACE  
-   */
-
-   public function placeAdd($placeJson) {
-    $endpoint = "/hascoapi/api/place/create/".rawurlencode($placeJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function placeDel($placeUri) {
-    $endpoint = "/hascoapi/api/place/delete/".rawurlencode($placeUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function getContains($uri, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/place/contains/place/".
-      rawurlencode($uri)."/".
-      $pageSize."/".
-      $offset;
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  public function getTotalContains($uri) {
-    $endpoint = "/hascoapi/api/place/contains/place/total/".
-      rawurlencode($uri);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  /**
-   *   ORGANIZATION  
-   */
-
-   public function organizationAdd($organizationJson) {
-    $endpoint = "/hascoapi/api/organization/create/".rawurlencode($organizationJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function organizationDel($organizationUri) {
-    $endpoint = "/hascoapi/api/organization/delete/".rawurlencode($organizationUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function getSubOrganizations($uri, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/organization/suborganizations/".
-      urlencode($uri)."/".
-      $pageSize."/".
-      $offset;
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  public function getTotalSubOrganizations($uri) {
-    $endpoint = "/hascoapi/api/organization/suborganizations/total/".
-      urlencode($uri);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  public function getAffiliations($uri, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/organization/affiliations/".
-      urlencode($uri)."/".
-      $pageSize."/".
-      $offset;
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  public function getTotalAffiliations($uri) {
-    $endpoint = "/hascoapi/api/organization/affiliations/total/".
-      urlencode($uri);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  /**
-   *   PERSON  
-   */
-
-   public function personAdd($personJson) {
-    $endpoint = "/hascoapi/api/person/create/".rawurlencode($personJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function personDel($personUri) {
-    $endpoint = "/hascoapi/api/person/delete/".rawurlencode($personUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  /**
-   *   POSTAL ADDRESS  
-   */
-
-   public function postalAddressAdd($postalAddressJson) {
-    $endpoint = "/hascoapi/api/postaladdress/create/".rawurlencode($postalAddressJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function postalAddressDel($postalAddressUri) {
-    $endpoint = "/hascoapi/api/postaladdress/delete/".rawurlencode($postalAddressUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function getContainsPostalAddress($uri, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/place/contains/postaladdress/".
-      rawurlencode($uri)."/".
-      $pageSize."/".
-      $offset;
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  public function getTotalContainsPostalAddress($uri) {
-    $endpoint = "/hascoapi/api/place/contains/postaladdress/total/".
-      rawurlencode($uri);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  public function getContainsElement($uri, $elementtype, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/place/contains/element/".
-      rawurlencode($uri)."/".
-      $elementtype."/".
-      $pageSize."/".
-      $offset;
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  public function getTotalContainsElement($uri, $elementtype) {
-    $endpoint = "/hascoapi/api/place/contains/element/total/".
-      rawurlencode($uri)."/".
-      $elementtype;
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
-  }
-
-  /**
-   *   REPOSITORY
-   */
+  /***************************************************************************
+   * 
+   *                          R E P O S I T O R Y 
+   * 
+   ***************************************************************************/
 
   public function repoInfo() {
     $endpoint = "/hascoapi/api/repo";
@@ -954,6 +1092,14 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
+  public function repoResetNamespaces() {
+    $endpoint = "/hascoapi/api/repo/namespace/reset/";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
   public function repoReloadNamespaceTriples() {
     $endpoint = "/hascoapi/api/repo/ont/load";
     $method = "GET";
@@ -962,8 +1108,16 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  public function repoDeleteSelectedNamespace($namespace) {
-    $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($namespace);
+  public function repoDeleteSelectedNamespace($abbreviation) {
+    $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($abbreviation);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+  }
+
+  public function repoCreateNamespace($json) {
+    $endpoint = "/hascoapi/api/repo/namespace/create/".rawurlencode($json);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -978,11 +1132,11 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);          
   }
 
-  /** 
+  /************************************************************************** 
    *
-   *   ERROR METHODS    
+   *                     E R R O R     M E T H O D S    
    * 
-   */
+   **************************************************************************/
 
    public function getError() {
     return $this->error;
@@ -1009,7 +1163,6 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    var_dump($api_url.$endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);   
   }
 

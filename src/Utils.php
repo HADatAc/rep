@@ -59,65 +59,50 @@ class Utils {
       return NULL;
     }
     switch ($elementType) {
-      case "instrument":
-        $short = Constant::PREFIX_INSTRUMENT;
-        break;
-      case "subcontainer":
-        $short = Constant::PREFIX_SUBCONTAINER;
-        break;
-      case "detectorstem":
-        $short = Constant::PREFIX_DETECTOR_STEM;
-        break;
-      case "detector":
-        $short = Constant::PREFIX_DETECTOR;
-        break;
-      case "codebook":
-        $short = Constant::PREFIX_CODEBOOK;
-        break;
-      case "responseoption":
-        $short = Constant::PREFIX_RESPONSE_OPTION;
+      case "annotation":
+        $short = Constant::PREFIX_ANNOTATION;
         break;
       case "annotationstem":
         $short = Constant::PREFIX_ANNOTATION_STEM;
         break;
-      case "annotation":
-        $short = Constant::PREFIX_ANNOTATION;
-        break;
-      case "semanticvariable":
-        $short = Constant::PREFIX_SEMANTIC_VARIABLE;
-        break;
-      case "ins":
-        $short = Constant::PREFIX_INS;
-        break;
-      case "sdd":
-        $short = Constant::PREFIX_SDD;
+      case "codebook":
+        $short = Constant::PREFIX_CODEBOOK;
         break;
       case "da":
         $short = Constant::PREFIX_DA;
         break;
+      case "dd":
+        $short = Constant::PREFIX_DD;
+        break;
       case "datafile":
         $short = Constant::PREFIX_DATAFILE;
+        break;
+      case "deployment":
+        $short = Constant::PREFIX_DEPLOYMENT;
+        break;
+      case "detector":
+        $short = Constant::PREFIX_DETECTOR;
+        break;
+      case "detectorinstance":
+        $short = Constant::PREFIX_DETECTOR_INSTANCE;
+        break;
+      case "detectorstem":
+        $short = Constant::PREFIX_DETECTOR_STEM;
         break;
       case "dsg":
         $short = Constant::PREFIX_DSG;
         break;
-      case "study":
-        $short = Constant::PREFIX_STUDY;
+      case "ins":
+        $short = Constant::PREFIX_INS;
         break;
-      case "studyrole":
-        $short = Constant::PREFIX_STUDY_ROLE;
+      case "instrument":
+        $short = Constant::PREFIX_INSTRUMENT;
         break;
-      case "studyobjectcollection":
-        $short = Constant::PREFIX_STUDY_OBJECT_COLLECTION;
+      case "instrumentinstance":
+        $short = Constant::PREFIX_INSTRUMENT_INSTANCE;
         break;
-      case "studyobject":
-        $short = Constant::PREFIX_STUDY_OBJECT;
-        break;
-      case "virtualcolumn":
-        $short = Constant::PREFIX_VIRTUAL_COLUMN;
-        break;
-      case "place":
-        $short = Constant::PREFIX_PLACE;
+      case "kgr":
+        $short = Constant::PREFIX_KGR;
         break;
       case "organization":
         $short = Constant::PREFIX_ORGANIZATION;
@@ -125,8 +110,53 @@ class Utils {
       case "person":
         $short = Constant::PREFIX_PERSON;
         break;
+      case "place":
+        $short = Constant::PREFIX_PLACE;
+        break;
+      case "platform":
+        $short = Constant::PREFIX_PLATFORM;
+        break;
+      case "platforminstance":
+        $short = Constant::PREFIX_PLATFORM_INSTANCE;
+        break;
       case "postaladdress":
         $short = Constant::PREFIX_POSTAL_ADDRESS;
+        break;
+      case "responseoption":
+        $short = Constant::PREFIX_RESPONSE_OPTION;
+        break;
+      case "sdd":
+        $short = Constant::PREFIX_SDD;
+        break;
+      case "semanticdatadictionary":
+        $short = Constant::PREFIX_SEMANTIC_DATA_DICTIONARY;
+        break;
+      case "semanticvariable":
+        $short = Constant::PREFIX_SEMANTIC_VARIABLE;
+        break;
+      case "str":
+        $short = Constant::PREFIX_STR;
+        break;
+      case "stream":
+        $short = Constant::PREFIX_STREAM;
+        break;
+      case "study":
+        $short = Constant::PREFIX_STUDY;
+        break;
+      case "studyobject":
+        $short = Constant::PREFIX_STUDY_OBJECT;
+        break;
+      case "studyobjectcollection":
+        $short = Constant::PREFIX_STUDY_OBJECT_COLLECTION;
+        break;
+      case "studyrole":
+        $short = Constant::PREFIX_STUDY_ROLE;
+        break;
+      case "subcontainer":
+        $short = Constant::PREFIX_SUBCONTAINER;
+        break;
+      case "virtualcolumn":
+        $short = Constant::PREFIX_VIRTUAL_COLUMN;
         break;
       default:
         $short = NULL;
@@ -172,6 +202,14 @@ class Utils {
     return $uri;
   }
 
+  public static function labelFromAutocomplete($field) {
+    $index = strpos($field, '[');
+    if ($index == false) {
+      return "";
+    }
+    return substr($field, 0, $index);
+  }
+
   /** 
    *  During autocomplete, from the URI and label of a property, generates the field to be show in the form.
    *  The function will return an empty string if the uri is NULL. It will generate a field with no label is
@@ -207,6 +245,10 @@ class Utils {
       if (\Drupal::moduleHandler()->moduleExists('sir')) {
         $rt = 'sir.search';
       }
+    } else if ($module == 'dpl') {
+      if (\Drupal::moduleHandler()->moduleExists('dpl')) {
+        $rt = 'dpl.search_deployment';
+      }
     } else if ($module == 'rep') {
       if (\Drupal::moduleHandler()->moduleExists('rep')) {
         $rt = 'rep.search';
@@ -222,7 +264,7 @@ class Utils {
     }
 
     if ($rt == NULL) {
-      return Url::fromRoute('rep.about');
+      return Url::fromRoute('rep.home');
     }
 
     $url = Url::fromRoute($rt);
@@ -262,10 +304,12 @@ class Utils {
     $tables = new Tables;
     $namespaces = $tables->getNamespaces();
 
-    foreach ($namespaces as $abbrev => $ns) {
-      if ($potentialNs == $abbrev) {
-        $match = $potentialNs . ":";
-        return str_replace($match, $ns ,$uri);
+    if ($namespaces != NULL) {
+      foreach ($namespaces as $abbrev => $ns) {
+        if ($potentialNs == $abbrev) {
+          $match = $potentialNs . ":";
+          return str_replace($match, $ns ,$uri);
+        }
       }
     }
     return $uri;
@@ -290,6 +334,7 @@ class Utils {
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
+    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance', 'stream', 'deployment'];
     $meugrafo = ['kgr','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
@@ -299,6 +344,8 @@ class Utils {
       return 'rep';
     } else if (in_array($elementtype,$std)) {
       return 'std';
+    } else if (in_array($elementtype,$dpl)) {
+      return 'dpl';
     } else if (in_array($elementtype,$meugrafo)) {
       return 'meugrafo';
     } 

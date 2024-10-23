@@ -2,7 +2,11 @@
 # Landing page
 
 rep.home:
-  path: '/'
+  path: 'rep'
+  defaults:
+    _form: '\Drupal\rep\Form\LandingPage'
+  requirements:
+    _permission: 'access content'
 
 # Main menu options 
 
@@ -97,6 +101,34 @@ rep.select_mt_element:
   options:
     no_cache: 'TRUE'
 
+# Tree support
+
+rep.browse_tree:
+  path: 'rep/hierarchy/{mode}/{elementtype}'
+  defaults:
+    _form: '\Drupal\rep\Form\TreeForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'    
+  options:
+    no_cache: 'TRUE'
+
+rep.get_child:
+  path: '/rep/getchildren'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getChildren'
+    _title: 'Get Children'
+  requirements:
+    _permission: 'access content'
+
+rep.get_node:
+  path: '/rep/getnode'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getNode'
+    _title: 'Get Node'
+  requirements:
+    _permission: 'access content'
+
 # MT CRUD options
 
 rep.add_mt:
@@ -173,9 +205,31 @@ rep.admin_namespace_settings_custom:
   path: 'admin/config/rep/namespace'
   defaults:
     _form: '\Drupal\rep\Form\REPNameSpaceForm'
-    _title: 'Semantic Repository NameSpace Management'
+    _title: 'NameSpace Management'
   requirements:
     _permission: 'administer site NameSpace configuration'
+  options:
+    _admin_route: TRUE
+    no_cache: 'TRUE'
+
+rep.update_namespace_settings_custom:
+  path: 'admin/config/rep/namespace/update/{abbreviation}'
+  defaults:
+    _form: '\Drupal\rep\Form\REPUpdateNameSpaceForm'
+    _title: 'Update NameSpace'
+  requirements:
+    _permission: 'administer site NameSpace configuration'
+  options:
+    _admin_route: TRUE
+    no_cache: 'TRUE'
+
+rep.admin_preferred_names_custom:
+  path: 'admin/config/rep/preferred'
+  defaults:
+    _form: '\Drupal\rep\Form\REPPreferredNamesForm'
+    _title: 'Semantic Repository Preferred Names Management'
+  requirements:
+    _permission: 'administer site Preferred Names configuration'
   options:
     _admin_route: TRUE
     no_cache: 'TRUE'

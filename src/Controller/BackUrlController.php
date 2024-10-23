@@ -14,7 +14,7 @@ class BackUrlController extends ControllerBase {
    */
   public function previous($previousurl, $currenturl, $currentroute) {
     if ($previousurl == NULL || $currenturl == NULL || $currentroute == NULL) {
-      $response = new RedirectResponse(Url::fromRoute('rep.about')->toString());
+      $response = new RedirectResponse(Url::fromRoute('rep.home')->toString());
       $response->send();
       return;
     }    

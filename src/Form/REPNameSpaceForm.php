@@ -42,11 +42,11 @@
     public function getList() {
       return $this->list;
     }
-  
+
     public function setList($list) {
-      return $this->list = $list; 
+      return $this->list = $list;
     }
-  
+
     /**
      * {@inheritdoc}
      */
@@ -66,7 +66,7 @@
             }
         }
         $header = Ontology::generateHeader();
-        $output = Ontology::generateOutput($this->getList());   
+        $output = Ontology::generateOutput($this->getList());
 
         $form['filler_1'] = [
             '#type' => 'item',
@@ -77,25 +77,49 @@
             '#type' => 'submit',
             '#value' => $this->t('Reload Triples from All NameSpaces with URL'),
             '#name' => 'reload',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'reload-button'],
+            ],
         ];
-      
+
         $form['delete_triples_submit'] = [
             '#type' => 'submit',
             '#value' => $this->t('Delete Triples from All NameSpaces with URL'),
             '#name' => 'delete',
-          ];
-      
-        $form['delete_namespace'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Delete Selected NameSpaces'),
-        '#name' => 'del_selected',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'delete-element-button'],
+            ],
         ];
-      
+
+        $form['update_namespace'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Update Selected NameSpaces'),
+            '#name' => 'upd_selected',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'save-button'],
+            ],
+        ];
+
+        $form['delete_namespace'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Delete Selected NameSpaces'),
+            '#name' => 'del_selected',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'delete-element-button'],
+            ],
+        ];
+
+        //$form['reset_namespace'] = [
+        //    '#type' => 'submit',
+        //    '#value' => $this->t('Reset NameSpaces'),
+        //    '#name' => 'reset',
+        //];
+
         $form['filler_2'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
         ];
-      
+
         $form['element_table'] = [
             '#type' => 'tableselect',
             '#header' => $header,
@@ -107,20 +131,23 @@
         $form['filler_3'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
-        ];      
+        ];
 
         $form['back_submit'] = [
             '#type' => 'submit',
             '#value' => $this->t('Back to rep Settings'),
             '#name' => 'back',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'back-button'],
+            ],
         ];
 
         $form['filler_4'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
-        ];      
+        ];
 
-        $form['actions']['submit']['#access'] = 'FALSE'; 
+        $form['actions']['submit']['#access'] = 'FALSE';
         //$form['actions']['edit-submit'] = [
         //    '#type' => 'hidden',
         //    '#title' => 'test',
@@ -136,7 +163,7 @@
 
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
-     
+
     /**
      * {@inheritdoc}
      */
@@ -145,7 +172,7 @@
         // RETRIEVE TRIGGERING BUTTON
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
-    
+
         // RETRIEVE SELECTED ROWS, IF ANY
         $selected_rows = $form_state->getValue('element_table');
         $rows = [];
@@ -154,14 +181,14 @@
                 $rows[$index] = $index;
             }
         }
-        
+
         // BUTTON ACTIONS
 
         if ($button_name === 'back') {
           $form_state->setRedirectUrl(Url::fromRoute('rep.admin_settings_custom'));
           return;
-        } 
-              
+        }
+
         $APIservice = \Drupal::service('rep.api_connector');
 
         if ($button_name === 'reload') {
@@ -169,29 +196,55 @@
           \Drupal::messenger()->addMessage(t($message));
           $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
           return;
-        } 
-                
+        }
+
         if ($button_name === 'delete') {
           $message = $APIservice->parseObjectResponse($APIservice->repoDeleteNamespaceTriples(),'repoDeleteNamespaceTriples');
           \Drupal::messenger()->addMessage(t($message));
           $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
           return;
-        } 
-                
+        }
+
+        if ($button_name === 'upd_selected') {
+            if (sizeof($rows) != 1) {
+                \Drupal::messenger()->addWarning(t("Select the exact NameSpace to be updated."));
+            } else {
+                $firstKey = array_key_first($rows);
+                $abbrev = $rows[$firstKey];
+                //dpm($abbrev);
+                $url = Url::fromRoute('rep.update_namespace_settings_custom', ['abbreviation' => $abbrev]);
+                $form_state->setRedirectUrl($url);
+                return;
+            }
+        }
+
         if ($button_name === 'del_selected') {
             if (sizeof($rows) <= 0) {
-                \Drupal::messenger()->addWarning(t("At least one NameSpace needs to be selected for deletion."));      
+                \Drupal::messenger()->addWarning(t("At least one NameSpace needs to be selected for deletion."));
             } else {
                 foreach($rows as $abbrev) {
-                    $message = ' ';
-                    $message = $APIservice->parseObjectResponse($APIservice->repoDeleteSelectedNamespace($abbrev),'repoDeleteSelectedNamespace');
-                    \Drupal::messenger()->addMessage(t($message));
+                    if ($form['element_table']['#options'][$abbrev]['ontology_in_memory'] == 'yes') {
+                        \Drupal::messenger()->addWarning(t("An in-memory ontology cannot be deleted."));
+                        return;
+                    } else {
+                        $message = ' ';
+                        $message = $APIservice->parseObjectResponse($APIservice->repoDeleteSelectedNamespace($abbrev),'repoDeleteSelectedNamespace');
+                        \Drupal::messenger()->addMessage(t($message));
+                    }
                 }
                 $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
                 return;
-            } 
+            }
         }
-                  
+
+        //if ($button_name === 'reset') {
+        //    $message = ' ';
+        //    $message = $APIservice->parseObjectResponse($APIservice->repoResetNamespaces(),'repoResetNamespaces');
+        //    \Drupal::messenger()->addMessage(t($message));
+        //    $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+        //    return;
+        //}
+
     }
 
  }

@@ -44,7 +44,7 @@ class REPSelectMTForm extends FormBase {
   }
 
   public function setMode($mode) {
-    return $this->mode = $mode; 
+    return $this->mode = $mode;
   }
 
   public function getList() {
@@ -52,7 +52,7 @@ class REPSelectMTForm extends FormBase {
   }
 
   public function setList($list) {
-    return $this->list = $list; 
+    return $this->list = $list;
   }
 
   public function getListSize() {
@@ -60,7 +60,7 @@ class REPSelectMTForm extends FormBase {
   }
 
   public function setListSize($list_size) {
-    return $this->list_size = $list_size; 
+    return $this->list_size = $list_size;
   }
 
   /**
@@ -94,7 +94,7 @@ class REPSelectMTForm extends FormBase {
     }
     if (gettype($this->list_size) == 'string') {
         $total_pages = "0";
-    } else { 
+    } else {
         if ($this->list_size % $pagesize == 0) {
             $total_pages = $this->list_size / $pagesize;
         } else {
@@ -126,39 +126,52 @@ class REPSelectMTForm extends FormBase {
         $this->single_class_name = "DSG";
         $this->plural_class_name = "DSGs";
         $header = MetadataTemplate::generateHeader();
-        $output = MetadataTemplate::generateOutput('dsg',$this->getList());    
+        $output = MetadataTemplate::generateOutput('dsg',$this->getList());
         break;
       case "ins":
         $this->single_class_name = "INS";
         $this->plural_class_name = "INSs";
         $header = MetadataTemplate::generateHeader();
-        $output = MetadataTemplate::generateOutput('ins',$this->getList());    
+        $output = MetadataTemplate::generateOutput('ins',$this->getList());
         break;
       case "da":
         $this->single_class_name = "DA";
         $this->plural_class_name = "DAs";
         $header = MetadataTemplate::generateHeader();
         if ($mode == 'table') {
-          $output = MetadataTemplate::generateOutput('da',$this->getList());    
+          $output = MetadataTemplate::generateOutput('da',$this->getList());
         } else {
-          $output = MetadataTemplate::generateOutput('da',$this->getList());    
+          $output = MetadataTemplate::generateOutput('da',$this->getList());
         }
         break;
       case "dd":
         $this->single_class_name = "DD";
         $this->plural_class_name = "DDs";
         $header = MetadataTemplate::generateHeader();
-        $output = MetadataTemplate::generateOutput('dd',$this->getList());    
+        $output = MetadataTemplate::generateOutput('dd',$this->getList());
         break;
       case "sdd":
         $this->single_class_name = "SDD";
         $this->plural_class_name = "SDDs";
         $header = MetadataTemplate::generateHeader();
-        $output = MetadataTemplate::generateOutput('sdd',$this->getList());    
+        $output = MetadataTemplate::generateOutput('sdd',$this->getList());
+        break;
+      case "dp2":
+        $this->single_class_name = "DP2";
+        $this->plural_class_name = "DP2s";
+        $header = MetadataTemplate::generateHeader();
+        $output = MetadataTemplate::generateOutput('dp2',$this->getList());
+        break;
+      case "str":
+        $this->single_class_name = "STR";
+        $this->plural_class_name = "STRs";
+        $header = MetadataTemplate::generateHeader();
+        $output = MetadataTemplate::generateOutput('str',$this->getList());
         break;
       default:
-        $this->single_class_name = "Object of Unknown Type";
-        $this->plural_class_name = "Objects of Unknown Types";
+        \Drupal::messenger()->addError(t("[ERROR] Element [" . $this->element_type . "] is to unknown type."));
+        backSelect($elementType, $mode, $studyuri);
+        return;
     }
 
     // PUT FORM TOGETHER
@@ -174,34 +187,46 @@ class REPSelectMTForm extends FormBase {
       '#type' => 'submit',
       '#value' => $this->t('Add New ' . $this->single_class_name),
       '#name' => 'add_element',
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'add-element-button'],
+      ],
     ];
     if ($mode == 'table') {
       $form['edit_selected_element'] = [
           '#type' => 'submit',
           '#value' => $this->t('Edit Selected ' . $this->single_class_name),
           '#name' => 'edit_element',
+          '#attributes' => [
+            'class' => ['btn', 'btn-primary', 'edit-element-button'],
+          ],
       ];
       $form['delete_selected_element'] = [
           '#type' => 'submit',
           '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
           '#name' => 'delete_element',
-          '#attributes' => ['onclick' => 'if(!confirm("Really Delete?")){return false;}'],
+          '#attributes' => [
+            'onclick' => 'if(!confirm("Really Delete?")){return false;}',
+            'class' => ['btn', 'btn-primary', 'delete-element-button'],
+          ],
         ];
       $form['ingest_mt'] = [
           '#type' => 'submit',
           '#value' => $this->t('Ingest Selected ' . $this->single_class_name),
           '#name' => 'ingest_mt',
           '#attributes' => [
-              'class' => ['use-ajax'],
+              'class' => ['use-ajax', 'btn', 'btn-primary', 'ingest_mt-button'],
               'data-dialog-type' => 'modal',
               'data-dialog-options' => Json::encode(['width' => 700, 'height' => 400]),
-          ],  
+          ],
       ];
       $form['uningest_mt'] = [
           '#type' => 'submit',
           '#value' => $this->t('Uningest Selected ' . $this->plural_class_name),
           '#name' => 'uningest_mt',
-      ];  
+          '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'uningest_mt-element-button'],
+          ],
+      ];
       $form['space1'] = [
         '#type' => 'item',
         '#value' => $this->t('<br>'),
@@ -235,7 +260,7 @@ class REPSelectMTForm extends FormBase {
           $indexCard = 0;
           foreach ($row as $uri => $card) {
               $indexCard++;
-              $form['row_' . $index]['element_' . $indexCard] = $card;     
+              $form['row_' . $index]['element_' . $indexCard] = $card;
           }
       }
 
@@ -258,6 +283,9 @@ class REPSelectMTForm extends FormBase {
         '#type' => 'submit',
         '#value' => $this->t('Back'),
         '#name' => 'back',
+        '#attributes' => [
+          'class' => ['btn', 'btn-primary', 'back-button'],
+        ],
     ];
     $form['space2'] = [
         '#type' => 'item',
@@ -269,12 +297,12 @@ class REPSelectMTForm extends FormBase {
 
   /**
    * {@inheritdoc}
-   */   
+   */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // RETRIEVE TRIGGERING BUTTON
     $triggering_element = $form_state->getTriggeringElement();
     $button_name = $triggering_element['#name'];
-  
+
     // RETRIEVE SELECTED ROWS, IF ANY
     $selected_rows = $form_state->getValue('element_table');
     $rows = [];
@@ -290,37 +318,37 @@ class REPSelectMTForm extends FormBase {
       $previousUrl = \Drupal::request()->getRequestUri();
       Utils::trackingStoreUrls($uid, $previousUrl, 'rep.add_mt');
       $url = Url::fromRoute('rep.add_mt', [
-        'elementtype' => $this->element_type, 
-        'studyuri' => 'none', 
+        'elementtype' => $this->element_type,
+        'studyuri' => 'none',
         'fixstd' => 'F',
       ]);
       $form_state->setRedirectUrl($url);
-    }  
+    }
 
     // EDIT ELEMENT
     if ($button_name === 'edit_element') {
       if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Select the exact " . $this->single_class_name . " to be edited."));      
+        \Drupal::messenger()->addWarning(t("Select the exact " . $this->single_class_name . " to be edited."));
       } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("No more than one " . $this->single_class_name . " can be edited at once."));      
+        \Drupal::messenger()->addWarning(t("No more than one " . $this->single_class_name . " can be edited at once."));
       } else {
         $first = array_shift($rows);
         $uid = \Drupal::currentUser()->id();
         $previousUrl = \Drupal::request()->getRequestUri();
         Utils::trackingStoreUrls($uid, $previousUrl, 'rep.edit_mt');
           $url = Url::fromRoute('rep.edit_mt', [
-          'elementtype' => $this->element_type, 
-          'elementuri' => base64_encode($first), 
+          'elementtype' => $this->element_type,
+          'elementuri' => base64_encode($first),
           'fixstd' => 'F',
         ]);
         $form_state->setRedirectUrl($url);
-      } 
+      }
     }
 
     // DELETE ELEMENT
     if ($button_name === 'delete_element') {
       if (sizeof($rows) <= 0) {
-        \Drupal::messenger()->addWarning(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));      
+        \Drupal::messenger()->addWarning(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));
       } else {
         $api = \Drupal::service('rep.api_connector');
         foreach($rows as $uri) {
@@ -332,27 +360,27 @@ class REPSelectMTForm extends FormBase {
               $file = File::load($mt->hasDataFile->id);
               if ($file) {
                 $file->delete();
-                \Drupal::messenger()->addMessage(t("Deleted file with following ID: ".$mt->hasDataFile->id));      
-              }  
+                \Drupal::messenger()->addMessage(t("Deleted file with following ID: ".$mt->hasDataFile->id));
+              }
             }
 
             // DELETE DATAFILE
             if (isset($mt->hasDataFile->uri)) {
               $api->dataFileDel($mt->hasDataFile->uri);
-              \Drupal::messenger()->addMessage(t("Deleted DataFile with following URI: ".$mt->hasDataFile->uri));      
+              \Drupal::messenger()->addMessage(t("Deleted DataFile with following URI: ".$mt->hasDataFile->uri));
             }
           }
         }
-        \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));      
+        \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));
       }
-    }  
+    }
 
     // INGEST MT
     if ($button_name === 'ingest_mt') {
       if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Select the exact " . $this->single_class_name . " to be ingested."));      
+        \Drupal::messenger()->addWarning(t("Select the exact " . $this->single_class_name . " to be ingested."));
       } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("No more than one " . $this->single_class_name . " can be ingested at once."));      
+        \Drupal::messenger()->addWarning(t("No more than one " . $this->single_class_name . " can be ingested at once."));
       } else {
         $api = \Drupal::service('rep.api_connector');
         $first = array_shift($rows);
@@ -361,25 +389,25 @@ class REPSelectMTForm extends FormBase {
           \Drupal::messenger()->addError(t("Failed to retrieve datafile to be ingested."));
           $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
           return;
-        } 
+        }
         $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $study),'uploadTemplate');
         if ($msg == NULL) {
-          \Drupal::messenger()->addError(t("Selected " . $this->single_class_name . " FAILED to be submitted for ingestion."));      
+          \Drupal::messenger()->addError(t("Selected " . $this->single_class_name . " FAILED to be submitted for ingestion."));
           $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
           return;
         }
-        \Drupal::messenger()->addMessage(t("Selected " . $this->single_class_name . " has been submitted for ingestion."));      
+        \Drupal::messenger()->addMessage(t("Selected " . $this->single_class_name . " has been submitted for ingestion."));
         $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
         return;
       }
-    }  
+    }
 
     // UNINGEST MT
     if ($button_name === 'uningest_mt') {
       if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Select the exact " . $this->single_class_name . " to be uningested."));      
+        \Drupal::messenger()->addWarning(t("Select the exact " . $this->single_class_name . " to be uningested."));
       } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("No more than one " . $this->single_class_name . " can be uningested at once."));      
+        \Drupal::messenger()->addWarning(t("No more than one " . $this->single_class_name . " can be uningested at once."));
       } else {
         $api = \Drupal::service('rep.api_connector');
         $first = array_shift($rows);
@@ -388,48 +416,48 @@ class REPSelectMTForm extends FormBase {
         if ($mt == NULL) {
           \Drupal::messenger()->addError(t("Failed to retrieve " . $this->single_class_name . " to be uningested."));
           return;
-        } 
+        }
         $newMT->setPreservedMT($mt);
         $df = $api->parseObjectResponse($api->getUri($mt->hasDataFileUri),'getUri');
         if ($df == NULL) {
           \Drupal::messenger()->addError(t("Failed to retrieve " . $this->single_class_name . "'s datafile to be uningested."));
           return;
-        } 
+        }
         $newMT->setPreservedDF($df);
         $msg = $api->parseObjectResponse($api->uningestMT($mt->uri),'uningestMT');
         if ($msg == NULL) {
-          \Drupal::messenger()->addError(t("Selected " . $this->single_class_name . " FAILED to be uningested."));      
+          \Drupal::messenger()->addError(t("Selected " . $this->single_class_name . " FAILED to be uningested."));
           return;
         }
         $newMT->savePreservedMT($this->element_type);
-        \Drupal::messenger()->addMessage(t("Selected " . $this->single_class_name . " has been uningested."));      
+        \Drupal::messenger()->addMessage(t("Selected " . $this->single_class_name . " has been uningested."));
         return;
       }
-    }  
-    
+    }
+
     // BACK TO MAIN PAGE
     if ($button_name === 'back') {
       $url = Url::fromRoute('std.search');
       $form_state->setRedirectUrl($url);
-    }  
+    }
 
   }
 
   /**
    * {@inheritdoc}
-   */   
+   */
   public static function backSelect($elementType, $mode, $studyuri) {
     $url = Url::fromRoute('rep.select_mt_element');
     $url->setRouteParameter('elementtype', $elementType);
     $url->setRouteParameter('mode', $mode);
     $url->setRouteParameter('page', 0);
     $url->setRouteParameter('pagesize', 12);
-    if ($studyuri == NULL || $studyuri != '' || $studyuri == ' ') { 
+    if ($studyuri == NULL || $studyuri != '' || $studyuri == ' ') {
       $url->setRouteParameter('studyuri', 'none');
     } else {
       $url->setRouteParameter('studyuri', $studyuri);
     }
     return $url;
   }
-  
+
 }

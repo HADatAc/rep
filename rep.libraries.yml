@@ -20,8 +20,11 @@ scrollable_table:
   css:
     theme:
       css/scrollable_table.css: {}
-fontawesome5:
-  version: 1.0
+rep_tree:
+  version: VERSION
   css:
-    component:
-      //use.fontawesome.com/releases/v5.15.4/css/all.css: {}
+    css/rep_tree.css: {}
+  js:
+    js/rep_tree.js: {}
+  dependencies:
+    - core/jquery

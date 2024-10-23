@@ -5,9 +5,9 @@ dependencies:
     - rep
     - system
   theme:
-    - bootstrap_barrio_subtheme
+    - hasco_barrio
 id: searchbasiccriteria
-theme: bootstrap_barrio_subtheme
+theme: hasco_barrio
 region: sidebar_first
 weight: 0
 provider: null

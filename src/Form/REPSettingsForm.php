@@ -46,6 +46,25 @@
         if ($config->get("rep_home")!= NULL) {
             $home = $config->get("rep_home");
         }
+
+        $form['namespace_submit'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Manage NameSpaces'),
+            '#name' => 'namespace',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'manage_codebookslots'],
+            ],
+        ];
+
+        $form['preferred_names_submit'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Preferred Names'),
+            '#name' => 'preferred',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'bookmark-button'],
+            ],
+        ];
+
         $form['rep_home'] = [
             '#type' => 'checkbox',
             '#title' => 'Do you want rep to be the home (first page) of the Drupal?',
@@ -133,18 +152,12 @@
             '#type' => 'item',
             '#title' => $this->t('<br>'),
         ];
-      
-        $form['namespace_submit'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Manage NameSpaces'),
-            '#name' => 'namespace',
-        ];
-      
+
         $form['filler_2'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
         ];
-      
+
         return Parent::buildForm($form, $form_state);
 
 
@@ -160,10 +173,10 @@
         if(strlen($form_state->getValue('repository_domain_url')) < 1) {
             $form_state->setErrorByName('repository_domain_url', $this->t("Please inform repository's Domain URL."));
         } else {
-            if ((strtolower(substr($form_state->getValue('repository_domain_url'), 0, 7)) !== "http://") &&  
+            if ((strtolower(substr($form_state->getValue('repository_domain_url'), 0, 7)) !== "http://") &&
                 (strtolower(substr($form_state->getValue('repository_domain_url'), 0, 8)) !== "https://")) {
                 $form_state->setErrorByName('repository_domain_url', $this->t("Domain URL must start with 'http://' or 'https://'."));
-            } 
+            }
         }
         if(strlen($form_state->getValue('repository_domain_namespace')) < 1) {
             $form_state->setErrorByName('repository_domain_namespace', $this->t("Please inform repository's Domain Namespace."));
@@ -173,21 +186,26 @@
             $form_state->setErrorByName('repository_domain_namespace', $this->t("Domain Namespace can only have letters, numbers and '-'."));
         }
    }
-     
+
     /**
      * {@inheritdoc}
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
-    
+
         if ($button_name === 'namespace') {
           $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
           return;
-        } 
-        
-        $config = $this->config(static::CONFIGNAME);
-        
+        }
+
+        if ($button_name === 'preferred') {
+          $form_state->setRedirectUrl(Url::fromRoute('rep.admin_preferred_names_custom'));
+          return;
+        }
+
+          $config = $this->config(static::CONFIGNAME);
+
         //save confs
         $config->set("rep_home", $form_state->getValue('rep_home'));
         $config->set("site_label", trim($form_state->getValue('site_label')));
@@ -198,16 +216,16 @@
         $config->set("api_url", $form_state->getValue('api_url'));
         $config->set("jwt_secret", $form_state->getValue('jwt_secret'));
         $config->save();
-        
+
         //site name
         $configdrupal = \Drupal::service('config.factory')->getEditable('system.site');
-        $configdrupal->set('name', $form_state->getValue('site_name')); 
+        $configdrupal->set('name', $form_state->getValue('site_name'));
         $configdrupal->save();
 
         //update Repository configuration
         $api = \Drupal::service('rep.api_connector');
 
-        //label 
+        //label
         $api->repoUpdateLabel(
             $form_state->getValue('api_url'),
             $form_state->getValue('site_label'));
@@ -221,24 +239,24 @@
         $api->repoUpdateDescription(
             $form_state->getValue('api_url'),
             $form_state->getValue('repository_description'));
-        
+
         //namespace
         $api->repoUpdateNamespace(
             $form_state->getValue('api_url'),
             $form_state->getValue('repository_domain_namespace'),
             $form_state->getValue('repository_domain_url'));
-      
+
         // Save the filename in configuration.
         //$this->config('rep.settings')
         //  ->set('svg_file', $file_id)
         //  ->save();
-      
+
         $messenger = \Drupal::service('messenger');
         $messenger->addMessage($this->t('Your new rep configuration has been saved'));
 
         $url = Url::fromRoute('rep.repo_info');
         $form_state->setRedirectUrl($url);
-        
+
     }
 
  }

@@ -36,7 +36,7 @@ class REPSelectForm extends FormBase {
   }
 
   public function setList($list) {
-    return $this->list = $list; 
+    return $this->list = $list;
   }
 
   public function getListSize() {
@@ -44,7 +44,7 @@ class REPSelectForm extends FormBase {
   }
 
   public function setListSize($list_size) {
-    return $this->list_size = $list_size; 
+    return $this->list_size = $list_size;
   }
 
   /**
@@ -66,7 +66,7 @@ class REPSelectForm extends FormBase {
     }
     if (gettype($this->list_size) == 'string') {
       $total_pages = "0";
-    } else { 
+    } else {
       if ($this->list_size % $pagesize == 0) {
         $total_pages = $this->list_size / $pagesize;
       } else {
@@ -100,7 +100,7 @@ class REPSelectForm extends FormBase {
         $this->single_class_name = "Data File";
         $this->plural_class_name = "Data Files";
         $header = DataFile::generateHeader();
-        $output = DataFile::generateOutput($this->getList());    
+        $output = DataFile::generateOutput($this->getList());
         break;
       default:
         $this->single_class_name = "Object of Unknown Type";
@@ -121,7 +121,10 @@ class REPSelectForm extends FormBase {
       '#type' => 'submit',
       '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
       '#name' => 'delete_element',
-      '#attributes' => ['onclick' => 'if(!confirm("Really Delete?")){return false;}'],
+      '#attributes' => [
+        'onclick' => 'if(!confirm("Really Delete?")){return false;}',
+        'class' => ['btn', 'btn-primary', 'delete-element-button']
+      ],
     ];
     //$form['my_tableselect_wrapper'] = array(
     //  '#type' => 'container',
@@ -152,23 +155,26 @@ class REPSelectForm extends FormBase {
       '#type' => 'submit',
       '#value' => $this->t('Back'),
       '#name' => 'back',
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'back-button'],
+      ],
     ];
     $form['space'] = [
       '#type' => 'item',
       '#value' => $this->t('<br><br><br>'),
     ];
- 
+
     return $form;
   }
 
   /**
    * {@inheritdoc}
-   */   
+   */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // RETRIEVE TRIGGERING BUTTON
     $triggering_element = $form_state->getTriggeringElement();
     $button_name = $triggering_element['#name'];
-  
+
     // RETRIEVE SELECTED ROWS, IF ANY
     $selected_rows = $form_state->getValue('element_table');
     $rows = [];
@@ -182,29 +188,29 @@ class REPSelectForm extends FormBase {
     if ($button_name === 'add_element') {
       //if ($this->element_type == 'organization') {
       //  $url = Url::fromRoute('rep.add_organization');
-      //} 
+      //}
       //$form_state->setRedirectUrl($url);
-    }  
+    }
 
     // EDIT ELEMENT
     if ($button_name === 'edit_element') {
       if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addMessage(t("Select the exact " . $this->single_class_name . " to be edited."));      
+        \Drupal::messenger()->addMessage(t("Select the exact " . $this->single_class_name . " to be edited."));
       } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addMessage(t("No more than one " . $this->single_class_name . " can be edited at once."));      
+        \Drupal::messenger()->addMessage(t("No more than one " . $this->single_class_name . " can be edited at once."));
       } else {
         $first = array_shift($rows);
         //if ($this->element_type == 'organization') {
         //  $url = Url::fromRoute('rep.edit_organization', ['organizationuri' => base64_encode($first)]);
-        //} 
+        //}
         $form_state->setRedirectUrl($url);
-      } 
+      }
     }
 
     // DELETE ELEMENT
     if ($button_name === 'delete_element') {
       if (sizeof($rows) <= 0) {
-        \Drupal::messenger()->addMessage(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));      
+        \Drupal::messenger()->addMessage(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));
       } else {
         $api = \Drupal::service('rep.api_connector');
         $success = TRUE;
@@ -212,29 +218,29 @@ class REPSelectForm extends FormBase {
           if ($this->element_type == 'datafile') {
             $resp = $api->parseObjectResponse($api->datafileDel($uri),'datafileDel');
             if ($resp == NULL) {
-              \Drupal::messenger()->addMessage(t("Failed to delete the following " . $this->$single_class_name . ": " . $uri));      
+              \Drupal::messenger()->addMessage(t("Failed to delete the following " . $this->$single_class_name . ": " . $uri));
               $success = FALSE;
             }
-          } 
+          }
         }
         if ($success) {
-          \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));      
+          \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));
         }
       }
-    }  
+    }
 
 
     // BACK TO MAIN PAGE
     if ($button_name === 'back') {
-      $url = Url::fromRoute('sem.search');
+      $url = Url::fromRoute('rep.home');
       $form_state->setRedirectUrl($url);
-    }  
+    }
 
   }
-  
+
   /**
    * {@inheritdoc}
-   */   
+   */
   public static function backSelect($elementType) {
     $url = Url::fromRoute('rep.select_element');
     $url->setRouteParameter('elementtype', $elementType);
@@ -242,7 +248,7 @@ class REPSelectForm extends FormBase {
     $url->setRouteParameter('pagesize', 12);
     return $url;
   }
-  
+
 
 
 }

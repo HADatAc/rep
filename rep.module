@@ -46,11 +46,25 @@ function rep_install() {
  */
 function rep_form_alter(&$form, &$form_state, $form_id) {
     // Check if the form ID matches your configuration form.
-    if ($form_id == 'rep_form_namespace') { 
+    if ($form_id == 'rep_form_namespace' ||
+        $form_id == 'rep_form_preferred_names' ||
+        $form_id == 'rep_form_update_namespace') {
         // Remove the default "Save configuration" button.
-        unset($form['actions']['submit']);
+      unset($form['actions']['submit']);
     }
 }
+
+/**
+ * Implements hook_menu_alter().
+ */
+/*
+function rep_menu_alter(&$items) {
+  // Change the title of the menu item with path 'node/1/edit'.
+  if (isset($items['node/1/edit'])) {
+    $items['node/1/edit']['title'] = 'Edit Article';
+  }
+}
+*/
 
 /**
  * Implements hook_theme
@@ -60,7 +74,7 @@ function rep_theme($existing, $type, $theme, $path)
     return [
         'list-page' => [
             'variables' => array(
-                'items' => array(          
+                'items' => array(
                     'offset' => '',
                     'first' => '',
                     'last' => '',
@@ -80,6 +94,7 @@ function rep_theme($existing, $type, $theme, $path)
 function rep_preprocess_block(&$variables) {
   // Add the core/drupal.dialog.ajax library.
   $variables['#attached']['library'][] = 'core/drupal.dialog.ajax';
+  $attachments['#attached']['library'][] = 'rep/rep_js_css';
 }
 
 /**
