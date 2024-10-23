@@ -15,7 +15,7 @@ class AssocStudy {
   public static function process($element, array &$form, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
     $t = \Drupal::service('string_translation');
-    
+
     /*
     *    PLACE's VIRTUAL COLUMNS
     */
@@ -55,7 +55,7 @@ class AssocStudy {
         //dpm($socs);
         //dpm($socMap);
 
-        /* 
+        /*
          *    SUBJECT SOCs
          */
         if (count($socMap['subject']) > 0) {
@@ -78,7 +78,7 @@ class AssocStudy {
             $link = ListPropertyPage::link($element,HASCO::IS_MEMBER_OF,NULL,1,20);
             $form['socs']['more_subjects'] = [
               '#type' => 'markup',
-              '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+              '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
                           'data-dialog-type="modal" '.
                           'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
             ];
@@ -89,7 +89,7 @@ class AssocStudy {
           ];
         }
 
-        /* 
+        /*
          *    SAMPLE SOCs
          */
         if (count($socMap['sample']) > 0) {
@@ -112,7 +112,7 @@ class AssocStudy {
             $link = ListPropertyPage::link($element,HASCO::IS_MEMBER_OF,NULL,1,20);
             $form['socs']['more_samples'] = [
               '#type' => 'markup',
-              '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+              '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
                           'data-dialog-type="modal" '.
                           'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
             ];
@@ -123,7 +123,7 @@ class AssocStudy {
           ];
         }
 
-        /* 
+        /*
          *    SPACE SOCs
          */
         if (count($socMap['space']) > 0) {
@@ -146,7 +146,7 @@ class AssocStudy {
             $link = ListPropertyPage::link($element,HASCO::IS_MEMBER_OF,NULL,1,20);
             $form['socs']['more_spaces'] = [
               '#type' => 'markup',
-              '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+              '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
                           'data-dialog-type="modal" '.
                           'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
             ];
@@ -157,7 +157,7 @@ class AssocStudy {
           ];
         }
 
-        /* 
+        /*
          *    TIME SOCs
          */
         if (count($socMap['time']) > 0) {
@@ -180,7 +180,7 @@ class AssocStudy {
             $link = ListPropertyPage::link($element,HASCO::IS_MEMBER_OF,NULL,1,20);
             $form['socs']['more_times'] = [
               '#type' => 'markup',
-              '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+              '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
                           'data-dialog-type="modal" '.
                           'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
             ];
@@ -193,9 +193,9 @@ class AssocStudy {
 
       }
     }
-    return $form;        
+    return $form;
   }
-        
+
   public static function sortSOCs($socs) {
     $socMap = [
       'subject' => [],
@@ -277,35 +277,35 @@ class AssocStudy {
       foreach ($socs as $soc) {
         if ($soc->uri != NULL && $soc->uri != "") {
           $linkObjects = $root_url.REPGUI::VIEW_STUDY_OBJECTS.base64_encode($soc->uri);
-          $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm" '.
+          $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm view-button" '.
             ' role="button">View Objects</a>';
-          $spaceScopes = ' '; 
+          $spaceScopes = ' ';
           if ($soc->spaceScopes != NULL && !empty($soc->spaceScopes)) {
             foreach ($soc->spaceScopes as $spaceSoc) {
               $spaceScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($spaceSoc->uri).'">'.
                 $spaceSoc->label.'</a> ';
-            }         
+            }
           }
-          $timeScopes = ' ';  
+          $timeScopes = ' ';
           if ($soc->timeScopes != NULL && !empty($soc->timeScopes)) {
             foreach ($soc->timeScopes as $timeSoc) {
               $timeScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeSoc->uri).'">'.
                 $timeSoc->label.'</a> ';
-            }         
+            }
           }
           $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              Utils::namespaceUri($soc->uri).'</a>'),         
-            'soc_label' => $soc->label,     
+              Utils::namespaceUri($soc->uri).'</a>'),
+            'soc_label' => $soc->label,
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
-            'soc_reference' => $soc->virtualColumn->socreference,     
-            'soc_role_label' => $soc->virtualColumn->label,     
+            'soc_reference' => $soc->virtualColumn->socreference,
+            'soc_role_label' => $soc->virtualColumn->label,
             'soc_has_scope' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->hasScopeUri).'">'.
-            $soc->label.'</a>'),     
-            'soc_has_space_scopes' => t($spaceScopes),     
-            'soc_has_time_scopes' => t($timeScopes),     
-            'soc_num_objects' => $soc->numOfObjects,     
-            'soc_operations' => t($button),     
+            $soc->label.'</a>'),
+            'soc_has_space_scopes' => t($spaceScopes),
+            'soc_has_time_scopes' => t($timeScopes),
+            'soc_num_objects' => $soc->numOfObjects,
+            'soc_operations' => t($button),
           ];
         }
       }
@@ -321,25 +321,25 @@ class AssocStudy {
       foreach ($socs as $soc) {
         if ($soc->uri != NULL && $soc->uri != "") {
           $linkObjects = $root_url.REPGUI::VIEW_STUDY_OBJECTS.base64_encode($soc->uri);
-          $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm" '.
+          $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm view-button" '.
             ' role="button">View Objects</a>';
-            $timeScopes = ' ';  
+            $timeScopes = ' ';
             if ($soc->timeScopes != NULL && !empty($soc->timeScopes)) {
               foreach ($soc->timeScopes as $timeSoc) {
                 $timeScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeSoc->uri).'">'.
                   $timeSoc->label.'</a> ';
-              }         
+              }
             }
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              $soc->label.'</a>'),         
-            'soc_label' => $soc->label,     
+              $soc->label.'</a>'),
+            'soc_label' => $soc->label,
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
-            'soc_reference' => $soc->virtualColumn->socreference,     
-            'soc_role_label' => $soc->virtualColumn->label,     
-            'soc_has_space_scopes' => t($spaceScopes),     
-            'soc_num_objects' => $soc->numOfObjects,     
-            'soc_operations' => t($button),     
+            'soc_reference' => $soc->virtualColumn->socreference,
+            'soc_role_label' => $soc->virtualColumn->label,
+            'soc_has_space_scopes' => t($spaceScopes),
+            'soc_num_objects' => $soc->numOfObjects,
+            'soc_operations' => t($button),
           ];
         }
       }
@@ -355,25 +355,25 @@ class AssocStudy {
       foreach ($socs as $soc) {
         if ($soc->uri != NULL && $soc->uri != "") {
           $linkObjects = $root_url.REPGUI::VIEW_STUDY_OBJECTS.base64_encode($soc->uri);
-          $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm" '.
+          $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm view-button" '.
             ' role="button">View Objects</a>';
-            $timeScopes = ' ';  
+            $timeScopes = ' ';
             if ($soc->timeScopes != NULL && !empty($soc->timeScopes)) {
               foreach ($soc->timeScopes as $timeSoc) {
                 $timeScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeSoc->uri).'">'.
                   $timeSoc->label.'</a> ';
-              }         
+              }
             }
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              $soc->label.'</a>'),         
-            'soc_label' => $soc->label,     
+              $soc->label.'</a>'),
+            'soc_label' => $soc->label,
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
-            'soc_reference' => $soc->virtualColumn->socreference,     
-            'soc_role_label' => $soc->virtualColumn->label,     
-            'soc_has_time_scopes' => t($timeScopes),     
-            'soc_num_objects' => $soc->numOfObjects,     
-            'soc_operations' => t($button),     
+            'soc_reference' => $soc->virtualColumn->socreference,
+            'soc_role_label' => $soc->virtualColumn->label,
+            'soc_has_time_scopes' => t($timeScopes),
+            'soc_num_objects' => $soc->numOfObjects,
+            'soc_operations' => t($button),
           ];
         }
       }
@@ -393,13 +393,13 @@ class AssocStudy {
      <td>@if(oc.getRoleLabel() != null) { @oc.getRoleLabel() }</td>
      <td>@if(oc.getComment() != null) { @oc.getComment() }</td>
      <td>@if(oc.getHasScope() != null) { @oc.getHasScope().getLabel() }</td>
-     <td>@if(oc.getSpaceScopes() != null) { 
+     <td>@if(oc.getSpaceScopes() != null) {
        @for(scope <- oc.getSpaceScopes()) {
           @scope.getLabel() <br>
        }
      }
      </td>
-     <td>@if(oc.getTimeScopes() != null) { 
+     <td>@if(oc.getTimeScopes() != null) {
        @for(scope <- oc.getTimeScopes()) {
           @scope.getLabel() <br>
        }
@@ -420,13 +420,13 @@ class AssocStudy {
      <td>@if(oc.getRoleLabel() != null) { @oc.getRoleLabel() }</td>
      <td>@if(oc.getComment() != null) { @oc.getComment() }</td>
      <td>@if(oc.getHasScope() != null) { @oc.getHasScope().getLabel() }</td>
-     <td>@if(oc.getSpaceScopes() != null) { 
+     <td>@if(oc.getSpaceScopes() != null) {
        @for(scope <- oc.getSpaceScopes()) {
           @scope.getLabel() <br>
        }
      }
      </td>
-     <td>@if(oc.getTimeScopes() != null) { 
+     <td>@if(oc.getTimeScopes() != null) {
        @for(scope <- oc.getTimeScopes()) {
           @scope.getLabel() <br>
        }
@@ -445,7 +445,7 @@ class AssocStudy {
      <td>@if(vc.getSOCReference() != null) { @vc.getSOCReference() }</td>
      <td>@if(oc.getRoleLabel() != null) { @oc.getRoleLabel() }</td>
      <td>@if(oc.getComment() != null) { @oc.getComment() }</td>
-     <td>@if(oc.getSpaceScopes() != null) { 
+     <td>@if(oc.getSpaceScopes() != null) {
        @for(scope <- oc.getSpaceScopes()) {
           @scope.getLabel() <br>
        }

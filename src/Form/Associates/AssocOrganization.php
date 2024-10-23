@@ -15,7 +15,7 @@ class AssocOrganization {
   public static function process($element, array &$form, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
     $t = \Drupal::service('string_translation');
-    
+
     /*
       *    ORGANIZATION's ORGANIZATIONS
       */
@@ -38,7 +38,7 @@ class AssocOrganization {
           $link = ListPropertyPage::link($element,SCHEMA::SUB_ORGANIZATION,NULL,1,20);
           $form['moreElements'] = [
             '#type' => 'markup',
-            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
                         'data-dialog-type="modal" '.
                         'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
           ];
@@ -71,7 +71,7 @@ class AssocOrganization {
           $link = ListPropertyPage::link($element,FOAF::MEMBER,NULL,1,20);
           $form['moreElements'] = [
             '#type' => 'markup',
-            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
                         'data-dialog-type="modal" '.
                         'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
           ];
@@ -104,7 +104,7 @@ class AssocOrganization {
           $link = ListPropertyPage::link($element,SCHEMA::HAS_ADDRESS,NULL,1,20);
           $form['postaladdress']['moreElements'] = [
             '#type' => 'markup',
-            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm" '.
+            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
                         'data-dialog-type="modal" '.
                         'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
           ];
@@ -115,7 +115,7 @@ class AssocOrganization {
         ];
       }
     }
-    return $form;        
+    return $form;
   }
-    
+
 }
