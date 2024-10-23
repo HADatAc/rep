@@ -1,5 +1,5 @@
 {
-    "name": "drupalmodules/rep",
+    "name": "hasco/rep",
     "description": "Rep module to integrate with Drupal",
     "type": "drupal-module",
     "require": {
@@ -7,6 +7,6 @@
         "drupal/core": "^10"
     },
     "license": "Apache-2.0",
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }
