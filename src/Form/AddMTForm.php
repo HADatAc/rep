@@ -263,8 +263,21 @@ class AddMTForm extends FormBase {
       $useremail = \Drupal::currentUser()->getEmail();
 
       $fileId = $form_state->getValue('mt_filename');
-      $file_entity = \Drupal\file\Entity\File::load($fileId[0]);
-      $filename = $file_entity->getFilename();
+      if (!empty($fileId) && isset($fileId[0])) {
+        $file_entity = \Drupal\file\Entity\File::load($fileId[0]);
+        if ($file_entity) {
+          $filename = $file_entity->getFilename();
+        } else {
+          \Drupal::messenger()->addError(t('File could not be loaded.'));
+          return;
+        }
+      } else {
+        \Drupal::messenger()->addError(t('Please upload a file.'));
+        return;
+      }
+
+      #\Drupal::logger('rep')->debug('File ID: <pre>@fileId</pre>', ['@fileId' => print_r($fileId, TRUE)]);
+
 
       $ddUri = NULL;
       if ($form_state->getValue('mt_dd') != NULL && $form_state->getValue('mt_dd') != '') {
@@ -312,7 +325,7 @@ class AddMTForm extends FormBase {
         // Set the status to FILE_STATUS_PERMANENT.
         $file_entity->set('status', FileInterface::STATUS_PERMANENT);
         $file_entity->save();
-        \Drupal::messenger()->addMessage(t('File uploaded successfully.'));
+        #\Drupal::messenger()->addMessage(t('File uploaded successfully.'));
 
         $api = \Drupal::service('rep.api_connector');
 

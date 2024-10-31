@@ -3,18 +3,12 @@ rep_js_css:
   css:
     theme:
       css/rep.css: {}
-  dependencies:
-    - core/jquery
-    - core/drupal
-    - core/jquery.once
-infinitescroll:
-  version: 1.x
   js:
     js/infinitescroll.js: {}
   dependencies:
     - core/jquery
     - core/drupal
-    - core/drupal.ajax
+    - core/jquery.once
 scrollable_table:
   version: 1.x
   css:
