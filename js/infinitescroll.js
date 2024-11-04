@@ -1,56 +1,42 @@
 (function ($, Drupal) {
-    Drupal.behaviors.infinitescroll = {
-      attach: function (context, settings) {
-        var isLoading = false;
-        var $window = $(window);
-  
-        function loadMoreContent() {
-          if (isLoading) {
-            return;
-          }
-  
-          var loadMoreButton = $('button[data-drupal-selector="edit-load-more"]');
-          if (loadMoreButton.length === 0) {
-            return;
-          }
-  
-          var elementTable = $('#element-table');
-          var page = loadMoreButton.data('page');
-          var elementtype = loadMoreButton.data('elementtype');
-          var keyword = loadMoreButton.data('keyword');
-  
-          isLoading = true;
-          $.ajax({
-            url: Drupal.url('ajax/rep/list/load_more'),
-            type: 'POST',
-            data: {
-              page: page + 1,
-              elementtype: elementtype,
-              keyword: keyword
-            },
-            success: function (response) {
-              if (response && response.commands) {
-                response.commands.forEach(function (command) {
-                  if (command.command === 'insert' && command.selector === '#element-table') {
-                    elementTable.append($(command.data));
-                  }
-                });
-                loadMoreButton.data('page', page + 1);
-                if ((page + 1) * settings.rep.pagesize >= settings.rep.list_size) {
-                  loadMoreButton.remove();
-                }
-              }
-              isLoading = false;
-            }
-          });
-        }
-  
-        $window.on('scroll', function () {
-          if ($window.scrollTop() + $window.height() >= $(document).height() - 100) {
-            loadMoreContent();
-          }
-        });
+  Drupal.behaviors.repInfiniteScroll = {
+    attach: function (context, settings) {
+      if (window.infiniteScrollInitialized) {
+        return;
       }
-    };
-  })(jQuery, Drupal);
-  
+      window.infiniteScrollInitialized = true;
+
+      let isLoading = false;
+      const pageSizeIncrement = 9;
+
+      function debounce(func, wait) {
+        let timeout;
+        return function () {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(this, arguments), wait);
+        };
+      }
+
+      function onScroll() {
+        const scrollThreshold = 20;
+        const loadState = $("#list_state").val();
+
+        // Se há mais itens para carregar e estamos perto do final da página
+        if (loadState == 1 && $(window).scrollTop() + $(window).height() >= $(document).height() - scrollThreshold && !isLoading) {
+          isLoading = true;
+          $('#loading-overlay').show();
+          $('#load-more-button').trigger('click'); // Dispara o clique no botão "Load More"
+        }
+      }
+
+      // Quando o carregamento é concluído, esconder o indicador e liberar para próximo carregamento
+      $(document).ajaxComplete(function () {
+        $('#loading-overlay').hide();
+        isLoading = false;
+      });
+
+      // Bind debounce to scroll
+      $(window).on('scroll', debounce(onScroll, 50));
+    }
+  };
+})(jQuery, Drupal);

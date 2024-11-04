@@ -87,29 +87,47 @@ class REPSelectMTForm extends FormBase {
 
     // OBTÉM O NÚMERO TOTAL DE ELEMENTOS E TOTAL DE PÁGINAS
     $this->element_type = $elementtype;
+    if ($this->element_type != NULL) {
+      $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
+    }
+
+    // Retrieve or set default view type
+    $session = \Drupal::request()->getSession();
+    $view_type = $session->get('rep_select_mt_view_type', 'table');
+    $form_state->set('view_type', $view_type);
 
     // Tamanho da página padrão se não fornecido
     if ($pagesize === NULL) {
       $pagesize = 9; // Ajustado para 9 conforme solicitado
     }
 
-    // Página atual inicializada se não fornecida
+    // Attach necessary libraries
+    $form['#attached']['library'][] = 'core/drupal.bootstrap';
+    $form['#attached']['library'][] = 'core/jquery';
+    $form['#attached']['library'][] = 'core/jquery.once';
+    $form['#attached']['library'][] = 'core/drupal';
+    $form['#attached']['library'][] = 'core/drupalSettings';
+    $form['#attached']['library'][] = 'rep/rep_js_css';
+    $form['#attached']['drupalSettings']['rep_select_mt_form']['base_url'] = \Drupal::request()->getSchemeAndHttpHost() . base_path();
+    $form['#attached']['drupalSettings']['rep_select_mt_form']['elementtype'] = $elementtype;
+
+    // Define start page if not provided
     if ($page === NULL) {
       $page = 1;
+    }
+    $form_state->set('current_page', $page);
+
+    // Get value `pagesize` (default 9)
+    if ($form_state->get('page_size')) {
+      $pagesize = $form_state->get('page_size');
+    } else {
+      $pagesize = $session->get('rep_select_mt_view_type', 9);
+      $form_state->set('page_size', $pagesize);
     }
 
     $this->setListSize(-1);
     if ($this->element_type != NULL) {
       $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
-    }
-    if (gettype($this->list_size) == 'string') {
-      $total_pages = "0";
-    } else {
-      if ($this->list_size % $pagesize == 0) {
-        $total_pages = $this->list_size / $pagesize;
-      } else {
-        $total_pages = floor($this->list_size / $pagesize) + 1;
-      }
     }
 
     // RETRIEVE ELEMENTS
@@ -166,16 +184,7 @@ class REPSelectMTForm extends FormBase {
         return;
     }
 
-    // Recuperar ou definir o tipo de visualização padrão
-    $session = \Drupal::request()->getSession();
-    $view_type = $session->get('rep_select_mt_view_type', 'table');
-    $form_state->set('view_type', $view_type);
-
-    // Armazenar página atual e tamanho da página no estado do formulário para uso nos callbacks AJAX
-    $form_state->set('current_page', $page);
-    $form_state->set('page_size', $pagesize);
-
-    // COLOCAR O FORMULÁRIO JUNTO
+    // START FORM
     $form['page_title'] = [
       '#type' => 'item',
       '#markup' => '<h3 class="mt-5">Manage ' . $this->plural_class_name . '</h3>',
@@ -241,21 +250,35 @@ class REPSelectMTForm extends FormBase {
     } elseif ($view_type == 'card') {
       $this->buildCardView($form, $form_state, $header, $output);
 
-      // Lógica para determinar se o botão "Load More" deve ser exibido
-      $total_items_loaded = count($form_state->get('cards_output', []));
-      $remaining_items = $this->list_size - $total_items_loaded;
+      // SHOW "Load More" BUTTON
+      // TOTAL ITEMS
+      $total_items = $this->getListSize();
 
-      // Exibir o botão "Load More" apenas se houver múltiplos de 9 cards apresentados e houver mais itens a carregar
-      if ($remaining_items > 0 && $total_items_loaded % 9 == 0) {
-        $form['load_more'] = [
+      // PAGESIZE
+      $current_page_size = $form_state->get('page_size') ?? 9;
+
+      //Prevent infinite scroll without new data
+      if ($total_items > $current_page_size) {
+        $form['load_more_button'] = [
           '#type' => 'submit',
-          '#value' => $this->t('Carregar Mais'),
-          '#name' => 'load_more',
-          '#ajax' => [
-            'callback' => '::ajaxLoadMore',
-            'wrapper' => 'element-cards-wrapper',
+          '#value' => $this->t('Load More'),
+          '#name' => 'load_more_button',
+          '#attributes' => [
+            'id' => 'load-more-button',
+            'class' => ['btn', 'btn-primary', 'load-more-button'],
+            'style' => 'display: none;',
           ],
+          '#submit' => ['::loadMoreSubmit'],
           '#limit_validation_errors' => [],
+        ];
+
+        $form['list_state'] = [
+          '#type' => 'hidden',
+          '#value' => ($total_items > $current_page_size ? 1:0),
+          "#name" => 'list_state',
+          '#attributes' => [
+            'id' => 'list_state',
+          ]
         ];
       }
     }
@@ -277,7 +300,21 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Construir a visualização em tabela.
+   * Submit handler for the Load More button.
+   */
+  public function loadMoreSubmit(array &$form, FormStateInterface $form_state) {
+    // Increments page number to load more cards
+    $current_page_size = $form_state->get('page_size') ?? 9;
+    $new_page_size = $current_page_size + 9;
+    $form_state->set('page_size', $new_page_size);
+
+    // Forces rebuild to load more cards
+    $form_state->setRebuild();
+  }
+
+
+  /**
+   * Build Table View
    */
   protected function buildTableView(array &$form, FormStateInterface $form_state, $header, $output) {
     // Adicionar botões de ação para visualização em tabela
@@ -324,9 +361,29 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Construir a visualização em cards com funcionalidade de "Load More".
+   * Build Cards view with infinite scroll
    */
   protected function buildCardView(array &$form, FormStateInterface $form_state, $header, $output) {
+
+    // Se não estiver adicionando mais, crie o wrapper principal
+    $form['loading_overlay'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'id' => 'loading-overlay',
+        'class' => ['loading-overlay'],
+        'style' => 'display: none;', // Inicialmente escondido
+      ],
+      '#markup' => '<div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>',
+    ];
+
+    $form['cards_wrapper'] = [
+        '#type' => 'container',
+        '#attributes' => [
+            'id' => 'cards-wrapper',
+            'class' => ['row'],
+        ],
+    ];
+
     // Wrapper para AJAX
     $form['element_cards_wrapper'] = [
       '#type' => 'container',
@@ -457,10 +514,6 @@ class REPSelectMTForm extends FormBase {
         '#submit' => ['::editElementSubmit'],
         '#limit_validation_errors' => [],
         '#element_uri' => $key,
-        '#ajax' => [
-          'callback' => '::ajaxRefresh',
-          'wrapper' => 'element-cards-wrapper',
-        ],
       ];
 
       // Botão Excluir
@@ -474,11 +527,7 @@ class REPSelectMTForm extends FormBase {
         ],
         '#submit' => ['::deleteElementSubmit'],
         '#limit_validation_errors' => [],
-        '#element_uri' => $key,
-        '#ajax' => [
-          'callback' => '::ajaxRefresh',
-          'wrapper' => 'element-cards-wrapper',
-        ],
+        '#element_uri' => $key
       ];
 
       // Botão Ingest
@@ -491,11 +540,7 @@ class REPSelectMTForm extends FormBase {
         ],
         '#submit' => ['::ingestElementSubmit'],
         '#limit_validation_errors' => [],
-        '#element_uri' => $key,
-        '#ajax' => [
-          'callback' => '::ajaxRefresh',
-          'wrapper' => 'element-cards-wrapper',
-        ],
+        '#element_uri' => $key
       ];
 
       // Botão Uningest
@@ -508,52 +553,9 @@ class REPSelectMTForm extends FormBase {
         ],
         '#submit' => ['::uningestElementSubmit'],
         '#limit_validation_errors' => [],
-        '#element_uri' => $key,
-        '#ajax' => [
-          'callback' => '::ajaxRefresh',
-          'wrapper' => 'element-cards-wrapper',
-        ],
+        '#element_uri' => $key
       ];
     }
-  }
-
-  /**
-   * AJAX callback para o botão "Load More".
-   */
-  public function ajaxLoadMore(array &$form, FormStateInterface $form_state) {
-    // Incrementar o número da página
-    $current_page = $form_state->get('current_page') + 1;
-    $form_state->set('current_page', $current_page);
-
-    // Recuperar elementos adicionais
-    $pagesize = $form_state->get('page_size');
-    $additional_list = ListManagerEmailPage::exec($this->element_type, $this->manager_email, $current_page, $pagesize);
-
-    if (empty($additional_list)) {
-      // Não há mais itens para carregar
-      $form_state->setRebuild(FALSE);
-      return $form['element_cards_wrapper'];
-    }
-
-    // Gerar saída para os elementos adicionais
-    $output = MetadataTemplate::generateOutput($this->element_type, $additional_list);
-
-    // Mesclar com a saída existente
-    $existing_output = $form_state->get('cards_output');
-    $cards_output = array_merge($existing_output, $output);
-    $form_state->set('cards_output', $cards_output);
-
-    // Rebuild the form
-    $form_state->setRebuild(TRUE);
-
-    return $form['element_cards_wrapper'];
-  }
-
-  /**
-   * AJAX callback para atualizar o formulário.
-   */
-  public function ajaxRefresh(array &$form, FormStateInterface $form_state) {
-    return $form['element_cards_wrapper'];
   }
 
   /**
