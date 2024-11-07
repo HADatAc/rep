@@ -432,6 +432,9 @@ class REPSelectMTForm extends FormBase
   protected function buildCardView(array &$form, FormStateInterface $form_state, $header, $output)
   {
 
+    // IMAGE PLACEHOLDER
+    $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/semVar_placeholder.png';
+
     $form['element_cards_wrapper'] = [
       '#type' => 'container',
       '#attributes' => ['id' => 'element-cards-wrapper', 'class' => ['row', 'mt-3']],
@@ -460,6 +463,9 @@ class REPSelectMTForm extends FormBase
         }
       }
 
+      // Definir a URL da imagem, usar placeholder se não houver imagem no item
+      $image_uri = !empty($item['image']) ? $item['image'] : $placeholder_image;
+
       if (strlen($header_text) > 0) {
         $form['element_cards_wrapper'][$sanitized_key]['card']['header'] = [
           '#type' => 'container',
@@ -471,14 +477,41 @@ class REPSelectMTForm extends FormBase
         ];
       }
 
-      $form['element_cards_wrapper'][$sanitized_key]['card']['content'] = [
+      $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper'] = [
         '#type' => 'container',
         '#attributes' => [
-          'style' => 'margin-bottom:0!important;',
-          'class' => ['card-body'],
+          'class' => ['row'],
         ],
       ];
 
+      // Coluna para a imagem
+      $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['image'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['col-md-5', 'texta-align-center'],
+          'style' => 'margin-bottom:0!important;text-align:center!important;',
+        ],
+        'image' => [
+          '#type' => 'html_tag',
+          '#tag' => 'img',
+          '#attributes' => [
+              'src' => $image_uri,
+              'alt' => $header_text,
+              'style' => 'max-width: 70%; height: auto;',
+          ]
+        ],
+      ];
+
+      // Coluna para o conteúdo e rodapé
+      $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['col-md-7', 'card-body'],
+          'style' => 'margin-bottom:0!important;',
+        ],
+      ];
+
+      // Iterando sobre o conteúdo existente e adicionando-o à coluna de conteúdo
       foreach ($header as $column_key => $column_label) {
         $value = isset($item[$column_key]) ? $item[$column_key] : '';
         if ($column_label == 'Name') {
@@ -496,7 +529,7 @@ class REPSelectMTForm extends FormBase
           ];
         }
 
-        $form['element_cards_wrapper'][$sanitized_key]['card']['content'][$column_key] = [
+        $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'][$column_key] = [
           '#type' => 'container',
           '#attributes' => [
             'class' => ['field-container'],
@@ -510,6 +543,7 @@ class REPSelectMTForm extends FormBase
         ];
       }
 
+      // Adicionando o rodapé na mesma coluna de conteúdo
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer'] = [
         '#type' => 'container',
         '#attributes' => [
@@ -518,6 +552,7 @@ class REPSelectMTForm extends FormBase
         ],
       ];
 
+      // Adicionando os botões ao rodapé
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions'] = [
         '#type' => 'actions',
         '#attributes' => [
@@ -526,7 +561,7 @@ class REPSelectMTForm extends FormBase
         ],
       ];
 
-      // EDIT BUTTON
+      // Botão Editar
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['edit'] = [
         '#type' => 'submit',
         '#value' => $this->t('Edit'),
@@ -539,7 +574,7 @@ class REPSelectMTForm extends FormBase
         '#element_uri' => $key,
       ];
 
-      // DELETE BUTTON
+      // Botão Excluir
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['delete'] = [
         '#type' => 'submit',
         '#value' => $this->t('Delete'),
@@ -550,10 +585,10 @@ class REPSelectMTForm extends FormBase
         ],
         '#submit' => ['::deleteElementSubmit'],
         '#limit_validation_errors' => [],
-        '#element_uri' => $key
+        '#element_uri' => $key,
       ];
 
-      // INGEST BUTTON
+      // Botão Ingest
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['ingest'] = [
         '#type' => 'submit',
         '#value' => $this->t('Ingest'),
@@ -563,10 +598,10 @@ class REPSelectMTForm extends FormBase
         ],
         '#submit' => ['::ingestElementSubmit'],
         '#limit_validation_errors' => [],
-        '#element_uri' => $key
+        '#element_uri' => $key,
       ];
 
-      // UNINGEST BUTTON
+      // Botão Uningest
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['uningest'] = [
         '#type' => 'submit',
         '#value' => $this->t('Uningest'),
@@ -576,7 +611,7 @@ class REPSelectMTForm extends FormBase
         ],
         '#submit' => ['::uningestElementSubmit'],
         '#limit_validation_errors' => [],
-        '#element_uri' => $key
+        '#element_uri' => $key,
       ];
     }
   }
