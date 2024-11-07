@@ -307,7 +307,7 @@ button.download-button {
 }
 
 .download-button::before {
-  content: "\f019"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  content: "\f56d"; /* Código Unicode do ícone de "plus" do FontAwesome */
   font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
   font-weight: 900; /* Necessário para a versão sólida dos ícones */
   position: absolute;
