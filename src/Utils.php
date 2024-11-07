@@ -33,7 +33,16 @@ class Utils {
 
   public static function baseUrl() {
     $request = \Drupal::request();
-    return $request->getScheme() . '://' . $request->getHost();
+    $scheme = $request->getScheme();
+    $host = $request->getHost();
+    $port = $request->getPort();
+
+    // Verifica se a porta deve ser incluída no URL
+    if (($scheme === 'http' && $port !== 80) || ($scheme === 'https' && $port !== 443)) {
+      return $scheme . '://' . $host . ':' . $port;
+    }
+
+    return $scheme . '://' . $host;
   }
 
   /**
