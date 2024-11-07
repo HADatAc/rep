@@ -36,7 +36,7 @@
                     if ($childrenContainer.children().length === 0) {
                         //console.log(nodeUri);
                         $.ajax({
-                            url: 'http://localhost/rep/getchildren',
+                            url: '/rep/getchildren',
                             type: 'GET',
                             data: { nodeUri: nodeUri },
                             dataType: 'json',
@@ -54,7 +54,7 @@
                                 console.error('Failed to fetch data:', textStatus, errorThrown);
                             }
                         });
-                    } 
+                    }
                 }
             });
 
@@ -95,7 +95,7 @@
                 console.log(`Node selected: ${nodeUri}`);
                 // Perform the action for selecting the node
             });
-            
+
         }
     };
 })(jQuery, Drupal);
