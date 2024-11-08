@@ -72,7 +72,7 @@ class REPSelectMTForm extends FormBase
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $mode = NULL, $pagesize = NULL, $studyuri = NULL)
+  public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $mode = NULL, $page=1, $pagesize=9, $studyuri = NULL)
   {
     // STUDYURI OPCIONAL
     if ($studyuri == NULL) {
@@ -97,30 +97,52 @@ class REPSelectMTForm extends FormBase
       $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
     }
 
-    // SET PAGE_SIZE
-    $pagesize = $form_state->get('page_size') ?? $pagesize ?? 9;
-    $form_state->set('page_size', $pagesize);
-
     /// GET VIEW MODE
     $session = \Drupal::request()->getSession();
     $view_type = $form_state->get('view_type') ?? $session->get('rep_select_mt_view_type') ?? 'table';
     $form_state->set('view_type', $view_type);
 
-    // \Drupal::logger('rep_select_mt_form')->notice('Building Form: page_size @page_size, view_type @view_type', [
-    //   '@page_size' => $pagesize,
-    //   '@view_type' => $view_type,
-    // ]);
+    if ($view_type == 'table') {
 
-    // \Drupal::logger('rep_select_mt_form')->notice('Calling ListManagerEmailPage::exec with parameters: element_type @element_type, manager_email @manager_email, pagesize @pagesize', [
-    //   '@element_type' => $this->element_type,
-    //   '@manager_email' => $this->manager_email,
-    //   '@pagesize' => $pagesize,
-    // ]);
-    $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, 1, $pagesize));
+      $this->setListSize(-1);
+      if ($this->element_type != NULL) {
+          $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
+      }
+      if (gettype($this->list_size) == 'string') {
+        $total_pages = "0";
+      } else {
+        if ($this->list_size % $pagesize == 0) {
+            $total_pages = $this->list_size / $pagesize;
+        } else {
+            $total_pages = (int) floor($this->list_size / $pagesize) + 1;
+        }
+      }
 
-    // \Drupal::logger('rep_select_mt_form')->notice('List returned: @list', [
-    //   '@list' => json_encode($this->getList()),
-    // ]);
+      // CREATE LINK FOR NEXT PAGE AND PREVIOUS PAGE
+      if ($page < $total_pages) {
+          $next_page = $page + 1;
+          $next_page_link = ListManagerEmailPage::linkdpl($this->element_type, $next_page, $pagesize, 'rep');
+      } else {
+          $next_page_link = '';
+      }
+      if ($page > 1) {
+          $previous_page = $page - 1;
+          $previous_page_link = ListManagerEmailPage::linkdpl($this->element_type, $previous_page, $pagesize, 'rep');
+      } else {
+          $previous_page_link = '';
+      }
+
+      $form_state->set('current_page', $page);
+      $form_state->set('page_size', $pagesize);
+
+      $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
+
+    } else {
+      // SET PAGE_SIZE
+      $pagesize = $form_state->get('page_size') ?? $pagesize ?? 9;
+      $form_state->set('page_size', $pagesize);
+      $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, 1, $pagesize));
+    }
 
     $this->single_class_name = "";
     $this->plural_class_name = "";
@@ -172,11 +194,6 @@ class REPSelectMTForm extends FormBase
         $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
         return;
     }
-
-    // \Drupal::logger('rep_select_mt_form')->notice('Header: @header, Output: @output', [
-    //     '@header' => json_encode($header),
-    //     '@output' => json_encode($output),
-    // ]);
 
     // START FORM
     $form['page_title'] = [
@@ -235,11 +252,23 @@ class REPSelectMTForm extends FormBase
 
     // RENDER BASED ON VIEW TYPE
     if ($view_type == 'table') {
+
       $this->buildTableView($form, $form_state, $header, $output);
 
       $form['pager'] = [
-        '#type' => 'pager',
+        '#theme' => 'list-page',
+        '#items' => [
+            'page' => strval($page),
+            'first' => ListManagerEmailPage::linkdpl($this->element_type, 1, $pagesize, 'rep'),
+            'last' => ListManagerEmailPage::linkdpl($this->element_type, $total_pages, $pagesize, 'rep'),
+            'previous' => $previous_page_link,
+            'next' => $next_page_link,
+            'last_page' => strval($total_pages),
+            'links' => null,
+            'title' => ' ',
+        ],
       ];
+
     } elseif ($view_type == 'card') {
       $this->buildCardView($form, $form_state, $header, $output);
 
