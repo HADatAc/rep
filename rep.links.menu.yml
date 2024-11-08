@@ -10,7 +10,7 @@ rep.kg:
   weight: 10
   requirements:
     _permission: 'access content'
-    
+
 rep.dashboard:
   title: Dashboard
   description: Knowledge graph's dashboad
@@ -20,7 +20,7 @@ rep.dashboard:
   weight: 10
   requirements:
     _permission: 'access content'
-    
+
 rep.uri_describe:
   title: Describe URI
   description: Use URI to retrieve descriptions of knowledge graph's elements
@@ -30,8 +30,8 @@ rep.uri_describe:
   weight: 100
   requirements:
     _permission: 'access content'
-    
-        
+
+
 #
 # REPOSITORY
 #
@@ -115,7 +115,7 @@ rep.about:
 rep.admin_settings_link:
   title: Configuration
   description: Semantic Repository Settings
-  menu_name: main 
+  menu_name: main
   route_name: rep.admin_settings_custom
   parent: rep.top_level
   weight: 7
@@ -123,3 +123,13 @@ rep.admin_settings_link:
     _permission: 'access content'
     _role: 'authenticated'
 
+# Config Customization Admin Page
+rep.admin_custom_config:
+  title: 'Customization of HascoRepo Enviroment'
+  description: 'Customization of HascoRepo Enviroment'
+  route_name: rep.config_form
+  parent: system.admin_config
+  weight: 8
+  menu_name: admin
+  requirements:
+    _permission: 'administer site configuration'
