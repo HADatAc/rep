@@ -30,13 +30,13 @@ class LandingPage extends FormBase
    */
   public function buildForm(array $form, FormStateInterface $form_state)
   {
-
+    // Title
     $form['dashboard_title'] = [
-      '#type' => 'item',
+      '#type' => 'markup',
       '#markup' => '<h1 class="mt-5 mb-3">Knowledge Graph Dashboard</h1>',
       '#attributes' => [
-        'class' => ['mt-3', 'mb-3']
-      ]
+        'class' => ['mt-5', 'mb-3']
+      ],
     ];
 
     // Introduction text
@@ -51,7 +51,7 @@ class LandingPage extends FormBase
       '#title' => 'This repository currently hosts a knowledge graph about the following:<br>',
     ];
 
-    // First row with 5 columns
+    // First row with 5 columns, responsive to stack vertically on small screens
     $form['row'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['row']],
@@ -60,73 +60,73 @@ class LandingPage extends FormBase
     // Social/Organizational Elements Column
     $form['row']['social_organizational_elements'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col']],
+      '#attributes' => ['class' => ['col-12', 'col-md-2', 'p-2']],
       'card' => [
         '#type' => 'markup',
-        '#markup' => '<div class="card"><div class="card-body">' . $this->getSocialOrganizationalElements() . '</div></div>',
+        '#markup' => '<div class="card mb-3"><div class="card-body">' . $this->getSocialOrganizationalElements() . '</div></div>',
       ],
     ];
 
     // Study Elements Column
     $form['row']['study_elements'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col']],
+      '#attributes' => ['class' => ['col-12', 'col-md-2', 'p-2']],
       'card' => [
         '#type' => 'markup',
-        '#markup' => '<div class="card"><div class="card-body">' . $this->getStudyElements() . '</div></div>',
+        '#markup' => '<div class="card mb-3"><div class="card-body">' . $this->getStudyElements() . '</div></div>',
       ],
     ];
 
     // Deployment Elements Column
     $form['row']['deployment_elements'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col']],
+      '#attributes' => ['class' => ['col-12', 'col-md-2', 'p-2']],
       'card' => [
         '#type' => 'markup',
-        '#markup' => '<div class="card"><div class="card-body">' . $this->getDeploymentElements() . '</div></div>',
+        '#markup' => '<div class="card mb-3"><div class="card-body">' . $this->getDeploymentElements() . '</div></div>',
       ],
     ];
 
     // Instrument Elements Column
     $form['row']['instrument_elements'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col']],
+      '#attributes' => ['class' => ['col-12', 'col-md-2', 'p-2']],
       'card' => [
         '#type' => 'markup',
-        '#markup' => '<div class="card"><div class="card-body">' . $this->getInstrumentElements() . '</div></div>',
+        '#markup' => '<div class="card mb-3"><div class="card-body">' . $this->getInstrumentElements() . '</div></div>',
       ],
     ];
 
     // Data Elements Column
     $form['row']['data_elements'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col']],
+      '#attributes' => ['class' => ['col-12', 'col-md-2', 'p-2']],
       'card' => [
         '#type' => 'markup',
-        '#markup' => '<div class="card"><div class="card-body">' . $this->getDataElements() . '</div></div>',
+        '#markup' => '<div class="card mb-3"><div class="card-body">' . $this->getDataElements() . '</div></div>',
       ],
     ];
 
-    // Second row with 2 columns (50%-50%)
+    // Second row with 2 columns (50%-50%) using flex
     $form['second_row'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['row', 'mt-4']],
     ];
 
-    // HASCO Cycle Image Column
+    // HASCO Cycle Image Column (responsive image)
     $form['second_row']['hasco_cycle_image'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col-md-6']],
+      '#attributes' => ['class' => ['col-12', 'col-md-6', 'p-2']],
       'card' => [
         '#type' => 'markup',
-        '#markup' => '<img src="' . $this->getImagePath() . '" alt="HASCO Cycle" style="width:100%;" border="0" />',
+        '#markup' => '<img src="' . $this->getImagePath() . '" alt="HASCO Cycle" class="img-fluid" border="0" />',
       ],
     ];
 
-    // Ontologies Column
+    // Ontologies Column with responsive table
     $form['second_row']['ontologies'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col-md-6']],
+      '#attributes' => ['class' => ['col-12', 'col-md-6', 'p-2']],
       'card' => [
         '#type' => 'markup',
         '#markup' => '<div class="card"><div class="card-body">' . $this->getOntologies() . '</div></div>',
@@ -225,23 +225,35 @@ class LandingPage extends FormBase
     return './' . $module_path . '/images/hasco_cycle.png';
   }
 
-  // Helper function to render Ontologies content
+  // Helper function to render Ontologies content (responsive table)
   private function getOntologies()
   {
-    $ontologies = '<h3>Ontologies</h3><table>';
+    $ontologies = '<h3>Ontologies</h3>';
+    // Limitar largura da tabela e garantir rolagem horizontal quando necessário
+    $ontologies .= '<div class="table-responsive" style="max-width: 100%;">';
+    $ontologies .= '<table class="table table-striped table-bordered" style="table-layout: fixed; width: 100%;">';
+    $ontologies .= '<thead><tr><th style="width: 30%;">Abbreviation</th><th style="width: 70%;">Namespace</th></tr></thead><tbody>';
+
     $tables = new Tables;
     $namespaces = $tables->getNamespaces();
-    $ontologies .= '<thead><tr><th>Abbreviation</th><th>Namespace</th><th>Triples</th></tr></thead><tbody>';
+
     if ($namespaces != NULL) {
       foreach ($namespaces as $abbrev => $ns) {
-        $ontologies .= '<tr><td>' . $abbrev . '</td><td><a href="' . $ns . '">' . $ns . '</a></td><td></td></tr>';
+        $ontologies .= '<tr>';
+        $ontologies .= '<td style="word-wrap: break-word;">' . $abbrev . '</td>';
+        $ontologies .= '<td style="word-wrap: break-word;"><a href="' . $ns . '">' . $ns . '</a></td>';
+        $ontologies .= '</tr>';
       }
     } else {
       $ontologies .= '<tr><td colspan="3">No NAMESPACE information available at the moment</td></tr>';
     }
+
     $ontologies .= '</tbody></table>';
+    $ontologies .= '</div>';  // End of container
+
     return $ontologies;
   }
+
 
   /**
    * {@inheritdoc}
