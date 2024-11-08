@@ -116,7 +116,7 @@ class LandingPage extends FormBase
     // HASCO Cycle Image Column (responsive image)
     $form['second_row']['hasco_cycle_image'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col-12', 'col-md-6', 'p-2']],
+      '#attributes' => ['class' => ['col-12', 'col-md-6', 'p-2', 'text-align-center']],
       'card' => [
         '#type' => 'markup',
         '#markup' => '<img src="' . $this->getImagePath() . '" alt="HASCO Cycle" class="img-fluid" border="0" />',
