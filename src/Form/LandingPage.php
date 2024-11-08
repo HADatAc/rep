@@ -60,7 +60,7 @@ class LandingPage extends FormBase
     // Social/Organizational Elements Column
     $form['row']['social_organizational_elements'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col-12', 'col-md-2', 'p-2']],
+      '#attributes' => ['class' => ['col-12', 'col-md-3', 'p-2']],
       'card' => [
         '#type' => 'markup',
         '#markup' => '<div class="card mb-3"><div class="card-body">' . $this->getSocialOrganizationalElements() . '</div></div>',
@@ -100,7 +100,7 @@ class LandingPage extends FormBase
     // Data Elements Column
     $form['row']['data_elements'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['col-12', 'col-md-2', 'p-2']],
+      '#attributes' => ['class' => ['col-12', 'col-md-3', 'p-2']],
       'card' => [
         '#type' => 'markup',
         '#markup' => '<div class="card mb-3"><div class="card-body">' . $this->getDataElements() . '</div></div>',
