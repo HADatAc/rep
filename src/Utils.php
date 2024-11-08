@@ -279,7 +279,7 @@ class Utils {
     $url = Url::fromRoute($rt);
     $url->setRouteParameter('elementtype', $element_type);
     $url->setRouteParameter('page', '1');
-    $url->setRouteParameter('pagesize', '12');
+    $url->setRouteParameter('pagesize', '9');
     return $url;
 
   }
