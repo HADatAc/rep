@@ -45,6 +45,8 @@ class ListManagerEmailPage {
   }
 
   public static function link($elementtype, $page, $pagesize) {
+
+    //dpr($elementtype.'-'.$page.'-'.$pagesize.'-'.$module);
     $root_url = \Drupal::request()->getBaseUrl();
     $module = '';
     if ($elementtype != NULL && $page > 0 && $pagesize > 0) {
@@ -52,12 +54,27 @@ class ListManagerEmailPage {
       if ($module == NULL) {
         return '';
       }
-     return $root_url . '/' . $module . REPGUI::SELECT_PAGE . 
+     return $root_url . '/' . $module . REPGUI::SELECT_PAGE .
           $elementtype . '/' .
-          strval($page) . '/' . 
+          strval($page) . '/' .
           strval($pagesize);
     }
-    return ''; 
+    return '';
+  }
+
+  public static function linkdpl($elementtype, $page, $pagesize, $module=NULL) {
+
+    //dpr($elementtype.'-'.$page.'-'.$pagesize.'-'.$module);
+    $root_url = \Drupal::request()->getBaseUrl();
+    if ($elementtype != NULL && $page > 0 && $pagesize > 0) {
+     return $root_url . '/' . $module . REPGUI::SELECT_PAGE . 'mt/' .
+          $elementtype .
+          '/table' . '/' .
+          strval($page) . '/' .
+          strval($pagesize) .
+          '/none';
+    }
+    return '';
   }
 
 }
