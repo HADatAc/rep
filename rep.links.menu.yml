@@ -128,8 +128,9 @@ rep.admin_custom_config:
   title: 'Customization of HascoRepo Enviroment'
   description: 'Customization of HascoRepo Enviroment'
   route_name: rep.config_form
-  parent: system.admin_config
+  parent: rep.top_level
   weight: 8
   menu_name: admin
   requirements:
     _permission: 'administer site configuration'
+    _role: 'authenticated'
