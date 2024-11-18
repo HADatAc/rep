@@ -874,6 +874,17 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);  
   }
 
+  public function getStudySTRs($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/study/strs/".
+      urlencode($uri)."/".
+      $pageSize."/".
+      $offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
   public function getTotalStudyDAs($uri) {
     $endpoint = "/hascoapi/api/study/dataacquisitions/total/".
       urlencode($uri);
@@ -912,6 +923,15 @@ class FusekiAPIConnector {
 
   public function getTotalStudySOs($uri) {
     $endpoint = "/hascoapi/api/study/studyobjects/total/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+  }
+
+  public function getTotalStudySTRs($uri) {
+    $endpoint = "/hascoapi/api/study/strs/total/".
       urlencode($uri);
     $method = "GET";
     $api_url = $this->getApiUrl();

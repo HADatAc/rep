@@ -68,9 +68,28 @@ class MetadataTemplate {
 
   }
 
-  public static function generateOutput($elementType, $list) {
+  public static function generateHeaderCompact() {
 
-    //dpm($list);
+    return $header = [
+      'element_filename' => t('FileName'),
+      'element_status' => t('Status'),
+      'element_log' => t('Log'),
+      'element_operations' => t('Operations'),
+    ];
+
+  }
+
+  public static function generateOutput($elementType, $list) {
+    return MetadataTemplate::generateOutputWithMode($elementType, $list, 'normal');
+  }
+
+  public static function generateOutputCompact($elementType, $list) {
+    return MetadataTemplate::generateOutputWithMode($elementType, $list, 'compact');
+  }
+
+  private static function generateOutputWithMode($elementType, $list, $mode) {
+
+      //dpm($list);
 
 
     // ROOT URL
@@ -144,14 +163,23 @@ class MetadataTemplate {
         }
       }
       $encodedUri = rawurlencode(rawurlencode($element->uri));
-      $output[$element->uri] = [
-        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
-        'element_name' => t($label),
-        'element_filename' => $filename,
-        'element_status' => t($filestatus),
-        'element_log' => t($log),
-        'element_download' => t($download),
-      ];
+      if ($mode == 'normal') {
+        $output[$element->uri] = [
+          'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+          'element_name' => t($label),
+          'element_filename' => $filename,
+          'element_status' => t($filestatus),
+          'element_log' => t($log),
+          'element_download' => t($download),
+        ];
+      } else {
+        $output[$element->uri] = [
+          'element_filename' => $filename,
+          'element_status' => t($filestatus),
+          'element_log' => t($log),
+          'element_operations' => t($download),
+        ];
+      }
     }
 
     return $output;
