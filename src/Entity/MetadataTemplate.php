@@ -10,6 +10,7 @@ use Drupal\rep\Entity\DataFile;
 use Drupal\rep\Constant;
 use Drupal\rep\Utils;
 use Drupal\Core\Render\Markup;
+use Drupal\Core\Link;
 
 
 class MetadataTemplate {
@@ -89,7 +90,7 @@ class MetadataTemplate {
 
   private static function generateOutputWithMode($elementType, $list, $mode) {
 
-      //dpm($list);
+    //dpm($list);
 
 
     // ROOT URL
@@ -158,9 +159,10 @@ class MetadataTemplate {
           $file_entity = \Drupal\file\Entity\File::load($element->hasDataFile->id);
           if ($file_entity != NULL) {
             $downloadLink = $root_url.REPGUI::DATAFILE_DOWNLOAD.base64_encode($element->hasDataFile->uri);
-            $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm download-button" role="button" disabled>Get It</a>';
+            $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm download-button" role="button" disabled></a>';
           }
         }
+
       }
       $encodedUri = rawurlencode(rawurlencode($element->uri));
       if ($mode == 'normal') {
@@ -173,12 +175,124 @@ class MetadataTemplate {
           'element_download' => t($download),
         ];
       } else {
+
+        $previousUrl = base64_encode(Url::fromRoute('std.manage_study_elements', [
+          'studyuri' => base64_encode($element->isMemberOf->uri),
+        ])->toString());
+
+        $view_da_str = base64_encode(Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($element->uri)])->toString());
+        $view_da_route = 'rep.describe_element';
+        $view_da = Url::fromRoute('rep.back_url', [
+          'previousurl' => $previousUrl,
+          'currenturl' => $view_da_str,
+          'currentroute' => 'rep.describe_element'
+        ]);
+
+        $edit_da_str = base64_encode(Url::fromRoute('rep.edit_mt', [
+          'elementtype' => 'da',
+          'elementuri' => base64_encode($element->uri),
+          'fixstd' => 'T',
+        ])->toString());
+        $edit_da = Url::fromRoute('rep.back_url', [
+          'previousurl' => $previousUrl,
+          'currenturl' => $edit_da_str,
+          'currentroute' => 'rep.edit_mt'
+        ]);
+
+        $delete_da = Url::fromRoute('rep.delete_element', [
+          'elementtype' => 'da',
+          'elementuri' => base64_encode($element->uri),
+          'currenturl' => $previousUrl,
+        ]);
+
+        $download_da = Url::fromRoute('rep.datafile_download', [
+          'datafileuri' => base64_encode($element->hasDataFile->uri),
+        ]);
+
+        $ingest_da = '';
+        $uningest_da = '';
+
+        // Criar os links adicionais
+        // Verificar se $view_da, $edit_da, $delete_da, $download_da são URLs válidas
+
+        $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<none>');
+        $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<none>');
+        $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<none>');
+        $download_da = $download_da instanceof Url ? $download_da : Url::fromRoute('<none>');
+
+        $view_bto = Link::fromTextAndUrl(
+          Markup::create('<i class="fa-solid fa-eye"></i>'),
+          $view_da
+        )->toRenderable();
+        $view_bto['#attributes'] = [
+          'class' => ['btn', 'btn-sm', 'btn-secondary'],
+          'style' => 'margin-right: 10px;',
+        ];
+
+        $edit_bto = Link::fromTextAndUrl(
+          Markup::create('<i class="fa-solid fa-pen-to-square"></i>'),
+          $edit_da
+        )->toRenderable();
+        $edit_bto['#attributes'] = [
+          'class' => ['btn', 'btn-sm', 'btn-secondary'],
+          'style' => 'margin-right: 10px;',
+        ];
+
+        $delete_bto = Link::fromTextAndUrl(
+          Markup::create('<i class="fa-solid fa-trash-can"></i>'),
+          $delete_da
+        )->toRenderable();
+        $delete_bto['#attributes'] = [
+          'onclick' => 'if(!confirm("Really Delete?")){return false;}',
+          'class' => ['btn', 'btn-sm', 'btn-secondary', 'btn-danger'],
+        ];
+
+        $ingest_bto = Link::fromTextAndUrl(
+          Markup::create('<i class="fa-solid fa-download"></i>'),
+          $view_da
+        )->toRenderable();
+        $ingest_bto['#attributes'] = [
+          'class' => ['btn', 'btn-sm', 'btn-secondary', !$element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
+          'style' => 'margin-right: 10px;',
+        ];
+
+        $uningest_bto = Link::fromTextAndUrl(
+          Markup::create('<i class="fa-solid fa-upload"></i>'),
+          $view_da
+        )->toRenderable();
+        $uningest_bto['#attributes'] = [
+          'class' => ['btn', 'btn-sm', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
+          'style' => 'margin-right: 10px;',
+        ];
+        
+
+        $download_bto = Link::fromTextAndUrl(
+          Markup::create('<i class="fa-solid fa-save"></i>'),
+          $download_da
+        )->toRenderable();
+        $download_bto['#attributes'] = [
+          'class' => ['btn', 'btn-sm', 'btn-secondary'],
+          'style' => 'margin-right: 10px;',
+        ];
+
+        // Concatenar os links como HTML
+        $links = [
+          \Drupal::service('renderer')->render($view_bto),
+          \Drupal::service('renderer')->render($edit_bto),          
+          \Drupal::service('renderer')->render($ingest_bto),
+          \Drupal::service('renderer')->render($uningest_bto),
+          \Drupal::service('renderer')->render($download_bto),
+          \Drupal::service('renderer')->render($delete_bto),
+        ];
+
+        // Adicionar todos os links concatenados ao campo `element_operations`
         $output[$element->uri] = [
           'element_filename' => $filename,
           'element_status' => t($filestatus),
           'element_log' => t($log),
-          'element_operations' => t($download),
+          'element_operations' => implode(' ', $links), // Concatenar links com espaço entre eles
         ];
+
       }
     }
 
