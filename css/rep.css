@@ -558,3 +558,20 @@ div#json-table-pager span.current-page {
   color: white !important;
   cursor: default !important;
 }
+
+.drop-area {
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  text-align: center;
+  transition: border-color 0.3s;
+}
+
+.drop-area.drag-over {
+  border-color: #007bff;
+}
+
+.modal-dialog-centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

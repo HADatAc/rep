@@ -13,21 +13,23 @@ use Drupal\Core\Render\Markup;
 use Drupal\Core\Link;
 
 
-class MetadataTemplate {
+class MetadataTemplate
+{
 
   protected $preservedMT;
 
   protected $preservedDF;
 
   // Constructor
-  public function __construct() {
-  }
+  public function __construct() {}
 
-  public function getPreservedMT() {
+  public function getPreservedMT()
+  {
     return $this->preservedMT;
   }
 
-  public function setPreservedMT($mt) {
+  public function setPreservedMT($mt)
+  {
     if ($this->preservedMT == NULL) {
       $this->preservedMT = new MetadataTemplate();
     }
@@ -40,11 +42,13 @@ class MetadataTemplate {
     $this->preservedMT->hasSIRManagerEmail = $mt->hasSIRManagerEmail;
   }
 
-  public function getPreservedDF() {
+  public function getPreservedDF()
+  {
     return $this->preservedDF;
   }
 
-  public function setPreservedDF($df) {
+  public function setPreservedDF($df)
+  {
     if ($this->preservedDF == NULL) {
       $this->preservedDF = new DataFile();
     }
@@ -56,7 +60,8 @@ class MetadataTemplate {
     $this->preservedDF->hasSIRManagerEmail = $df->hasSIRManagerEmail;
   }
 
-  public static function generateHeader() {
+  public static function generateHeader()
+  {
 
     return $header = [
       'element_uri' => t('URI'),
@@ -66,10 +71,10 @@ class MetadataTemplate {
       'element_log' => t('Log'),
       'element_download' => t('Download'),
     ];
-
   }
 
-  public static function generateHeaderCompact() {
+  public static function generateHeaderCompact()
+  {
 
     return $header = [
       'element_filename' => t('FileName'),
@@ -77,18 +82,20 @@ class MetadataTemplate {
       'element_log' => t('Log'),
       'element_operations' => t('Operations'),
     ];
-
   }
 
-  public static function generateOutput($elementType, $list) {
+  public static function generateOutput($elementType, $list)
+  {
     return MetadataTemplate::generateOutputWithMode($elementType, $list, 'normal');
   }
 
-  public static function generateOutputCompact($elementType, $list) {
+  public static function generateOutputCompact($elementType, $list)
+  {
     return MetadataTemplate::generateOutputWithMode($elementType, $list, 'compact');
   }
 
-  private static function generateOutputWithMode($elementType, $list, $mode) {
+  private static function generateOutputWithMode($elementType, $list, $mode)
+  {
 
     //dpm($list);
 
@@ -126,31 +133,35 @@ class MetadataTemplate {
         //$api = \Drupal::service('rep.api_connector');
         //$dataFile = $api->parseObjectResponse($api->getUri($element->hasDataFile),'getUri');
 
-        if ($element->hasDataFile->filename != NULL &&
-            $element->hasDataFile->filename != '') {
+        if (
+          $element->hasDataFile->filename != NULL &&
+          $element->hasDataFile->filename != ''
+        ) {
           $filename = $element->hasDataFile->filename;
         }
-        if ($element->hasDataFile->fileStatus != NULL &&
-            $element->hasDataFile->fileStatus != '') {
+        if (
+          $element->hasDataFile->fileStatus != NULL &&
+          $element->hasDataFile->fileStatus != ''
+        ) {
           if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
-            $filestatus = '<b><font style="color:#ff0000;">'.Constant::FILE_STATUS_UNPROCESSED.'</font></b>';
+            $filestatus = '<b><font style="color:#ff0000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED) {
-            $filestatus = '<b><font style="color:#008000;">'.Constant::FILE_STATUS_PROCESSED.'</font></b>';
+            $filestatus = '<b><font style="color:#008000;">' . Constant::FILE_STATUS_PROCESSED . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING) {
-            $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_WORKING.'</font></b>';
+            $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED_STD) {
-            $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_PROCESSED_STD.'</font></b>';
+            $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_PROCESSED_STD . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING_STD) {
-            $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_WORKING_STD.'</font></b>';
-            } else {
+            $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING_STD . '</font></b>';
+          } else {
             $filestatus = ' ';
           }
         }
         if (isset($element->hasDataFile->log) && $element->hasDataFile->log != NULL) {
-          $link = $root_url.REPGUI::DATAFILE_LOG.base64_encode($element->hasDataFile->uri);
-          $log = '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm read-button" '.
-                 'data-dialog-type="modal" '.
-                 'data-dialog-options=\'{"width": 700}\' role="button">Read</a>';
+          $link = $root_url . REPGUI::DATAFILE_LOG . base64_encode($element->hasDataFile->uri);
+          $log = '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm read-button" ' .
+            'data-dialog-type="modal" ' .
+            'data-dialog-options=\'{"width": 700}\' role="button">Read</a>';
 
           //$log = '<a href="'.$link.'" class="btn btn-primary btn-sm" role="button">Read</a>';
         }
@@ -158,16 +169,15 @@ class MetadataTemplate {
         if ($element->hasDataFile->id != NULL && $element->hasDataFile->id != '') {
           $file_entity = \Drupal\file\Entity\File::load($element->hasDataFile->id);
           if ($file_entity != NULL) {
-            $downloadLink = $root_url.REPGUI::DATAFILE_DOWNLOAD.base64_encode($element->hasDataFile->uri);
-            $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm download-button" role="button" disabled></a>';
+            $downloadLink = $root_url . REPGUI::DATAFILE_DOWNLOAD . base64_encode($element->hasDataFile->uri);
+            $download = '<a href="' . $downloadLink . '" class="btn btn-primary btn-sm download-button" role="button" disabled></a>';
           }
         }
-
       }
       $encodedUri = rawurlencode(rawurlencode($element->uri));
       if ($mode == 'normal') {
         $output[$element->uri] = [
-          'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+          'element_uri' => t('<a href="' . $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($uri) . '">' . $uri . '</a>'),
           'element_name' => t($label),
           'element_filename' => $filename,
           'element_status' => t($filestatus),
@@ -238,13 +248,16 @@ class MetadataTemplate {
           'style' => 'margin-right: 10px;',
         ];
 
-        $delete_bto = Link::fromTextAndUrl(
-          Markup::create('<i class="fa-solid fa-trash-can"></i>'),
-          $delete_da
-        )->toRenderable();
-        $delete_bto['#attributes'] = [
-          'onclick' => 'if(!confirm("Really Delete?")){return false;}',
-          'class' => ['btn', 'btn-sm', 'btn-secondary', 'btn-danger'],
+        // Criar a URL real do botão de delete (use o método toString)
+        $data_url = $delete_da instanceof Url ? $delete_da->toString() : '#';
+
+        // Criar o botão de delete manualmente
+        $delete_bto = [
+          '#markup' => Markup::create('<a href="#" class="btn btn-sm btn-secondary btn-danger delete-button" 
+            data-url="' . $data_url . '" 
+            onclick="return false;">
+            <i class="fa-solid fa-trash-can"></i>
+            </a>'),
         ];
 
         $ingest_bto = Link::fromTextAndUrl(
@@ -264,7 +277,7 @@ class MetadataTemplate {
           'class' => ['btn', 'btn-sm', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
           'style' => 'margin-right: 10px;',
         ];
-        
+
 
         $download_bto = Link::fromTextAndUrl(
           Markup::create('<i class="fa-solid fa-save"></i>'),
@@ -278,7 +291,7 @@ class MetadataTemplate {
         // Concatenar os links como HTML
         $links = [
           \Drupal::service('renderer')->render($view_bto),
-          \Drupal::service('renderer')->render($edit_bto),          
+          \Drupal::service('renderer')->render($edit_bto),
           \Drupal::service('renderer')->render($ingest_bto),
           \Drupal::service('renderer')->render($uningest_bto),
           \Drupal::service('renderer')->render($download_bto),
@@ -292,36 +305,36 @@ class MetadataTemplate {
           'element_log' => t($log),
           'element_operations' => implode(' ', $links), // Concatenar links com espaço entre eles
         ];
-
       }
     }
 
     return $output;
   }
 
-  public function savePreservedMT($elementType) {
+  public function savePreservedMT($elementType)
+  {
 
     if ($this->getPreservedMT() == NULL || $this->getPreservedDF() == NULL) {
       return FALSE;
     }
 
     try {
-      $datafileJSON = '{"uri":"'. $this->getPreservedDF()->uri .'",'.
-          '"typeUri":"'.HASCO::DATAFILE.'",'.
-          '"hascoTypeUri":"'.HASCO::DATAFILE.'",'.
-          '"label":"'.$this->getPreservedDF()->label.'",'.
-          '"filename":"'.$this->getPreservedDF()->filename.'",'.
-          '"id":"'.$this->getPreservedDF()->id.'",'.
-          '"fileStatus":"'.Constant::FILE_STATUS_UNPROCESSED.'",'.
-          '"hasSIRManagerEmail":"'.$this->getPreservedDF()->hasSIRManagerEmail.'"}';
+      $datafileJSON = '{"uri":"' . $this->getPreservedDF()->uri . '",' .
+        '"typeUri":"' . HASCO::DATAFILE . '",' .
+        '"hascoTypeUri":"' . HASCO::DATAFILE . '",' .
+        '"label":"' . $this->getPreservedDF()->label . '",' .
+        '"filename":"' . $this->getPreservedDF()->filename . '",' .
+        '"id":"' . $this->getPreservedDF()->id . '",' .
+        '"fileStatus":"' . Constant::FILE_STATUS_UNPROCESSED . '",' .
+        '"hasSIRManagerEmail":"' . $this->getPreservedDF()->hasSIRManagerEmail . '"}';
 
-      $mtJSON = '{"uri":"'. $this->getPreservedMT()->uri .'",'.
-          '"typeUri":"'.$this->getPreservedMT()->typeUri.'",'.
-          '"hascoTypeUri":"'.$this->getPreservedMT()->hascoTypeUri.'",'.
-          '"label":"'.$this->getPreservedMT()->label.'",'.
-          '"hasDataFileUri":"'.$this->getPreservedMT()->hasDataFileUri.'",'.
-          '"comment":"'.$this->getPreservedMT()->comment.'",'.
-          '"hasSIRManagerEmail":"'.$this->getPreservedMT()->hasSIRManagerEmail.'"}';
+      $mtJSON = '{"uri":"' . $this->getPreservedMT()->uri . '",' .
+        '"typeUri":"' . $this->getPreservedMT()->typeUri . '",' .
+        '"hascoTypeUri":"' . $this->getPreservedMT()->hascoTypeUri . '",' .
+        '"label":"' . $this->getPreservedMT()->label . '",' .
+        '"hasDataFileUri":"' . $this->getPreservedMT()->hasDataFileUri . '",' .
+        '"comment":"' . $this->getPreservedMT()->comment . '",' .
+        '"hasSIRManagerEmail":"' . $this->getPreservedMT()->hasSIRManagerEmail . '"}';
 
       $api = \Drupal::service('rep.api_connector');
 
@@ -330,12 +343,12 @@ class MetadataTemplate {
       $msg2 = NULL;
       $dfRaw = $api->datafileAdd($datafileJSON);
       if ($dfRaw != NULL) {
-        $msg1 = $api->parseObjectResponse($dfRaw,'datafileAdd');
+        $msg1 = $api->parseObjectResponse($dfRaw, 'datafileAdd');
 
         // ADD MT
         $mtRaw = $api->elementAdd($elementType, $mtJSON);
         if ($mtRaw != NULL) {
-          $msg2 = $api->parseObjectResponse($mtRaw,'elementAdd');
+          $msg2 = $api->parseObjectResponse($mtRaw, 'elementAdd');
         }
       }
 
@@ -344,18 +357,19 @@ class MetadataTemplate {
       } else {
         return FALSE;
       }
-
-    } catch(\Exception $e) {}
+    } catch (\Exception $e) {
+    }
   }
 
-  public static function generateOutputAsCards($elementType, $list) {
+  public static function generateOutputAsCards($elementType, $list)
+  {
     $output = [];
 
     // ROOT URL
     $root_url = \Drupal::request()->getBaseUrl();
 
     if ($list == NULL) {
-        return $output;
+      return $output;
     }
 
     $index = 0;
@@ -404,26 +418,29 @@ class MetadataTemplate {
         $download_da = Url::fromRoute('rep.datafile_download', [
           'datafileuri' => base64_encode($element->hasDataFile->uri),
         ]);
-
       }
 
-      if ($element->hasDataFile->filename != NULL &&
-        $element->hasDataFile->filename != '') {
+      if (
+        $element->hasDataFile->filename != NULL &&
+        $element->hasDataFile->filename != ''
+      ) {
         $filename = $element->hasDataFile->filename;
       }
-      if ($element->hasDataFile->fileStatus != NULL &&
-          $element->hasDataFile->fileStatus != '') {
+      if (
+        $element->hasDataFile->fileStatus != NULL &&
+        $element->hasDataFile->fileStatus != ''
+      ) {
         if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
-          $filestatus = '<b><font style="color:#ff0000;">'.Constant::FILE_STATUS_UNPROCESSED.'</font></b>';
+          $filestatus = '<b><font style="color:#ff0000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
         } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED) {
-          $filestatus = '<b><font style="color:#008000;">'.Constant::FILE_STATUS_PROCESSED.'</font></b>';
+          $filestatus = '<b><font style="color:#008000;">' . Constant::FILE_STATUS_PROCESSED . '</font></b>';
         } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING) {
-          $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_WORKING.'</font></b>';
+          $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING . '</font></b>';
         } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED_STD) {
-          $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_PROCESSED_STD.'</font></b>';
+          $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_PROCESSED_STD . '</font></b>';
         } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING_STD) {
-          $filestatus = '<b><font style="color:#ffA500;">'.Constant::FILE_STATUS_WORKING_STD.'</font></b>';
-          } else {
+          $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING_STD . '</font></b>';
+        } else {
           $filestatus = ' ';
         }
       }
@@ -439,7 +456,7 @@ class MetadataTemplate {
 
       $properties = ' ';
       if ($elementType == 'da') {
-        $properties = '<p class="card-text">'.
+        $properties = '<p class="card-text">' .
           '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' .
           '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' [' . $filestatus . ']<br><br>' .
           'Documentation: <br>' .
@@ -447,7 +464,7 @@ class MetadataTemplate {
           '&nbsp;&nbsp;&nbsp;<b>Semantic Data Dictionary</b>: ' . $sdd . '<br>' .
           '</p>';
       } else {
-        $properties = '<p class="card-text">'.
+        $properties = '<p class="card-text">' .
           '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' .
           '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' (' . $filestatus . ')<br>' .
           '</p>';
@@ -459,82 +476,80 @@ class MetadataTemplate {
       $output[$index] = [
         '#type' => 'container', // Use container instead of html_tag for better semantics
         '#attributes' => [
-            'class' => ['card', 'mb-3'],
+          'class' => ['card', 'mb-3'],
         ],
         '#prefix' => '<div class="col-md-6">',
         '#suffix' => '</div>',
-        'card_body_'.$index => [
-            '#type' => 'container', // Use container for the card body
+        'card_body_' . $index => [
+          '#type' => 'container', // Use container for the card body
+          '#attributes' => [
+            'class' => ['card-body'],
+          ],
+          'title' => [
+            '#markup' => '<h5 class="card-title">' . $label . '</h5><br>',
+          ],
+          'text' => [
+            '#markup' => $properties,
+          ],
+          'link1_' . $index => [
+            '#type' => 'link',
+            '#title' => Markup::create('<i class="fa-solid fa-eye"></i> View'),
+            '#url' => $view_da,
             '#attributes' => [
-                'class' => ['card-body'],
+              'class' => ['btn', 'btn-sm', 'btn-secondary'],
+              'style' => 'margin-right: 10px;',
             ],
-            'title' => [
-                '#markup' => '<h5 class="card-title">' . $label . '</h5><br>',
+          ],
+          'link2_' . $index => [
+            '#type' => 'link',
+            '#title' => Markup::create('<i class="fa-solid fa-pen-to-square"></i> Edit'),
+            '#url' => $edit_da,
+            '#attributes' => [
+              'class' => ['btn', 'btn-sm', 'btn-secondary'],
+              'style' => 'margin-right: 10px;',
             ],
-            'text' => [
-                '#markup' => $properties,
+          ],
+          'link3_' . $index => [
+            '#type' => 'link',
+            '#title' => Markup::create('<i class="fa-solid fa-trash-can"></i> Delete'),
+            '#url' => $delete_da,
+            '#attributes' => [
+              'onclick' => 'if(!confirm("Really Delete?")){return false;}',
+              'class' => ['btn', 'btn-sm', 'btn-secondary', 'btn-danger'],
+              'style' => 'margin-right: 10px;',
             ],
-            'link1_'.$index => [
-              '#type' => 'link',
-              '#title' => Markup::create('<i class="fa-solid fa-eye"></i> View'),
-              '#url' => $view_da,
-              '#attributes' => [
-                'class' => ['btn', 'btn-sm', 'btn-secondary'],
-                'style' => 'margin-right: 10px;',
-              ],
+          ],
+          'link4_' . $index => [
+            '#type' => 'link',
+            '#title' => Markup::create('<i class="fa-solid fa-download"></i> Download'),
+            '#url' => $download_da,
+            '#attributes' => [
+              'onclick' => 'if(!confirm("Really Download?")){return false;}',
+              'class' => ['btn', 'btn-sm', 'btn-secondary'],
+              'style' => 'margin-right: 10px;',
             ],
-            'link2_'.$index => [
-              '#type' => 'link',
-              '#title' => Markup::create('<i class="fa-solid fa-pen-to-square"></i> Edit'),
-              '#url' => $edit_da,
-              '#attributes' => [
-                'class' => ['btn', 'btn-sm', 'btn-secondary'],
-                'style' => 'margin-right: 10px;',
-              ],
+          ],
+          'link5_' . $index => [
+            '#type' => 'link',
+            '#title' => Markup::create('<i class="fa-solid fa-arrow-down"></i> Ingest'),
+            '#url' => $view_da,
+            '#attributes' => [
+              'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
+              'style' => 'margin-right: 10px;',
             ],
-            'link3_'.$index => [
-              '#type' => 'link',
-              '#title' => Markup::create('<i class="fa-solid fa-trash-can"></i> Delete'),
-              '#url' => $delete_da,
-              '#attributes' => [
-                'onclick' => 'if(!confirm("Really Delete?")){return false;}',
-                'class' => ['btn', 'btn-sm', 'btn-secondary', 'btn-danger'],
-                'style' => 'margin-right: 10px;',
-              ],
+          ],
+          'link6_' . $index => [
+            '#type' => 'link',
+            '#title' => Markup::create('<i class="fa-solid fa-arrow-up"></i> Uningest'),
+            '#url' => $view_da,
+            '#attributes' => [
+              'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
             ],
-            'link4_'.$index => [
-              '#type' => 'link',
-              '#title' => Markup::create('<i class="fa-solid fa-download"></i> Download'),
-              '#url' => $download_da,
-              '#attributes' => [
-                'onclick' => 'if(!confirm("Really Download?")){return false;}',
-                'class' => ['btn', 'btn-sm', 'btn-secondary'],
-                'style' => 'margin-right: 10px;',
-              ],
-            ],
-            'link5_'.$index => [
-              '#type' => 'link',
-              '#title' => Markup::create('<i class="fa-solid fa-arrow-down"></i> Ingest'),
-              '#url' => $view_da,
-              '#attributes' => [
-                'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
-                'style' => 'margin-right: 10px;',
-              ],
-            ],
-            'link6_'.$index => [
-              '#type' => 'link',
-              '#title' => Markup::create('<i class="fa-solid fa-arrow-up"></i> Uningest'),
-              '#url' => $view_da,
-              '#attributes' => [
-                'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
-              ],
-            ],
+          ],
         ],
       ];
-
     }
 
     return $output;
   }
-
 }
