@@ -575,3 +575,8 @@ div#json-table-pager span.current-page {
   align-items: center;
   justify-content: center;
 }
+
+.info-card {
+  font-size: 0.8rem;
+  font-weight: 500;
+}

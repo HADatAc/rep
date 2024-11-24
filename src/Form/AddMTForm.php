@@ -354,7 +354,11 @@ class AddMTForm extends FormBase {
 
   function backUrl() {
     $uid = \Drupal::currentUser()->id();
-    $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.add_mt');
+    if ($this->elementType != 'da')
+      $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.add_mt');
+    else  
+      $previousUrl = Utils::trackingGetPreviousUrl($uid, 'std.manage_study_elements');
+    
     if ($previousUrl) {
       $response = new RedirectResponse($previousUrl);
       $response->send();
