@@ -170,7 +170,7 @@ class MetadataTemplate
           $file_entity = \Drupal\file\Entity\File::load($element->hasDataFile->id);
           if ($file_entity != NULL) {
             $downloadLink = $root_url . REPGUI::DATAFILE_DOWNLOAD . base64_encode($element->hasDataFile->uri);
-            $download = '<a href="' . $downloadLink . '" class="btn btn-primary btn-sm download-button" role="button" disabled></a>';
+            $download = '<a href="' . $downloadLink . '" class="btn btn-primary btn-sm download-button" role="button" disabled>Get It</a>';
           }
         }
       }
