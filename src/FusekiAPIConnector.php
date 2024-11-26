@@ -838,22 +838,6 @@ class FusekiAPIConnector {
    *   STUDY
    */
 
-   public function studyAdd($studyJson) {
-    $endpoint = "/hascoapi/api/study/create/".rawurlencode($studyJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function studyDel($studyUri) {
-    $endpoint = "/hascoapi/api/study/delete/".rawurlencode($studyUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
   public function getStudyVCs($uri) {
     $endpoint = "/hascoapi/api/study/virtualcolumns/".
       urlencode($uri);
@@ -875,7 +859,7 @@ class FusekiAPIConnector {
   }
 
   public function getStudySTRs($uri, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/study/strs/".
+    $endpoint = "/hascoapi/api/study/streams/".
       urlencode($uri)."/".
       $pageSize."/".
       $offset;
@@ -931,7 +915,7 @@ class FusekiAPIConnector {
   }
 
   public function getTotalStudySTRs($uri) {
-    $endpoint = "/hascoapi/api/study/strs/total/".
+    $endpoint = "/hascoapi/api/study/streams/total/".
       urlencode($uri);
     $method = "GET";
     $api_url = $this->getApiUrl();
@@ -940,44 +924,8 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   STUDY ROLE 
-   */
-
-   public function studyRoleAdd($studyRoleJson) {
-    $endpoint = "/hascoapi/api/studyrole/create/".rawurlencode($studyRoleJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function studyRoleDel($studyRoleUri) {
-    $endpoint = "/hascoapi/api/studyrole/delete/".rawurlencode($studyRoleUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  /**
    *   STUDY OBJECT COLLECTION
    */
-
-   public function studyObjectCollectionAdd($studyObjectCollectionJson) {
-    $endpoint = "/hascoapi/api/studyobjectcollection/create/".rawurlencode($studyObjectCollectionJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function studyObjectCollectionDel($studyObjectCollectionUri) {
-    $endpoint = "/hascoapi/api/studyobjectcollection/delete/".rawurlencode($studyObjectCollectionUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
 
   public function studyObjectCollectionsByStudy($studyUri) {
     $endpoint = "/hascoapi/api/studyobjectcollection/bystudy/".rawurlencode($studyUri);
@@ -1038,22 +986,6 @@ class FusekiAPIConnector {
   /**
    *   VIRTUAL COLUMN 
    */
-
-   public function virtualColumnAdd($virtualColumnJson) {
-    $endpoint = "/hascoapi/api/virtualcolumn/create/".rawurlencode($virtualColumnJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
-
-  public function virtualColumnDel($virtualColumnUri) {
-    $endpoint = "/hascoapi/api/virtualcolumn/delete/".rawurlencode($virtualColumnUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
-  }
 
   public function virtualColumnsByStudy($studyUri) {
     $endpoint = "/hascoapi/api/virtualcolumn/bystudy/".rawurlencode($studyUri);

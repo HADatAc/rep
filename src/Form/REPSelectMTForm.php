@@ -513,7 +513,7 @@ class REPSelectMTForm extends FormBase
         ],
       ];
 
-      // Coluna para a imagem
+      // Column for the image
       $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['image'] = [
         '#type' => 'container',
         '#attributes' => [
@@ -531,7 +531,7 @@ class REPSelectMTForm extends FormBase
         ],
       ];
 
-      // Coluna para o conteúdo e rodapé
+      // Column for main content and footer
       $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'] = [
         '#type' => 'container',
         '#attributes' => [
