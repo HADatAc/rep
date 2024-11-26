@@ -129,7 +129,7 @@ class AddMTForm extends FormBase {
 
     $this->setElementType($elementtype);
 
-    //dpm("Element type: " . $this->getElementType());
+    //dpm(basename($this->getStudy()->uri));
 
 
     $study = ' ';
@@ -164,41 +164,53 @@ class AddMTForm extends FormBase {
       '#type' => 'textfield',
       '#title' => $this->t('Name'),
     ];
-    if ($this->getElementType() == 'da') {
-      $form['mt_filename'] = [
-        '#type' => 'managed_file',
-        '#title' => $this->t('File Upload'),
-        '#description' => $this->t('Upload a file.'),
-        '#upload_location' => 'public://uploads/',
-        '#upload_validators' => [
-          'file_validate_extensions' => ['csv'],
-        ],
-      ];
-    } else {
-      $form['mt_filename'] = [
-        '#type' => 'managed_file',
-        '#title' => $this->t('File Upload'),
-        '#description' => $this->t('Upload a file.'),
-        '#upload_location' => 'public://uploads/',
-        '#upload_validators' => [
-          'file_validate_extensions' => ['xlsx'],
-        ],
-      ];
-    }
+    // if ($this->getElementType() == 'da') {
+    //   $form['mt_filename'] = [
+    //     '#type' => 'managed_file',
+    //     '#title' => $this->t('File Upload'),
+    //     '#description' => $this->t('Upload a file.'),
+    //     //'#upload_location' => 'public://uploads/',
+    //     '#upload_location' => 'private://'..'/',
+    //     '#upload_validators' => [
+    //       'file_validate_extensions' => ['csv'],
+    //     ],
+    //   ];
+    // } else {
+    //   $form['mt_filename'] = [
+    //     '#type' => 'managed_file',
+    //     '#title' => $this->t('File Upload'),
+    //     '#description' => $this->t('Upload a file.'),
+    //     '#upload_location' => 'public://uploads/',
+    //     '#upload_validators' => [
+    //       'file_validate_extensions' => ['xlsx'],
+    //     ],
+    //   ];
+    // }
 
-    if ($this->getElementType() == 'da') {
-      $form['mt_dd'] = [
-        '#type' => 'textfield',
-        '#title' => $this->t('Data Dictionary (DD)'),
-        #'#default_value' => $study,
-        '#autocomplete_route_name' => 'rep.dd_autocomplete',
-      ];
-      $form['mt_sdd'] = [
-        '#type' => 'textfield',
-        '#title' => $this->t('Semantic Data Dictionary (SDD)'),
-        '#autocomplete_route_name' => 'rep.sdd_autocomplete',
-      ];
-    }
+    $form['mt_filename'] = [
+      '#type' => 'managed_file',
+      '#title' => $this->t('File Upload'),
+      '#description' => $this->t('Upload a file.'),
+      '#upload_location' => 'public://uploads/',
+      '#upload_location' => 'private://'.basename($this->getStudy()->uri).'/'.$this->getElementType().'/',
+      '#upload_validators' => [
+        'file_validate_extensions' => ['csv', 'xlsx'],
+      ],
+    ];
+
+    // if ($this->getElementType() == 'da') {
+    //   $form['mt_dd'] = [
+    //     '#type' => 'textfield',
+    //     '#title' => $this->t('Data Dictionary (DD)'),
+    //     #'#default_value' => $study,
+    //     '#autocomplete_route_name' => 'rep.dd_autocomplete',
+    //   ];
+    //   $form['mt_sdd'] = [
+    //     '#type' => 'textfield',
+    //     '#title' => $this->t('Semantic Data Dictionary (SDD)'),
+    //     '#autocomplete_route_name' => 'rep.sdd_autocomplete',
+    //   ];
+    // }
 
     $form['mt_version'] = [
       '#type' => 'textfield',
@@ -335,6 +347,9 @@ class AddMTForm extends FormBase {
         // ADD MT
         $msg2 = $api->parseObjectResponse($api->elementAdd($this->getElementType(),$mtJSON),'elementAdd');
 
+        dpm($datafileJSON);
+        dpm($mtJSON);
+
         if ($msg1 != NULL && $msg2 != NULL) {
           \Drupal::messenger()->addMessage(t($this->getElementName() . " has been added successfully."));
         } else {
@@ -358,7 +373,7 @@ class AddMTForm extends FormBase {
       $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.add_mt');
     else  
       $previousUrl = Utils::trackingGetPreviousUrl($uid, 'std.manage_study_elements');
-    
+
     if ($previousUrl) {
       $response = new RedirectResponse($previousUrl);
       $response->send();
