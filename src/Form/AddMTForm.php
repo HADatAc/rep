@@ -187,16 +187,27 @@ class AddMTForm extends FormBase {
     //   ];
     // }
 
-    $form['mt_filename'] = [
-      '#type' => 'managed_file',
-      '#title' => $this->t('File Upload'),
-      '#description' => $this->t('Upload a file.'),
-      '#upload_location' => 'public://uploads/',
-      '#upload_location' => 'private://'.basename($this->getStudy()->uri).'/'.$this->getElementType().'/',
-      '#upload_validators' => [
-        'file_validate_extensions' => ['csv', 'xlsx'],
-      ],
-    ];
+    if ($this->getElementType() == 'da') {
+      $form['mt_filename'] = [
+        '#type' => 'managed_file',
+        '#title' => $this->t('File Upload'),
+        '#description' => $this->t('Upload a file.'),
+        '#upload_location' => 'private://std/'.basename($this->getStudy()->uri).'/'.$this->getElementType().'/',
+        '#upload_validators' => [
+          'file_validate_extensions' => ['csv'],
+        ],
+      ];
+    } else {
+      $form['mt_filename'] = [
+        '#type' => 'managed_file',
+        '#title' => $this->t('File Upload'),
+        '#description' => $this->t('Upload a file.'),
+        '#upload_location' => 'private://'.$this->getElementType().'/',
+        '#upload_validators' => [
+          'file_validate_extensions' => ['xlsx'],
+        ],
+      ];
+    }
 
     // if ($this->getElementType() == 'da') {
     //   $form['mt_dd'] = [
