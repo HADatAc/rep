@@ -354,8 +354,8 @@ class Utils {
     $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
-    $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
-    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance', 'stream', 'deployment'];
+    $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];
+    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance',  'deployment'];
     $meugrafo = ['kgr','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';

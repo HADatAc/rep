@@ -104,24 +104,27 @@ class AddMTForm extends FormBase {
       return;
     }
 
-    if ($elementtype == 'dsg') {
-      $this->setElementName('DSG');
-      $this->setElementTypeUri(HASCO::DSG);
-    } else if ($elementtype == 'ins') {
-      $this->setElementName('INS');
-      $this->setElementTypeUri(HASCO::INS);
-    } else if ($elementtype == 'da') {
+    if ($elementtype == 'da') {
       $this->setElementName('DA');
       $this->setElementTypeUri(HASCO::DATA_ACQUISITION);
     } else if ($elementtype == 'dd') {
       $this->setElementName('DD');
       $this->setElementTypeUri(HASCO::DD);
-    } else if ($elementtype == 'sdd') {
-      $this->setElementName('SDD');
-      $this->setElementTypeUri(HASCO::SDD);
+    } else if ($elementtype == 'dsg') {
+      $this->setElementName('DSG');
+      $this->setElementTypeUri(HASCO::DSG);
+    } else if ($elementtype == 'ins') {
+      $this->setElementName('INS');
+      $this->setElementTypeUri(HASCO::INS);
     } else if ($elementtype == 'kgr') {
       $this->setElementName('KGR');
       $this->setElementTypeUri(HASCO::KGR);
+    } else if ($elementtype == 'sdd') {
+      $this->setElementName('SDD');
+      $this->setElementTypeUri(HASCO::SDD);
+    } else if ($elementtype == 'str') {
+      $this->setElementName('STR');
+      $this->setElementTypeUri(HASCO::STR);
     } else {
       \Drupal::messenger()->addError(t("<b>".$elementtype . "</b> is not a valid Metadata Template type."));
       self::backUrl();
@@ -307,6 +310,9 @@ class AddMTForm extends FormBase {
           '"hascoTypeUri":"'.$this->getElementTypeUri().'",';
       if ($this->getElementType() == 'da') {
         $mtJSON .= '"isMemberOfUri":"'.$this->getStudy()->uri.'",';
+      }
+      if ($this->getElementType() == 'str') {
+        $mtJSON .= '"studyUri":"'.$this->getStudy()->uri.'",';
       }
       if ($ddUri != NULL) {
         $mtJSON .= '"hasDDUri":"'.$ddUri.'",';
