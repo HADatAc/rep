@@ -364,8 +364,8 @@ class AddMTForm extends FormBase {
         // ADD MT
         $msg2 = $api->parseObjectResponse($api->elementAdd($this->getElementType(),$mtJSON),'elementAdd');
 
-        dpm($datafileJSON);
-        dpm($mtJSON);
+        //dpm($datafileJSON);
+        //dpm($mtJSON);
 
         if ($msg1 != NULL && $msg2 != NULL) {
           \Drupal::messenger()->addMessage(t($this->getElementName() . " has been added successfully."));
