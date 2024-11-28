@@ -36,7 +36,7 @@
                     if ($childrenContainer.children().length === 0) {
                         //console.log(nodeUri);
                         $.ajax({
-                            url: '/rep/getchildren',
+                            url: drupalSettings.path.baseUrl + '/rep/getchildren',
                             type: 'GET',
                             data: { nodeUri: nodeUri },
                             dataType: 'json',

@@ -528,8 +528,10 @@ button.view-button {
 form#edit-mt-form h1,
 form#add-mt-form h1 {margin-top: 1em!important;}
 
-/* DA Table JSON */
-#json-table-pager {
+
+/* STUDYELEMENTS TABLES AND PAGINATION */
+#json-table-pager,
+#publication-table-pager {
   display: flex;
   gap: 10px;
   justify-content: center;
@@ -549,7 +551,8 @@ form#add-mt-form h1 {margin-top: 1em!important;}
   background-color: #f1f1f1;
 }
 
-div#json-table-pager span.current-page {
+div#json-table-pager span.current-page,
+div#publication-table-pager span.current-page {
   padding: 5px 10px !important;
   font-weight: bold !important;
   border: 1px solid #007bff !important;
@@ -559,6 +562,7 @@ div#json-table-pager span.current-page {
   cursor: default !important;
 }
 
+/* DROP AREA */
 .drop-area {
   border: 2px dashed #ccc;
   border-radius: 10px;
@@ -573,6 +577,7 @@ div#json-table-pager span.current-page {
   transform: scale(1.0); /* Leve zoom */
 }
 
+/* MODAL DESCRIPTION*/
 .modal-dialog-centered {
   display: flex;
   align-items: center;
