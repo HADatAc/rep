@@ -477,4 +477,21 @@ class Utils {
     return $result;
   }
 
+  /**
+   * TRIM AUTOCOMPLETE LABELS
+   * LABELS ARE LIMITED TO 128 chars
+   */
+  public static function trimAutoCompleteString($content, $uri)
+  {
+    $maxLength = 127;
+    $uriLength = strlen($uri) + 4; // Inclui os colchetes e o espaço
+    $availableLength = $maxLength - $uriLength;
+    if (strlen($content) > $availableLength) {
+      $value = substr($content, 0, $availableLength - 4) . '... ['. $uri .']'; // Trunca e adiciona "..."
+    } else {
+      $value = $content;
+    }
+
+    return $value;
+  }
 }
