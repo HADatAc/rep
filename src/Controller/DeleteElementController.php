@@ -12,37 +12,93 @@ class DeleteElementController extends ControllerBase {
   /**
    *   Delete Study with given studyurl and redirect to current URL 
    */
-  public function exec($elementtype, $elementuri, $currenturl) {
-    if ($elementuri == NULL || $currenturl == NULL) {
-      $response = new RedirectResponse(Url::fromRoute('rep.home')->toString());
-      $response->send();
-      return;
-    }    
+  // public function exec($elementtype, $elementuri, $currenturl) {
+  //   if ($elementuri == NULL || $currenturl == NULL) {
+  //     $response = new RedirectResponse(Url::fromRoute('rep.home')->toString());
+  //     $response->send();
+  //     return;
+  //   }    
+
+  //   $uri = base64_decode($elementuri);
+  //   $url = base64_decode($currenturl);
+
+  //   $elementname = 'element';
+  //   if ($elementtype == 'da') {
+  //     $elementname = 'DA';
+  //   } elseif ($elementtype == 'study') {
+  //     $elementname = 'study';
+  //   } else {
+  //     \Drupal::messenger()->addMessage('Element ' . $elementtype . ' cannot be deleted via controller.');      
+  //     $response = new RedirectResponse($url);
+  //     $response->send();      
+  //     return; 
+  //   }
+
+  //   // DELETE ELEMENT
+  //   $api = \Drupal::service('rep.api_connector');
+  //   $api->elementDel($elementtype, $uri);
+  //   \Drupal::messenger()->addMessage('Selected ' . $elementname . ' has/have been deleted successfully.');      
+
+  //   // RETURN TO CURRENT URL
+  //   $response = new RedirectResponse($url);
+  //   $response->send();
+  //   return;
+  // }
+
+  public function exec($elementtype, $elementuri, $currenturl)
+{
+    // Validação inicial
+    if ($elementuri === NULL || $currenturl === NULL) {
+        $response = new RedirectResponse(Url::fromRoute('rep.home')->toString());
+        $response->send();
+        return;
+    }
 
     $uri = base64_decode($elementuri);
     $url = base64_decode($currenturl);
 
+    // Identifica o tipo de elemento
     $elementname = 'element';
-    if ($elementtype == 'da') {
-      $elementname = 'DA';
-    } elseif ($elementtype == 'study') {
-      $elementname = 'study';
+    if ($elementtype === 'da') {
+        $elementname = 'DA';
+
+        try {
+            // DELETE ELEMENT para tipo DA
+            $api = \Drupal::service('rep.api_connector');
+            $api->elementDel($elementtype, $uri);
+
+            // Retorna resposta JSON para DA
+            return new \Symfony\Component\HttpFoundation\JsonResponse([
+                'status' => 'success',
+                'messages' => ['Selected ' . $elementname . ' has/have been deleted successfully.'],
+                'errors' => []
+            ]);
+        } catch (\Exception $e) {
+            // Captura erros e retorna JSON para DA
+            return new \Symfony\Component\HttpFoundation\JsonResponse([
+                'status' => 'error',
+                'messages' => [],
+                'errors' => ['An error occurred: ' . $e->getMessage()]
+            ]);
+        }
+    } elseif ($elementtype === 'study') {
+        $elementname = 'study';
     } else {
-      \Drupal::messenger()->addMessage('Element ' . $elementtype . ' cannot be deleted via controller.');      
-      $response = new RedirectResponse($url);
-      $response->send();      
-      return; 
+        \Drupal::messenger()->addMessage('Element ' . $elementtype . ' cannot be deleted via controller.');
+        $response = new RedirectResponse($url);
+        $response->send();
+        return;
     }
 
-    // DELETE ELEMENT
+    // DELETE ELEMENT para outros tipos
     $api = \Drupal::service('rep.api_connector');
     $api->elementDel($elementtype, $uri);
-    \Drupal::messenger()->addMessage('Selected ' . $elementname . ' has/have been deleted successfully.');      
+    \Drupal::messenger()->addMessage('Selected ' . $elementname . ' has/have been deleted successfully.');
 
-    // RETURN TO CURRENT URL
+    // Redireciona para a URL atual
     $response = new RedirectResponse($url);
     $response->send();
     return;
-  }
+}
 
 }

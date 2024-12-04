@@ -111,18 +111,20 @@ class EditMTForm extends FormBase {
     }
     $this->setElementType($elementtype);
 
-    if ($this->getElementType() == 'dsg') {
-      $this->setElementName('DSG');
-    } else if ($this->getElementType() == 'ins') {
-      $this->setElementName('INS');
-    } else if ($this->getElementType() == 'da') {
+    if ($this->getElementType() == 'da') {
       $this->setElementName('DA');
     } else if ($this->getElementType() == 'dd') {
       $this->setElementName('DD');
-    } else if ($this->getElementType() == 'sdd') {
-      $this->setElementName('SDD');
+    } else if ($this->getElementType() == 'dsg') {
+      $this->setElementName('DSG');
+    } else if ($this->getElementType() == 'ins') {
+      $this->setElementName('INS');
     } else if ($this->getElementType() == 'kgr') {
       $this->setElementName('KGR');
+    } else if ($this->getElementType() == 'sdd') {
+      $this->setElementName('SDD');
+    } else if ($this->getElementType() == 'str') {
+      $this->setElementName('STR');
     } else {
       \Drupal::messenger()->addError(t("<b>".$this->getElementType() . "</b> is not a valid Metadata Template type."));
       self::backUrl();
@@ -290,6 +292,9 @@ class EditMTForm extends FormBase {
       '"hascoTypeUri":"'. $this->getMT()->hascoTypeUri .'",';
     if ($this->getElementType() == 'da') {
       $mtJSON .= '"isMemberOfUri":"'.$this->getStudy()->uri.'",';
+    }
+    if ($this->getElementType() == 'str') {
+      $mtJSON .= '"studyUri":"'.$this->getStudy()->uri.'",';
     }
     if ($ddUri != NULL) {
       $mtJSON .= '"hasDDUri":"'.$ddUri.'",';

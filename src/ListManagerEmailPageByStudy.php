@@ -61,6 +61,17 @@ class ListManagerEmailPageByStudy {
     return ''; 
   }
 
+  public static function linkDA($studyuri, $elementtype, $page, $pagesize) {
+    $root_url = \Drupal::request()->getBaseUrl();
+    $module = 'da';
+    return $root_url . '/' . $module . REPGUI::SELECT_PAGE_BYSTUDY . 
+          base64_encode($studyuri) . '/' . 
+          $elementtype . '/' .
+          'table/' .
+          strval($page) . '/' . 
+          strval($pagesize); 
+  }
+
 }
 
 ?>

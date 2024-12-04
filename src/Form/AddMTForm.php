@@ -104,24 +104,27 @@ class AddMTForm extends FormBase {
       return;
     }
 
-    if ($elementtype == 'dsg') {
-      $this->setElementName('DSG');
-      $this->setElementTypeUri(HASCO::DSG);
-    } else if ($elementtype == 'ins') {
-      $this->setElementName('INS');
-      $this->setElementTypeUri(HASCO::INS);
-    } else if ($elementtype == 'da') {
+    if ($elementtype == 'da') {
       $this->setElementName('DA');
       $this->setElementTypeUri(HASCO::DATA_ACQUISITION);
     } else if ($elementtype == 'dd') {
       $this->setElementName('DD');
       $this->setElementTypeUri(HASCO::DD);
-    } else if ($elementtype == 'sdd') {
-      $this->setElementName('SDD');
-      $this->setElementTypeUri(HASCO::SDD);
+    } else if ($elementtype == 'dsg') {
+      $this->setElementName('DSG');
+      $this->setElementTypeUri(HASCO::DSG);
+    } else if ($elementtype == 'ins') {
+      $this->setElementName('INS');
+      $this->setElementTypeUri(HASCO::INS);
     } else if ($elementtype == 'kgr') {
       $this->setElementName('KGR');
       $this->setElementTypeUri(HASCO::KGR);
+    } else if ($elementtype == 'sdd') {
+      $this->setElementName('SDD');
+      $this->setElementTypeUri(HASCO::SDD);
+    } else if ($elementtype == 'str') {
+      $this->setElementName('STR');
+      $this->setElementTypeUri(HASCO::STR);
     } else {
       \Drupal::messenger()->addError(t("<b>".$elementtype . "</b> is not a valid Metadata Template type."));
       self::backUrl();
@@ -129,7 +132,7 @@ class AddMTForm extends FormBase {
 
     $this->setElementType($elementtype);
 
-    //dpm("Element type: " . $this->getElementType());
+    //dpm(basename($this->getStudy()->uri));
 
 
     $study = ' ';
@@ -164,12 +167,35 @@ class AddMTForm extends FormBase {
       '#type' => 'textfield',
       '#title' => $this->t('Name'),
     ];
+    // if ($this->getElementType() == 'da') {
+    //   $form['mt_filename'] = [
+    //     '#type' => 'managed_file',
+    //     '#title' => $this->t('File Upload'),
+    //     '#description' => $this->t('Upload a file.'),
+    //     //'#upload_location' => 'public://uploads/',
+    //     '#upload_location' => 'private://'..'/',
+    //     '#upload_validators' => [
+    //       'file_validate_extensions' => ['csv'],
+    //     ],
+    //   ];
+    // } else {
+    //   $form['mt_filename'] = [
+    //     '#type' => 'managed_file',
+    //     '#title' => $this->t('File Upload'),
+    //     '#description' => $this->t('Upload a file.'),
+    //     '#upload_location' => 'public://uploads/',
+    //     '#upload_validators' => [
+    //       'file_validate_extensions' => ['xlsx'],
+    //     ],
+    //   ];
+    // }
+
     if ($this->getElementType() == 'da') {
       $form['mt_filename'] = [
         '#type' => 'managed_file',
         '#title' => $this->t('File Upload'),
         '#description' => $this->t('Upload a file.'),
-        '#upload_location' => 'public://uploads/',
+        '#upload_location' => 'private://std/'.basename($this->getStudy()->uri).'/'.$this->getElementType().'/',
         '#upload_validators' => [
           'file_validate_extensions' => ['csv'],
         ],
@@ -179,26 +205,26 @@ class AddMTForm extends FormBase {
         '#type' => 'managed_file',
         '#title' => $this->t('File Upload'),
         '#description' => $this->t('Upload a file.'),
-        '#upload_location' => 'public://uploads/',
+        '#upload_location' => 'private://'.$this->getElementType().'/',
         '#upload_validators' => [
           'file_validate_extensions' => ['xlsx'],
         ],
       ];
     }
 
-    if ($this->getElementType() == 'da') {
-      $form['mt_dd'] = [
-        '#type' => 'textfield',
-        '#title' => $this->t('Data Dictionary (DD)'),
-        #'#default_value' => $study,
-        '#autocomplete_route_name' => 'rep.dd_autocomplete',
-      ];
-      $form['mt_sdd'] = [
-        '#type' => 'textfield',
-        '#title' => $this->t('Semantic Data Dictionary (SDD)'),
-        '#autocomplete_route_name' => 'rep.sdd_autocomplete',
-      ];
-    }
+    // if ($this->getElementType() == 'da') {
+    //   $form['mt_dd'] = [
+    //     '#type' => 'textfield',
+    //     '#title' => $this->t('Data Dictionary (DD)'),
+    //     #'#default_value' => $study,
+    //     '#autocomplete_route_name' => 'rep.dd_autocomplete',
+    //   ];
+    //   $form['mt_sdd'] = [
+    //     '#type' => 'textfield',
+    //     '#title' => $this->t('Semantic Data Dictionary (SDD)'),
+    //     '#autocomplete_route_name' => 'rep.sdd_autocomplete',
+    //   ];
+    // }
 
     $form['mt_version'] = [
       '#type' => 'textfield',
@@ -308,6 +334,9 @@ class AddMTForm extends FormBase {
       if ($this->getElementType() == 'da') {
         $mtJSON .= '"isMemberOfUri":"'.$this->getStudy()->uri.'",';
       }
+      if ($this->getElementType() == 'str') {
+        $mtJSON .= '"studyUri":"'.$this->getStudy()->uri.'",';
+      }
       if ($ddUri != NULL) {
         $mtJSON .= '"hasDDUri":"'.$ddUri.'",';
       }
@@ -335,6 +364,9 @@ class AddMTForm extends FormBase {
         // ADD MT
         $msg2 = $api->parseObjectResponse($api->elementAdd($this->getElementType(),$mtJSON),'elementAdd');
 
+        //dpm($datafileJSON);
+        //dpm($mtJSON);
+
         if ($msg1 != NULL && $msg2 != NULL) {
           \Drupal::messenger()->addMessage(t($this->getElementName() . " has been added successfully."));
         } else {
@@ -354,7 +386,11 @@ class AddMTForm extends FormBase {
 
   function backUrl() {
     $uid = \Drupal::currentUser()->id();
-    $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.add_mt');
+    if ($this->elementType != 'da')
+      $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.add_mt');
+    else  
+      $previousUrl = Utils::trackingGetPreviousUrl($uid, 'std.manage_study_elements');
+
     if ($previousUrl) {
       $response = new RedirectResponse($previousUrl);
       $response->send();
