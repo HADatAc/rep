@@ -705,3 +705,9 @@ div.toast {
 #pdf-scroll-container::-webkit-scrollbar {
   display: none; /* Oculta scrollbar no Chrome, Safari e outros baseados em WebKit */
 }
+
+.disabled-link {
+  pointer-events: none;
+  opacity: 0.6;
+  cursor: not-allowed;
+}

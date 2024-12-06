@@ -225,7 +225,7 @@ class MetadataTemplate
         $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<none>');
         $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<none>');
         $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<none>');
-        $download_da = '/download-file/' . base64_encode($element->hasDataFile->filename) . '/' . base64_encode($element->isMemberOf->uri);
+        $download_da = '/download-file/' . base64_encode($element->hasDataFile->filename) . '/' . base64_encode($element->isMemberOf->uri) . '/da';
 
         $view_bto = Link::fromTextAndUrl(
           Markup::create('<i class="fa-solid fa-eye"></i>'),
