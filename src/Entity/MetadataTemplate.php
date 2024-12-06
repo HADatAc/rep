@@ -169,11 +169,12 @@ class MetadataTemplate
         if ($element->hasDataFile->id != NULL && $element->hasDataFile->id != '') {
           $file_entity = \Drupal\file\Entity\File::load($element->hasDataFile->id);
           if ($file_entity != NULL) {
-            $downloadLink = $root_url . REPGUI::DATAFILE_DOWNLOAD . base64_encode($element->hasDataFile->uri);
-            $download = '<a href="' . $downloadLink . '" class="btn btn-primary btn-sm download-button" role="button" disabled>Get It</a>';
+            $downloadLink = base64_encode($element->hasDataFile->uri);
+            $download = '<a href="#" data-view-url="' . $downloadLink . '" class="btn btn-primary btn-sm download-button" role="button" disabled>Get It</a>';
           }
         }
       }
+      
       $encodedUri = rawurlencode(rawurlencode($element->uri));
       if ($mode == 'normal') {
         $output[$element->uri] = [
@@ -215,10 +216,6 @@ class MetadataTemplate
           'currenturl' => $previousUrl,
         ]);
 
-        $download_da = Url::fromRoute('rep.datafile_download', [
-          'datafileuri' => base64_encode($element->hasDataFile->uri),
-        ]);
-
         $ingest_da = '';
         $uningest_da = '';
 
@@ -228,7 +225,7 @@ class MetadataTemplate
         $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<none>');
         $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<none>');
         $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<none>');
-        $download_da = $download_da instanceof Url ? $download_da : Url::fromRoute('<none>');
+        $download_da = '/download-file/' . base64_encode($element->hasDataFile->filename) . '/' . base64_encode($element->isMemberOf->uri) . '/da';
 
         $view_bto = Link::fromTextAndUrl(
           Markup::create('<i class="fa-solid fa-eye"></i>'),
@@ -279,13 +276,14 @@ class MetadataTemplate
         ];
 
 
-        $download_bto = Link::fromTextAndUrl(
-          Markup::create('<i class="fa-solid fa-save"></i>'),
-          $download_da
-        )->toRenderable();
-        $download_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'btn-secondary'],
-          'style' => 'margin-right: 10px;',
+        $download_bto = [
+          '#type' => 'link',
+          '#title' => Markup::create('<i class="fa-solid fa-save"></i>'),
+          '#url' => Url::fromUserInput("#", ['attributes' => ['data-download-url' => $download_da]]),
+          '#attributes' => [
+            'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-url'],
+            'style' => 'margin-right: 10px;',
+          ],
         ];
 
         // Concatenar os links como HTML
