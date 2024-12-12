@@ -1,13 +1,13 @@
 /* Basic styling for the tree */
-ul { 
-    list-style-type: none; 
-    padding-left: 20px; 
+ul {
+    list-style-type: none;
+    padding-left: 20px;
 }
 
-.node { 
-    cursor: pointer; 
+.node {
+    cursor: pointer;
 }
 
-.children { 
-    margin-left: 20px; 
+.children {
+    margin-left: 20px;
 }

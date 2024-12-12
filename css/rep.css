@@ -605,3 +605,87 @@ div.toast {
   width: fit-content!important;
   z-index: 99999;
 }
+
+
+
+/* TREE */
+#block-hasco-barrio-content form.tree-form{
+  padding-left:5px;
+  max-width: 1110px !important; /* Garantir a largura máxima */
+  overflow-x: auto; /* Adicionar barra de rolagem horizontal se necessário */
+  white-space: nowrap; /* Impedir quebra de linha dos itens */
+}
+
+#tree-root {
+  overflow-x: auto; /* Adicionar barra de rolagem horizontal para o jstree */
+  white-space: nowrap; /* Impedir quebra de texto dentro dos nós */
+  max-height: 58vh!important; /* Define a altura máxima como 80% da altura da janela */
+  overflow-y: auto; /* Adiciona scroll vertical */
+}
+
+.jstree-anchor {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: inline-block;
+  max-width: 90%;
+  vertical-align: middle;
+  white-space: normal !important;
+  word-wrap: break-word;
+}
+
+.jstree-anchor[title]:hover:after {
+  content: attr(title);
+  position: absolute;
+  background: #333;
+  color: #fff;
+  padding: 5px;
+  border-radius: 4px;
+  white-space: normal; /* Permite quebra de linha no tooltip */
+  z-index: 1000;
+  top: 110%; /* Ajuste a posição do tooltip */
+  left: 0;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.jstree-container-ul {
+  padding-bottom: 40px!important;
+}
+
+#tree-search {
+  max-width: 350px; /* Limitar a largura do campo de pesquisa */
+  display: inline-block;
+  position: relative;
+  padding-right: 30px; /* Espaço para o botão de limpar */
+}
+
+#tree-search-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+#clear-search {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: #888;
+  cursor: pointer;
+  display: none; /* Ocultar por padrão */
+
+}
+
+#clear-search:hover {
+  color: #000; /* Cor ao passar o mouse */
+}
+
+#tree-root .jstree-anchor {
+  font-size: 14px;
+  color: #333;
+}
+
+#tree-root .jstree-anchor i {
+  margin-right: 5px;
+}

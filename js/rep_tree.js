@@ -1,101 +1,238 @@
+(function ($, Drupal, drupalSettings) {
+  Drupal.behaviors.tree = {
+    attach: function (context, settings) {
+      const $treeRoot = $('#tree-root', context);
+      const $searchInput = $('#tree-search', context);
+      const $clearButton = $('#clear-search', context);
+      const apiEndpoint = drupalSettings.rep_tree.apiEndpoint;
+      const branches = drupalSettings.rep_tree.branches;
 
-(function ($, Drupal) {
-    Drupal.behaviors.tree = {
-        attach: function (context, settings) {
-            const nodeUriMap = new Map();
-            let nodeIdCounter = 0;
-            const expandedNodes = new Set(); // Track expanded nodes
+      let searchTimeout;
 
-            // Event delegation for dynamically loading children
-            $(document).off('click', '.node').on('click', '.node', function (event) {
-                event.stopPropagation();
-
-                const $node = $(this);
-                const nodeUri = $node.data('uri');
-                const nodeId = 'node-' + $node.data('nodeId');
-                //console.log(nodeUri);
-                console.log(nodeId);
-                //let nodeId = $node.data('id');
-                //if (!nodeId) {
-                //    nodeId = `node-${nodeIdCounter++}`;
-                //    $node.data('id', nodeId);
-                //    //$node.css('font-weight', 'bold');
-                //    nodeUriMap.set(nodeId, nodeUri); // Map nodeId to nodeUri
-                //}
-
-                //const $childrenContainer = $(`#tree-container`);
-                const $childrenContainer = $(`#children-${nodeId}`);
-
-                if (expandedNodes.has(nodeId)) {
-                    // Node is already expanded, so collapse it
-                    $childrenContainer.empty(); // Remove children
-                    expandedNodes.delete(nodeId); // Update state
-                    $node.css('font-weight', 'normal'); // Optionally change style
-                } else {
-                    // Load children only if not already loaded
-                    if ($childrenContainer.children().length === 0) {
-                        //console.log(nodeUri);
-                        $.ajax({
-                            url: drupalSettings.path.baseUrl + '/rep/getchildren',
-                            type: 'GET',
-                            data: { nodeUri: nodeUri },
-                            dataType: 'json',
-                            success: function (data) {
-                                //console.log('AJAX Success:', data);
-                                if (Array.isArray(data) && data.length > 0) {
-                                    //console.log(renderTreeNodes(data));
-                                    $childrenContainer.html(renderTreeNodes(data));
-                                    expandedNodes.add(nodeId); // Update state
-                                } else {
-                                    $node.css('text-decoration-line', 'underline');
-                                }
-                            },
-                            error: function (jqXHR, textStatus, errorThrown) {
-                                console.error('Failed to fetch data:', textStatus, errorThrown);
-                            }
-                        });
-                    }
-                }
-            });
-
-            function renderTreeNodes(nodes) {
-                return '<ul>' + nodes.map(renderNode).join('') + '</ul>';
+      if ($treeRoot.length) {
+        const treeInstance = $treeRoot.jstree({
+          core: {
+            data: function (node, cb) {
+              if (node.id === '#') {
+                cb(branches.map(branch => ({
+                  id: branch.id,
+                  text: branch.label,
+                  uri: branch.uri,
+                  icon: 'fas fa-folder',
+                  children: true
+                })));
+              } else {
+                $.ajax({
+                  url: apiEndpoint,
+                  type: 'GET',
+                  data: { nodeUri: node.original.uri },
+                  dataType: 'json',
+                  success: function (data) {
+                    cb(data.map(item => ({
+                      id: item.nodeId,
+                      text: item.label || 'Unnamed Node',
+                      uri: item.uri,
+                      icon: 'fas fa-file-alt',
+                      children: true
+                    })));
+                  },
+                  error: function () {
+                    console.error('Error fetching children for node:', node.original.uri);
+                    cb([]);
+                  }
+                });
+              }
+            },
+            themes: {
+              responsive: true,
+              dots: false,
+              icons: true
             }
+          },
+          plugins: ['search', 'wholerow']
+        });
 
-            function renderNode(node) {
-                //const nodeId = `node-${nodeIdCounter++}`;
-                const nodeId = `node-${node.nodeId}`
-                //nodeUriMap.set(nodeId, node.uri);
-                //const shortHash = hashUriToShortString(node.uri);
-                //console.log(node.uri);
-                //console.log(nodeId);
-                //console.log(shortHash);
+        // Prevenir múltiplos eventos
+        $treeRoot.off('select_node.jstree').on('select_node.jstree', function (e, data) {
+          const node = data.node;
+          const nodeText = truncateText(node.text, 50); // Limitar o texto a 50 caracteres
+          const nodeUri = node.original.uri || 'N/A';
 
-                let nodeHtml = '<li>';
-                nodeHtml += `<span class="node" data-node-id="${node.nodeId}" data-uri="${node.uri}">${node.label || node.name}</span>&nbsp;`;
-                nodeHtml += `<input type="checkbox" class="node-checkbox" data-node-id="${node.nodeId}">`; // Add the checkbox
-                nodeHtml += '<div class="children" id="children-' + nodeId + '">';
-                if (node.children && node.children.length > 0) {
-                    nodeHtml += renderTreeNodes(node.children);
-                }
-                nodeHtml += '</div>';
-                nodeHtml += '</li>';
-                return nodeHtml;
-            }
+          const outputText = `${nodeText} [${nodeUri}]`;
+          if (outputText.length > 125) {
+            console.warn('Output length exceeds 125 characters, truncating...');
+          }
 
-            // Event delegation for select button
-            $(document).on('click', '.select-btn', function (event) {
-                event.preventDefault(); // Prevent default action
+          // Atualizar o campo global
+          updateGlobalField(outputText);
 
-                const $button = $(this);
-                const nodeId = $button.data('id');
-                const $node = $(`[data-id="${nodeId}"]`);
-                const nodeUri = $node.data('uri');
+          // Debug para validação
+          // console.log('Selected node:', {
+          //   text: nodeText,
+          //   uri: nodeUri,
+          //   output: outputText
+          // });
+        });
 
-                console.log(`Node selected: ${nodeUri}`);
-                // Perform the action for selecting the node
-            });
+        $treeRoot.on('hover_node.jstree', function (e, data) {
+          const node = data.node;
+          const $nodeAnchor = $(`#${node.id}_anchor`);
 
+          // Verifica se o tooltip já existe, para evitar duplicações
+          if (!$nodeAnchor.attr('title')) {
+            const fullText = node.text; // Obtém o texto completo do nó
+            $nodeAnchor.attr('title', fullText); // Define o atributo title para exibir o tooltip
+          }
+        });
+
+        // Função para preencher o campo globalmente
+        function updateGlobalField(value) {
+          const outputFieldSelector = '#edit-search-keyword--2';
+          const $outputField = $(outputFieldSelector);
+
+          if ($outputField.length) {
+            $outputField.val(value);
+          } else {
+            console.warn(`Output field (${outputFieldSelector}) not found. Retrying...`);
+            setTimeout(() => updateGlobalField(value), 500);
+          }
         }
-    };
-})(jQuery, Drupal);
+
+        // Função para truncar texto
+        function truncateText(text, maxLength) {
+          if (text.length > maxLength) {
+            return text.slice(0, maxLength - 3) + '...';
+          }
+          return text;
+        }
+
+        // Botões de controle
+        $('#expand-all', context).on('click', function () {
+          $treeRoot.jstree('open_all');
+        });
+
+        $('#collapse-all', context).on('click', function () {
+          $treeRoot.jstree('close_all');
+        });
+
+        $('#select-all', context).on('click', function () {
+          $treeRoot.jstree('check_all');
+        });
+
+        $('#unselect-all', context).on('click', function () {
+          $treeRoot.jstree('uncheck_all');
+        });
+
+        $clearButton.on('click', function () {
+          $searchInput.val('');
+          $clearButton.hide();
+          clearHighlight();
+          updateGlobalField();
+          $treeRoot.jstree('clear_search');
+          $treeRoot.jstree('close_all');
+        });
+
+        $searchInput.on('input', function () {
+          if ($(this).val().length > 0) {
+            $clearButton.show();
+          } else {
+            $clearButton.hide();
+          }
+        });
+
+        $searchInput.attr('autocomplete', 'off');
+        $searchInput.on('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+          }
+        });
+
+        $searchInput.on('keyup', function () {
+          clearTimeout(searchTimeout);
+          const searchTerm = $(this).val().toLowerCase();
+
+          searchTimeout = setTimeout(() => {
+            if (searchTerm.length > 0) {
+              clearHighlight();
+              performSearchAndCollapse(searchTerm);
+            } else {
+              clearHighlight();
+              $treeRoot.jstree('clear_search');
+              $treeRoot.jstree('close_all');
+            }
+          }, 300);
+        });
+
+        function performSearchAndCollapse(searchTerm) {
+          // console.log('Iniciando pesquisa:', searchTerm);
+
+          function searchNodeRecursively(nodeId, cb) {
+            $treeRoot.jstree('open_node', nodeId, function () {
+              const children = $treeRoot.jstree('get_node', nodeId).children;
+              let hasMatchingChild = false;
+
+              if (children && children.length) {
+                let pendingCallbacks = children.length;
+
+                children.forEach(function (childId) {
+                  const text = $treeRoot.jstree('get_text', childId).toLowerCase();
+
+                  searchNodeRecursively(childId, function (childHasMatch) {
+                    if (text.includes(searchTerm) || childHasMatch) {
+                      styleNode(childId);
+                      hasMatchingChild = true;
+                    } else {
+                      $treeRoot.jstree('close_node', childId);
+                    }
+                    pendingCallbacks--;
+                    if (pendingCallbacks === 0) {
+                      cb(hasMatchingChild);
+                    }
+                  });
+                });
+              } else {
+                const text = $treeRoot.jstree('get_text', nodeId).toLowerCase();
+                const isMatch = text.includes(searchTerm);
+                if (isMatch) {
+                  styleNode(nodeId);
+                }
+                cb(isMatch);
+              }
+            });
+          }
+
+          let pendingBranches = branches.length;
+          branches.forEach(branch => {
+            searchNodeRecursively(branch.id, function (hasMatch) {
+              if (!hasMatch) {
+                $treeRoot.jstree('close_node', branch.id);
+              }
+              pendingBranches--;
+              if (pendingBranches === 0) {
+                // console.log('Pesquisa concluída.');
+              }
+            });
+          });
+        }
+
+        function styleNode(nodeId) {
+          const $nodeAnchor = $(`#${nodeId}_anchor`);
+          $nodeAnchor.css({
+            'color': 'blue',
+            'font-style': 'italic',
+            'background-color': 'lightgreen'
+          });
+        }
+
+        function clearHighlight() {
+          // console.log('Limpando realces anteriores.');
+          $treeRoot.find('.jstree-anchor').css({
+            'color': '',
+            'font-style': '',
+            'background-color': ''
+          });
+        }
+      }
+    }
+  };
+})(jQuery, Drupal, drupalSettings);
