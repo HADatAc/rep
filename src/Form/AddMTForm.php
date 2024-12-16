@@ -110,6 +110,9 @@ class AddMTForm extends FormBase {
     } else if ($elementtype == 'dd') {
       $this->setElementName('DD');
       $this->setElementTypeUri(HASCO::DD);
+    } else if ($elementtype == 'dp2') {
+      $this->setElementName('DP2');
+      $this->setElementTypeUri(HASCO::DP2);
     } else if ($elementtype == 'dsg') {
       $this->setElementName('DSG');
       $this->setElementTypeUri(HASCO::DSG);

@@ -74,7 +74,7 @@ class REPSelectMTForm extends FormBase
    */
   public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $mode = NULL, $page=1, $pagesize=9, $studyuri = NULL)
   {
-    // STUDYURI OPCIONAL
+    // STUDYURI OPTIONAL
     if ($studyuri == NULL) {
       $studyuri = "";
     }
