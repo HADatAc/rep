@@ -115,6 +115,8 @@ class EditMTForm extends FormBase {
       $this->setElementName('DA');
     } else if ($this->getElementType() == 'dd') {
       $this->setElementName('DD');
+    } else if ($this->getElementType() == 'dp2') {
+      $this->setElementName('DP2');
     } else if ($this->getElementType() == 'dsg') {
       $this->setElementName('DSG');
     } else if ($this->getElementType() == 'ins') {
