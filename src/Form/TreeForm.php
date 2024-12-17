@@ -10,7 +10,6 @@ use Drupal\rep\Vocabulary\VSTOI;
 class TreeForm extends FormBase {
 
   protected $elementType;
-
   protected $rootNode;
 
   public function getElementType() {
@@ -33,7 +32,17 @@ class TreeForm extends FormBase {
     return 'tree_form';
   }
 
-  public function buildForm(array $form, FormStateInterface $form_state, $mode=NULL, $elementtype=NULL) {
+  /**
+   * @param array $form
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   * @param null|string $mode Ex: 'browse' ou 'select'
+   * @param null|string $elementtype Ex: 'unit', 'attribute', etc.
+   * @param array|null $branches_param Ex: [
+   *    ['id' => 'unit', 'uri' => SIO::UNIT, 'label' => 'Units']
+   * ]
+   * @param string|null $output_field_selector Ex: '#my-custom-field'
+   */
+  public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL) {
 
     $api = \Drupal::service('rep.api_connector');
 
@@ -52,6 +61,7 @@ class TreeForm extends FormBase {
     }
     $this->setElementType($elementtype);
 
+    // Tipos válidos padrão
     $validTypes = [
       'attribute' => ["Attribute", SIO::ATTRIBUTE],
       'entity' => ["Entity", SIO::ENTITY],
@@ -62,24 +72,10 @@ class TreeForm extends FormBase {
       'detectorstem' => ["Detector Stem", VSTOI::DETECTOR_STEM]
     ];
 
-    if (array_key_exists($this->getElementType(), $validTypes)) {
-      [$elementName, $nodeUri] = $validTypes[$this->getElementType()];
-    } else {
-      \Drupal::messenger()->addError(t("No valid element type has been provided."));
-      return [];
-    }
-
-    $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
-    if ($this->getRootNode() == NULL) {
-        \Drupal::messenger()->addError(t("Failed to retrieve root node " . $nodeUri . "."));
-        return [];
-    }
-
-    $form['#attached']['library'][] = 'rep/rep_tree';
-
-    $form['#attached']['drupalSettings']['rep_tree'] = [
-      'apiEndpoint' => '/drupal/web/rep/getchildren', // Endpoint da API para carregamento dinâmico
-      'branches' => [
+    // Caso o $branches_param não seja fornecido, usamos um padrão
+    if ($branches_param === NULL) {
+      // Se não tiver sido passado, geramos um array default
+      $branches_param = [
         [
           'id' => 'attribute',
           'uri' => SIO::ATTRIBUTE,
@@ -135,12 +131,39 @@ class TreeForm extends FormBase {
           'uri' => VSTOI::ANNOTATION,
           'label' => 'Annotations'
         ],
-      ]
+      ];
+    }
+
+    // Se o tipo for um dos válidos, busca o nome e a URI raiz
+    if (array_key_exists($this->getElementType(), $validTypes)) {
+      [$elementName, $nodeUri] = $validTypes[$this->getElementType()];
+    } else {
+      \Drupal::messenger()->addError(t("No valid element type has been provided."));
+      return [];
+    }
+
+    // Recupera nó raiz
+    $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
+    if ($this->getRootNode() == NULL) {
+      \Drupal::messenger()->addError(t("Failed to retrieve root node " . $nodeUri . "."));
+      return [];
+    }
+
+    // Caso não seja fornecido o output_field_selector, usa o padrão
+    if ($output_field_selector === NULL) {
+      $output_field_selector = '#edit-search-keyword--2';
+    }
+
+    $form['#attached']['library'][] = 'rep/rep_tree';
+
+    $form['#attached']['drupalSettings']['rep_tree'] = [
+      'apiEndpoint' => '/drupal/web/rep/getchildren', // Endpoint da API para carregamento dinâmico
+      'branches' => $branches_param,
+      'outputField' => $output_field_selector,
     ];
 
     $form['title'] = [
         '#type' => 'markup',
-        //'#markup' => '<h3>' . $elementName . ' Hierarchy</h3>',
         '#markup' => '<h3 class="mt-4 mb-4">Knowledge Graph Hierarchy</h3>',
     ];
 
@@ -176,6 +199,6 @@ class TreeForm extends FormBase {
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // No submission logic for this example
+    // Sem lógica de submissão
   }
 }

@@ -4,8 +4,10 @@
       const $treeRoot = $('#tree-root', context);
       const $searchInput = $('#tree-search', context);
       const $clearButton = $('#clear-search', context);
+
       const apiEndpoint = drupalSettings.rep_tree.apiEndpoint;
-      const branches = drupalSettings.rep_tree.branches;
+      const branches = drupalSettings.rep_tree.branches || [];
+      const outputFieldSelector = drupalSettings.rep_tree.outputField || '#edit-search-keyword--2';
 
       let searchTimeout;
 
@@ -63,15 +65,8 @@
             console.warn('Output length exceeds 125 characters, truncating...');
           }
 
-          // Atualizar o campo global
+          // Atualizar o campo global (dinâmico)
           updateGlobalField(outputText);
-
-          // Debug para validação
-          // console.log('Selected node:', {
-          //   text: nodeText,
-          //   uri: nodeUri,
-          //   output: outputText
-          // });
         });
 
         $treeRoot.on('hover_node.jstree', function (e, data) {
@@ -87,7 +82,6 @@
 
         // Função para preencher o campo globalmente
         function updateGlobalField(value) {
-          const outputFieldSelector = '#edit-search-keyword--2';
           const $outputField = $(outputFieldSelector);
 
           if ($outputField.length) {
@@ -127,7 +121,7 @@
           $searchInput.val('');
           $clearButton.hide();
           clearHighlight();
-          updateGlobalField();
+          updateGlobalField('');
           $treeRoot.jstree('clear_search');
           $treeRoot.jstree('close_all');
         });
@@ -164,8 +158,6 @@
         });
 
         function performSearchAndCollapse(searchTerm) {
-          // console.log('Iniciando pesquisa:', searchTerm);
-
           function searchNodeRecursively(nodeId, cb) {
             $treeRoot.jstree('open_node', nodeId, function () {
               const children = $treeRoot.jstree('get_node', nodeId).children;
@@ -208,9 +200,6 @@
                 $treeRoot.jstree('close_node', branch.id);
               }
               pendingBranches--;
-              if (pendingBranches === 0) {
-                // console.log('Pesquisa concluída.');
-              }
             });
           });
         }
@@ -225,7 +214,6 @@
         }
 
         function clearHighlight() {
-          // console.log('Limpando realces anteriores.');
           $treeRoot.find('.jstree-anchor').css({
             'color': '',
             'font-style': '',

@@ -98,6 +98,9 @@ class Utils {
       case "detectorstem":
         $short = Constant::PREFIX_DETECTOR_STEM;
         break;
+      case "dp2":
+        $short = Constant::PREFIX_DP2;
+        break;
       case "dsg":
         $short = Constant::PREFIX_DSG;
         break;

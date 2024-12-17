@@ -11,6 +11,7 @@ class VSTOIInstance {
 
     return $header = [
       'element_uri' => t('URI'),
+      'element_label' => t('Label'),
       'element_type' => t('Type'),
       'element_serial' => t('Serial Number'),
     ];
@@ -35,11 +36,17 @@ class VSTOIInstance {
           $uri = $element->uri;
         }
         $uri = Utils::namespaceUri($uri);
+        $label = ' ';
+        if (isset($element->label) &&
+            $element->label != NULL) {
+          $label = $element->label;
+        }
         $typeLabel = ' ';
         if (isset($element->type) &&
             $element->type != NULL &&
+            $element->type->uri != NULL &&
             $element->type->label != NULL) {
-          $typeLabel = $element->type->label;
+          $typeLabel = $element->type->label . ' (' . $element->type->uri . ')';
         }
         $serial = ' ';
         if (isset($element->hasSerialNumber) &&
@@ -48,6 +55,7 @@ class VSTOIInstance {
         }
         $output[$element->uri] = [
           'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),     
+          'element_label' => $label,
           'element_type' => $typeLabel,
           'element_serial' => $serial,
         ];
