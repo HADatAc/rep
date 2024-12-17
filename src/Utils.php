@@ -12,37 +12,46 @@ use Drupal\rep\Vocabulary\HASCO;
 use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Constant;
-  
+
 class Utils {
-  
+
   /**
    * Settings Variable.
    */
   Const CONFIGNAME = "rep.settings";
 
   /**
-   * 
+   *
    *  Returns the value of configuration parameter api_ulr
-   * 
+   *
    *  @var string
    */
-  public static function configApiUrl() {   
-    $config = \Drupal::config(Utils::CONFIGNAME);           
+  public static function configApiUrl() {
+    $config = \Drupal::config(Utils::CONFIGNAME);
     return $config->get("api_url");
   }
 
-  public static function baseUrl() {   
+  public static function baseUrl() {
     $request = \Drupal::request();
-    return $request->getScheme() . '://' . $request->getHost();
+    $scheme = $request->getScheme();
+    $host = $request->getHost();
+    $port = $request->getPort();
+
+    // Verifica se a porta deve ser incluída no URL
+    if (($scheme === 'http' && $port !== 80) || ($scheme === 'https' && $port !== 443)) {
+      return $scheme . '://' . $host . ':' . $port;
+    }
+
+    return $scheme . '://' . $host;
   }
 
   /**
-   * 
+   *
    *  Returns the value of configuration parameter repository_iri
-   * 
+   *
    *  @var string
    */
-  public static function configRepositoryURI() {   
+  public static function configRepositoryURI() {
     // RETRIEVE CONFIGURATION FROM CURRENT IP
     $api = \Drupal::service('rep.api_connector');
     $repo = $api->repoInfo();
@@ -88,6 +97,9 @@ class Utils {
         break;
       case "detectorstem":
         $short = Constant::PREFIX_DETECTOR_STEM;
+        break;
+      case "dp2":
+        $short = Constant::PREFIX_DP2;
         break;
       case "dsg":
         $short = Constant::PREFIX_DSG;
@@ -165,11 +177,11 @@ class Utils {
   }
 
   /**
-   * 
+   *
    *  Generates a new URI for a given $elementType
-   * 
+   *
    * @var string
-   * 
+   *
    */
   public static function uriGen($elementType) {
     if ($elementType == NULL) {
@@ -188,11 +200,11 @@ class Utils {
     return $repoUri . $short . $iid;
   }
 
-  /** 
-   *  During autocomplete, extracts the URI from the generated field shown in the form 
+  /**
+   *  During autocomplete, extracts the URI from the generated field shown in the form
    */
 
-  public static function uriFromAutocomplete($field) {   
+  public static function uriFromAutocomplete($field) {
     $uri = '';
     if ($field === NULL || $field === '') {
       return $uri;
@@ -210,7 +222,7 @@ class Utils {
     return substr($field, 0, $index);
   }
 
-  /** 
+  /**
    *  During autocomplete, from the URI and label of a property, generates the field to be show in the form.
    *  The function will return an empty string if the uri is NULL. It will generate a field with no label is
    *  just the label is NULL.
@@ -227,16 +239,16 @@ class Utils {
   }
 
   /**
-   * 
-   *  To be used inside of Add*Form and Edit*Form documents. The function return the URL 
+   *
+   *  To be used inside of Add*Form and Edit*Form documents. The function return the URL
    *  to the SelectForm Form with the corresponding concept.
-   * 
-   *  @var \Drupal\Core\Url  
-   * 
+   *
+   *  @var \Drupal\Core\Url
+   *
    */
-  public static function selectBackUrl($element_type) {  
+  public static function selectBackUrl($element_type) {
     $rt = NULL;
-    $module = Utils::elementTypeModule($element_type); 
+    $module = Utils::elementTypeModule($element_type);
     if ($module == 'sem') {
       if (\Drupal::moduleHandler()->moduleExists('sem')) {
         $rt = 'sem.search';
@@ -272,7 +284,7 @@ class Utils {
     $url->setRouteParameter('page', '1');
     $url->setRouteParameter('pagesize', '12');
     return $url;
-  
+
   }
 
   public static function namespaceUri($uri) {
@@ -333,8 +345,8 @@ class Utils {
     $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
-    $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
-    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance', 'stream', 'deployment'];
+    $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];
+    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance',  'deployment'];
     $meugrafo = ['kgr','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
@@ -348,7 +360,7 @@ class Utils {
       return 'dpl';
     } else if (in_array($elementtype,$meugrafo)) {
       return 'meugrafo';
-    } 
+    }
     return NULL;
   }
 
@@ -360,7 +372,7 @@ class Utils {
       return 'std';
     } else if (in_array($element->hascoTypeUri,$meugrafo)) {
       return 'meugrafo';
-    } 
+    }
     return NULL;
   }
 
@@ -374,7 +386,7 @@ class Utils {
       },
       array_keys($array),
       $array
-    ));    
+    ));
     return $str;
   }
 
@@ -444,7 +456,7 @@ class Utils {
 
     $result = $query->execute()->fetchField();
     //dpm("Tracking Previuous URLs: previousUrl=[" . $result . "]");
-    
+
     // Remove the current_url entry
     if ($result) {
       $connection->delete('user_tracking')
@@ -456,4 +468,21 @@ class Utils {
     return $result;
   }
 
+  /**
+   * TRIM AUTOCOMPLETE LABELS
+   * LABELS ARE LIMITED TO 128 chars
+   */
+  public static function trimAutoCompleteString($content, $uri)
+  {
+    $maxLength = 127;
+    $uriLength = strlen($uri) + 4; // Inclui os colchetes e o espaço
+    $availableLength = $maxLength - $uriLength;
+    if (strlen($content) > $availableLength) {
+      $value = substr($content, 0, $availableLength - 4) . '... ['. $uri .']'; // Trunca e adiciona "..."
+    } else {
+      $value = $content;
+    }
+
+    return $value;
+  }
 }

@@ -5,19 +5,19 @@ namespace Drupal\rep\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
-use Drupal\Component\Serialization\Json;
 use Drupal\file\Entity\File;
 use Drupal\rep\ListManagerEmailPage;
 use Drupal\rep\Utils;
 use Drupal\rep\Entity\MetadataTemplate;
-use Drupal\Core\Render\Markup;
 
-class REPSelectMTForm extends FormBase {
+class REPSelectMTForm extends FormBase
+{
 
   /**
    * {@inheritdoc}
    */
-  public function getFormId() {
+  public function getFormId()
+  {
     return 'rep_select_mt_form';
   }
 
@@ -39,81 +39,110 @@ class REPSelectMTForm extends FormBase {
 
   protected $studyuri;
 
-  public function getMode() {
+  public function getMode()
+  {
     return $this->mode;
   }
 
-  public function setMode($mode) {
+  public function setMode($mode)
+  {
     return $this->mode = $mode;
   }
 
-  public function getList() {
+  public function getList()
+  {
     return $this->list;
   }
 
-  public function setList($list) {
+  public function setList($list)
+  {
     return $this->list = $list;
   }
 
-  public function getListSize() {
+  public function getListSize()
+  {
     return $this->list_size;
   }
 
-  public function setListSize($list_size) {
+  public function setListSize($list_size)
+  {
     return $this->list_size = $list_size;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $mode = NULL, $page = NULL, $pagesize = NULL, $studyuri = NULL) {
-
-    // STUDYURI OPCIONAL
+  public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $mode = NULL, $page=1, $pagesize=9, $studyuri = NULL)
+  {
+    // STUDYURI OPTIONAL
     if ($studyuri == NULL) {
       $studyuri = "";
     }
     $this->studyuri = $studyuri;
 
-    // OBTÉM O MODO
+    // GET MODE
     if ($mode != NULL) {
       $this->setMode($mode);
     }
 
-    // OBTÉM O EMAIL DO GERENTE
+    // GET MANAGER EMAIL
     $this->manager_email = \Drupal::currentUser()->getEmail();
     $uid = \Drupal::currentUser()->id();
     $user = \Drupal\user\Entity\User::load($uid);
     $this->manager_name = $user->name->value;
 
-    // OBTÉM O NÚMERO TOTAL DE ELEMENTOS E TOTAL DE PÁGINAS
+    // GET ELEMENT TYPE
     $this->element_type = $elementtype;
-
-    // Tamanho da página padrão se não fornecido
-    if ($pagesize === NULL) {
-      $pagesize = 9; // Ajustado para 9 conforme solicitado
-    }
-
-    // Página atual inicializada se não fornecida
-    if ($page === NULL) {
-      $page = 1;
-    }
-
-    $this->setListSize(-1);
     if ($this->element_type != NULL) {
       $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
     }
-    if (gettype($this->list_size) == 'string') {
-      $total_pages = "0";
-    } else {
-      if ($this->list_size % $pagesize == 0) {
-        $total_pages = $this->list_size / $pagesize;
-      } else {
-        $total_pages = floor($this->list_size / $pagesize) + 1;
-      }
-    }
 
-    // RETRIEVE ELEMENTS
-    $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
+    /// GET VIEW MODE
+    $session = \Drupal::request()->getSession();
+    $view_type = $form_state->get('view_type') ?? $session->get('rep_select_mt_view_type') ?? 'table';
+    $form_state->set('view_type', $view_type);
+
+    if ($view_type == 'table') {
+
+      $this->setListSize(-1);
+      if ($this->element_type != NULL) {
+          $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
+      }
+      if (gettype($this->list_size) == 'string') {
+        $total_pages = "0";
+      } else {
+        if ($this->list_size % $pagesize == 0) {
+            $total_pages = $this->list_size / $pagesize;
+        } else {
+            $total_pages = (int) floor($this->list_size / $pagesize) + 1;
+        }
+      }
+
+      // CREATE LINK FOR NEXT PAGE AND PREVIOUS PAGE
+      if ($page < $total_pages) {
+          $next_page = $page + 1;
+          $next_page_link = ListManagerEmailPage::linkdpl($this->element_type, $next_page, $pagesize, 'rep');
+      } else {
+          $next_page_link = '';
+      }
+      if ($page > 1) {
+          $previous_page = $page - 1;
+          $previous_page_link = ListManagerEmailPage::linkdpl($this->element_type, $previous_page, $pagesize, 'rep');
+      } else {
+          $previous_page_link = '';
+      }
+
+      $form_state->set('current_page', $page);
+      $form_state->set('page_size', $pagesize);
+
+      $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
+
+    } else {
+      // SET PAGE_SIZE
+      $pagesize = $form_state->get('page_size') ?? $pagesize ?? 9;
+      $form_state->set('page_size', $pagesize);
+      $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, 1, $pagesize));
+    }
 
     $this->single_class_name = "";
     $this->plural_class_name = "";
@@ -166,16 +195,7 @@ class REPSelectMTForm extends FormBase {
         return;
     }
 
-    // Recuperar ou definir o tipo de visualização padrão
-    $session = \Drupal::request()->getSession();
-    $view_type = $session->get('rep_select_mt_view_type', 'table');
-    $form_state->set('view_type', $view_type);
-
-    // Armazenar página atual e tamanho da página no estado do formulário para uso nos callbacks AJAX
-    $form_state->set('current_page', $page);
-    $form_state->set('page_size', $pagesize);
-
-    // COLOCAR O FORMULÁRIO JUNTO
+    // START FORM
     $form['page_title'] = [
       '#type' => 'item',
       '#markup' => '<h3 class="mt-5">Manage ' . $this->plural_class_name . '</h3>',
@@ -189,7 +209,7 @@ class REPSelectMTForm extends FormBase {
       ]),
     ];
 
-    // Adicionar botões de alternância de visualização
+    // ADD BUTTONS FOR VIEW MODE
     $form['view_toggle'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['view-toggle', 'd-flex', 'justify-content-end']],
@@ -202,7 +222,7 @@ class REPSelectMTForm extends FormBase {
       '#attributes' => [
         'style' => 'padding: 20px;',
         'class' => ['table-view-button', 'fa-xl', 'mx-1'],
-        'title' => $this->t('Tabel View'),
+        'title' => $this->t('Table View'),
       ],
       '#submit' => ['::viewTableSubmit'],
       '#limit_validation_errors' => [],
@@ -230,32 +250,62 @@ class REPSelectMTForm extends FormBase {
       ],
     ];
 
-    // Renderizar saída com base no tipo de visualização
+    // RENDER BASED ON VIEW TYPE
     if ($view_type == 'table') {
+
       $this->buildTableView($form, $form_state, $header, $output);
 
-      // Adicionar paginação para visualização em tabela
       $form['pager'] = [
-        '#type' => 'pager',
+        '#theme' => 'list-page',
+        '#items' => [
+            'page' => strval($page),
+            'first' => ListManagerEmailPage::linkdpl($this->element_type, 1, $pagesize, 'rep'),
+            'last' => ListManagerEmailPage::linkdpl($this->element_type, $total_pages, $pagesize, 'rep'),
+            'previous' => $previous_page_link,
+            'next' => $next_page_link,
+            'last_page' => strval($total_pages),
+            'links' => null,
+            'title' => ' ',
+        ],
       ];
+
     } elseif ($view_type == 'card') {
       $this->buildCardView($form, $form_state, $header, $output);
 
-      // Lógica para determinar se o botão "Load More" deve ser exibido
-      $total_items_loaded = count($form_state->get('cards_output', []));
-      $remaining_items = $this->list_size - $total_items_loaded;
+      $total_items = $this->getListSize();
+      $current_page_size = $form_state->get('page_size') ?? 9;
 
-      // Exibir o botão "Load More" apenas se houver múltiplos de 9 cards apresentados e houver mais itens a carregar
-      if ($remaining_items > 0 && $total_items_loaded % 9 == 0) {
+      if ($total_items > $current_page_size) {
         $form['load_more'] = [
           '#type' => 'submit',
-          '#value' => $this->t('Carregar Mais'),
+          '#value' => $this->t('Load More'),
           '#name' => 'load_more',
-          '#ajax' => [
-            'callback' => '::ajaxLoadMore',
-            'wrapper' => 'element-cards-wrapper',
+          '#attributes' => [
+            'class' => ['btn', 'btn-primary', 'load-more-button'],
+            'id' => 'load-more-button',
+            'style' => 'display: none;',
           ],
+          '#submit' => ['::loadMoreSubmit'],
           '#limit_validation_errors' => [],
+        ];
+
+        // ADD LOADING OVERLAY
+        $form['loading_overlay'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'id' => 'loading-overlay',
+            'class' => ['loading-overlay'],
+            'style' => 'display: none;',
+          ],
+          '#markup' => '<div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>',
+        ];
+
+        $form['list_state'] = [
+          '#type' => 'hidden',
+          '#value' => ($this->getListSize() > $form_state->get('page_size')) ? 1 : 0,
+          '#attributes' => [
+            'id' => 'list_state',
+          ],
         ];
       }
     }
@@ -277,10 +327,92 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Construir a visualização em tabela.
+   * HANDLER FOR LOAD MORE BUTTON
    */
-  protected function buildTableView(array &$form, FormStateInterface $form_state, $header, $output) {
-    // Adicionar botões de ação para visualização em tabela
+  public function loadMoreSubmit(array &$form, FormStateInterface $form_state)
+  {
+    // Atualiza o tamanho da página para carregar mais itens
+    $current_page_size = $form_state->get('page_size') ?? 9;
+    $pagesize = $current_page_size + 9; // Soma mais 9 ao tamanho atual
+    $form_state->set('page_size', $pagesize);
+
+    // \Drupal::logger('rep_select_mt_form')->notice('Load More Triggered: new page_size @page_size', [
+    //     '@page_size' => $pagesize,
+    // ]);
+
+    // FORCE REBUILD
+    $form_state->setRebuild();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state)
+  {
+    // RETRIEVE TRIGGERING BUTTON
+    $triggering_element = $form_state->getTriggeringElement();
+    $button_name = $triggering_element['#name'];
+
+    if (isset($triggering_element['#submit']) && !empty($triggering_element['#submit'])) {
+      return;
+    }
+
+    // RETRIEVE SELECTED ROWS, IF ANY
+    $selected_rows = $form_state->getValue('element_table');
+    $rows = [];
+    if ($selected_rows) {
+      foreach ($selected_rows as $index => $selected) {
+        if ($selected) {
+          $rows[$index] = $index;
+        }
+      }
+    }
+
+    // Handle actions based on button name
+    if ($button_name === 'add_element') {
+      $this->performAdd($form_state);
+    } elseif ($button_name === 'edit_element') {
+      if (sizeof($rows) < 1) {
+        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be edited."));
+      } else if ((sizeof($rows) > 1)) {
+        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be edited simultaneously."));
+      } else {
+        $first = array_shift($rows);
+        $this->performEdit($first, $form_state);
+      }
+    } elseif ($button_name === 'delete_element') {
+      if (sizeof($rows) <= 0) {
+        \Drupal::messenger()->addWarning(t("At least one " . $this->single_class_name . " must be selected to delete."));
+      } else {
+        $this->performDelete($rows, $form_state);
+      }
+    } elseif ($button_name === 'ingest_mt') {
+      if (sizeof($rows) < 1) {
+        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be ingested."));
+      } else if ((sizeof($rows) > 1)) {
+        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be ingested simultaneously."));
+      } else {
+        $this->performIngest($rows, $form_state);
+      }
+    } elseif ($button_name === 'uningest_mt') {
+      if (sizeof($rows) < 1) {
+        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be uningested."));
+      } else if ((sizeof($rows) > 1)) {
+        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be uningested simultaneously."));
+      } else {
+        $this->performUningest($rows, $form_state);
+      }
+    } elseif ($button_name === 'back') {
+      $url = Url::fromRoute('std.search');
+      $form_state->setRedirectUrl($url);
+    }
+  }
+
+  /**
+   * BUILD TABLE VIEW
+   */
+  protected function buildTableView(array &$form, FormStateInterface $form_state, $header, $output)
+  {
     $form['edit_selected_element'] = [
       '#type' => 'submit',
       '#value' => $this->t('Edit ' . $this->single_class_name . ' Selected'),
@@ -324,48 +456,34 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Construir a visualização em cards com funcionalidade de "Load More".
+   * BUILD CARD VIEW
    */
-  protected function buildCardView(array &$form, FormStateInterface $form_state, $header, $output) {
-    // Wrapper para AJAX
+  protected function buildCardView(array &$form, FormStateInterface $form_state, $header, $output)
+  {
+
+    // IMAGE PLACEHOLDER
+    $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/semVar_placeholder.png';
+
     $form['element_cards_wrapper'] = [
       '#type' => 'container',
-      '#attributes' => ['id' => 'element-cards-wrapper'],
+      '#attributes' => ['id' => 'element-cards-wrapper', 'class' => ['row', 'mt-3']],
     ];
 
-    $cards_output = $form_state->get('cards_output');
-    if ($cards_output === NULL) {
-        $cards_output = [];
-        $form_state->set('cards_output', $cards_output);
-    }
-
-    $cards_output = $form_state->get('cards_output');
-    $cards_output = array_merge($cards_output, $output);
-    $form_state->set('cards_output', $cards_output);
-
-    $form['element_cards_wrapper']['element_cards'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['row', 'mt-3']],
-    ];
-
-    foreach ($cards_output as $key => $item) {
-      // Gerar uma chave sanitizada para os nomes dos elementos
+    foreach ($output as $key => $item) {
       $sanitized_key = md5($key);
 
-      $form['element_cards_wrapper']['element_cards'][$sanitized_key] = [
+      $form['element_cards_wrapper'][$sanitized_key] = [
         '#type' => 'container',
         '#attributes' => ['class' => ['col-md-4']],
       ];
 
-      $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card'] = [
+      $form['element_cards_wrapper'][$sanitized_key]['card'] = [
         '#type' => 'container',
         '#attributes' => ['class' => ['card', 'mb-4']],
       ];
 
-      // Inicializar o texto do cabeçalho
       $header_text = '';
 
-      // Primeiro, extrair o texto do cabeçalho (campo 'Name')
       foreach ($header as $column_key => $column_label) {
         if ($column_label == 'Name') {
           $value = isset($item[$column_key]) ? $item[$column_key] : '';
@@ -374,9 +492,11 @@ class REPSelectMTForm extends FormBase {
         }
       }
 
-      // Adicionar o cabeçalho ao card antes do conteúdo
+      // Definir a URL da imagem, usar placeholder se não houver imagem no item
+      $image_uri = !empty($item['image']) ? $item['image'] : $placeholder_image;
+
       if (strlen($header_text) > 0) {
-        $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card']['header'] = [
+        $form['element_cards_wrapper'][$sanitized_key]['card']['header'] = [
           '#type' => 'container',
           '#attributes' => [
             'style' => 'margin-bottom:0!important;',
@@ -386,25 +506,48 @@ class REPSelectMTForm extends FormBase {
         ];
       }
 
-      // Agora, adicionar o conteúdo do card
-      $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card']['content'] = [
+      $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper'] = [
         '#type' => 'container',
         '#attributes' => [
-          'style' => 'margin-bottom:0!important;',
-          'class' => ['card-body'],
+          'class' => ['row'],
         ],
       ];
 
-      // Adicionar campos ao conteúdo do card
+      // Column for the image
+      $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['image'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['col-md-5', 'texta-align-center'],
+          'style' => 'margin-bottom:0!important;text-align:center!important;',
+        ],
+        'image' => [
+          '#type' => 'html_tag',
+          '#tag' => 'img',
+          '#attributes' => [
+              'src' => $image_uri,
+              'alt' => $header_text,
+              'style' => 'max-width: 70%; height: auto;',
+          ]
+        ],
+      ];
+
+      // Column for main content and footer
+      $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['col-md-7', 'card-body'],
+          'style' => 'margin-bottom:0!important;',
+        ],
+      ];
+
+      // Iterando sobre o conteúdo existente e adicionando-o à coluna de conteúdo
       foreach ($header as $column_key => $column_label) {
         $value = isset($item[$column_key]) ? $item[$column_key] : '';
         if ($column_label == 'Name') {
-          // Já foi tratado no cabeçalho
           continue;
         }
 
         if ($column_label == 'Status') {
-          // Renderizar o valor do Status com HTML permitido
           $value_rendered = [
             '#markup' => $value,
             '#allowed_tags' => ['b', 'font', 'span', 'div', 'strong', 'em'],
@@ -415,7 +558,7 @@ class REPSelectMTForm extends FormBase {
           ];
         }
 
-        $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card']['content'][$column_key] = [
+        $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'][$column_key] = [
           '#type' => 'container',
           '#attributes' => [
             'class' => ['field-container'],
@@ -429,8 +572,8 @@ class REPSelectMTForm extends FormBase {
         ];
       }
 
-      // Finalmente, adicionar o rodapé do card (botões de ação)
-      $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card']['footer'] = [
+      // Adicionando o rodapé na mesma coluna de conteúdo
+      $form['element_cards_wrapper'][$sanitized_key]['card']['footer'] = [
         '#type' => 'container',
         '#attributes' => [
           'style' => 'margin-bottom:0!important;',
@@ -438,7 +581,8 @@ class REPSelectMTForm extends FormBase {
         ],
       ];
 
-      $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card']['footer']['actions'] = [
+      // Adicionando os botões ao rodapé
+      $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions'] = [
         '#type' => 'actions',
         '#attributes' => [
           'style' => 'margin-bottom:0!important;',
@@ -447,7 +591,7 @@ class REPSelectMTForm extends FormBase {
       ];
 
       // Botão Editar
-      $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card']['footer']['actions']['edit'] = [
+      $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['edit'] = [
         '#type' => 'submit',
         '#value' => $this->t('Edit'),
         '#name' => 'edit_element_' . $sanitized_key,
@@ -457,14 +601,10 @@ class REPSelectMTForm extends FormBase {
         '#submit' => ['::editElementSubmit'],
         '#limit_validation_errors' => [],
         '#element_uri' => $key,
-        '#ajax' => [
-          'callback' => '::ajaxRefresh',
-          'wrapper' => 'element-cards-wrapper',
-        ],
       ];
 
       // Botão Excluir
-      $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card']['footer']['actions']['delete'] = [
+      $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['delete'] = [
         '#type' => 'submit',
         '#value' => $this->t('Delete'),
         '#name' => 'delete_element_' . $sanitized_key,
@@ -475,14 +615,10 @@ class REPSelectMTForm extends FormBase {
         '#submit' => ['::deleteElementSubmit'],
         '#limit_validation_errors' => [],
         '#element_uri' => $key,
-        '#ajax' => [
-          'callback' => '::ajaxRefresh',
-          'wrapper' => 'element-cards-wrapper',
-        ],
       ];
 
       // Botão Ingest
-      $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card']['footer']['actions']['ingest'] = [
+      $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['ingest'] = [
         '#type' => 'submit',
         '#value' => $this->t('Ingest'),
         '#name' => 'ingest_mt_' . $sanitized_key,
@@ -492,14 +628,10 @@ class REPSelectMTForm extends FormBase {
         '#submit' => ['::ingestElementSubmit'],
         '#limit_validation_errors' => [],
         '#element_uri' => $key,
-        '#ajax' => [
-          'callback' => '::ajaxRefresh',
-          'wrapper' => 'element-cards-wrapper',
-        ],
       ];
 
       // Botão Uningest
-      $form['element_cards_wrapper']['element_cards'][$sanitized_key]['card']['footer']['actions']['uningest'] = [
+      $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['uningest'] = [
         '#type' => 'submit',
         '#value' => $this->t('Uningest'),
         '#name' => 'uningest_mt_' . $sanitized_key,
@@ -509,57 +641,15 @@ class REPSelectMTForm extends FormBase {
         '#submit' => ['::uningestElementSubmit'],
         '#limit_validation_errors' => [],
         '#element_uri' => $key,
-        '#ajax' => [
-          'callback' => '::ajaxRefresh',
-          'wrapper' => 'element-cards-wrapper',
-        ],
       ];
     }
   }
 
   /**
-   * AJAX callback para o botão "Load More".
+   * HANDLER TO CHANGE TO TABLE VIEW
    */
-  public function ajaxLoadMore(array &$form, FormStateInterface $form_state) {
-    // Incrementar o número da página
-    $current_page = $form_state->get('current_page') + 1;
-    $form_state->set('current_page', $current_page);
-
-    // Recuperar elementos adicionais
-    $pagesize = $form_state->get('page_size');
-    $additional_list = ListManagerEmailPage::exec($this->element_type, $this->manager_email, $current_page, $pagesize);
-
-    if (empty($additional_list)) {
-      // Não há mais itens para carregar
-      $form_state->setRebuild(FALSE);
-      return $form['element_cards_wrapper'];
-    }
-
-    // Gerar saída para os elementos adicionais
-    $output = MetadataTemplate::generateOutput($this->element_type, $additional_list);
-
-    // Mesclar com a saída existente
-    $existing_output = $form_state->get('cards_output');
-    $cards_output = array_merge($existing_output, $output);
-    $form_state->set('cards_output', $cards_output);
-
-    // Rebuild the form
-    $form_state->setRebuild(TRUE);
-
-    return $form['element_cards_wrapper'];
-  }
-
-  /**
-   * AJAX callback para atualizar o formulário.
-   */
-  public function ajaxRefresh(array &$form, FormStateInterface $form_state) {
-    return $form['element_cards_wrapper'];
-  }
-
-  /**
-   * Submit handler para alternar para visualização em tabela.
-   */
-  public function viewTableSubmit(array &$form, FormStateInterface $form_state) {
+  public function viewTableSubmit(array &$form, FormStateInterface $form_state)
+  {
     $form_state->set('view_type', 'table');
     $session = \Drupal::request()->getSession();
     $session->set('rep_select_mt_view_type', 'table');
@@ -567,9 +657,10 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Submit handler para alternar para visualização em cards.
+   * HANDLER TO CHANGE TO CARD VIEW
    */
-  public function viewCardSubmit(array &$form, FormStateInterface $form_state) {
+  public function viewCardSubmit(array &$form, FormStateInterface $form_state)
+  {
     $form_state->set('view_type', 'card');
     $session = \Drupal::request()->getSession();
     $session->set('rep_select_mt_view_type', 'card');
@@ -577,9 +668,10 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Submit handler para editar um elemento na visualização em cards.
+   * HANDLER TO EDIT CARD
    */
-  public function editElementSubmit(array &$form, FormStateInterface $form_state) {
+  public function editElementSubmit(array &$form, FormStateInterface $form_state)
+  {
     $triggering_element = $form_state->getTriggeringElement();
     $uri = $triggering_element['#element_uri'];
 
@@ -587,9 +679,10 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Submit handler para excluir um elemento na visualização em cards.
+   * HANDLER TO DELETE CARD
    */
-  public function deleteElementSubmit(array &$form, FormStateInterface $form_state) {
+  public function deleteElementSubmit(array &$form, FormStateInterface $form_state)
+  {
     $triggering_element = $form_state->getTriggeringElement();
     $uri = $triggering_element['#element_uri'];
 
@@ -597,9 +690,10 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Submit handler para ingestar um elemento na visualização em cards.
+   * HANDLER TO INGEST CARD
    */
-  public function ingestElementSubmit(array &$form, FormStateInterface $form_state) {
+  public function ingestElementSubmit(array &$form, FormStateInterface $form_state)
+  {
     $triggering_element = $form_state->getTriggeringElement();
     $uri = $triggering_element['#element_uri'];
 
@@ -607,9 +701,10 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Submit handler para desingestar um elemento na visualização em cards.
+   * HANDLER TO UNINGEST CARD
    */
-  public function uningestElementSubmit(array &$form, FormStateInterface $form_state) {
+  public function uningestElementSubmit(array &$form, FormStateInterface $form_state)
+  {
     $triggering_element = $form_state->getTriggeringElement();
     $uri = $triggering_element['#element_uri'];
 
@@ -617,73 +712,10 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * {@inheritdoc}
+   * ADD CARD
    */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
-    // RETRIEVE TRIGGERING BUTTON
-    $triggering_element = $form_state->getTriggeringElement();
-    $button_name = $triggering_element['#name'];
-
-    // Se o botão acionado tiver um manipulador de submissão específico, não processar aqui
-    if (isset($triggering_element['#submit']) && !empty($triggering_element['#submit'])) {
-      return;
-    }
-
-    // RETRIEVE SELECTED ROWS, IF ANY
-    $selected_rows = $form_state->getValue('element_table');
-    $rows = [];
-    if ($selected_rows) {
-      foreach ($selected_rows as $index => $selected) {
-        if ($selected) {
-          $rows[$index] = $index;
-        }
-      }
-    }
-
-    // Handle actions based on button name
-    if ($button_name === 'add_element') {
-      $this->performAdd($form_state);
-    } elseif ($button_name === 'edit_element') {
-      if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be edited."));
-      } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be edite simultaneously."));
-      } else {
-        $first = array_shift($rows);
-        $this->performEdit($first, $form_state);
-      }
-    } elseif ($button_name === 'delete_element') {
-      if (sizeof($rows) <= 0) {
-        \Drupal::messenger()->addWarning(t("At least one " . $this->single_class_name . " must be selected to delete)."));
-      } else {
-        $this->performDelete($rows, $form_state);
-      }
-    } elseif ($button_name === 'ingest_mt') {
-      if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be ingested."));
-      } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be ingested simultaneously."));
-      } else {
-        $this->performIngest($rows, $form_state);
-      }
-    } elseif ($button_name === 'uningest_mt') {
-      if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to uningested."));
-      } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be ingested simultaneously."));
-      } else {
-        $this->performUningest($rows, $form_state);
-      }
-    } elseif ($button_name === 'back') {
-      $url = Url::fromRoute('std.search');
-      $form_state->setRedirectUrl($url);
-    }
-  }
-
-  /**
-   * Executa a ação de adicionar.
-   */
-  protected function performAdd(FormStateInterface $form_state) {
+  protected function performAdd(FormStateInterface $form_state)
+  {
     $uid = \Drupal::currentUser()->id();
     $previousUrl = \Drupal::request()->getRequestUri();
     Utils::trackingStoreUrls($uid, $previousUrl, 'rep.add_mt');
@@ -696,9 +728,10 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Executa a ação de editar.
+   * EDIT CARD
    */
-  protected function performEdit($uri, FormStateInterface $form_state) {
+  protected function performEdit($uri, FormStateInterface $form_state)
+  {
     $uid = \Drupal::currentUser()->id();
     $previousUrl = \Drupal::request()->getRequestUri();
     Utils::trackingStoreUrls($uid, $previousUrl, 'rep.edit_mt');
@@ -711,12 +744,13 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Executa a ação de excluir.
+   * DELETE CARD
    */
-  protected function performDelete(array $uris, FormStateInterface $form_state) {
+  protected function performDelete(array $uris, FormStateInterface $form_state)
+  {
     $api = \Drupal::service('rep.api_connector');
-    foreach($uris as $uri) {
-      $mt = $api->parseObjectResponse($api->getUri($uri),'getUri');
+    foreach ($uris as $uri) {
+      $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
       if ($mt != NULL && $mt->hasDataFile != NULL) {
 
         // DELETE FILE
@@ -724,34 +758,35 @@ class REPSelectMTForm extends FormBase {
           $file = File::load($mt->hasDataFile->id);
           if ($file) {
             $file->delete();
-            \Drupal::messenger()->addMessage(t("Archive with ID ".$mt->hasDataFile->id." deleted."));
+            \Drupal::messenger()->addMessage(t("Archive with ID " . $mt->hasDataFile->id . " deleted."));
           }
         }
 
         // DELETE DATAFILE
         if (isset($mt->hasDataFile->uri)) {
           $api->dataFileDel($mt->hasDataFile->uri);
-          \Drupal::messenger()->addMessage(t("DataFile with URI ".$mt->hasDataFile->uri." deleted."));
+          \Drupal::messenger()->addMessage(t("DataFile with URI " . $mt->hasDataFile->uri . " deleted."));
         }
       }
     }
-    \Drupal::messenger()->addMessage(t("The " . $this->plural_class_name . " selected were deletes successfully."));
+    \Drupal::messenger()->addMessage(t("The " . $this->plural_class_name . " selected were deleted successfully."));
     $form_state->setRebuild();
   }
 
   /**
-   * Executa a ação de ingestar.
+   * INGEST CARD
    */
-  protected function performIngest(array $uris, FormStateInterface $form_state) {
+  protected function performIngest(array $uris, FormStateInterface $form_state)
+  {
     $api = \Drupal::service('rep.api_connector');
     $uri = reset($uris);
-    $study = $api->parseObjectResponse($api->getUri($uri),'getUri');
+    $study = $api->parseObjectResponse($api->getUri($uri), 'getUri');
     if ($study == NULL) {
       \Drupal::messenger()->addError(t("Failed to retrieve the datafile to be ingested."));
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
-    $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $study),'uploadTemplate');
+    $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $study), 'uploadTemplate');
     if ($msg == NULL) {
       \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILD to be submited for Ingestion."));
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
@@ -763,25 +798,26 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * Executa a ação de desingestar.
+   * UNINGEST CARD
    */
-  protected function performUningest(array $uris, FormStateInterface $form_state) {
+  protected function performUningest(array $uris, FormStateInterface $form_state)
+  {
     $api = \Drupal::service('rep.api_connector');
     $uri = reset($uris);
     $newMT = new MetadataTemplate();
-    $mt = $api->parseObjectResponse($api->getUri($uri),'getUri');
+    $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
     if ($mt == NULL) {
       \Drupal::messenger()->addError(t("Failed to recover " . $this->single_class_name . " for uningestion."));
       return;
     }
     $newMT->setPreservedMT($mt);
-    $df = $api->parseObjectResponse($api->getUri($mt->hasDataFileUri),'getUri');
+    $df = $api->parseObjectResponse($api->getUri($mt->hasDataFileUri), 'getUri');
     if ($df == NULL) {
       \Drupal::messenger()->addError(t("Fail to recover datafile of" . $this->single_class_name . " from being unigested."));
       return;
     }
     $newMT->setPreservedDF($df);
-    $msg = $api->parseObjectResponse($api->uningestMT($mt->uri),'uningestMT');
+    $msg = $api->parseObjectResponse($api->uningestMT($mt->uri), 'uningestMT');
     if ($msg == NULL) {
       \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to uningested."));
       return;
@@ -794,18 +830,18 @@ class REPSelectMTForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public static function backSelect($elementType, $mode, $studyuri) {
+  public static function backSelect($elementType, $mode, $studyuri)
+  {
     $url = Url::fromRoute('rep.select_mt_element');
     $url->setRouteParameter('elementtype', $elementType);
     $url->setRouteParameter('mode', $mode);
     $url->setRouteParameter('page', 0);
-    $url->setRouteParameter('pagesize', 9); // Ajustado para 9 conforme solicitado
-    if ($studyuri == NULL || $studyuri != '' || $studyuri == ' ') {
+    $url->setRouteParameter('pagesize', 9);
+    if ($studyuri == NULL || $studyuri == '' || $studyuri == ' ') {
       $url->setRouteParameter('studyuri', 'none');
     } else {
       $url->setRouteParameter('studyuri', $studyuri);
     }
     return $url;
   }
-
 }

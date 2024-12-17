@@ -8,12 +8,14 @@ use Drupal\Core\Url;
 use Drupal\rep\ListManagerEmailPage;
 use Drupal\rep\Entity\DataFile;
 
-class REPSelectForm extends FormBase {
+class REPSelectForm extends FormBase
+{
 
   /**
    * {@inheritdoc}
    */
-  public function getFormId() {
+  public function getFormId()
+  {
     return 'rep_select_form';
   }
 
@@ -31,26 +33,31 @@ class REPSelectForm extends FormBase {
 
   protected $list_size;
 
-  public function getList() {
+  public function getList()
+  {
     return $this->list;
   }
 
-  public function setList($list) {
+  public function setList($list)
+  {
     return $this->list = $list;
   }
 
-  public function getListSize() {
+  public function getListSize()
+  {
     return $this->list_size;
   }
 
-  public function setListSize($list_size) {
+  public function setListSize($list_size)
+  {
     return $this->list_size = $list_size;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $elementtype=NULL, $page=NULL, $pagesize=NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $page = NULL, $pagesize = NULL)
+  {
 
     // GET MANAGER EMAIL
     $this->manager_email = \Drupal::currentUser()->getEmail();
@@ -95,7 +102,7 @@ class REPSelectForm extends FormBase {
     $this->plural_class_name = "";
     switch ($this->element_type) {
 
-      // ELEMENTS
+        // ELEMENTS
       case "datafile":
         $this->single_class_name = "Data File";
         $this->plural_class_name = "Data Files";
@@ -111,7 +118,7 @@ class REPSelectForm extends FormBase {
     //$form['#attached']['library'][] = 'rep/scrollable_table';
     $form['page_title'] = [
       '#type' => 'item',
-      '#title' => $this->t('<h3>Manage ' . $this->plural_class_name . '</h3>'),
+      '#title' => $this->t('<h3 class="mt-5">Manage ' . $this->plural_class_name . '</h3>'),
     ];
     $form['page_subtitle'] = [
       '#type' => 'item',
@@ -170,7 +177,8 @@ class REPSelectForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
+  public function submitForm(array &$form, FormStateInterface $form_state)
+  {
     // RETRIEVE TRIGGERING BUTTON
     $triggering_element = $form_state->getTriggeringElement();
     $button_name = $triggering_element['#name'];
@@ -214,9 +222,9 @@ class REPSelectForm extends FormBase {
       } else {
         $api = \Drupal::service('rep.api_connector');
         $success = TRUE;
-        foreach($rows as $uri) {
+        foreach ($rows as $uri) {
           if ($this->element_type == 'datafile') {
-            $resp = $api->parseObjectResponse($api->datafileDel($uri),'datafileDel');
+            $resp = $api->parseObjectResponse($api->datafileDel($uri), 'datafileDel');
             if ($resp == NULL) {
               \Drupal::messenger()->addMessage(t("Failed to delete the following " . $this->$single_class_name . ": " . $uri));
               $success = FALSE;
@@ -235,20 +243,17 @@ class REPSelectForm extends FormBase {
       $url = Url::fromRoute('rep.home');
       $form_state->setRedirectUrl($url);
     }
-
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function backSelect($elementType) {
+  public static function backSelect($elementType)
+  {
     $url = Url::fromRoute('rep.select_element');
     $url->setRouteParameter('elementtype', $elementType);
     $url->setRouteParameter('page', 0);
     $url->setRouteParameter('pagesize', 12);
     return $url;
   }
-
-
-
 }
