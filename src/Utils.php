@@ -287,6 +287,18 @@ class Utils {
 
   }
 
+  public static function namespaceUriWithNS($uri, $namespaces) {
+    foreach ($namespaces as $abbrev => $ns) {
+      if ($abbrev != NULL && $abbrev != "" && $ns != NULL && $ns != "") {
+        if (str_starts_with($uri,$ns)) {
+          $replacement = $abbrev . ":";
+          return str_replace($ns, $replacement ,$uri);
+        }
+      }
+    }
+    return $uri;
+  }
+
   public static function namespaceUri($uri) {
     $tables = new Tables;
     $namespaces = $tables->getNamespaces();
