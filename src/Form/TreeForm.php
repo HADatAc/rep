@@ -80,21 +80,21 @@ class TreeForm extends FormBase {
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'apiEndpoint' => '/drupal/web/rep/getchildren', // Endpoint da API para carregamento dinâmico
       'branches' => [
-        // [
-        //   'id' => 'attribute',
-        //   'uri' => SIO::ATTRIBUTE,
-        //   'label' => 'Attributes'
-        // ],
-        // [
-        //   'id' => 'entity',
-        //   'uri' => SIO::ENTITY,
-        //   'label' => 'Entities'
-        // ],
-        // [
-        //   'id' => 'unit',
-        //   'uri' => SIO::UNIT,
-        //   'label' => 'Units'
-        // ],
+        [
+          'id' => 'attribute',
+          'uri' => SIO::ATTRIBUTE,
+          'label' => 'Attributes'
+        ],
+        [
+          'id' => 'entity',
+          'uri' => SIO::ENTITY,
+          'label' => 'Entities'
+        ],
+        [
+          'id' => 'unit',
+          'uri' => SIO::UNIT,
+          'label' => 'Units'
+        ],
         [
           'id' => 'instrument',
           'uri' => VSTOI::INSTRUMENT,
