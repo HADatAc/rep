@@ -24,7 +24,14 @@ rep_tree:
     js/rep_tree.js: {}
   dependencies:
     - core/jquery
-
+rep_modal:
+  version: 1.x
+  js:
+    js/modal.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal.dialog
+    - core/drupal.ajax
 # rep_tree:
 #   version: VERSION
 #   css:

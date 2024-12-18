@@ -617,8 +617,9 @@ div.toast {
 #tree-root {
   overflow-x: auto; /* Adicionar barra de rolagem horizontal para o jstree */
   white-space: nowrap; /* Impedir quebra de texto dentro dos nós */
-  max-height: 58vh!important; /* Define a altura máxima como 80% da altura da janela */
+  max-height: 55vh!important; /* Define a altura máxima como 80% da altura da janela */
   overflow-y: auto; /* Adiciona scroll vertical */
+  margin-bottom: 10px;
 }
 
 .jstree-anchor {
@@ -686,4 +687,21 @@ div.toast {
 
 #tree-root .jstree-anchor i {
   margin-right: 5px;
+}
+
+
+/* MODAL Open-Dialog */
+/* Ajustar altura máxima e rolagem do modal */
+.ui-dialog {
+  position: fixed;
+  top: 10% !important; /* Garante que o modal esteja visível no topo */
+  bottom: auto;
+  max-height: 90vh; /* Limita o tamanho máximo vertical */
+  width: auto !important; /* Permite que o modal ajuste a largura conforme necessário */
+  overflow: auto; /* Adiciona rolagem interna se o conteúdo crescer */
+}
+
+.ui-dialog-content {
+  max-height: calc(90vh - 100px); /* Limita a altura interna do conteúdo */
+  overflow-y: auto; /* Adiciona rolagem interna para conteúdo excedente */
 }

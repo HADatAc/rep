@@ -1,132 +1,169 @@
 (function ($, Drupal, drupalSettings) {
   Drupal.behaviors.tree = {
     attach: function (context, settings) {
+      console.log('Tree behavior attached.');
       const $treeRoot = $('#tree-root', context);
+      const $selectNodeButton = $('#select-tree-node', context);
       const $searchInput = $('#tree-search', context);
       const $clearButton = $('#clear-search', context);
-
-      const apiEndpoint = drupalSettings.rep_tree.apiEndpoint;
-      const branches = drupalSettings.rep_tree.branches || [];
-      const outputFieldSelector = drupalSettings.rep_tree.outputField || '#edit-search-keyword--2';
+      const $modalField = $('[data-initial-uri]'); // Field with initial value
+      const $waitMessage = $('#wait-message', context); // Wait message element
 
       let searchTimeout;
+      let ajaxTimeout;
 
+      // Inicialmente, a árvore está escondida e a mensagem de espera é exibida
+      $treeRoot.hide();
+      $waitMessage.show();
+
+      // JSTree Initialization
       if ($treeRoot.length) {
+        console.log('Initializing JSTree...');
         const treeInstance = $treeRoot.jstree({
           core: {
             data: function (node, cb) {
+              console.log('Fetching tree data for node:', node);
               if (node.id === '#') {
-                cb(branches.map(branch => ({
+                console.log('Loading root branches...');
+                cb(drupalSettings.rep_tree.branches.map(branch => ({
                   id: branch.id,
                   text: branch.label,
                   uri: branch.uri,
+                  typeNamespace: branch.typeNamespace || '',
                   icon: 'fas fa-folder',
                   children: true
                 })));
               } else {
+                console.log('Loading children for node URI:', node.original.uri);
                 $.ajax({
-                  url: apiEndpoint,
+                  url: drupalSettings.rep_tree.apiEndpoint,
                   type: 'GET',
                   data: { nodeUri: node.original.uri },
                   dataType: 'json',
                   success: function (data) {
+                    console.log('Fetched child nodes:', data);
                     cb(data.map(item => ({
                       id: item.nodeId,
                       text: item.label || 'Unnamed Node',
                       uri: item.uri,
+                      typeNamespace: item.typeNamespace || '',
                       icon: 'fas fa-file-alt',
                       children: true
                     })));
+                    resetAjaxTimeout();
                   },
                   error: function () {
                     console.error('Error fetching children for node:', node.original.uri);
                     cb([]);
+                    resetAjaxTimeout();
                   }
                 });
               }
-            },
-            themes: {
-              responsive: true,
-              dots: false,
-              icons: true
             }
           },
           plugins: ['search', 'wholerow']
         });
 
-        // Prevenir múltiplos eventos
-        $treeRoot.off('select_node.jstree').on('select_node.jstree', function (e, data) {
-          const node = data.node;
-          const nodeText = truncateText(node.text, 50); // Limitar o texto a 50 caracteres
-          const nodeUri = node.original.uri || 'N/A';
-
-          const outputText = `${nodeText} [${nodeUri}]`;
-          if (outputText.length > 125) {
-            console.warn('Output length exceeds 125 characters, truncating...');
-          }
-
-          // Atualizar o campo global (dinâmico)
-          updateGlobalField(outputText);
+        // Dispara o evento Expand All ao inicializar a árvore
+        $treeRoot.on('ready.jstree', function () {
+          console.log('JSTree ready. Expanding all nodes...');
+          $treeRoot.jstree('open_all');
         });
 
-        $treeRoot.on('hover_node.jstree', function (e, data) {
-          const node = data.node;
-          const $nodeAnchor = $(`#${node.id}_anchor`);
+        // Função para monitorar requisições AJAX
+        function resetAjaxTimeout() {
+          clearTimeout(ajaxTimeout);
+          ajaxTimeout = setTimeout(function () {
+            console.log('No AJAX requests for 5 seconds. Collapsing all nodes and showing the tree.');
+            $treeRoot.jstree('close_all');
+            $waitMessage.hide();
+            $treeRoot.show();
+          }, 5000);
+        }
 
-          // Verifica se o tooltip já existe, para evitar duplicações
-          if (!$nodeAnchor.attr('title')) {
-            const fullText = node.text; // Obtém o texto completo do nó
-            $nodeAnchor.attr('title', fullText); // Define o atributo title para exibir o tooltip
+        // Highlight and Expand Specific Node
+        function highlightNode(initialUri) {
+          console.log('Attempting to highlight node with URI:', initialUri);
+          if (!initialUri) {
+            console.warn('No initial URI provided.');
+            return;
           }
-        });
 
-        // Função para preencher o campo globalmente
-        function updateGlobalField(value) {
-          const $outputField = $(outputFieldSelector);
+          $treeRoot.jstree('close_all'); // Collapse all nodes
+          console.log('Tree collapsed. Searching for the node...');
 
-          if ($outputField.length) {
-            $outputField.val(value);
+          const nodes = $treeRoot.jstree(true).get_json('#', { flat: true });
+          console.log('Retrieved flat node list:', nodes);
+
+          let targetNode = null;
+
+          nodes.forEach(node => {
+            console.log('Checking node:', node);
+            if (node.original && node.original.uri === initialUri) {
+              console.log('Node matched:', node);
+              targetNode = node;
+            }
+          });
+
+          if (targetNode) {
+            console.log('Expanding path to the node:', targetNode.id);
+            const parents = $treeRoot.jstree('get_path', targetNode.id, '/', true);
+            parents.forEach(parentId => {
+              console.log('Opening parent node:', parentId);
+              $treeRoot.jstree('open_node', parentId);
+            });
+
+            console.log('Selecting the node:', targetNode.id);
+            $treeRoot.jstree('select_node', targetNode.id);
           } else {
-            console.warn(`Output field (${outputFieldSelector}) not found. Retrying...`);
-            setTimeout(() => updateGlobalField(value), 500);
+            console.warn('Node with URI not found:', initialUri);
           }
         }
 
-        // Função para truncar texto
-        function truncateText(text, maxLength) {
-          if (text.length > maxLength) {
-            return text.slice(0, maxLength - 3) + '...';
-          }
-          return text;
-        }
+        // Event: Modal Opens
+        $modalField.on('click', function () {
+          const initialValue = $(this).val();
+          console.log('Modal opened. Initial value to search:', initialValue);
 
-        // Botões de controle
+          setTimeout(() => {
+            highlightNode(initialValue);
+          }, 500);
+        });
+
+        // Node Selection
+        $treeRoot.on('select_node.jstree', function (e, data) {
+          console.log('Node selected:', data.node);
+          const selectedNode = data.node.original;
+
+          if (selectedNode.typeNamespace) {
+            console.log('typeNamespace detected:', selectedNode.typeNamespace);
+            $selectNodeButton
+              .prop('disabled', false)
+              .removeClass('disabled')
+              .data('selected-value', selectedNode.typeNamespace);
+          } else {
+            console.warn('No typeNamespace found for selected node.');
+            $selectNodeButton
+              .prop('disabled', true)
+              .addClass('disabled')
+              .removeData('selected-value');
+          }
+        });
+
+        // Expand and Collapse All
         $('#expand-all', context).on('click', function () {
+          console.log('Expand All clicked.');
           $treeRoot.jstree('open_all');
         });
 
         $('#collapse-all', context).on('click', function () {
+          console.log('Collapse All clicked.');
           $treeRoot.jstree('close_all');
         });
 
-        $('#select-all', context).on('click', function () {
-          $treeRoot.jstree('check_all');
-        });
-
-        $('#unselect-all', context).on('click', function () {
-          $treeRoot.jstree('uncheck_all');
-        });
-
-        $clearButton.on('click', function () {
-          $searchInput.val('');
-          $clearButton.hide();
-          clearHighlight();
-          updateGlobalField('');
-          $treeRoot.jstree('clear_search');
-          $treeRoot.jstree('close_all');
-        });
-
+        // Search Logic
         $searchInput.on('input', function () {
+          console.log('Search input changed:', $(this).val());
           if ($(this).val().length > 0) {
             $clearButton.show();
           } else {
@@ -134,92 +171,32 @@
           }
         });
 
-        $searchInput.attr('autocomplete', 'off');
-        $searchInput.on('keydown', function (e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-          }
-        });
-
         $searchInput.on('keyup', function () {
           clearTimeout(searchTimeout);
           const searchTerm = $(this).val().toLowerCase();
+          console.log('Search triggered. Term:', searchTerm);
 
           searchTimeout = setTimeout(() => {
             if (searchTerm.length > 0) {
-              clearHighlight();
-              performSearchAndCollapse(searchTerm);
+              console.log('Searching in tree for term:', searchTerm);
+              $treeRoot.jstree('search', searchTerm);
             } else {
-              clearHighlight();
+              console.log('Clearing search and collapsing tree.');
               $treeRoot.jstree('clear_search');
               $treeRoot.jstree('close_all');
             }
           }, 300);
         });
 
-        function performSearchAndCollapse(searchTerm) {
-          function searchNodeRecursively(nodeId, cb) {
-            $treeRoot.jstree('open_node', nodeId, function () {
-              const children = $treeRoot.jstree('get_node', nodeId).children;
-              let hasMatchingChild = false;
-
-              if (children && children.length) {
-                let pendingCallbacks = children.length;
-
-                children.forEach(function (childId) {
-                  const text = $treeRoot.jstree('get_text', childId).toLowerCase();
-
-                  searchNodeRecursively(childId, function (childHasMatch) {
-                    if (text.includes(searchTerm) || childHasMatch) {
-                      styleNode(childId);
-                      hasMatchingChild = true;
-                    } else {
-                      $treeRoot.jstree('close_node', childId);
-                    }
-                    pendingCallbacks--;
-                    if (pendingCallbacks === 0) {
-                      cb(hasMatchingChild);
-                    }
-                  });
-                });
-              } else {
-                const text = $treeRoot.jstree('get_text', nodeId).toLowerCase();
-                const isMatch = text.includes(searchTerm);
-                if (isMatch) {
-                  styleNode(nodeId);
-                }
-                cb(isMatch);
-              }
-            });
-          }
-
-          let pendingBranches = branches.length;
-          branches.forEach(branch => {
-            searchNodeRecursively(branch.id, function (hasMatch) {
-              if (!hasMatch) {
-                $treeRoot.jstree('close_node', branch.id);
-              }
-              pendingBranches--;
-            });
-          });
-        }
-
-        function styleNode(nodeId) {
-          const $nodeAnchor = $(`#${nodeId}_anchor`);
-          $nodeAnchor.css({
-            'color': 'blue',
-            'font-style': 'italic',
-            'background-color': 'lightgreen'
-          });
-        }
-
-        function clearHighlight() {
-          $treeRoot.find('.jstree-anchor').css({
-            'color': '',
-            'font-style': '',
-            'background-color': ''
-          });
-        }
+        $clearButton.on('click', function () {
+          console.log('Clear search clicked.');
+          $searchInput.val('');
+          $clearButton.hide();
+          $treeRoot.jstree('clear_search');
+          $treeRoot.jstree('close_all');
+        });
+      } else {
+        console.warn('Tree root not found. Initialization aborted.');
       }
     }
   };
