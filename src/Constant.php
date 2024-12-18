@@ -34,7 +34,7 @@ class Constant {
   const PREFIX_SDD                        = "SDD";
   const PREFIX_SDD_ATTRIBUTE              = "SDDATT";
   const PREFIX_SDD_OBJECT                 = "SDDOBJ";
-  const PREFIX_SEMANTIC_DATA_DICTIONARY   = "SDY";
+  const PREFIX_SEMANTIC_DATA_DICTIONARY   = "SDDICT";
   const PREFIX_SEMANTIC_VARIABLE          = "SVR";
   const PREFIX_STUDY                      = "STD";
   const PREFIX_STUDY_OBJECT_COLLECTION    = "OCL";

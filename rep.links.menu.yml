@@ -60,47 +60,47 @@ rep.manage_datafile:
     _permission: 'access content'
     _role: 'authenticated'
 
-rep.browse_attributes:
-  title: Browse Attributes
-  description: Browse Attributes
-  route_name: rep.browse_tree
-  route_parameters:
-    mode: 'browse'
-    elementtype: 'attribute'
-  parent: rep.top_level
-  menu_name: main
-  weight: 7
-  requirements:
-    _permission: 'access content'
-    _role: 'authenticated'
+#rep.browse_attributes:
+#  title: Browse Attributes
+#  description: Browse Attributes
+#  route_name: rep.browse_tree
+#  route_parameters:
+#    mode: 'browse'
+#    elementtype: 'attribute'
+#  parent: rep.top_level
+#  menu_name: main
+#  weight: 7
+#  requirements:
+#    _permission: 'access content'
+#    _role: 'authenticated'
 
-rep.select_instruments:
-  title: Select Instruments
-  description: Select Instruments
-  route_name: rep.browse_tree
-  route_parameters:
-    mode: 'select'
-    elementtype: 'instrument'
-  parent: rep.top_level
-  menu_name: main
-  weight: 7
-  requirements:
-    _permission: 'access content'
-    _role: 'authenticated'
+#rep.select_instruments:
+#  title: Select Instruments
+#  description: Select Instruments
+#  route_name: rep.browse_tree
+#  route_parameters:
+#    mode: 'select'
+#    elementtype: 'instrument'
+#  parent: rep.top_level
+#  menu_name: main
+#  weight: 7
+#  requirements:
+#    _permission: 'access content'
+#    _role: 'authenticated'
 
-rep.browse_instruments:
-  title: Browse Instruments
-  description: Browse Instruments
-  route_name: rep.browse_tree
-  route_parameters:
-    mode: 'browse'
-    elementtype: 'instrument'
-  parent: rep.top_level
-  menu_name: main
-  weight: 7
-  requirements:
-    _permission: 'access content'
-    _role: 'authenticated'
+#rep.browse_instruments:
+#  title: Browse Instruments
+#  description: Browse Instruments
+#  route_name: rep.browse_tree
+#  route_parameters:
+#    mode: 'browse'
+#    elementtype: 'instrument'
+#  parent: rep.top_level
+#  menu_name: main
+#  weight: 7
+#  requirements:
+#    _permission: 'access content'
+#    _role: 'authenticated'
 
 rep.about:
   title: About
