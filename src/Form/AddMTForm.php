@@ -330,7 +330,7 @@ class AddMTForm extends FormBase {
           '"hasSIRManagerEmail":"'.$useremail.'"}';
 
       // MT JSON
-      $newMTUri = str_replace("DF",Utils::elementPrefix($this->getElementType()),$newDataFileUri);
+      $newMTUri = str_replace("DFL",Utils::elementPrefix($this->getElementType()),$newDataFileUri);
       $mtJSON = '{"uri":"'. $newMTUri .'",'.
           '"typeUri":"'.$this->getElementTypeUri().'",'.
           '"hascoTypeUri":"'.$this->getElementTypeUri().'",';
