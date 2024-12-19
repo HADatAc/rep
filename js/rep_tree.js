@@ -6,11 +6,11 @@
       const $selectNodeButton = $('#select-tree-node', context);
       const $searchInput = $('#tree-search', context);
       const $clearButton = $('#clear-search', context);
-      const $modalField = $('[data-initial-uri]'); // Field with initial value
-      const $waitMessage = $('#wait-message', context); // Wait message element
+      const $modalField = $('[data-initial-uri]');
+      const $waitMessage = $('#wait-message', context);
 
       let searchTimeout;
-      let ajaxTimeout;
+      let treeReady = false;
 
       // Inicialmente, a árvore está escondida e a mensagem de espera é exibida
       $treeRoot.hide();
@@ -30,6 +30,7 @@
                   text: branch.label,
                   uri: branch.uri,
                   typeNamespace: branch.typeNamespace || '',
+                  data: { typeNamespace: branch.typeNamespace || '' },
                   icon: 'fas fa-folder',
                   children: true
                 })));
@@ -47,15 +48,14 @@
                       text: item.label || 'Unnamed Node',
                       uri: item.uri,
                       typeNamespace: item.typeNamespace || '',
+                      data: { typeNamespace: item.typeNamespace || '' },
                       icon: 'fas fa-file-alt',
                       children: true
                     })));
-                    resetAjaxTimeout();
                   },
                   error: function () {
                     console.error('Error fetching children for node:', node.original.uri);
                     cb([]);
-                    resetAjaxTimeout();
                   }
                 });
               }
@@ -64,70 +64,116 @@
           plugins: ['search', 'wholerow']
         });
 
-        // Dispara o evento Expand All ao inicializar a árvore
+        // Expand and Collapse Logic After Tree Load
         $treeRoot.on('ready.jstree', function () {
           console.log('JSTree ready. Expanding all nodes...');
           $treeRoot.jstree('open_all');
-        });
 
-        // Função para monitorar requisições AJAX
-        function resetAjaxTimeout() {
-          clearTimeout(ajaxTimeout);
-          ajaxTimeout = setTimeout(function () {
-            console.log('No AJAX requests for 5 seconds. Collapsing all nodes and showing the tree.');
+          setTimeout(() => {
+            console.log('Tree fully expanded. Collapsing all nodes...');
             $treeRoot.jstree('close_all');
+
+            console.log('Tree collapsed. Showing the tree...');
             $waitMessage.hide();
             $treeRoot.show();
-          }, 5000);
-        }
 
-        // Highlight and Expand Specific Node
-        function highlightNode(initialUri) {
-          console.log('Attempting to highlight node with URI:', initialUri);
-          if (!initialUri) {
-            console.warn('No initial URI provided.');
+            treeReady = true; // Sinaliza que a árvore está carregada
+
+            // Simula "limpar" a caixa de texto se estiver vazia
+            const searchTerm = $searchInput.val().trim();
+            if (searchTerm.length === 0) {
+              console.log('Search input is empty. Simulating clear action...');
+              $treeRoot.jstree('clear_search');
+              $treeRoot.jstree('close_all'); // Certifica-se de que a árvore está colapsada
+            } else if (searchTerm.length > 1) {
+              console.log(`Performing search for term: ${searchTerm}`);
+              performSearch(searchTerm); // Realiza a pesquisa se houver um termo válido
+            }
+          }, 3500);
+        });
+
+        // Função de pesquisa atualizada
+        function performSearch(searchTerm) {
+          if (!treeReady) {
+            console.warn('Tree is not ready for search.');
+            return;
+          }
+          if (searchTerm.length < 2) {
+            console.warn('Search term must be at least 2 characters.');
             return;
           }
 
-          $treeRoot.jstree('close_all'); // Collapse all nodes
-          console.log('Tree collapsed. Searching for the node...');
+          console.log('Performing search for term:', searchTerm);
 
-          const nodes = $treeRoot.jstree(true).get_json('#', { flat: true });
-          console.log('Retrieved flat node list:', nodes);
+          // Realiza a pesquisa
+          $treeRoot.jstree('search', searchTerm);
 
-          let targetNode = null;
+          // Aguarda para garantir que a árvore esteja manipulável
+          setTimeout(() => {
+            const matchedNodes = $treeRoot.jstree(true).get_json('#', { flat: true })
+              .filter(node => {
+                return (
+                  node.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (node.data.typeNamespace &&
+                    node.data.typeNamespace.toLowerCase().includes(searchTerm.toLowerCase()))
+                );
+              });
 
-          nodes.forEach(node => {
-            console.log('Checking node:', node);
-            if (node.original && node.original.uri === initialUri) {
-              console.log('Node matched:', node);
-              targetNode = node;
+            if (matchedNodes.length > 0) {
+              matchedNodes.forEach(node => {
+                console.log('Expanding matched node:', node.id);
+
+                // Abre todos os nós pais do nó correspondente
+                const path = $treeRoot.jstree('get_path', node.id, '/', true); // Retorna o caminho como string
+                const parents = path.split('/'); // Divide o caminho em um array
+
+                parents.forEach(parentId => {
+                  $treeRoot.jstree('open_node', parentId, false, true);
+                });
+
+                // Seleciona o nó encontrado para destacá-lo
+                $treeRoot.jstree('select_node', node.id);
+              });
+            } else {
+              console.warn('No matching nodes found.');
             }
-          });
-
-          if (targetNode) {
-            console.log('Expanding path to the node:', targetNode.id);
-            const parents = $treeRoot.jstree('get_path', targetNode.id, '/', true);
-            parents.forEach(parentId => {
-              console.log('Opening parent node:', parentId);
-              $treeRoot.jstree('open_node', parentId);
-            });
-
-            console.log('Selecting the node:', targetNode.id);
-            $treeRoot.jstree('select_node', targetNode.id);
-          } else {
-            console.warn('Node with URI not found:', initialUri);
-          }
+          }, 300);
         }
 
-        // Event: Modal Opens
-        $modalField.on('click', function () {
-          const initialValue = $(this).val();
-          console.log('Modal opened. Initial value to search:', initialValue);
 
-          setTimeout(() => {
-            highlightNode(initialValue);
-          }, 500);
+        // Search Logic
+        $searchInput.on('input', function () {
+          console.log('Search input changed:', $(this).val());
+          const searchTerm = $(this).val().trim();
+          if (searchTerm.length > 0) {
+            $clearButton.show(); // Exibe o botão "X"
+          } else {
+            $clearButton.hide(); // Oculta o botão "X"
+          }
+        });
+
+        $searchInput.on('keyup', function () {
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => {
+            performSearch($searchInput.val().trim());
+          }, 300);
+        });
+
+        $clearButton.on('click', function () {
+          console.log('Clear search clicked.');
+          $searchInput.val('');
+          $clearButton.hide();
+          $treeRoot.jstree('clear_search');
+          $treeRoot.jstree('close_all'); // Colapsa a árvore ao limpar a pesquisa
+        });
+
+        $searchInput.on('input', function () {
+          const searchTerm = $(this).val().trim();
+          if (searchTerm.length > 0) {
+            $clearButton.show();
+          } else {
+            $clearButton.hide();
+          }
         });
 
         // Node Selection
@@ -148,52 +194,6 @@
               .addClass('disabled')
               .removeData('selected-value');
           }
-        });
-
-        // Expand and Collapse All
-        $('#expand-all', context).on('click', function () {
-          console.log('Expand All clicked.');
-          $treeRoot.jstree('open_all');
-        });
-
-        $('#collapse-all', context).on('click', function () {
-          console.log('Collapse All clicked.');
-          $treeRoot.jstree('close_all');
-        });
-
-        // Search Logic
-        $searchInput.on('input', function () {
-          console.log('Search input changed:', $(this).val());
-          if ($(this).val().length > 0) {
-            $clearButton.show();
-          } else {
-            $clearButton.hide();
-          }
-        });
-
-        $searchInput.on('keyup', function () {
-          clearTimeout(searchTimeout);
-          const searchTerm = $(this).val().toLowerCase();
-          console.log('Search triggered. Term:', searchTerm);
-
-          searchTimeout = setTimeout(() => {
-            if (searchTerm.length > 0) {
-              console.log('Searching in tree for term:', searchTerm);
-              $treeRoot.jstree('search', searchTerm);
-            } else {
-              console.log('Clearing search and collapsing tree.');
-              $treeRoot.jstree('clear_search');
-              $treeRoot.jstree('close_all');
-            }
-          }, 300);
-        });
-
-        $clearButton.on('click', function () {
-          console.log('Clear search clicked.');
-          $searchInput.val('');
-          $clearButton.hide();
-          $treeRoot.jstree('clear_search');
-          $treeRoot.jstree('close_all');
         });
       } else {
         console.warn('Tree root not found. Initialization aborted.');

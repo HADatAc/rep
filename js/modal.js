@@ -9,13 +9,15 @@
 
           const url = $(this).data('url');
           const fieldId = $(this).data('field-id');
+          const searchValue = $(this).val(); // Obter o valor atual do campo
 
+          // Configurar opções do modal
           const dialogOptions = {
             title: Drupal.t('Tree Form'),
             width: 800,
             modal: true,
             close: function () {
-              // Restore the original value if the modal is closed
+              // Restaurar o valor original se o modal for fechado
               const initialValue = $(this).data('initial-value');
               if (initialValue) {
                 $(`[name="${fieldId}"], #${fieldId}`).val(initialValue);
@@ -23,50 +25,58 @@
             },
           };
 
-          // Get the initial value of the field
+          // Abrir o modal usando Ajax
+          const modalUrl = `${url}&field_id=${fieldId}`;
           const $field = $(`[name="${fieldId}"], #${fieldId}`);
           const initialValue = $field.val();
 
-          // Save the initial value for restoration if needed
+          // Salvar o valor inicial para restauração, se necessário
           $field.data('initial-value', initialValue);
 
-          // Open the modal
-          const modalUrl = `${url}&field_id=${fieldId}`;
           Drupal.ajax({
             url: modalUrl,
             dialogType: 'modal',
             dialog: dialogOptions,
           }).execute();
+
+          // Após abrir o modal, configurar o campo de busca
+          setTimeout(() => {
+            const $searchField = $('#tree-search'); // Campo de busca no modal
+            if ($searchField.length) {
+              $searchField.val(searchValue || ''); // Definir valor inicial
+              $searchField.trigger('input'); // Disparar o evento input para busca automática
+            }
+          }, 500); // Atraso para garantir que o modal foi carregado
         });
     },
   };
 
-  // Logic for Select Node Button remains unchanged
+  // Lógica para o botão "Select Node" permanece inalterada
   Drupal.behaviors.repTreeSelection = {
     attach: function (context, settings) {
       const $treeRoot = $('#tree-root', context); // JSTree root
-      const $selectNodeButton = $('#select-tree-node', context); // Select Node button
+      const $selectNodeButton = $('#select-tree-node', context); // Botão "Select Node"
 
-      // Initialize the button as disabled
+      // Inicializar o botão como desativado
       $selectNodeButton.prop('disabled', true);
 
-      // Handle node selection in JSTree
+      // Lidar com a seleção de nós no JSTree
       $treeRoot
-        .off('select_node.jstree') // Prevent duplicate bindings
+        .off('select_node.jstree') // Prevenir bindings duplicados
         .on('select_node.jstree', function (e, data) {
           const selectedNode = data.node.original;
           const typeNamespace = selectedNode.typeNamespace || '';
 
           if (typeNamespace) {
-            console.log('typeNamespace detected:', typeNamespace);
+            console.log('typeNamespace detectado:', typeNamespace);
 
-            // Enable the button and save the selected value
+            // Ativar o botão e salvar o valor selecionado
             $selectNodeButton
               .prop('disabled', false)
               .removeClass('disabled')
               .data('selected-value', typeNamespace);
           } else {
-            console.warn('typeNamespace not found, button remains disabled.');
+            console.warn('typeNamespace não encontrado, botão permanece desativado.');
             $selectNodeButton
               .prop('disabled', true)
               .addClass('disabled')
@@ -74,9 +84,9 @@
           }
         });
 
-      // Handle click on Select Node button
+      // Lidar com clique no botão "Select Node"
       $selectNodeButton
-        .off('click') // Prevent duplicate bindings
+        .off('click') // Prevenir bindings duplicados
         .on('click', function (e) {
           e.preventDefault();
 
@@ -84,13 +94,13 @@
           const fieldId = $(this).data('field-id');
 
           if (fieldId && selectedValue) {
-            // Update the field with the selected value
+            // Atualizar o campo com o valor selecionado
             $(`[name="${fieldId}"], #${fieldId}`).val(selectedValue);
 
-            console.log(`Filled field ${fieldId} with value ${selectedValue}`);
+            console.log(`Campo ${fieldId} preenchido com o valor ${selectedValue}`);
           }
 
-          // Close the modal
+          // Fechar o modal
           $('.ui-dialog-content').dialog('close');
         });
     },
