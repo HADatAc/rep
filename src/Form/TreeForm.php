@@ -219,14 +219,14 @@ class TreeForm extends FormBase {
       ',
     ];
 
-    $form['controls'] = [
-      '#type' => 'inline_template',
-      '#template' => '
-        <div style="margin-bottom: 10px;">
-          <button type="button" id="expand-all" class="btn btn-primary btn-sm">Expand All</button>
-          <button type="button" id="collapse-all" class="btn btn-secondary btn-sm">Collapse All</button>
-        </div>',
-    ];
+    // $form['controls'] = [
+    //   '#type' => 'inline_template',
+    //   '#template' => '
+    //     <div style="margin-bottom: 10px;">
+    //       <button type="button" id="expand-all" class="btn btn-primary btn-sm">Expand All</button>
+    //       <button type="button" id="collapse-all" class="btn btn-secondary btn-sm">Collapse All</button>
+    //     </div>',
+    // ];
 
     $form['wait_message'] = [
       '#type' => 'markup',

@@ -6,7 +6,8 @@
       const $selectNodeButton = $('#select-tree-node', context);
       const $searchInput = $('#tree-search', context);
       const $clearButton = $('#clear-search', context);
-      const $modalField = $('[data-initial-uri]');
+      const $expandButton = $('#expand-tree', context);
+      const $collapseButton = $('#collapse-tree', context);
       const $waitMessage = $('#wait-message', context);
 
       let searchTimeout;
@@ -16,7 +17,10 @@
       $treeRoot.hide();
       $waitMessage.show();
 
-      // JSTree Initialization
+      // O campo de pesquisa é desativado inicialmente
+      $searchInput.prop('disabled', true);
+
+      // Inicializa o JSTree
       if ($treeRoot.length) {
         console.log('Initializing JSTree...');
         const treeInstance = $treeRoot.jstree({
@@ -32,7 +36,7 @@
                   typeNamespace: branch.typeNamespace || '',
                   data: { typeNamespace: branch.typeNamespace || '' },
                   icon: 'fas fa-folder',
-                  children: true
+                  children: true,
                 })));
               } else {
                 console.log('Loading children for node URI:', node.original.uri);
@@ -50,18 +54,28 @@
                       typeNamespace: item.typeNamespace || '',
                       data: { typeNamespace: item.typeNamespace || '' },
                       icon: 'fas fa-file-alt',
-                      children: true
+                      children: true,
                     })));
                   },
                   error: function () {
                     console.error('Error fetching children for node:', node.original.uri);
                     cb([]);
-                  }
+                  },
                 });
               }
-            }
+            },
           },
-          plugins: ['search', 'wholerow']
+          plugins: ['search', 'wholerow'],
+          search: {
+            case_sensitive: false,
+            show_only_matches: true,
+            show_only_matches_children: true,
+            search_callback: function (str, node) {
+              const searchTerm = str.toLowerCase();
+              return node.text.toLowerCase().includes(searchTerm) ||
+                (node.data.typeNamespace && node.data.typeNamespace.toLowerCase().includes(searchTerm));
+            },
+          },
         });
 
         // Expand and Collapse Logic After Tree Load
@@ -72,27 +86,66 @@
           setTimeout(() => {
             console.log('Tree fully expanded. Collapsing all nodes...');
             $treeRoot.jstree('close_all');
-
             console.log('Tree collapsed. Showing the tree...');
             $waitMessage.hide();
             $treeRoot.show();
+            treeReady = true;
 
-            treeReady = true; // Sinaliza que a árvore está carregada
+            // Habilita o campo de pesquisa
+            $searchInput.prop('disabled', false);
 
-            // Simula "limpar" a caixa de texto se estiver vazia
-            const searchTerm = $searchInput.val().trim();
-            if (searchTerm.length === 0) {
-              console.log('Search input is empty. Simulating clear action...');
-              $treeRoot.jstree('clear_search');
-              $treeRoot.jstree('close_all'); // Certifica-se de que a árvore está colapsada
-            } else if (searchTerm.length > 1) {
-              console.log(`Performing search for term: ${searchTerm}`);
-              performSearch(searchTerm); // Realiza a pesquisa se houver um termo válido
+            // Se o campo "unit" já contiver valores, realiza a pesquisa com atraso
+            const initialSearch = $searchInput.val().trim();
+            if (initialSearch.length > 0) {
+              setTimeout(() => {
+                performSearch(initialSearch);
+              }, 500); // Atraso de 500ms para garantir que a árvore esteja pronta
             }
           }, 3500);
         });
 
-        // Função de pesquisa atualizada
+        // Botões Expandir e Colapsar
+        $expandButton.on('click', function () {
+          if (treeReady) {
+            console.log('Expanding all nodes...');
+            $treeRoot.jstree('open_all');
+          } else {
+            console.warn('Tree is not ready to expand.');
+          }
+        });
+
+        $collapseButton.on('click', function () {
+          if (treeReady) {
+            console.log('Collapsing all nodes...');
+            $treeRoot.jstree('close_all');
+          } else {
+            console.warn('Tree is not ready to collapse.');
+          }
+        });
+
+        // Gerencia a seleção de nós e ativa o botão "Select Node"
+        $treeRoot.on('select_node.jstree', function (e, data) {
+          console.log('Node selected:', data.node);
+          const selectedNode = data.node.original;
+
+          if (selectedNode.typeNamespace) {
+            console.log('typeNamespace detected:', selectedNode.typeNamespace);
+            $selectNodeButton
+              .prop('disabled', false)
+              .removeClass('disabled')
+              .data('selected-value', selectedNode.typeNamespace)
+              .data('field-id', $('#tree-root').data('field-id')); // Associar o campo
+          } else {
+            console.warn('No typeNamespace found. Disabling button.');
+            $selectNodeButton
+              .prop('disabled', true)
+              .addClass('disabled')
+              .removeData('selected-value')
+              .removeData('field-id');
+          }
+        });
+
+        // Função de pesquisa
         function performSearch(searchTerm) {
           if (!treeReady) {
             console.warn('Tree is not ready for search.');
@@ -104,68 +157,109 @@
           }
 
           console.log('Performing search for term:', searchTerm);
-
-          // Realiza a pesquisa
           $treeRoot.jstree('search', searchTerm);
 
-          // Aguarda para garantir que a árvore esteja manipulável
           setTimeout(() => {
             const matchedNodes = $treeRoot.jstree(true).get_json('#', { flat: true })
-              .filter(node => {
-                return (
-                  node.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  (node.data.typeNamespace &&
-                    node.data.typeNamespace.toLowerCase().includes(searchTerm.toLowerCase()))
-                );
+              .filter(node => (
+                node.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (node.data.typeNamespace &&
+                  node.data.typeNamespace.toLowerCase().includes(searchTerm.toLowerCase()))
+              ));
+
+            matchedNodes.forEach(node => {
+              console.log('Expanding matched node:', node.id);
+
+              // Certifique-se de abrir os pais do nó antes de expandi-lo
+              $treeRoot.jstree('open_node', node.parents, () => {
+                $treeRoot.jstree('open_node', node.id, false, true);
               });
-
-            if (matchedNodes.length > 0) {
-              matchedNodes.forEach(node => {
-                console.log('Expanding matched node:', node.id);
-
-                // Abre todos os nós pais do nó correspondente
-                const path = $treeRoot.jstree('get_path', node.id, '/', true); // Retorna o caminho como string
-                const parents = path.split('/'); // Divide o caminho em um array
-
-                parents.forEach(parentId => {
-                  $treeRoot.jstree('open_node', parentId, false, true);
-                });
-
-                // Seleciona o nó encontrado para destacá-lo
-                $treeRoot.jstree('select_node', node.id);
-              });
-            } else {
-              console.warn('No matching nodes found.');
-            }
-          }, 300);
+            });
+          }, 500);
         }
+        // function performSearch(searchTerm) {
+        //   if (!treeReady) {
+        //     console.warn('Tree is not ready for search.');
+        //     return;
+        //   }
+        //   if (searchTerm.length < 2) {
+        //     console.warn('Search term must be at least 2 characters.');
+        //     return;
+        //   }
+
+        //   console.log('Performing search for term:', searchTerm);
+
+        //   // Limpa buscas anteriores e inicia uma nova busca
+        //   $treeRoot.jstree('clear_search');
+        //   $treeRoot.jstree('search', searchTerm);
+
+        //   // Aguarda o evento de busca concluída
+        //   $treeRoot.off('search.jstree'); // Remove handlers duplicados, se houver
+        //   $treeRoot.on('search.jstree', function (e, data) {
+        //     console.log('Search completed. Nodes:', data.nodes);
+
+        //     // Certifique-se de que `data.nodes` é uma lista iterável
+        //     const nodes = Array.isArray(data.nodes) ? data.nodes : Array.from(data.nodes || []);
+        //     if (nodes.length === 0) {
+        //       console.warn('No matches found for term:', searchTerm);
+        //       return;
+        //     }
+
+        //     // Para cada nó encontrado, abre os pais e destaca o nó
+        //     nodes.forEach(nodeId => {
+        //       console.log('Processing node:', nodeId);
+
+        //       // Abre o caminho completo até o nó
+        //       openPathToNode(nodeId, function () {
+        //         console.log('Selecting node:', nodeId);
+        //         $treeRoot.jstree('deselect_all'); // Desseleciona nós anteriores
+        //         $treeRoot.jstree('select_node', nodeId); // Seleciona e destaca o nó encontrado
+        //       });
+        //     });
+        //   });
+        // }
+
+        // // Função para abrir os pais de um nó e garantir expansão
+        // function openPathToNode(nodeId, callback) {
+        //   const treeInstance = $treeRoot.jstree(true);
+        //   const parents = treeInstance.get_path(nodeId, true); // Obtém os IDs dos pais, incluindo o próprio nó
+
+        //   if (!parents || parents.length === 0) {
+        //     console.warn('No parents found for node:', nodeId);
+        //     callback();
+        //     return;
+        //   }
+
+        //   let index = 0;
+
+        //   function openNextParent() {
+        //     if (index >= parents.length - 1) {
+        //       console.log('All parents opened. Expanding node:', nodeId);
+        //       callback(); // Após abrir os pais, chama o callback
+        //       return;
+        //     }
+
+        //     const parentId = parents[index];
+        //     console.log('Opening parent node:', parentId);
+
+        //     // Verifica se o nó pai já está aberto antes de tentar abri-lo
+        //     if (treeInstance.is_open(parentId)) {
+        //       console.log('Parent node already open:', parentId);
+        //       index++;
+        //       openNextParent(); // Continua com o próximo pai
+        //     } else {
+        //       treeInstance.open_node(parentId, () => {
+        //         index++;
+        //         openNextParent(); // Continua com o próximo pai após abertura
+        //       });
+        //     }
+        //   }
+
+        //   openNextParent(); // Inicia a sequência de abertura
+        // }
 
 
         // Search Logic
-        $searchInput.on('input', function () {
-          console.log('Search input changed:', $(this).val());
-          const searchTerm = $(this).val().trim();
-          if (searchTerm.length > 0) {
-            $clearButton.show(); // Exibe o botão "X"
-          } else {
-            $clearButton.hide(); // Oculta o botão "X"
-          }
-        });
-
-        $searchInput.on('keyup', function () {
-          clearTimeout(searchTimeout);
-          searchTimeout = setTimeout(() => {
-            performSearch($searchInput.val().trim());
-          }, 300);
-        });
-
-        $clearButton.on('click', function () {
-          console.log('Clear search clicked.');
-          $searchInput.val('');
-          $clearButton.hide();
-          $treeRoot.jstree('clear_search');
-          $treeRoot.jstree('close_all'); // Colapsa a árvore ao limpar a pesquisa
-        });
 
         $searchInput.on('input', function () {
           const searchTerm = $(this).val().trim();
@@ -176,28 +270,36 @@
           }
         });
 
-        // Node Selection
-        $treeRoot.on('select_node.jstree', function (e, data) {
-          console.log('Node selected:', data.node);
-          const selectedNode = data.node.original;
+        $searchInput.on('keyup', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            console.log('Enter press prevented on search input.');
+            return;
+          }
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => {
+            performSearch($searchInput.val().trim());
+          }, 500);
+        });
 
-          if (selectedNode.typeNamespace) {
-            console.log('typeNamespace detected:', selectedNode.typeNamespace);
-            $selectNodeButton
-              .prop('disabled', false)
-              .removeClass('disabled')
-              .data('selected-value', selectedNode.typeNamespace);
-          } else {
-            console.warn('No typeNamespace found for selected node.');
-            $selectNodeButton
-              .prop('disabled', true)
-              .addClass('disabled')
-              .removeData('selected-value');
+        $clearButton.on('click', function () {
+          console.log('Clear search clicked.');
+          $searchInput.val('');
+          $clearButton.hide();
+          $treeRoot.jstree('clear_search');
+          $treeRoot.jstree('close_all');
+        });
+
+        // Previne submissão com Enter no botão ou em qualquer lugar do formulário
+        $(document).on('keypress', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            console.log('Enter press prevented globally.');
           }
         });
       } else {
         console.warn('Tree root not found. Initialization aborted.');
       }
-    }
+    },
   };
 })(jQuery, Drupal, drupalSettings);
