@@ -99,9 +99,9 @@
             if (initialSearch.length > 0) {
               setTimeout(() => {
                 performSearch(initialSearch);
-              }, 500); // Atraso de 500ms para garantir que a árvore esteja pronta
+              }, 100); // Atraso de 500ms para garantir que a árvore esteja pronta
             }
-          }, 3500);
+          }, 3000);
         });
 
         // Botões Expandir e Colapsar
@@ -302,4 +302,43 @@
       }
     },
   };
+
+
 })(jQuery, Drupal, drupalSettings);
+
+(function ($, Drupal) {
+  Drupal.behaviors.modalFix = {
+    attach: function (context, settings) {
+      const $modal = $('.ui-dialog'); // Seletor padrão para o modal do Drupal
+      const $selectNodeButton = $('#select-tree-node'); // Certifique-se de que este seletor está correto
+
+      // Função para limpar atributos do <html>
+      function resetHtmlAttributes() {
+        console.log('Resetting <html> attributes...');
+        $('html').css({
+          overflow: '',
+          'box-sizing': '',
+          'padding-right': '',
+        });
+      }
+
+      // Evento disparado quando o modal do Drupal é fechado
+      $(document).on('dialog:afterclose', function () {
+        console.log('Drupal dialog closed.');
+        resetHtmlAttributes();
+      });
+
+      // Callback ao clicar no botão "Select Node"
+      $selectNodeButton.on('click', function () {
+        console.log('"Select Node" button clicked.');
+        resetHtmlAttributes();
+      });
+
+      // Fallback para o botão "X" do modal (caso necessário)
+      $(document).on('click', '.ui-dialog-titlebar-close', function () {
+        console.log('"X" button clicked.');
+        resetHtmlAttributes();
+      });
+    },
+  };
+})(jQuery, Drupal);

@@ -11,12 +11,49 @@
           const fieldId = $(this).data('field-id');
           const searchValue = $(this).val(); // Obter o valor atual do campo
 
+          // Verificar se o modal já existe
+          const $existingModal = $('.ui-dialog-content');
+          if ($existingModal.length) {
+            console.log('Reutilizando modal existente.');
+            $existingModal.dialog('open');
+
+            // Colapsar a árvore ao reutilizar o modal
+            const $treeRoot = $('#tree-root');
+            if ($treeRoot.length) {
+              $treeRoot.jstree('close_all');
+              console.log('Árvore colapsada.');
+            }
+
+            // Atualizar o campo Search e realizar a pesquisa
+            const $searchField = $('#tree-search');
+            if ($searchField.length) {
+              $searchField.val(searchValue || ''); // Passar valor do campo de texto
+              console.log('Atualizando campo de busca com:', searchValue);
+
+              // Acionar a pesquisa no JSTree
+              setTimeout(() => {
+                const treeInstance = $treeRoot.jstree(true);
+                if (treeInstance) {
+                  treeInstance.search(searchValue); // Lançar ação de pesquisa
+                  console.log('Pesquisa realizada com o valor:', searchValue);
+                }
+              }, 300); // Adicionar um pequeno atraso para garantir a execução
+            }
+
+            return;
+          }
+
+          console.log('Criando novo modal.');
+
           // Configurar opções do modal
           const dialogOptions = {
             title: Drupal.t('Tree Form'),
             width: 800,
             modal: true,
             close: function () {
+              console.log('Modal foi fechado.');
+              alert('O modal foi fechado.');
+
               // Restaurar o valor original se o modal for fechado
               const initialValue = $(this).data('initial-value');
               if (initialValue) {

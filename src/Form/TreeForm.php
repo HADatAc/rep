@@ -60,7 +60,7 @@ class TreeForm extends FormBase {
       \Drupal::messenger()->addError(t("A mode is required to inspect a concept hierarchy."));
       return [];
     }
-    if ($mode != 'browse' && $mode != 'select') {
+    if ($mode != 'modal' && $mode != 'browse' && $mode != 'select') {
       \Drupal::messenger()->addError(t("A valid mode is required to inspect a concept hierarchy."));
       return [];
     }
@@ -202,10 +202,13 @@ class TreeForm extends FormBase {
       'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]', // Usar o name como seletor
     ];
 
-    $form['title'] = [
-        '#type' => 'markup',
-        '#markup' => '<h3 class="mt-4 mb-4">Knowledge Graph Hierarchy</h3>',
-    ];
+    if ($mode == 'browse')
+    {
+      $form['title'] = [
+          '#type' => 'markup',
+          '#markup' => '<h3 class="mt-4 mb-4">Knowledge Graph Hierarchy</h3>',
+      ];
+    }
 
     $form['search_wrapper'] = [
       '#type' => 'inline_template',
@@ -230,7 +233,7 @@ class TreeForm extends FormBase {
 
     $form['wait_message'] = [
       '#type' => 'markup',
-      '#markup' => '<div id="wait-message" style="text-align: center; font-style: italic; color: grey; margin-top: 10px;">Wait please...</div>',
+      '#markup' => '<div id="wait-message" style="text-align: center; font-style: italic; color: grey; margin-top: 10px;" class="mt-3 mb-3 text-center">Wait please...</div>',
     ];
 
     $form['tree_root'] = [
@@ -238,17 +241,20 @@ class TreeForm extends FormBase {
       '#markup' => '<div id="tree-root" data-initial-uri="' . $this->getRootNode()->uri . '" style="display:none;"></div>',
     ];
 
-    $form['select_node'] = [
-      '#type' => 'inline_template',
-      '#attributes' => [
-        'id' => 'select-tree-node',
-        'class' => ['btn', 'btn-primary', 'mt-3', 'mb-3', 'disabled'],
-      ],
-      '#template' => '
-        <div style="margin-bottom: 10px;">
-          <button type="button" id="select-tree-node" class="btn btn-primary btn-sm" data-field-id="' . (\Drupal::request()->query->get('field_id') ?? '').'">'.t('Select Node').'</button>
-        </div>'
-    ];
+    if ($mode == 'modal')
+    {
+      $form['select_node'] = [
+        '#type' => 'inline_template',
+        '#attributes' => [
+          'id' => 'select-tree-node',
+          'class' => ['btn', 'btn-primary', 'mt-3', 'mb-3', 'disabled'],
+        ],
+        '#template' => '
+          <div style="margin-bottom: 10px;">
+            <button type="button" id="select-tree-node" class="btn btn-primary btn-sm" data-field-id="' . (\Drupal::request()->query->get('field_id') ?? '').'">'.t('Select Node').'</button>
+          </div>'
+      ];
+    }
 
     return $form;
   }
