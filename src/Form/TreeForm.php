@@ -69,7 +69,8 @@ class TreeForm extends FormBase {
       \Drupal::messenger()->addError(t("An element type is required to inspect a concept hierarchy."));
       return [];
     }
-    $this->setElementType($elementtype);
+
+    //$this->setElementType($elementtype);
 
     // Tipos válidos padrão
     $validTypes = [
@@ -155,21 +156,46 @@ class TreeForm extends FormBase {
       ],
     ];
 
-    if (array_key_exists($this->getElementType(), $validTypes)) {
-      [$elementName, $nodeUri] = $validTypes[$this->getElementType()];
+    // Dividir a string $elementtype em um array
+    $elementtypesArray = explode(',', $elementtype);
+
+    // Filtrar tipos válidos a partir do array $validTypes
+    $validElementtypes = array_filter($elementtypesArray, function ($type) use ($validTypes) {
+        return array_key_exists($type, $validTypes);
+    });
+
+    // Verificar se algum tipo válido foi encontrado
+    if (empty($validElementtypes)) {
+        \Drupal::messenger()->addError(t("No valid element type has been provided."));
+        return [];
+    }
+
+    // Preparar branches com base nos tipos válidos
+    $branches_param = array_values(array_filter($branches_param, function ($branch) use ($validElementtypes) {
+        return in_array($branch['id'], $validElementtypes);
+    }));
+
+    // Configurar o elemento principal (opcional, baseado no primeiro tipo válido)
+    $firstType = reset($validElementtypes);
+    if ($firstType && array_key_exists($firstType, $validTypes)) {
+        [$elementName, $nodeUri] = $validTypes[$firstType];
     } else {
-      \Drupal::messenger()->addError(t("No valid element type has been provided."));
-      return [];
+        \Drupal::messenger()->addError(t("Failed to determine the primary element type."));
+        return [];
     }
 
-    if (!empty($branches_param) && $elementtype !== NULL) {
-      // Filtra apenas o nó correspondente ao $elementtype
-      $branches_param = array_values(array_filter($branches_param, function ($branch) use ($elementtype) {
-        return $branch['id'] === $elementtype;
-      }));
-    }
+    // Dividir $elementtype e remover espaços
+    $elementtypesArray = array_map('trim', explode(',', $elementtype));
 
-    // Se nenhum filtro corresponder ou $branches_param estiver vazio, define um valor padrão
+    // Filtra
+    $branches_param = array_filter($branches_param, function ($branch) use ($elementtypesArray) {
+      return in_array($branch['id'], $elementtypesArray);
+    });
+
+    // Reindexa e garante array "limpo"
+    $branches_param = array_values($branches_param);
+
+    // Se ficou vazio, podemos repor um default
     if (empty($branches_param)) {
       $branches_param = [
         [
@@ -179,6 +205,8 @@ class TreeForm extends FormBase {
         ],
       ];
     }
+    //dpm($elementtype, 'Debug $elementtype');           // Ver qual string está chegando
+    //dpm($branches_param, 'Debug $branches_param');     // Ver o array final de branches
 
     // Recupera nó raiz
     $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
@@ -206,14 +234,14 @@ class TreeForm extends FormBase {
     {
       $form['title'] = [
           '#type' => 'markup',
-          '#markup' => '<h3 class="mt-4 mb-4">Knowledge Graph Hierarchy</h3>',
+          '#markup' => '<h3 class="mt-4 mb-4">'.$elementName.' Graph Hierarchy</h3>',
       ];
     }
 
     $form['search_wrapper'] = [
       '#type' => 'inline_template',
       '#template' => '
-        <div style="position: relative; max-width: 350px;" class="js-form-wrapper form-wrapper" id="edit-search-wrapper" data-drupal-selector="edit-search-wrapper">
+        <div style="position: relative; max-width: 350px;" class="js-form-wrapper form-wrapper mt-3" id="edit-search-wrapper" data-drupal-selector="edit-search-wrapper">
           <div class="js-form-item js-form-type-textfield form-type-textfield js-form-item-search-input form-item-search-input form-no-label">
             <input id="tree-search" class="form-control" placeholder="Search..." style="padding-right: 30px; margin-bottom: 10px;" autocomplete="off" data-drupal-selector="edit-search-input" type="text" name="search_input" value="" size="60" maxlength="128">
           </div>
@@ -222,18 +250,9 @@ class TreeForm extends FormBase {
       ',
     ];
 
-    // $form['controls'] = [
-    //   '#type' => 'inline_template',
-    //   '#template' => '
-    //     <div style="margin-bottom: 10px;">
-    //       <button type="button" id="expand-all" class="btn btn-primary btn-sm">Expand All</button>
-    //       <button type="button" id="collapse-all" class="btn btn-secondary btn-sm">Collapse All</button>
-    //     </div>',
-    // ];
-
     $form['wait_message'] = [
       '#type' => 'markup',
-      '#markup' => '<div id="wait-message" style="text-align: center; font-style: italic; color: grey; margin-top: 10px;" class="mt-3 mb-3 text-center">Wait please...</div>',
+      '#markup' => '<div id="wait-message" style="text-align: center; font-style: italic; color: grey; margin-top: 10px;" class="mt-3 mb-3 '.($mode == 'modal' ?? 'text-center').'">Wait please...</div>',
     ];
 
     $form['tree_root'] = [
