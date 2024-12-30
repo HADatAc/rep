@@ -24,8 +24,8 @@
           const $clearButton = $('#clear-search');
           const $existingModal = $('.ui-dialog-content');
 
-          console.warn(elementtype);
-          console.warn($existingModal.data('elementtype'));
+          //console.warn(elementtype);
+          //console.warn($existingModal.data('elementtype'));
 
           // Checagem de reutilização
           if (
@@ -146,7 +146,7 @@
               .removeClass('disabled')
               .data('selected-value', typeNamespace);
           } else {
-            console.warn('typeNamespace não encontrado, botão permanece desativado.');
+            //console.warn('typeNamespace não encontrado, botão permanece desativado.');
             $selectNodeButton
               .prop('disabled', true)
               .addClass('disabled')

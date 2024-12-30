@@ -21,7 +21,7 @@
           return true;
         });
 
-        console.warn('After removing duplicates:', drupalSettings.rep_tree.branches);
+        //console.warn('After removing duplicates:', drupalSettings.rep_tree.branches);
 
         const $treeRoot = $(element);
         const $selectNodeButton = $('#select-tree-node', context);
@@ -79,14 +79,14 @@
 
         // Inicializa o JSTree
         if ($treeRoot.length) {
-          console.warn(JSON.stringify(drupalSettings.rep_tree.branches));
-          console.log('Initializing JSTree...');
+          //console.warn(JSON.stringify(drupalSettings.rep_tree.branches));
+          //console.log('Initializing JSTree...');
           const treeInstance = $treeRoot.jstree({
             core: {
               data: function (node, cb) {
-                console.log('Fetching tree data for node:', node);
+                //console.log('Fetching tree data for node:', node);
                 if (node.id === '#') {
-                  console.log('Loading root branches...');
+                  //console.log('Loading root branches...');
                   cb(drupalSettings.rep_tree.branches.map(branch => ({
                     id: branch.id,
                     text: branch.label,
@@ -97,14 +97,14 @@
                     children: true,
                   })));
                 } else {
-                  console.log('Loading children for node URI:', node.original.uri);
+                  //console.log('Loading children for node URI:', node.original.uri);
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
                     type: 'GET',
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-                      console.log('Fetched child nodes:', data);
+                      //console.log('Fetched child nodes:', data);
                       cb(data.map(item => ({
                         id: item.nodeId,
                         text: item.label || 'Unnamed Node',
@@ -116,7 +116,7 @@
                       })));
                     },
                     error: function () {
-                      console.error('Error fetching children for node:', node.original.uri);
+                      //console.error('Error fetching children for node:', node.original.uri);
                       cb([]);
                     },
                   });
@@ -152,36 +152,36 @@
           // Botões Expandir e Colapsar
           $expandButton.on('click', function () {
             if (treeReady) {
-              console.log('Expanding all nodes...');
+              //console.log('Expanding all nodes...');
               $treeRoot.jstree('open_all');
             } else {
-              console.warn('Tree is not ready to expand.');
+              //console.warn('Tree is not ready to expand.');
             }
           });
 
           $collapseButton.on('click', function () {
             if (treeReady) {
-              console.log('Collapsing all nodes...');
+              //console.log('Collapsing all nodes...');
               $treeRoot.jstree('close_all');
             } else {
-              console.warn('Tree is not ready to collapse.');
+              //console.warn('Tree is not ready to collapse.');
             }
           });
 
           // Gerencia a seleção de nós e ativa o botão "Select Node"
           $treeRoot.on('select_node.jstree', function (e, data) {
-            console.log('Node selected:', data.node);
+            //console.log('Node selected:', data.node);
             const selectedNode = data.node.original;
 
             if (selectedNode.typeNamespace) {
-              console.log('typeNamespace detected:', selectedNode.typeNamespace);
+              //console.log('typeNamespace detected:', selectedNode.typeNamespace);
               $selectNodeButton
                 .prop('disabled', false)
                 .removeClass('disabled')
                 .data('selected-value', selectedNode.typeNamespace)
                 .data('field-id', $('#tree-root').data('field-id')); // Associar o campo
             } else {
-              console.warn('No typeNamespace found. Disabling button.');
+              //console.warn('No typeNamespace found. Disabling button.');
               $selectNodeButton
                 .prop('disabled', true)
                 .addClass('disabled')
@@ -194,11 +194,11 @@
 
           function performSearch(searchTerm) {
             if (!treeReady) {
-              console.warn('Tree is not ready for search.');
+              //console.warn('Tree is not ready for search.');
               return;
             }
             if (searchTerm.length < 2) {
-              console.warn('Search term must be at least 2 characters.');
+              //console.warn('Search term must be at least 2 characters.');
               return;
             }
             if (searchTerm === lastSearchTerm) {
@@ -207,7 +207,7 @@
             }
             lastSearchTerm = searchTerm;
 
-            console.log('Performing search for term:', searchTerm);
+            //console.log('Performing search for term:', searchTerm);
             $treeRoot.jstree('search', searchTerm);
 
             setTimeout(() => {
@@ -221,7 +221,7 @@
               matchedNodes.forEach(node => {
                 // Antes de abrir, verifica se o nó já está aberto
                 if (!$treeRoot.jstree(true).is_open(node.id)) {
-                  console.log('Expanding matched node:', node.id);
+                  //console.log('Expanding matched node:', node.id);
                   $treeRoot.jstree('open_node', node.parents, () => {
                     $treeRoot.jstree('open_node', node.id, false, true);
                   });
@@ -243,7 +243,7 @@
           $searchInput.on('keyup', function (e) {
             if (e.key === 'Enter') {
               e.preventDefault();
-              console.log('Enter press prevented on search input.');
+              //console.log('Enter press prevented on search input.');
               return;
             }
             clearTimeout(searchTimeout);
@@ -253,7 +253,7 @@
           });
 
           $clearButton.on('click', function () {
-            console.log('Clear search clicked.');
+            //console.log('Clear search clicked.');
             $searchInput.val('');
             $clearButton.hide();
             $treeRoot.jstree('clear_search');
@@ -264,11 +264,11 @@
           $(document).on('keypress', function (e) {
             if (e.key === 'Enter') {
               e.preventDefault();
-              console.log('Enter press prevented globally.');
+              //console.log('Enter press prevented globally.');
             }
           });
         } else {
-          console.warn('Tree root not found. Initialization aborted.');
+          //console.warn('Tree root not found. Initialization aborted.');
         }
       });
     },
@@ -285,7 +285,7 @@
 
       // Função para limpar atributos do <html>
       function resetHtmlAttributes() {
-        console.log('Resetting <html> attributes...');
+        //console.log('Resetting <html> attributes...');
         $('html').css({
           overflow: '',
           'box-sizing': '',
@@ -295,19 +295,19 @@
 
       // Evento disparado quando o modal do Drupal é fechado
       $(document).on('dialog:afterclose', function () {
-        console.log('Drupal dialog closed.');
+        //console.log('Drupal dialog closed.');
         resetHtmlAttributes();
       });
 
       // Callback ao clicar no botão "Select Node"
       $selectNodeButton.on('click', function () {
-        console.log('"Select Node" button clicked.');
+        //console.log('"Select Node" button clicked.');
         resetHtmlAttributes();
       });
 
       // Fallback para o botão "X" do modal (caso necessário)
       $(document).on('click', '.ui-dialog-titlebar-close', function () {
-        console.log('"X" button clicked.');
+        //console.log('"X" button clicked.');
         resetHtmlAttributes();
       });
     },
