@@ -10,7 +10,7 @@ class TreeController extends ControllerBase {
 
   public function getChildren(Request $request) {
     $api = \Drupal::service('rep.api_connector');
-    
+
     $nodeUri = $request->query->get('nodeUri');
     $data = $api->parseObjectResponse($api->getChildren($nodeUri),'getChildren');
 
@@ -25,7 +25,7 @@ class TreeController extends ControllerBase {
 
   public function getNode(Request $request) {
     $api = \Drupal::service('rep.api_connector');
-    
+
     $nodeUri = $request->query->get('nodeUri');
     $data = $api->parseObjectResponse($api->getUri($nodeUri),'getUri');
 

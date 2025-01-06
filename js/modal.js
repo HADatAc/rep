@@ -10,24 +10,18 @@
           const url = $(this).data('url');
           const fieldId = $(this).data('field-id');
           const elementtype = $(this).data('elementtype');
-          // Valor do campo input que contém .open-tree-modal
-          const searchValue = $(this).val(); // Este .val() retorna o texto do <input>
+          const searchValue = $(this).val();
 
-          // <<< ADICIONADO >>> Se rep_tree não existe, cria:
           if (!drupalSettings.rep_tree) {
             drupalSettings.rep_tree = {};
           }
-          // Guardar o valor de busca no drupalSettings
+
           drupalSettings.rep_tree.searchValue = searchValue;
 
           const $searchField = $('#tree-search');
           const $clearButton = $('#clear-search');
           const $existingModal = $('.ui-dialog-content');
 
-          //console.warn(elementtype);
-          //console.warn($existingModal.data('elementtype'));
-
-          // Checagem de reutilização
           if (
             $existingModal.length &&
             JSON.stringify($existingModal.data('elementtype')) === JSON.stringify(elementtype)
@@ -39,9 +33,8 @@
               $treeRoot.jstree('close_all');
             }
 
-            // Atualiza o campo #tree-search
+
             if ($searchField.length) {
-              // Se já temos um valor armazenado
               const valToSet = drupalSettings.rep_tree.searchValue || '';
               $searchField.val(valToSet);
               $clearButton.show();
@@ -56,7 +49,6 @@
             return;
           }
 
-          // Caso contrário, cria um novo modal
           const dialogOptions = {
             title: Drupal.t('Tree Form'),
             width: 800,
@@ -64,7 +56,6 @@
             close: function () {
               const currentelementtype = $(this).data('elementtype') || ['desconhecido'];
 
-              // Restaurar valor original se necessário
               const initialValue = $(this).data('initial-value');
               if (initialValue) {
                 $(`[name="${fieldId}"], #${fieldId}`).val(initialValue);
@@ -76,27 +67,23 @@
           const $field = $(`[name="${fieldId}"], #${fieldId}`);
           const initialValue = $field.val();
 
-          // Salvar valor inicial para restauração, se necessário
           $field.data('initial-value', initialValue);
 
-          // Abrir o modal via AJAX
           Drupal.ajax({
             url: modalUrl,
             dialogType: 'modal',
             dialog: dialogOptions,
           }).execute();
 
-          // Após abrir o modal, configurar o campo de busca
           setTimeout(() => {
-            // Aqui pegamos novamente o drupalSettings.rep_tree.searchValue
-            // para preencher #tree-search
             const valToSet = drupalSettings.rep_tree.searchValue || '';
+            const $searchField = $('#tree-search');
 
             if ($searchField.length) {
               $searchField.val(valToSet);
               $searchField.trigger('input');
 
-              if ($searchField.val().trim() !== '') {
+              if ($searchField.val().length > 0) {
                 $clearButton.show();
               } else {
                 $clearButton.hide();
@@ -115,7 +102,6 @@
             }
           }, 500);
 
-          // Atribuir o elementtype ao modal recém-criado
           setTimeout(() => {
             const $newModal = $('.ui-dialog-content');
             if ($newModal.length) {
@@ -126,7 +112,6 @@
     },
   };
 
-  // Behavior para o "Select Node" etc.
   Drupal.behaviors.repTreeSelection = {
     attach: function (context, settings) {
       const $treeRoot = $('#tree-root', context);
