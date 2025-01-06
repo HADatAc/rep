@@ -50,7 +50,7 @@
           }
 
           const dialogOptions = {
-            title: Drupal.t('Tree Form'),
+            title: Drupal.t('Knowledge Graph Hierarchy'),
             width: 800,
             modal: true,
             close: function () {
