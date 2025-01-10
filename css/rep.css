@@ -624,108 +624,108 @@ div.toast {
   z-index: 99999;
 }
 
-/* Estilo do Modal */
-.modal-media {
-  position: fixed;
-  top: 40px;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.9); /* Fundo mais escuro para maior contraste */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  overflow: auto; /* Permite rolagem para conteúdos maiores */
+/* TREE */
+#block-hasco-barrio-content form.tree-form{
+  padding-left:5px;
+  max-width: 1110px !important; /* Garantir a largura máxima */
+  overflow-x: auto; /* Adicionar barra de rolagem horizontal se necessário */
+  white-space: nowrap; /* Impedir quebra de linha dos itens */
 }
 
-.modal-media.hidden {
-  display: none;
+#tree-root {
+  overflow-x: auto; /* Adicionar barra de rolagem horizontal para o jstree */
+  white-space: nowrap; /* Impedir quebra de texto dentro dos nós */
+  max-height: 55vh!important; /* Define a altura máxima como 80% da altura da janela */
+  overflow-y: auto; /* Adiciona scroll vertical */
+  margin-bottom: 10px;
 }
 
-/* Ajuste do modal */
-#modal-content {
-  padding-top:20px;
-  text-align: center;
-  height: 90vh;
-  /*border: 1px solid #f5f5f5;*/
+.jstree-anchor {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: inline-block;
+  max-width: 90%;
+  vertical-align: middle;
+  white-space: normal !important;
+  word-wrap: break-word;
 }
 
-.modal-content {
-  margin: 40px auto;
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  width: 793px!important; /* Largura aproximada de A4 a 96 DPI */
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-  position: relative;
-  text-align: left;
-  z-index: 99999;
-}
-
-/* Botão de fechar */
-.close-btn {
+.jstree-anchor[title]:hover:after {
+  content: attr(title);
   position: absolute;
-  top: 0;
-  right: 10px;
-  padding-top:0px;
-  color: #000;
-  border: none;
-  font-size: 22px;
-  font-weight: bold;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-}
-
-.close-btn:hover {
-  color: #d32f2f;
-}
-
-/* Fundo do modal */
-.modal-backdrop {
-  position: fixed;
-  top: 0;
+  background: #333;
+  color: #fff;
+  padding: 5px;
+  border-radius: 4px;
+  white-space: normal; /* Permite quebra de linha no tooltip */
+  z-index: 1000;
+  top: 110%; /* Ajuste a posição do tooltip */
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  z-index: 999!important;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Contêiner para os PDFs */
-#pdf-scroll-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px; /* Espaço entre as páginas */
-  padding-top: 20px;
+.jstree-container-ul {
+  padding-bottom: 40px!important;
 }
 
-#pdf-scroll-container canvas {
-  width: 100%; /* Ajusta o tamanho para a largura do modal */
-  height: auto;
+#tree-search {
+  max-width: 350px; /* Limitar a largura do campo de pesquisa */
+  display: inline-block;
+  position: relative;
+  padding-right: 30px; /* Espaço para o botão de limpar */
 }
 
-/* Ocultar barra de rolagem enquanto mantém o scroll */
-#pdf-scroll-container {
-  overflow-y: scroll; /* Permite rolagem vertical */
-  -ms-overflow-style: none; /* Oculta scrollbar no IE e Edge */
-  scrollbar-width: none; /* Oculta scrollbar no Firefox */
+#tree-search-wrapper {
+  position: relative;
+  display: inline-block;
 }
 
-#pdf-scroll-container::-webkit-scrollbar {
-  display: none; /* Oculta scrollbar no Chrome, Safari e outros baseados em WebKit */
+#clear-search {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: #888;
+  cursor: pointer;
+  display: none; /* Ocultar por padrão */
+
+}
+
+#clear-search:hover {
+  color: #000; /* Cor ao passar o mouse */
+}
+
+#tree-root .jstree-anchor {
+  font-size: 14px;
+  color: #333;
+}
+
+#tree-root .jstree-anchor i {
+  margin-right: 5px;
+}
+
+
+/* MODAL Open-Dialog */
+/* Ajustar altura máxima e rolagem do modal */
+.ui-dialog {
+  position: fixed;
+  top: 10% !important; /* Garante que o modal esteja visível no topo */
+  bottom: auto;
+  max-height: 90vh; /* Limita o tamanho máximo vertical */
+  width: auto !important; /* Permite que o modal ajuste a largura conforme necessário */
+  overflow: auto; /* Adiciona rolagem interna se o conteúdo crescer */
 }
 
 .disabled-link {
   pointer-events: none;
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.ui-dialog-content {
+  max-height: calc(90vh - 100px); /* Limita a altura interna do conteúdo */
+  overflow-y: auto; /* Adiciona rolagem interna para conteúdo excedente */
 }
