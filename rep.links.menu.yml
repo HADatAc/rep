@@ -10,7 +10,7 @@ rep.kg:
   weight: 10
   requirements:
     _permission: 'access content'
-    
+
 rep.dashboard:
   title: Dashboard
   description: Knowledge graph's dashboad
@@ -20,7 +20,7 @@ rep.dashboard:
   weight: 10
   requirements:
     _permission: 'access content'
-    
+
 rep.uri_describe:
   title: Describe URI
   description: Use URI to retrieve descriptions of knowledge graph's elements
@@ -30,8 +30,8 @@ rep.uri_describe:
   weight: 100
   requirements:
     _permission: 'access content'
-    
-        
+
+
 #
 # REPOSITORY
 #
@@ -115,7 +115,7 @@ rep.about:
 rep.admin_settings_link:
   title: Configuration
   description: Semantic Repository Settings
-  menu_name: main 
+  menu_name: main
   route_name: rep.admin_settings_custom
   parent: rep.top_level
   weight: 7
@@ -123,3 +123,30 @@ rep.admin_settings_link:
     _permission: 'access content'
     _role: 'authenticated'
 
+
+#
+# REVIEWER
+#
+
+reviewer.top_level:
+  title: Reviewer
+  description: Manage Reviews
+  route_name: rep.home
+  menu_name: main
+  weight: 100
+  requirements:
+    _permission: 'access reviewer menu'
+
+reviewer.response_options:
+  title: Response Options
+  description: Manage Response Options Reviews
+  menu_name: main
+  route_name: sir.select_review_element
+  route_parameters:
+    elementtype: 'responseoption'
+    page: '1'
+    pagesize: '10'
+  parent: reviewer.top_level
+  weight: 1
+  requirements:
+    _permission: 'access reviewer menu'

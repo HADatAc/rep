@@ -21,6 +21,32 @@ class ListManagerEmailPage {
 
     $api = \Drupal::service('rep.api_connector');
     $elements = $api->parseObjectResponse($api->listByManagerEmail($elementtype,$manageremail,$pagesize,$offset),'listByManagerEmail');
+
+    dpm($elements);
+    return $elements;
+
+  }
+
+  public static function execReview($elementtype, $manageremail, $status, $withcurrent, $page, $pagesize) {
+    if ($elementtype == NULL || $page == NULL || $pagesize == NULL) {
+        $resp = array();
+        return $resp;
+    }
+
+    // List status URI
+
+
+    $offset = -1;
+    if ($page <= 1) {
+      $offset = 0;
+    } else {
+      $offset = ($page - 1) * $pagesize;
+    }
+
+    $api = \Drupal::service('rep.api_connector');
+    $elements = $api->parseObjectResponse($api->listByManagerEmailStatus($elementtype,$manageremail,$status,$withcurrent,$pagesize,$offset),'listByManagerEmailStatus');
+
+    dpm($elements);
     return $elements;
 
   }

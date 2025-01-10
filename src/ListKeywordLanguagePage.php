@@ -27,6 +27,29 @@ class ListKeywordLanguagePage {
     }
     $api = \Drupal::service('rep.api_connector');
     $elements = $api->parseObjectResponse($api->listByKeywordAndLanguage($elementtype,$keyword,$language,$pagesize,$offset),'listByKeywordAndLanguage');
+
+    return $elements;
+
+  }
+
+  public static function execReview($elementtype, $manageremail, $page, $pagesize) {
+    if ($elementtype == NULL || $page == NULL || $pagesize == NULL) {
+        $resp = array();
+        return $resp;
+    }
+
+    $offset = -1;
+    if ($page <= 1) {
+      $offset = 0;
+    } else {
+      $offset = ($page - 1) * $pagesize;
+    }
+
+    $api = \Drupal::service('rep.api_connector');
+    $elements = $api->parseObjectResponse($api->listByManagerEmail($elementtype,$manageremail,$pagesize,$offset),'listByManagerEmail');
+
+    dpm($elements);
+
     return $elements;
 
   }
@@ -41,9 +64,9 @@ class ListKeywordLanguagePage {
     if ($language == NULL) {
       $language = "_";
     }
-        
+
     $api = \Drupal::service('rep.api_connector');
-    
+
     $response = $api->listSizeByKeywordAndLanguage($elementtype,$keyword,$language);
     $listSize = -1;
     if ($response != null) {
@@ -66,14 +89,14 @@ class ListKeywordLanguagePage {
       if ($module == NULL) {
         return '';
       }
-      return $root_url . '/' . $module . REPGUI::LIST_PAGE . 
+      return $root_url . '/' . $module . REPGUI::LIST_PAGE .
           $elementtype . '/' .
           $keyword . '/' .
           $language . '/' .
-          strval($page) . '/' . 
+          strval($page) . '/' .
           strval($pagesize);
     }
-    return ''; 
+    return '';
   }
 
 }
