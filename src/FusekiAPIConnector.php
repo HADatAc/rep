@@ -6,7 +6,7 @@ use Drupal\Core\Http\ClientFactory;
 use Drupal\rep\JWT;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
-use GuzzleHttp\Exception\ConnectException; 
+use GuzzleHttp\Exception\ConnectException;
 use Exception;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
@@ -34,7 +34,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getUsage($uri) {
@@ -42,7 +42,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getDerivation($uri) {
@@ -50,7 +50,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getChildren($uri) {
@@ -59,7 +59,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getHascoType($uri) {
@@ -67,7 +67,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
@@ -82,7 +82,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
@@ -95,7 +95,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method, $api_url.$endpoint, $data);   
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
   }
 
   public function listByKeyword($elementType, $keyword, $pageSize, $offset) {
@@ -108,7 +108,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method, $api_url.$endpoint, $data);   
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
   }
 
   public function listSizeByKeyword($elementType, $keyword) {
@@ -119,7 +119,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
@@ -133,19 +133,35 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
+  public function listByManagerEmailStatus($elementType, $manageremail, $status="current", $withcurrent=0, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremail/status/".
+      $status."/".
+      $manageremail."/".
+      $withcurrent."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
   public function listSizeByManagerEmail($elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
-      $elementType . 
-      "/manageremail/total/" . 
+      $elementType .
+      "/manageremail/total/" .
       $manageremail;
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function listByManagerEmailByStudy($studyuri, $elementType, $manageremail, $pageSize, $offset) {
@@ -159,20 +175,20 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
   public function listSizeByManagerEmailByStudy($studyuri, $elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
-      $elementType . 
-      "/manageremailbystudy/total/" . 
+      $elementType .
+      "/manageremailbystudy/total/" .
       rawurlencode($studyuri)."/".
       $manageremail;
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function listByManagerEmailBySOC($socuri, $elementType, $manageremail, $pageSize, $offset) {
@@ -186,19 +202,19 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function listSizeByManagerEmailBySOC($socuri, $elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
-      $elementType . 
-      "/manageremailbysoc/total/" . 
+      $elementType .
+      "/manageremailbysoc/total/" .
       rawurlencode($socuri)."/".
       $manageremail;
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function listByManagerEmailByContainer($containeruri, $elementType, $manageremail, $pageSize, $offset) {
@@ -212,19 +228,19 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function listSizeByManagerEmailByContainer($containeruri, $elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
-      $elementType . 
-      "/manageremailbycontainer/total/" . 
+      $elementType .
+      "/manageremailbycontainer/total/" .
       rawurlencode($containeruri)."/".
       $manageremail;
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function uningestMT($metadataTemplateUri) {
@@ -232,36 +248,36 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function elementAdd($elementType, $elementJson) {
-    $endpoint = "/hascoapi/api/" . 
-      $elementType . 
+    $endpoint = "/hascoapi/api/" .
+      $elementType .
       "/create/".
       rawurlencode($elementJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function elementDel($elementType, $elementUri) {
-    $endpoint = "/hascoapi/api/" . 
-      $elementType . 
-      "/delete/" . 
-      rawurlencode($elementUri);    
+    $endpoint = "/hascoapi/api/" .
+      $elementType .
+      "/delete/" .
+      rawurlencode($elementUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  /****************************************************************************** 
+  /******************************************************************************
    *
    *                             E L E M E N T S
-   * 
-   ******************************************************************************/ 
+   *
+   ******************************************************************************/
 
   /**
    *   ANNOTATION
@@ -272,7 +288,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function annotationDel($annotationUri) {
@@ -280,7 +296,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function annotationByContainerAndPosition($containerUri,$positionUri) {
@@ -288,7 +304,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -300,7 +316,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function annotationStemDel($annotationStemUri) {
@@ -308,19 +324,19 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
    *   CODEBOOK
    */
- 
+
    public function codebookAdd($codebookJson) {
     $endpoint = "/hascoapi/api/codebook/create/".rawurlencode($codebookJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function codebookDel($codebookUri) {
@@ -328,10 +344,10 @@ class FusekiAPIConnector {
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  /** 
+  /**
    *   CODEBOOK SLOT
    */
 
@@ -340,7 +356,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function codebookSlotAdd($codebookUri,$totalCodebookSlots) {
@@ -348,7 +364,7 @@ class FusekiAPIConnector {
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function codebookSlotDel($containerUri) {
@@ -356,29 +372,29 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function codebookSlotReset($containerSlotUri) {
-    $endpoint = "/hascoapi/api/slots/codebook/detach/".rawurlencode($containerSlotUri);    
+    $endpoint = "/hascoapi/api/slots/codebook/detach/".rawurlencode($containerSlotUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
-   *  
+   *
    *    CONTAINER SLOTS
-   * 
+   *
    */
- 
+
   public function containerslotAdd($containerUri,$totalContainerSlots) {
     $endpoint = "/hascoapi/api/slots/container/create/".rawurlencode($containerUri)."/".rawurlencode($totalContainerSlots);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function containerslotDel($containerUri) {
@@ -386,15 +402,15 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function containerslotReset($containerslotUri) {
-    $endpoint = "/hascoapi/api/slots/container/detach/".rawurlencode($containerslotUri);    
+    $endpoint = "/hascoapi/api/slots/container/detach/".rawurlencode($containerslotUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -406,7 +422,7 @@ class FusekiAPIConnector {
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function datafileDel($datafileUri) {
@@ -414,7 +430,7 @@ class FusekiAPIConnector {
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -430,7 +446,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function deploymentSizeByStateEmail($state, $email) {
@@ -440,7 +456,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function deploymentsByPlatformInstanceWithPage($platformInstanceUri,$pageSize,$offset) {
@@ -451,7 +467,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function sizeDeploymentsByPlatformInstance($platformInstanceUri) {
@@ -460,7 +476,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -472,7 +488,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function detectorDel($detectorUri) {
@@ -480,7 +496,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function detectorAttach($detectorUri,$containerslotUri) {
@@ -488,7 +504,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -500,7 +516,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function detectorStemDel($detectorStemUri) {
@@ -508,7 +524,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -523,28 +539,28 @@ class FusekiAPIConnector {
     }
     $method = "GET";
     $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function instrumentAdd($instrumentJson) {
     $endpoint = "/hascoapi/api/instrument/create/".rawurlencode($instrumentJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function instrumentDel($instrumentUri) {
-    $endpoint = "/hascoapi/api/instrument/delete/".rawurlencode($instrumentUri);    
+    $endpoint = "/hascoapi/api/instrument/delete/".rawurlencode($instrumentUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
-   *   ORGANIZATION  
+   *   ORGANIZATION
    */
 
    public function organizationAdd($organizationJson) {
@@ -552,7 +568,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function organizationDel($organizationUri) {
@@ -560,7 +576,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getSubOrganizations($uri, $pageSize, $offset) {
@@ -571,7 +587,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalSubOrganizations($uri) {
@@ -580,7 +596,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getAffiliations($uri, $pageSize, $offset) {
@@ -591,7 +607,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalAffiliations($uri) {
@@ -600,11 +616,11 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
-   *   PERSON  
+   *   PERSON
    */
 
    public function personAdd($personJson) {
@@ -612,7 +628,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function personDel($personUri) {
@@ -620,11 +636,11 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
-   *   PLACE  
+   *   PLACE
    */
 
    public function placeAdd($placeJson) {
@@ -632,7 +648,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function placeDel($placeUri) {
@@ -640,7 +656,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getContains($uri, $pageSize, $offset) {
@@ -651,7 +667,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalContains($uri) {
@@ -660,7 +676,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -673,7 +689,7 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     //dpm($api_url.$endpoint);
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function sizePlatforminstancesByPlatform($platformUri) {
@@ -681,11 +697,11 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
-   *   POSTAL ADDRESS  
+   *   POSTAL ADDRESS
    */
 
    public function postalAddressAdd($postalAddressJson) {
@@ -693,7 +709,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function postalAddressDel($postalAddressUri) {
@@ -701,7 +717,7 @@ class FusekiAPIConnector {
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getContainsPostalAddress($uri, $pageSize, $offset) {
@@ -712,7 +728,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalContainsPostalAddress($uri) {
@@ -721,7 +737,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getContainsElement($uri, $elementtype, $pageSize, $offset) {
@@ -733,7 +749,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalContainsElement($uri, $elementtype) {
@@ -743,10 +759,10 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  /** 
+  /**
    *   RESPONSE OPTION
    */
 
@@ -755,7 +771,7 @@ class FusekiAPIConnector {
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function responseOptionDel($responseOptionUri) {
@@ -763,7 +779,7 @@ class FusekiAPIConnector {
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function responseOptionAttach($responseOptionUri,$containerSlotUri) {
@@ -771,7 +787,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -783,7 +799,7 @@ class FusekiAPIConnector {
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function semanticVariableDel($semanticVariableUri) {
@@ -791,10 +807,10 @@ class FusekiAPIConnector {
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  /** 
+  /**
    *   SLOT ELEMENT
    */
 
@@ -803,7 +819,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -820,7 +836,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function streamSizeByStateEmailDeployment($state, $email, $deploymenturi) {
@@ -831,7 +847,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data); 
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -844,7 +860,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getStudySOCs($uri, $pageSize, $offset) {
@@ -855,7 +871,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getStudySTRs($uri, $pageSize, $offset) {
@@ -866,7 +882,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalStudyDAs($uri) {
@@ -875,7 +891,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalStudyRoles($uri) {
@@ -884,7 +900,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalStudyVCs($uri) {
@@ -893,7 +909,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalStudySOCs($uri) {
@@ -902,7 +918,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalStudySOs($uri) {
@@ -911,7 +927,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function getTotalStudySTRs($uri) {
@@ -920,7 +936,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);  
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -932,11 +948,11 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
-   *   STUDY OBJECT 
+   *   STUDY OBJECT
    */
 
   public function studyObjectsBySOCwithPage($socUri,$pageSize,$offset) {
@@ -944,7 +960,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function sizeStudyObjectsBySOC($socUri) {
@@ -952,7 +968,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -963,28 +979,28 @@ class FusekiAPIConnector {
     $endpoint = "/hascoapi/api/subcontainer/create/".rawurlencode($subcontainerJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function subcontainerDel($subcontainerUri) {
     $endpoint = "/hascoapi/api/subcontainer/delete/".rawurlencode($subcontainerUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
-    $data = $this->getHeader();    
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function subcontainerUpdate($json) {
     $endpoint = "/hascoapi/api/subcontainer/update/".rawurlencode($json);
     $method = "POST";
     $api_url = $this->getApiUrl();
-    $data = $this->getHeader();   
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
-   *   VIRTUAL COLUMN 
+   *   VIRTUAL COLUMN
    */
 
   public function virtualColumnsByStudy($studyUri) {
@@ -992,13 +1008,13 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /***************************************************************************
-   * 
-   *                          R E P O S I T O R Y 
-   * 
+   *
+   *                          R E P O S I T O R Y
+   *
    ***************************************************************************/
 
   public function repoInfo() {
@@ -1006,42 +1022,42 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoInfoNewIP($api_url) {
     $endpoint = "/hascoapi/api/repo";
     $method = "GET";
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoUpdateLabel($api_url, $label) {
     $endpoint = "/hascoapi/api/repo/label/".rawurlencode($label);
     $method = "GET";
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoUpdateTitle($api_url, $title) {
     $endpoint = "/hascoapi/api/repo/title/".rawurlencode($title);
     $method = "GET";
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoUpdateDescription($api_url, $description) {
     $endpoint = "/hascoapi/api/repo/description/".rawurlencode($description);
     $method = "GET";
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoUpdateNamespace($api_url, $namespace, $baseUrl) {
     $endpoint = "/hascoapi/api/repo/namespace/default/".rawurlencode($namespace)."/".rawurlencode($baseUrl);
     $method = "GET";
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoResetNamespaces() {
@@ -1049,7 +1065,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoReloadNamespaceTriples() {
@@ -1057,7 +1073,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoDeleteSelectedNamespace($abbreviation) {
@@ -1065,7 +1081,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoCreateNamespace($json) {
@@ -1073,7 +1089,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function repoDeleteNamespaceTriples() {
@@ -1081,13 +1097,13 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);          
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  /************************************************************************** 
+  /**************************************************************************
    *
-   *                     E R R O R     M E T H O D S    
-   * 
+   *                     E R R O R     M E T H O D S
+   *
    **************************************************************************/
 
    public function getError() {
@@ -1107,7 +1123,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function informantList() {
@@ -1115,7 +1131,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function languageList() {
@@ -1123,7 +1139,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function generationActivityList() {
@@ -1131,7 +1147,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function instrumentPositionList() {
@@ -1139,7 +1155,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   public function subcontainerPositionList() {
@@ -1147,7 +1163,7 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);   
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   /**
@@ -1155,7 +1171,7 @@ class FusekiAPIConnector {
    */
 
   public function getApiUrl() {
-    $config = \Drupal::config(static::CONFIGNAME);           
+    $config = \Drupal::config(static::CONFIGNAME);
     return $config->get("api_url");
   }
 
@@ -1163,7 +1179,7 @@ class FusekiAPIConnector {
     if ($this->bearer == NULL) {
       $this->bearer = "Bearer " . JWT::jwt();
     }
-    return ['headers' => 
+    return ['headers' =>
       [
         'Authorization' => $this->bearer
       ]
@@ -1198,7 +1214,7 @@ class FusekiAPIConnector {
         ],
         'body' => $file_content,
       ]);
-      } 
+      }
     catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
@@ -1211,18 +1227,18 @@ class FusekiAPIConnector {
         $this->error_message = "API request returned the following status code: " . $res->getStatusCode();
         return(NULL);
       }
-    } 
-    return($res->getBody()); 
+    }
+    return($res->getBody());
   }
 
-  public function perform_http_request($method, $url, $data = false) {   
+  public function perform_http_request($method, $url, $data = false) {
     $client = new Client();
     $res=NULL;
     $this->error=NULL;
     $this->error_message="";
     try {
       $res = $client->request($method,$url,$data);
-    } 
+    }
     catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
@@ -1235,13 +1251,13 @@ class FusekiAPIConnector {
         $this->error_message = "API request returned the following status code: " . $res->getStatusCode();
         return(NULL);
       }
-    } 
-    return($res->getBody()); 
-  }   
+    }
+    return($res->getBody());
+  }
 
-  /** 
-   *  If anything goes wrong, this method will return NULL and issue a Drupal error message fowrarding the message provided by 
-   *  the HASCO API. 
+  /**
+   *  If anything goes wrong, this method will return NULL and issue a Drupal error message fowrarding the message provided by
+   *  the HASCO API.
    */
   public function parseObjectResponse($response, $methodCalled) {
     if ($this->error != NULL) {
@@ -1259,23 +1275,23 @@ class FusekiAPIConnector {
     $obj = json_decode($response);
     if ($obj == NULL) {
       \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
-      return NULL; 
+      return NULL;
     }
     if ($obj->isSuccessful) {
       return $obj->body;
     }
     $message = $obj->body;
-    if ($message != NULL && is_string($message) && 
+    if ($message != NULL && is_string($message) &&
         str_starts_with($message,"No") && str_ends_with($message,"has been found")) {
       return array();
-    }    
+    }
     \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
-    return NULL; 
+    return NULL;
   }
 
-  /** 
-   *  If anything goes wrong, this method will return NULL and issue a Drupal error message forwarding the message provided by 
-   *  the HASCO API. 
+  /**
+   *  If anything goes wrong, this method will return NULL and issue a Drupal error message forwarding the message provided by
+   *  the HASCO API.
    */
   public function parseTotalResponse($response, $methodCalled) {
     if ($this->error != NULL) {
@@ -1294,7 +1310,7 @@ class FusekiAPIConnector {
     $obj = json_decode($response);
     if ($obj == NULL) {
       \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
-      return NULL; 
+      return NULL;
     }
     if ($obj->isSuccessful) {
       $totalStr = $obj->body;
