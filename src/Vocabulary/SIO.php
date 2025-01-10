@@ -17,4 +17,3 @@
     const UNIT                      = SIO::SIO . "SIO_000052";
 
   }
-  http://semanticscience.org/resource/SIO_000776
