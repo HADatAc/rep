@@ -134,8 +134,8 @@ reviewer.top_level:
   route_name: rep.home
   menu_name: main
   weight: 100
-  # requirements:
-    # _permission: 'access reviewer menu'
+  requirements:
+    _permission: 'access reviewer menu'
 
 reviewer.response_options:
   title: Response Options
@@ -148,5 +148,5 @@ reviewer.response_options:
     pagesize: '10'
   parent: reviewer.top_level
   weight: 1
-  # requirements:
-    # _permission: 'access reviewer menu'
+  requirements:
+    _permission: 'access reviewer menu'
