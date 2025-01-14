@@ -499,6 +499,11 @@ button.aprove-button {
   border-color: #198754;
 }
 
+button.aprove-button:hover {
+  background-color: #04af5f;
+  border-color: #198754;
+}
+
 .aprove-button::before {
   content: "\f00c"; /* Código Unicode do ícone de "plus" do FontAwesome */
   font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */

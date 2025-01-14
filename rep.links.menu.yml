@@ -135,7 +135,7 @@ reviewer.top_level:
   menu_name: main
   weight: 100
   requirements:
-    # _permission: 'access reviewer menu'
+    _permission: 'access reviewer menu'
 
 reviewer.response_options:
   title: Response Options
@@ -149,4 +149,4 @@ reviewer.response_options:
   parent: reviewer.top_level
   weight: 1
   requirements:
-    # _permission: 'access reviewer menu'
+    _permission: 'access reviewer menu'

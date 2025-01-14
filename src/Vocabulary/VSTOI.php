@@ -55,6 +55,15 @@
     const OF_CODEBOOK                     = VSTOI::VSTOI . "ofCodebook";
 
     /*
+     * STATUS
+     */
+
+    const DRAFT                           = VSTOI::VSTOI . "Draft";
+    const UNDER_REVIEW                    = VSTOI::VSTOI . "UnderReview";
+    const CURRENT                         = VSTOI::VSTOI . "Current";
+    const DEPRECATED                      = VSTOI::VSTOI . "Deprecated";
+
+    /*
      *    POSITIONS
      */
 
