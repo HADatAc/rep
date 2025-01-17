@@ -529,6 +529,21 @@ button.review-element-button::before {
   transform: translateY(-50%);
 }
 
+button.generate-ins-element-button {
+  position: relative;
+  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+button.generate-ins-element-button::before {
+  content: "\f013"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 
 /* TABS */
 .form-control.nav-link {

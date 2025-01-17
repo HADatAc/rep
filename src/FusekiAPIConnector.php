@@ -4,6 +4,7 @@ namespace Drupal\rep;
 
 use Drupal\Core\Http\ClientFactory;
 use Drupal\rep\JWT;
+use Drupal\rep\Vocabulary\VSTOI;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ConnectException;
@@ -137,13 +138,11 @@ class FusekiAPIConnector {
   }
 
   // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
-  public function listByManagerEmailStatus($elementType, $manageremail, $status="current", $withcurrent=0, $pageSize, $offset) {
+  public function listByReviewStatus($elementType, $status, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
-      "/manageremail/status/".
-      $status."/".
-      $manageremail."/".
-      $withcurrent."/".
+      "/status/".
+      rawurlencode($status)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';

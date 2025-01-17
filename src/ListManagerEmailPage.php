@@ -27,15 +27,13 @@ class ListManagerEmailPage {
 
   }
 
-  public static function execReview($elementtype, $manageremail, $status, $withcurrent, $page, $pagesize) {
+  public static function execReview($elementtype, $status, $page, $pagesize) {
     if ($elementtype == NULL || $page == NULL || $pagesize == NULL) {
         $resp = array();
         return $resp;
     }
 
     // List status URI
-
-
     $offset = -1;
     if ($page <= 1) {
       $offset = 0;
@@ -44,9 +42,9 @@ class ListManagerEmailPage {
     }
 
     $api = \Drupal::service('rep.api_connector');
-    $elements = $api->parseObjectResponse($api->listByManagerEmailStatus($elementtype,$manageremail,$status,$withcurrent,$pagesize,$offset),'listByManagerEmailStatus');
+    $elements = $api->parseObjectResponse($api->listByReviewStatus($elementtype,$status,$pagesize,$offset),'listByReviewStatus');
 
-    dpm($elements);
+    //dpm($elements);
     return $elements;
 
   }
