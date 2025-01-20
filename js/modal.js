@@ -125,18 +125,20 @@
           const selectedNode = data.node.original;
           const typeNamespace = selectedNode.typeNamespace || '';
 
-          if (typeNamespace) {
-            $selectNodeButton
-              .prop('disabled', false)
-              .removeClass('disabled')
-              .data('selected-value', typeNamespace);
-          } else {
-            //console.warn('typeNamespace não encontrado, botão permanece desativado.');
-            $selectNodeButton
-              .prop('disabled', true)
-              .addClass('disabled')
-              .removeData('selected-value');
-          }
+          console.log(selectedNode);
+
+          // if (selectedNode) {
+          //   $selectNodeButton
+          //     .prop('disabled', false)
+          //     .removeClass('disabled')
+          //     .data('selected-value', typeNamespace);
+          // } else {
+          //   //console.warn('typeNamespace não encontrado, botão permanece desativado.');
+          //   $selectNodeButton
+          //     .prop('disabled', true)
+          //     .addClass('disabled')
+          //     .removeData('selected-value');
+          // }
         });
 
       $selectNodeButton
