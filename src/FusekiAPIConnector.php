@@ -558,6 +558,14 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function reviewRecursive($instrumentUri) {
+    $endpoint = "/hascoapi/api/review/recursive/".rawurlencode($instrumentUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**
    *   ORGANIZATION
    */
@@ -1185,7 +1193,7 @@ class FusekiAPIConnector {
     ];
   }
 
-  public function uploadTemplate($concept,$template) {
+  public function uploadTemplate($concept,$template,$status) {
 
     // RETRIEVE FILE CONTENT FROM FID
     $file_entity = \Drupal\file\Entity\File::load($template->hasDataFile->id);
@@ -1199,10 +1207,14 @@ class FusekiAPIConnector {
       \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $template->dataFile->id . ']'));
       return FALSE;
     }
+    if ($status != "" && $status != VSTOI::DRAFT && $status != VSTOI::CURRENT) {
+      \Drupal::messenger()->addError(t('UploadTemplate: Invalid value for status: [' . $status . ']'));
+      return FALSE;
+    }
 
-    // APPEND DATAFILE URI TO ENDPOINT'S URL
-    $endpoint = "/hascoapi/api/ingest/".$concept."/".rawurlencode($template->uri);
-
+    // APPEND DATAFILE URI AND STATUS TO ENDPOINT'S URL
+    $endpoint = "/hascoapi/api/ingest/".rawurlencode($status)."/".$concept."/".rawurlencode($template->uri);
+    
     // MAKE CALL TO API ENDPOINT
     $api_url = $this->getApiUrl();
     $client = new Client();
@@ -1213,13 +1225,11 @@ class FusekiAPIConnector {
         ],
         'body' => $file_content,
       ]);
-      }
-    catch(ConnectException $e){
+    } catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
       return(NULL);
-    }
-    catch(ClientException $e){
+    } catch(ClientException $e){
       $res = $e->getResponse();
       if($res->getStatusCode() != '200') {
         $this->error=$res->getStatusCode();
