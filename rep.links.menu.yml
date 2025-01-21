@@ -154,3 +154,17 @@ reviewer.response_options:
   weight: 1
   requirements:
     _review_access: 'TRUE'
+
+reviewer.codebooks:
+  title: Codebooks
+  description: Manage Codebooks Reviews
+  menu_name: main
+  route_name: sir.select_review_element
+  route_parameters:
+    elementtype: 'codebook'
+    page: '1'
+    pagesize: '9'
+  parent: reviewer.top_level
+  weight: 2
+  requirements:
+    _review_access: 'TRUE'
