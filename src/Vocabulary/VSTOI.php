@@ -29,6 +29,7 @@
     const QUESTIONNAIRE                   = VSTOI::VSTOI . "Questionnaire";
     const RESPONSE_OPTION                 = VSTOI::VSTOI . "ResponseOption";
     const SUBCONTAINER                    = VSTOI::VSTOI . "Subcontainer";
+    const PROCESS                         = VSTOI::VSTOI . "Process";
 
     /*
      *    PROPERTIES

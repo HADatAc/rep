@@ -170,6 +170,9 @@ class Utils {
       case "virtualcolumn":
         $short = Constant::PREFIX_VIRTUAL_COLUMN;
         break;
+      case "process":
+        $short = Constant::PREFIX_PROCESS;
+        break;
       default:
         $short = NULL;
     }
@@ -354,7 +357,7 @@ class Utils {
   }
 
   public static function elementTypeModule($elementtype) {
-    $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
+    $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'process'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];

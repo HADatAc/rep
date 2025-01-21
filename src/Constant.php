@@ -44,6 +44,7 @@ class Constant {
   const PREFIX_STREAM                     = "STM";
   const PREFIX_SUBCONTAINER               = "SCT";
   const PREFIX_VIRTUAL_COLUMN             = "VCO";
+  const PREFIX_PROCESS                    = "PRC";
 
   const FILE_STATUS_UNPROCESSED           = "UNPROCESSED";
   const FILE_STATUS_PROCESSED             = "PROCESSED";
