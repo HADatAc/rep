@@ -168,3 +168,17 @@ reviewer.codebooks:
   weight: 2
   requirements:
     _review_access: 'TRUE'
+
+reviewer.processes:
+  title: Processes
+  description: Manage Processes Reviews
+  menu_name: main
+  route_name: sir.select_review_element
+  route_parameters:
+    elementtype: 'process'
+    page: '1'
+    pagesize: '9'
+  parent: reviewer.top_level
+  weight: 3
+  requirements:
+    _review_access: 'TRUE'

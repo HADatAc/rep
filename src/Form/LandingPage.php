@@ -65,6 +65,7 @@ class LandingPage extends FormBase {
         $totalsInst .=  '<li> ' . About::total('detectorstem') . ' <a href="'.Utils::selectBackUrl('detectorstem')->toString().'">detector stem(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('detector') . ' <a href="'.Utils::selectBackUrl('detector')->toString().'">detector(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('codebook') . ' <a href="'.Utils::selectBackUrl('codebook')->toString().'">codebook(s)</a></li>';
+        $totalsInst .=  '<li> ' . About::total('process') . ' <a href="'.Utils::selectBackUrl('process')->toString().'">process(es)</a></li>';
         $totalsInst .=  '<li> ' . About::total('responseoption') . ' <a href="'.Utils::selectBackUrl('responseoption')->toString().'">response option(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('annotationstem') . ' <a href="'.Utils::selectBackUrl('annotationstem')->toString().'">annotation stem(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('annotation') . ' <a href="'.Utils::selectBackUrl('annotation')->toString().'">annotation(s)</a></li>';
