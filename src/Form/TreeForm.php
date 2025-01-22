@@ -154,6 +154,11 @@ class TreeForm extends FormBase {
         'uri' => VSTOI::ANNOTATION,
         'label' => 'Annotations'
       ],
+      [
+        'id' => 'processstem',
+        'uri' => VSTOI::PROCESS_STEM,
+        'label' => 'Process Stems'
+      ],
     ];
 
     // Dividir a string $elementtype em um array

@@ -79,6 +79,9 @@ class TreeForm extends FormBase {
     } else if ($this->getElementType() == 'detectorstem') {
       $elementName = "Detector Stem";
       $nodeUri = VSTOI::DETECTOR_STEM;
+    } else if ($this->getElementType() == 'processstem') {
+      $elementName = "Process Stem";
+      $nodeUri = VSTOI::PROCESS_STEM;
     } else {
       \Drupal::messenger()->addError(t("No valid element type has been provided."));
       return [];
