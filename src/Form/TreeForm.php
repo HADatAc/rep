@@ -73,7 +73,7 @@ class TreeForm extends FormBase {
 
     //$this->setElementType($elementtype);
 
-    // Tipos válidos padrão
+    // Valid types
     $validTypes = [
       'annotationstem' => ["Annotation Stem", EntryPoints::ANNOTATION_STEM],
       'attribute' => ["Attribute", EntryPoints::ATTRIBUTE],
@@ -155,26 +155,26 @@ class TreeForm extends FormBase {
 
     ];
 
-    // Dividir a string $elementtype em um array
+    // Divide string $elementtype into an array
     $elementtypesArray = explode(',', $elementtype);
 
-    // Filtrar tipos válidos a partir do array $validTypes
+    // Filter valid types from $validTypes array
     $validElementtypes = array_filter($elementtypesArray, function ($type) use ($validTypes) {
         return array_key_exists($type, $validTypes);
     });
 
-    // Verificar se algum tipo válido foi encontrado
+    // Check if any valid type was found
     if (empty($validElementtypes)) {
         \Drupal::messenger()->addError(t("No valid element type has been provided."));
         return [];
     }
 
-    // Preparar branches com base nos tipos válidos
+    // Prepare branches based on valid types
     $branches_param = array_values(array_filter($branches_param, function ($branch) use ($validElementtypes) {
         return in_array($branch['id'], $validElementtypes);
     }));
 
-    // Configurar o elemento principal (opcional, baseado no primeiro tipo válido)
+    // Set the primary element (optional, based on the first valid type)
     $firstType = reset($validElementtypes);
     if ($firstType && array_key_exists($firstType, $validTypes)) {
         [$elementName, $nodeUri] = $validTypes[$firstType];
@@ -183,18 +183,18 @@ class TreeForm extends FormBase {
         return [];
     }
 
-    // Dividir $elementtype e remover espaços
+    // Split $elementtype and remove spaces
     $elementtypesArray = array_map('trim', explode(',', $elementtype));
 
-    // Filtra
+    // Filter branches based on $elementtypesArray
     $branches_param = array_filter($branches_param, function ($branch) use ($elementtypesArray) {
       return in_array($branch['id'], $elementtypesArray);
     });
 
-    // Reindexa e garante array "limpo"
+    // Reindex and ensure clean array
     $branches_param = array_values($branches_param);
 
-    // Se ficou vazio, podemos repor um default
+    // If empty, we can replace with a default
     if (empty($branches_param)) {
       $branches_param = [
         [
@@ -204,17 +204,17 @@ class TreeForm extends FormBase {
         ],
       ];
     }
-    //dpm($elementtype, 'Debug $elementtype');           // Ver qual string está chegando
-    //dpm($branches_param, 'Debug $branches_param');     // Ver o array final de branches
+    //dpm($elementtype, 'Debug $elementtype');           // See which string is arriving
+    //dpm($branches_param, 'Debug $branches_param');     // See the final array of branches
 
-    // Recupera nó raiz
+    // Retrieve root node
     $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
     if ($this->getRootNode() == NULL) {
       \Drupal::messenger()->addError(t("Failed to retrieve root node " . $nodeUri . "."));
       return [];
     }
 
-    // Caso não seja fornecido o output_field_selector, usa o padrão
+    // If output_field_selector is not provided, use the default
     if ($output_field_selector === NULL) {
       $output_field_selector = '#edit-search-keyword--2';
     }
@@ -224,9 +224,9 @@ class TreeForm extends FormBase {
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
 
     $form['#attached']['drupalSettings']['rep_tree'] = [
-      'apiEndpoint' => $base_url . '/rep/getchildren', // Endpoint da API
+      'apiEndpoint' => $base_url . '/rep/getchildren', // API endpoint
       'branches' => $branches_param,
-      'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]', // Usar o name como seletor
+      'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]', // Use the name as selector
     ];
 
     if ($mode == 'browse')
@@ -278,6 +278,6 @@ class TreeForm extends FormBase {
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // Sem lógica de submissão
+    // No submission logic
   }
 }
