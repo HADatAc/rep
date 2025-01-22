@@ -6,6 +6,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\rep\Vocabulary\SIO;
 use Drupal\rep\Vocabulary\VSTOI;
+use Drupal\rep\EntryPoints;
 use Drupal\Core\Url;
 
 class TreeForm extends FormBase {
@@ -74,13 +75,20 @@ class TreeForm extends FormBase {
 
     // Tipos válidos padrão
     $validTypes = [
-      'attribute' => ["Attribute", SIO::ATTRIBUTE],
-      'entity' => ["Entity", SIO::ENTITY],
-      'unit' => ["Unit", SIO::UNIT],
-      'platform' => ["Platform", VSTOI::PLATFORM],
-      'instrument' => ["Instrument", VSTOI::INSTRUMENT],
-      'detector' => ["Detector", VSTOI::DETECTOR],
-      'detectorstem' => ["Detector Stem", VSTOI::DETECTOR_STEM]
+      'annotationstem' => ["Annotation Stem", EntryPoints::ANNOTATION_STEM],
+      'attribute' => ["Attribute", EntryPoints::ATTRIBUTE],
+      'detectorstem' => ["Detector Stem", EntryPoints::DETECTOR_STEM],
+      'entity' => ["Entity", EntryPoints::ENTITY],
+      'group' => ["Group", EntryPoints::GROUP],
+      'instrument' => ["Instrument", EntryPoints::INSTRUMENT],
+      'organization' => ["Organization", EntryPoints::ORGANIZATION],
+      'person' => ["Person", EntryPoints::PERSON],
+      'platform' => ["Platform", EntryPoints::PLATFORM],
+      'processstem' => ["Process Stem", EntryPoints::PROCESS_STEM],
+      'questionnaire' => ["Questionnaire", EntryPoints::QUESTIONNAIRE],
+      'responseoption' => ["Response Option", EntryPoints::RESPONSE_OPTION],
+      'study' => ["Study", EntryPoints::STUDY],
+      'unit' => ["Unit", EntryPoints::UNIT],
     ];
 
     // Caso o $branches_param não seja fornecido, usamos um padrão
@@ -90,80 +98,66 @@ class TreeForm extends FormBase {
     }
     $branches_param = [
       [
+        'id' => 'annotationstem',
+        'uri' => EntryPoints::ANNOTATION_STEM,
+        'label' => 'Annotation Stem'
+      ],
+      [
         'id' => 'attribute',
-        'uri' => SIO::ATTRIBUTE,
-        'label' => 'Attributes'
-      ],
-      [
-        'id' => 'entity',
-        'uri' => SIO::ENTITY,
-        'label' => 'Entities'
-      ],
-      [
-        'id' => 'unit',
-        'uri' => SIO::UNIT,
-        'label' => 'Units'
-      ],
-      [
-        'id' => 'latitude',
-        'uri' => SIO::LATITUDE,
-        'label' => 'Latitude'
-      ],
-      [
-        'id' => 'longitude',
-        'uri' => SIO::LONGITUDE,
-        'label' => 'Longitude'
-      ],
-      [
-        'id' => 'instrument',
-        'uri' => VSTOI::INSTRUMENT,
-        'label' => 'Instruments'
+        'uri' => EntryPoints::ATTRIBUTE,
+        'label' => 'Attribute'
       ],
       [
         'id' => 'detectorstem',
-        'uri' => VSTOI::DETECTOR_STEM,
-        'label' => 'Detector Stems'
+        'uri' => EntryPoints::DETECTOR_STEM,
+        'label' => 'Detector Stem'
       ],
       [
-        'id' => 'detector',
-        'uri' => VSTOI::DETECTOR,
-        'label' => 'Detectors'
+        'id' => 'entity',
+        'uri' => EntryPoints::ENTITY,
+        'label' => 'Entity'
+      ],
+      [
+        'id' => 'group',
+        'uri' => EntryPoints::GROUP,
+        'label' => 'Group'
+      ],
+      [
+        'id' => 'instrument',
+        'uri' => EntryPoints::INSTRUMENT,
+        'label' => 'Instrument'
       ],
       [
         'id' => 'platform',
-        'uri' => VSTOI::PLATFORM,
-        'label' => 'Platforms'
-      ],
-      [
-        'id' => 'codebook',
-        'uri' => VSTOI::CODEBOOK,
-        'label' => 'Codebook'
-      ],
-      [
-        'id' => 'response_options',
-        'uri' => VSTOI::RESPONSE_OPTION,
-        'label' => 'Response Options'
-      ],
-      [
-        'id' => 'annotation_stems',
-        'uri' => VSTOI::ANNOTATION_STEM,
-        'label' => 'Annotation Stems'
-      ],
-      [
-        'id' => 'annotations',
-        'uri' => VSTOI::ANNOTATION,
-        'label' => 'Annotations'
+        'uri' => EntryPoints::PLATFORM,
+        'label' => 'Platform'
       ],
       [
         'id' => 'processstem',
-        'uri' => VSTOI::PROCESS_STEM,
-        'label' => 'Process Stems'
+        'uri' => EntryPoints::PROCESS_STEM,
+        'label' => 'Process Stem'
       ],
       [
-        'id' => 'process',
-        'uri' => VSTOI::PROCESS,
-        'label' => 'Processes'
+        'id' => 'questionnaire',
+        'uri' => EntryPoints::QUESTIONNAIRE,
+        'label' => 'Questionnaire'
       ],
+      [
+        'id' => 'responseoption',
+        'uri' => EntryPoints::RESPONSE_OPTION,
+        'label' => 'Response Option'
+      ],
+      [
+        'id' => 'study',
+        'uri' => EntryPoints::STUDY,
+        'label' => 'Study'
+      ],
+      [
+        'id' => 'unit',
+        'uri' => EntryPoints::UNIT,
+        'label' => 'Unit'
+      ],
+
     ];
 
     // Dividir a string $elementtype em um array
