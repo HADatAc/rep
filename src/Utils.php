@@ -503,4 +503,50 @@ class Utils {
 
     return $value;
   }
+
+    /**
+   * Check if an element is derived from another element.
+   */
+  public static function checkDerivedElements($uri) {
+    $api = \Drupal::service('rep.api_connector');
+    $rawresponse = $api->getUri($uri);
+    $obj = json_decode($rawresponse);
+    $result = $obj->body;
+
+    $tmpStatus = true;
+
+    // Verifica se o elemento atual está em estado de rascunho e se foi derivado de outro
+    $oldElement = $api->getUri($result->wasDerivedFrom);
+    $oldObj = json_decode($oldElement);
+    $oldResult = $oldObj->body;
+
+    // Verifica se o conteúdo, idioma ou comentário são iguais
+    switch ($this->element_type) {
+      default:
+      case 'responseoption':
+        if (($oldResult->hasContent === $result->hasContent &&
+            $oldResult->hasLanguage === $result->hasLanguage &&
+            $oldResult->comment === $result->comment)
+        ) {
+          $tmpStatus = FALSE;
+        }
+        break;
+    }
+
+    // $currentTime = microtime(true); // Obtém o tempo atual em segundos com microsegundos
+    // $milliseconds = round($currentTime * 1000); // Converte para milissegundos
+    // dpm("Result: " . $result->uri . "<br>Old Result:" . $oldResult->uri . "<br>Hora: " . $milliseconds);
+
+    // OUTPUT
+    if ($tmpStatus === FALSE) {
+        return false;
+    } else {
+      if ($result->wasDerivedFrom !== NULL) {
+        return $this->checkDerivedElements($result->wasDerivedFrom);
+      } else {
+        return true;
+      }
+    }
+
+  }
 }

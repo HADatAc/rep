@@ -46,13 +46,13 @@ class TreeForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL) {
 
-    // Validação básica dos parâmetros
+    // basic validation of parameters
     if (empty($mode) || empty($elementtype)) {
       \Drupal::messenger()->addError($this->t('Invalid parameters provided.'));
       return [];
     }
 
-    // Configurações adicionais do formulário
+    // Additional form settings
     $form['#attached']['library'][] = 'rep/rep_modal';
 
     $api = \Drupal::service('rep.api_connector');
