@@ -91,11 +91,6 @@ class TreeForm extends FormBase {
       'unit' => ["Unit", EntryPoints::UNIT],
     ];
 
-    // Caso o $branches_param não seja fornecido, usamos um padrão
-    if ($branches_param === NULL) {
-      // Se não tiver sido passado, geramos um array default
-
-    }
     $branches_param = [
       [
         'id' => 'annotationstem',
