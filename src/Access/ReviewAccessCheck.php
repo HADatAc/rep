@@ -54,7 +54,7 @@ class ReviewAccessCheck implements AccessCheckInterface {
    */
   public function access(Route $route, RouteMatchInterface $route_match, AccountInterface $account) {
     // Log de depuração para verificar se a função está sendo chamada.
-    $this->logger->debug('ReviewAccessCheck chamado para o usuário: @user', ['@user' => $account->getAccountName()]);
+    //$this->logger->debug('ReviewAccessCheck chamado para o usuário: @user', ['@user' => $account->getAccountName()]);
 
     // Verifica se o usuário possui o papel 'content_editor'.
     $has_content_editor = $account->hasRole('content_editor');
@@ -62,17 +62,17 @@ class ReviewAccessCheck implements AccessCheckInterface {
     // Verifica se o usuário NÃO possui o papel 'administrator'.
     $is_not_administrator = !$account->hasRole('administrator');
 
-    $this->logger->debug('User has content_editor: @ce, is not administrator: @na', [
-      '@ce' => $has_content_editor ? 'TRUE' : 'FALSE',
-      '@na' => $is_not_administrator ? 'TRUE' : 'FALSE',
-    ]);
+    // $this->logger->debug('User has content_editor: @ce, is not administrator: @na', [
+    //   '@ce' => $has_content_editor ? 'TRUE' : 'FALSE',
+    //   '@na' => $is_not_administrator ? 'TRUE' : 'FALSE',
+    // ]);
 
     if ($has_content_editor && $is_not_administrator) {
-      $this->logger->debug('Acesso permitido para o usuário: @user', ['@user' => $account->getAccountName()]);
+      //$this->logger->debug('Acesso permitido para o usuário: @user', ['@user' => $account->getAccountName()]);
       return AccessResult::allowed()->cachePerUser();
     }
 
-    $this->logger->debug('Acesso negado para o usuário: @user', ['@user' => $account->getAccountName()]);
+    //$this->logger->debug('Acesso negado para o usuário: @user', ['@user' => $account->getAccountName()]);
     return AccessResult::forbidden()->cachePerUser();
   }
 
