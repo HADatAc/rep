@@ -765,3 +765,24 @@ div.toast {
   max-height: calc(90vh - 100px); /* Limita a altura interna do conteúdo */
   overflow-y: auto; /* Adiciona rolagem interna para conteúdo excedente */
 }
+
+
+/* SIR */
+div.vertical-tabs__panes {
+  border-left: 1px solid #ccc !important;
+  padding-left: 1.5rem!important;
+}
+
+li.vertical-tabs__menu-item.is-selected {
+  background-color: #0066004f!important;
+}
+
+li.vertical-tabs__menu-item.is-selected a .vertical-tabs__menu-item-title{
+  color: #3b3b3b!important;
+  text-decoration: none!important;
+}
+
+li.vertical-tabs__menu-item a .vertical-tabs__menu-item-title{
+  color: #3b3b3b!important;
+  text-decoration: none!important;
+}
