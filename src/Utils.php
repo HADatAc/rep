@@ -204,10 +204,10 @@ class Utils {
     }
     $uid = \Drupal::currentUser()->id();
     $iid = time().rand(10000,99999).$uid;
-    dpm($elementType);
-    dpm($repoUri);
-    dpm($short);
-    dpm($iid);
+    // dpm($elementType);
+    // dpm($repoUri);
+    // dpm($short);
+    // dpm($iid);
     return $repoUri . $short . $iid;
   }
 
