@@ -105,7 +105,9 @@ class TreeForm extends FormBase {
       [
         'id' => 'detectorstem',
         'uri' => EntryPoints::DETECTOR_STEM,
-        'label' => 'Detector Stem'
+        'label' => 'Detector Stem',
+        'typeNamespace' => EntryPoints::DETECTOR_STEM,
+        'uriNamespace' => EntryPoints::DETECTOR_STEM
       ],
       [
         'id' => 'entity',

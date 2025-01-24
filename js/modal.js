@@ -123,15 +123,16 @@
         .off('select_node.jstree')
         .on('select_node.jstree', function (e, data) {
           const selectedNode = data.node.original;
-          const typeNamespace = selectedNode.typeNamespace || '';
+          const typeNamespace = selectedNode.uri;
 
-          console.log(selectedNode);
+          // console.log(selectedNode);
 
           // if (selectedNode) {
+          //   console.log(typeNamespace);
           //   $selectNodeButton
           //     .prop('disabled', false)
           //     .removeClass('disabled')
-          //     .data('selected-value', typeNamespace);
+          //     .data('data-selected-value', typeNamespace);
           // } else {
           //   //console.warn('typeNamespace não encontrado, botão permanece desativado.');
           //   $selectNodeButton

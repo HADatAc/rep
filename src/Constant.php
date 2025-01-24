@@ -20,9 +20,9 @@ class Constant {
   const PREFIX_DETECTOR                   = "DTC";
   const PREFIX_DETECTOR_INSTANCE          = "DTI";
   const PREFIX_DSG                        = "DSG";
-  const PREFIX_INSTRUMENT                 = "IS0";
+  const PREFIX_INSTRUMENT                 = "INS";
   const PREFIX_INSTRUMENT_INSTANCE        = "INI";
-  const PREFIX_INS                        = "INS";
+  const PREFIX_INS                        = "IS";
   const PREFIX_ORGANIZATION               = "ORG";
   const PREFIX_PERSON                     = "PER";
   const PREFIX_PLACE                      = "PLC";
