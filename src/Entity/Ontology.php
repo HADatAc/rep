@@ -16,8 +16,9 @@ class Ontology {
       'ontology_name' => t('Source URL'),
       'ontology_mime_type' => t('MIME Type'),
       'ontology_triples' => t('Triples'),
+      'ontology_named' => t('Named'),
     ];
-  
+
   }
 
   public static function generateOutput($list) {
@@ -52,13 +53,18 @@ class Ontology {
       if ($ontology->numberOfLoadedTriples != NULL) {
         $triples = $ontology->numberOfLoadedTriples;
       }
+      $named = ' ';
+      if ($ontology->namedGraph != NULL) {
+        $named = $ontology->namedGraph;
+      }
       $output[$ontology->label] = [
-        'ontology_abbrev' => $abbrev,     
-        'ontology_uri' => t('<a href="'.$uri.'">'.$uri.'</a>'),  
-        'ontology_in_memory' => $in_memory,   
+        'ontology_abbrev' => $abbrev,
+        'ontology_uri' => t('<a href="'.$uri.'">'.$uri.'</a>'),
+        'ontology_in_memory' => $in_memory,
         'ontology_name' => $url,
         'ontology_mime_type' => $mimeType,
         'ontology_triples' => $triples,
+        'ontology_named' => $named,
       ];
     }
     return $output;
