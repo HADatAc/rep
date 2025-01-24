@@ -12,6 +12,7 @@ use Drupal\rep\Vocabulary\HASCO;
 use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Constant;
+use Drupal\rep\Vocabulary\VSTOI;
 
 class Utils {
 
@@ -508,9 +509,9 @@ class Utils {
     return $value;
   }
 
-    /**
-   * Check if an element is derived from another element.
-   */
+  /**
+  * Check if an element is derived from another element.
+  */
   public static function checkDerivedElements($uri) {
     $api = \Drupal::service('rep.api_connector');
     $rawresponse = $api->getUri($uri);
@@ -552,5 +553,20 @@ class Utils {
       }
     }
 
+  }
+
+     /**
+   * Check if an element is derived from another element.
+   */
+  public static function plainStatus($status) {
+    if ($status == VSTOI::DRAFT) {
+      return 'Draft';
+    } else if ($status == VSTOI::UNDER_REVIEW) {
+      return 'Review';
+    } else if ($status == VSTOI::CURRENT) {
+      return 'Current';
+    } else if ($status == VSTOI::DEPRECATED) {
+      return 'Deprecated';
+    }
   }
 }
