@@ -1369,4 +1369,12 @@ class FusekiAPIConnector {
     return $totalValue;
   }
 
+  // Return List of Detector from Instrument to Fill on Process
+  public function detectorListFromInstrument($instrumentUri) {
+    $endpoint = "/hascoapi/api/instrument/detectors/".rawurlencode($instrumentUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
 }
