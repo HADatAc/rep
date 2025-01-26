@@ -786,3 +786,25 @@ li.vertical-tabs__menu-item a .vertical-tabs__menu-item-title{
   color: #3b3b3b!important;
   text-decoration: none!important;
 }
+
+/* FIELDSETS */
+.fieldset-class {
+  border: 2px solid #ecebeb;
+  border-radius: 10px;
+  padding: 15px;
+  margin-top: 10px;
+
+}
+
+/* WIDTHs */
+.w-10 {
+  width: 10%!important;
+}
+
+.w-13 {
+  width: 13%!important;
+}
+
+.w-15 {
+  width: 15%!important;
+}
