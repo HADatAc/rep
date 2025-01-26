@@ -386,7 +386,7 @@ class FusekiAPIConnector {
    *   PROCESS
    */
 
-   public function processAdd($processJson) {
+  public function processAdd($processJson) {
     $endpoint = "/hascoapi/api/process/create/".rawurlencode($processJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
@@ -396,6 +396,40 @@ class FusekiAPIConnector {
 
   public function processDel($processUri) {
     $endpoint = "/hascoapi/api/process/delete/".rawurlencode($processUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function processInstrumentAdd($processUri, $instrumentUri) {
+    //dpm($processUri);
+    //dpm($instrumentUri);
+    $endpoint = "/hascoapi/api/process/instrument/add/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function processInstrumentDel($processUri, $detectorUri) {
+    $endpoint = "/hascoapi/api/process/instrument/remove/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function processDetectorAdd($processUri, $detectorUri) {
+    $endpoint = "/hascoapi/api/process/detector/add/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function processDetectorDel($processUri, $instrumentUri) {
+    $endpoint = "/hascoapi/api/process/detector/remove/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
