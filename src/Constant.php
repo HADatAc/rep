@@ -20,8 +20,8 @@ class Constant {
   const PREFIX_DETECTOR                   = "DTC";
   const PREFIX_DETECTOR_INSTANCE          = "DTI";
   const PREFIX_DSG                        = "DSG";
-  const PREFIX_INSTRUMENT                 = "INS";
-  const PREFIX_INSTRUMENT_INSTANCE        = "IN0";
+  const PREFIX_INSTRUMENT                 = "IS0";
+  const PREFIX_INSTRUMENT_INSTANCE        = "INI";
   const PREFIX_INS                        = "INS";
   const PREFIX_ORGANIZATION               = "ORG";
   const PREFIX_PERSON                     = "PER";
@@ -45,7 +45,7 @@ class Constant {
   const PREFIX_SUBCONTAINER               = "SCT";
   const PREFIX_VIRTUAL_COLUMN             = "VCO";
   const PREFIX_PROCESS_STEM               = "PST";
-  const PREFIX_PROCESS                    = "PC0";
+  const PREFIX_PROCESS                    = "PC";
 
   const FILE_STATUS_UNPROCESSED           = "UNPROCESSED";
   const FILE_STATUS_PROCESSED             = "PROCESSED";
