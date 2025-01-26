@@ -98,21 +98,55 @@
         }
         $form['repository_domain_url'] = [
             '#type' => 'textfield',
-            '#title' => 'Repository Domain URL (ex: http://childfirst.ucla.edu, http://tw.rpi.edu, etc.)',
+            '#title' => 'Repository URL (ex: http://childfirst.ucla.edu, http://tw.rpi.edu, etc.)',
             '#required' => TRUE,
             '#default_value' => $domainUrl,
+            '#description' => 'The main URL to access the Repository',
+        ];
+
+        $namespacePrefix = "";
+        if ($config->get("repository_namespace_prefix")!= NULL) {
+            $namespacePrefix = $config->get("repository_namespace_prefix");
+        }
+        $form['repository_namespace_prefix'] = [
+            '#type' => 'textfield',
+            '#title' => 'Prefix for Base Namespace (ex: ufmg, ucla, rpi, etc.)',
+            '#required' => TRUE,
+            '#default_value' => $namespacePrefix,
+        ];
+
+        $namespaceUrl = "";
+        if ($config->get("repository_namespace_url")!= NULL) {
+            $namespaceUrl = $config->get("repository_namespace_url");
+        }
+        $form['repository_namespace_url'] = [
+            '#type' => 'textfield',
+            '#title' => 'URL for Base Namespace',
+            '#required' => TRUE,
+            '#default_value' => $namespaceUrl,
             '#description' => 'This value is used to compose the URL of rep elements created within this repository',
         ];
 
-        $domainNamespace = "";
-        if ($config->get("repository_domain_namespace")!= NULL) {
-            $domainNamespace = $config->get("repository_domain_namespace");
+        $namespaceSourceMime = "";
+        if ($config->get("repository_namespace_source_mime")!= NULL) {
+            $namespaceSourceMime = $config->get("repository_namespace_source_mime");
         }
-        $form['repository_domain_namespace'] = [
+        $form['repository_namespace_source_mime'] = [
             '#type' => 'textfield',
-            '#title' => 'Namespace for Domain URL (ex: ufmg, ucla, rpi, etc.)',
-            '#required' => TRUE,
-            '#default_value' => $domainNamespace,
+            '#title' => 'Mime for Base Namespace',
+            '#required' => FALSE,
+            '#default_value' => $namespaceSourceMime,
+        ];
+
+        $namespaceSource = "";
+        if ($config->get("repository_namespace_source")!= NULL) {
+            $namespaceSource = $config->get("repository_namespace_source");
+        }
+        $form['repository_namespace_source'] = [
+            '#type' => 'textfield',
+            '#title' => 'Source for Base Namespace',
+            '#required' => FALSE,
+            '#default_value' => $namespaceSource,
         ];
 
         $description = "";
@@ -178,12 +212,20 @@
                 $form_state->setErrorByName('repository_domain_url', $this->t("Domain URL must start with 'http://' or 'https://'."));
             }
         }
-        if(strlen($form_state->getValue('repository_domain_namespace')) < 1) {
-            $form_state->setErrorByName('repository_domain_namespace', $this->t("Please inform repository's Domain Namespace."));
-        } else if (strlen($form_state->getValue('repository_domain_namespace')) > 10) {
-            $form_state->setErrorByName('repository_domain_namespace', $this->t("Domain Namespace cannot have more than 10 characters"));
-        } else if (!preg_match('/^[a-zA-Z0-9\-]+$/', $form_state->getValue('repository_domain_namespace'))) {
-            $form_state->setErrorByName('repository_domain_namespace', $this->t("Domain Namespace can only have letters, numbers and '-'."));
+        if(strlen($form_state->getValue('repository_namespace_prefix')) < 1) {
+            $form_state->setErrorByName('repository_namespace_prefix', $this->t("Please inform repository's Namespace Prefix."));
+        //} else if (strlen($form_state->getValue('repository_namespace_prefix')) > 10) {
+        //    $form_state->setErrorByName('repository_namespace_prefix', $this->t("Domain Namespace cannot have more than 10 characters"));
+        } else if (!preg_match('/^[a-zA-Z0-9\-]+$/', $form_state->getValue('repository_namespace_prefix'))) {
+            $form_state->setErrorByName('repository_namespace_prefix', $this->t("Namespace prefix can only have letters, numbers and '-'."));
+        }
+        if(strlen($form_state->getValue('repository_namespace_url')) < 1) {
+            $form_state->setErrorByName('repository_namespace_url', $this->t("Please inform repository's Namespace URL."));
+        } else {
+            if ((strtolower(substr($form_state->getValue('repository_namespace_url'), 0, 7)) !== "http://") &&
+                (strtolower(substr($form_state->getValue('repository_namespace_url'), 0, 8)) !== "https://")) {
+                $form_state->setErrorByName('repository_namespace_url', $this->t("Namespace URL must start with 'http://' or 'https://'."));
+            }
         }
    }
 
@@ -211,7 +253,10 @@
         $config->set("site_label", trim($form_state->getValue('site_label')));
         $config->set("site_name", trim($form_state->getValue('site_name')));
         $config->set("repository_domain_url", trim($form_state->getValue('repository_domain_url')));
-        $config->set("repository_domain_namespace", trim($form_state->getValue('repository_domain_namespace')));
+        $config->set("repository_namespace_prefix", trim($form_state->getValue('repository_namespace_prefix')));
+        $config->set("repository_namespace_url", trim($form_state->getValue('repository_namespace_url')));
+        $config->set("repository_namespace_source_mime", trim($form_state->getValue('repository_namespace_source_mime')));
+        $config->set("repository_namespace_source", trim($form_state->getValue('repository_namespace_source')));
         $config->set("repository_description", trim($form_state->getValue('repository_description')));
         $config->set("api_url", $form_state->getValue('api_url'));
         $config->set("jwt_secret", $form_state->getValue('jwt_secret'));
@@ -235,6 +280,11 @@
             $form_state->getValue('api_url'),
             $form_state->getValue('site_name'));
 
+        //domain URL
+        $api->repoUpdateURL(
+            $form_state->getValue('api_url'),
+            $form_state->getValue('repository_domain_url'));
+
         //description
         $api->repoUpdateDescription(
             $form_state->getValue('api_url'),
@@ -243,8 +293,10 @@
         //namespace
         $api->repoUpdateNamespace(
             $form_state->getValue('api_url'),
-            $form_state->getValue('repository_domain_namespace'),
-            $form_state->getValue('repository_domain_url'));
+            $form_state->getValue('repository_namespace_prefix'),
+            $form_state->getValue('repository_namespace_url'),
+            $form_state->getValue('repository_namespace_source_mime'),
+            $form_state->getValue('repository_namespace_source'));
 
         // Save the filename in configuration.
         //$this->config('rep.settings')

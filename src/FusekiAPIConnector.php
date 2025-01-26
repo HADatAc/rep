@@ -1127,6 +1127,13 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function repoUpdateURL($api_url, $url) {
+    $endpoint = "/hascoapi/api/repo/url/".rawurlencode($url);
+    $method = "GET";
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   public function repoUpdateDescription($api_url, $description) {
     $endpoint = "/hascoapi/api/repo/description/".rawurlencode($description);
     $method = "GET";
@@ -1134,8 +1141,12 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function repoUpdateNamespace($api_url, $namespace, $baseUrl) {
-    $endpoint = "/hascoapi/api/repo/namespace/default/".rawurlencode($namespace)."/".rawurlencode($baseUrl);
+  public function repoUpdateNamespace($api_url, $prefix, $url, $mime, $source) {
+    $endpoint = "/hascoapi/api/repo/namespace/default/".
+      rawurlencode($prefix)."/".
+      rawurlencode($url)."/".
+      rawurlencode($mime)."/".
+      rawurlencode($source);
     $method = "GET";
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
