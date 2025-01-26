@@ -406,7 +406,7 @@ class FusekiAPIConnector {
     //dpm($processUri);
     //dpm($instrumentUri);
     $endpoint = "/hascoapi/api/process/instrument/add/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
-    $method = "POST";
+    $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -414,7 +414,7 @@ class FusekiAPIConnector {
 
   public function processInstrumentDel($processUri, $detectorUri) {
     $endpoint = "/hascoapi/api/process/instrument/remove/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
-    $method = "POST";
+    $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -430,7 +430,7 @@ class FusekiAPIConnector {
 
   public function processDetectorDel($processUri, $instrumentUri) {
     $endpoint = "/hascoapi/api/process/detector/remove/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
-    $method = "POST";
+    $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
