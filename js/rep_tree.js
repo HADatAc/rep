@@ -144,11 +144,11 @@
             const selectedNode = data.node.original;
 
             if (selectedNode.id) {
-              console.log('typeNamespace detected:', selectedNode);
+              console.log(selectedNode);
               $selectNodeButton
                 .prop('disabled', false)
                 .removeClass('disabled')
-                .data('selected-value', selectedNode.uri ? selectedNode.uri : selectedNode.typeNamespace)
+                .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
                 .data('field-id', $('#tree-root').data('field-id')); // Associar o campo
             } else {
               //console.warn('No typeNamespace found. Disabling button.');
