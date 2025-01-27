@@ -33,4 +33,36 @@ class TreeController extends ControllerBase {
     return new JsonResponse($data);
   }
 
+  public function getSubclassesKeyword(Request $request) {
+    $api = \Drupal::service('rep.api_connector');
+
+    $superUri = $request->query->get('superuri');
+    $keyword = $request->query->get('keyword');
+
+    $data = $api->parseObjectResponse($api->getSubclassesKeyword($superUri, $keyword),'getSubclassesKeyword');
+
+    // Validate and format the data
+    if (!is_array($data)) {
+      $data = [];
+    }
+
+    // Return a JSON response
+    return new JsonResponse($data);
+  }
+
+  public function getSuperClasses(Request $request) {
+    $api = \Drupal::service('rep.api_connector');
+
+    $superUri = $request->query->get('uri');
+    $data = $api->parseObjectResponse($api->getSuperClasses($superUri),'getSuperClasses');
+
+    // Validate and format the data
+    if (!is_array($data)) {
+      $data = [];
+    }
+
+    // Return a JSON response
+    return new JsonResponse($data);
+  }
+
 }
