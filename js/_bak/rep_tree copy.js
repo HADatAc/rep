@@ -1,13 +1,12 @@
 (function ($, Drupal, drupalSettings) {
   Drupal.behaviors.tree = {
     attach: function (context, settings) {
-
       once('jstree-initialized', '#tree-root', context).forEach((element) => {
 
         if (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) {
           const searchVal = drupalSettings.rep_tree.searchValue;
           $('#tree-search').val(searchVal);
-          console.log(drupalSettings);
+
         }
 
         const seen = new Set();
@@ -131,12 +130,28 @@
             $treeRoot.on('load_node.jstree', resetActivityTimeout);
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
 
-            //UBERON TEMP FIX
-            //console.log(drupalSettings.rep_tree.elementType);
-            if (drupalSettings.rep_tree.elementType !== 'detectorattribute')
-              $treeRoot.jstree('open_all');
+            if (element)
+            $treeRoot.jstree('open_all');
 
             resetActivityTimeout();
+          });
+
+          $expandButton.on('click', function () {
+            if (treeReady) {
+              //console.log('Expanding all nodes...');
+              $treeRoot.jstree('open_all');
+            } else {
+              //console.warn('Tree is not ready to expand.');
+            }
+          });
+
+          $collapseButton.on('click', function () {
+            if (treeReady) {
+              //console.log('Collapsing all nodes...');
+              $treeRoot.jstree('close_all');
+            } else {
+              //console.warn('Tree is not ready to collapse.');
+            }
           });
 
           $treeRoot.on('select_node.jstree', function (e, data) {

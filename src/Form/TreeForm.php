@@ -89,6 +89,7 @@ class TreeForm extends FormBase {
       'responseoption' => ["Response Option", EntryPoints::RESPONSE_OPTION],
       'study' => ["Study", EntryPoints::STUDY],
       'unit' => ["Unit", EntryPoints::UNIT],
+      'detectorattribute' => ["Detector Attribute", EntryPoints::DETECTOR_ATTRIBUTE],
     ];
 
     $branches_param = [
@@ -108,6 +109,13 @@ class TreeForm extends FormBase {
         'label' => 'Detector Stem',
         'typeNamespace' => EntryPoints::DETECTOR_STEM,
         'uriNamespace' => EntryPoints::DETECTOR_STEM
+      ],
+      [
+        'id' => 'detectorattribute',
+        'uri' => EntryPoints::DETECTOR_ATTRIBUTE,
+        'label' => 'Detector Attribute',
+        'typeNamespace' => EntryPoints::DETECTOR_ATTRIBUTE,
+        'uriNamespace' => EntryPoints::DETECTOR_ATTRIBUTE
       ],
       [
         'id' => 'entity',
@@ -228,7 +236,8 @@ class TreeForm extends FormBase {
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'apiEndpoint' => $base_url . '/rep/getchildren', // API endpoint
       'branches' => $branches_param,
-      'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]', // Use the name as selector
+      'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]',
+      'elementType' => $elementtype,
     ];
 
     if ($mode == 'browse')

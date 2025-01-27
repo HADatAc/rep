@@ -12,6 +12,7 @@
 
     const ANNOTATION_STEM       = VSTOI::ANNOTATION_STEM;
     const ATTRIBUTE             = SIO::ATTRIBUTE;
+    const DETECTOR_ATTRIBUTE    = "http://purl.obolibrary.org/obo/UBERON_0000061";
     const DETECTOR_STEM         = VSTOI::DETECTOR_STEM;
     const ENTITY                = SIO::ENTITY;
     const GROUP                 = FOAF::GROUP;
@@ -20,7 +21,6 @@
     const PERSON                = FOAF::PERSON;
     const PLATFORM              = VSTOI::PLATFORM;
     const PROCESS_STEM          = VSTOI::PROCESS_STEM;
-    // const PROCESS_STEM          = "http://hadatac.org/ont/pmsr#SimulationProcessStem";
     const QUESTIONNAIRE         = VSTOI::QUESTIONNAIRE;
     const RESPONSE_OPTION       = VSTOI::RESPONSE_OPTION;
     const STUDY                 = HASCO::STUDY;
