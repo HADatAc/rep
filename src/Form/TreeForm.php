@@ -234,7 +234,10 @@ class TreeForm extends FormBase {
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
 
     $form['#attached']['drupalSettings']['rep_tree'] = [
-      'apiEndpoint' => $base_url . '/rep/getchildren', // API endpoint
+      'apiEndpoint' => $base_url . '/rep/getchildren',
+      'searchSubClassEndPoint' => $base_url . '/rep/subclasskeyword',
+      'searchSuperClassEndPoint' => $base_url . '/rep/getsuperclasses',
+      'superclass' => $branches_param[0]["uri"],
       'branches' => $branches_param,
       'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]',
       'elementType' => $elementtype,
@@ -249,16 +252,29 @@ class TreeForm extends FormBase {
     }
 
     $form['search_wrapper'] = [
-      '#type' => 'inline_template',
-      '#template' => '
-        <div style="position: relative; max-width: 350px;" class="js-form-wrapper form-wrapper mt-3" id="edit-search-wrapper" data-drupal-selector="edit-search-wrapper">
-          <div class="js-form-item js-form-type-textfield form-type-textfield js-form-item-search-input form-item-search-input form-no-label">
-            <input id="tree-search" class="form-control" placeholder="Search..." style="padding-right: 30px; margin-bottom: 10px;" autocomplete="off" data-drupal-selector="edit-search-input" type="text" name="search_input" value="" size="60" maxlength="128">
-          </div>
-          <button id="clear-search" type="button" style="position: absolute; top: 40%; right: 5px; transform: translateY(-50%); background: transparent; border: none; font-size: 16px; color: #888; cursor: pointer; display: none;" data-drupal-selector="edit-clear-button">×</button>
-        </div>
-      ',
+      '#type' => 'textfield',
+      //'#title' => $this->t('Search'),
+      '#placeholder' => $this->t('Search'),
+      //'#autocomplete_route_name' => 'rep.get_subclasskeyword',
+      '#attributes' => [
+          'id' => 'search_input',
+          'class' => ['mt-2'],
+          'autocomplete' => 'off'
+      ],
+      '#autocomplete' => 'off'
     ];
+
+    // $form['search_wrapper'] = [
+    //   '#type' => 'inline_template',
+    //   '#template' => '
+    //     <div style="position: relative; max-width: 350px;" class="js-form-wrapper form-wrapper mt-3" id="edit-search-wrapper" data-drupal-selector="edit-search-wrapper">
+    //       <div class="js-form-item js-form-type-textfield form-type-textfield js-form-item-search-input form-item-search-input form-no-label">"
+    //         <input id="tree-search" class="form-control" placeholder="Search..." style="padding-right: 30px; margin-bottom: 10px;" autocomplete="on" data-drupal-selector="edit-search-input" type="text" name="search_input" value="" size="60" maxlength="128">
+    //       </div>
+    //       <button id="clear-search" type="button" style="position: absolute; top: 40%; right: 5px; transform: translateY(-50%); background: transparent; border: none; font-size: 16px; color: #888; cursor: pointer; display: none;" data-drupal-selector="edit-clear-button">×</button>
+    //     </div>
+    //   ',
+    // ];
 
     $form['wait_message'] = [
       '#type' => 'markup',

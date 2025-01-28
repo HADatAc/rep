@@ -121,6 +121,22 @@ rep.get_child:
   requirements:
     _permission: 'access content'
 
+rep.get_subclasskeyword:
+  path: '/rep/subclasskeyword'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getSubclassesKeyword'
+    _title: 'Search Sub Class Nodes'
+  requirements:
+    _permission: 'access content'
+
+rep.get_superclass:
+  path: '/rep/getsuperclasses'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getSuperClasses'
+    _title: 'Search Super Class nodes'
+  requirements:
+    _permission: 'access content'
+
 rep.get_node:
   path: '/rep/getnode'
   defaults:

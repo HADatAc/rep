@@ -63,6 +63,25 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function getSubclassesKeyword($superuri, $keyword) {
+    $endpoint = "/hascoapi/api/subclasses/keyword/".
+      rawurlencode($superuri) . '/' . rawurlencode($keyword);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function getSuperClasses($uri) {
+    $endpoint = "/hascoapi/api/superclasses/".
+      rawurlencode($uri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+
   public function getHascoType($uri) {
     $endpoint = "/hascoapi/api/hascotype/".rawurlencode($uri);
     $method = 'GET';
