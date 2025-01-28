@@ -50,7 +50,7 @@
               const initialSearch = $searchInput.val().trim();
               if (initialSearch.length > 0) {
                 setTimeout(() => {
-                  performSearch(initialSearch);
+                  //performSearch(initialSearch);
                   $treeRoot.off('load_node.jstree', resetActivityTimeout);
                   $treeRoot.off('open_node.jstree', resetActivityTimeout);
                   initialSearchDone = true;
@@ -459,8 +459,6 @@
             setupAutocomplete('#search_input'); // Substitua '#search-field' pelo ID do seu campo de texto
           });
 
-
-
           $searchInput.on('input', function () {
             const searchTerm = $searchInput.val().trim();
             if (searchTerm.length > 0) {
@@ -496,13 +494,74 @@
               //console.log('Enter press prevented globally.');
             }
           });
+
+          $('#reset-tree').on('click', function () {
+            console.log('reset');
+            resetTree();
+          });
+
+          function resetTree() {
+            console.log('Resetting the tree to its initial state...');
+
+            // Clear search input and hide the clear button
+            $searchInput.val('');
+            $clearButton.hide();
+
+            // Reset the tree data to initial branches
+            $treeRoot.jstree(true).settings.core.data = function (node, cb) {
+              if (node.id === '#') {
+                cb(drupalSettings.rep_tree.branches.map(branch => ({
+                  id: branch.id,
+                  text: branch.label,
+                  uri: branch.uri,
+                  typeNamespace: branch.typeNamespace || '',
+                  data: { typeNamespace: branch.typeNamespace || '' },
+                  icon: 'fas fa-folder',
+                  children: true,
+                })));
+              } else {
+                // Do not load children for any nodes during reset
+                $.ajax({
+                  url: drupalSettings.rep_tree.apiEndpoint,
+                  type: 'GET',
+                  data: { nodeUri: node.original.uri },
+                  dataType: 'json',
+                  success: function (data) {
+                    //console.log('Fetched child nodes:', data);
+                    cb(data.map(item => ({
+                      id: item.nodeId,
+                      text: item.label || 'Unnamed Node',
+                      uri: item.uri,
+                      typeNamespace: item.typeNamespace || '',
+                      data: { typeNamespace: item.typeNamespace || '' },
+                      icon: 'fas fa-file-alt',
+                      children: true,
+                    })));
+                  },
+                  error: function () {
+                    //console.error('Error fetching children for node:', node.original.uri);
+                    cb([]);
+                  },
+                });
+              }
+            };
+
+            // Refresh the tree to reload the data
+            $treeRoot.jstree(true).refresh();
+
+            // Ensure no nodes are expanded
+            $treeRoot.on('refresh.jstree', function () {
+              $treeRoot.jstree('close_all'); // Close all nodes
+              console.log('Tree has been reset to its initial state with only root nodes visible.');
+            });
+          }
+
         } else {
           //console.warn('Tree root not found. Initialization aborted.');
         }
       });
     },
   };
-
 
 })(jQuery, Drupal, drupalSettings);
 

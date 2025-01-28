@@ -252,17 +252,32 @@ class TreeForm extends FormBase {
     }
 
     $form['search_wrapper'] = [
+      '#type' => 'container',
+    ];
+
+    $form['search_wrapper']['search_input'] = [
       '#type' => 'textfield',
       //'#title' => $this->t('Search'),
       '#placeholder' => $this->t('Search'),
       //'#autocomplete_route_name' => 'rep.get_subclasskeyword',
       '#attributes' => [
           'id' => 'search_input',
-          'class' => ['mt-2'],
+          'class' => ['mt-2', 'w-100'],
+          //'style' => 'float:left',
           'autocomplete' => 'off'
       ],
       '#autocomplete' => 'off'
     ];
+
+    // $form['search_wrapper']['select_node'] = [
+    //   '#type' => 'inline_template',
+    //   '#attributes' => [
+    //     'id' => 'reset-tree',
+    //     'class' => ['btn', 'btn-primary', 'mt-4'],
+    //     'style' => 'float:right',
+    //   ],
+    //   '#template' => '<button type="button" id="reset-tree" class="btn btn-primary mt-1 mx-3" data-field-id="">'.t('Reset').'</button>'
+    // ];
 
     // $form['search_wrapper'] = [
     //   '#type' => 'inline_template',
