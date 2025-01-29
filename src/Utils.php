@@ -512,7 +512,7 @@ class Utils {
   /**
   * Check if an element is derived from another element.
   */
-  public static function checkDerivedElements($uri) {
+  public static function checkDerivedElements($uri, $elementType) {
     $api = \Drupal::service('rep.api_connector');
     $rawresponse = $api->getUri($uri);
     $obj = json_decode($rawresponse);
@@ -526,7 +526,7 @@ class Utils {
     $oldResult = $oldObj->body;
 
     // Verifica se o conteúdo, idioma ou comentário são iguais
-    switch ($this->element_type) {
+    switch ($elementType) {
       default:
       case 'responseoption':
         if (($oldResult->hasContent === $result->hasContent &&
@@ -547,7 +547,7 @@ class Utils {
         return false;
     } else {
       if ($result->wasDerivedFrom !== NULL) {
-        return $this->checkDerivedElements($result->wasDerivedFrom);
+        return Utils::checkDerivedElements($result->wasDerivedFrom, $elementType);
       } else {
         return true;
       }
