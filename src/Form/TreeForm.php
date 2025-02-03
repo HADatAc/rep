@@ -262,22 +262,33 @@ class TreeForm extends FormBase {
       //'#autocomplete_route_name' => 'rep.get_subclasskeyword',
       '#attributes' => [
           'id' => 'search_input',
-          'class' => ['mt-2', 'w-100'],
-          //'style' => 'float:left',
+          'class' => ['mt-2', 'w-75'],
+          'style' => 'float:left',
           'autocomplete' => 'off'
       ],
       '#autocomplete' => 'off'
     ];
 
-    // $form['search_wrapper']['select_node'] = [
-    //   '#type' => 'inline_template',
-    //   '#attributes' => [
-    //     'id' => 'reset-tree',
-    //     'class' => ['btn', 'btn-primary', 'mt-4'],
-    //     'style' => 'float:right',
-    //   ],
-    //   '#template' => '<button type="button" id="reset-tree" class="btn btn-primary mt-1 mx-3" data-field-id="">'.t('Reset').'</button>'
-    // ];
+    $form['search_wrapper']['select_node'] = [
+      '#type' => 'inline_template',
+      '#attributes' => [
+        'id' => 'reset-tree',
+        'class' => ['btn', 'btn-primary', 'mt-4'],
+        'style' => 'float:right',
+      ],
+      '#template' => '<button type="button" id="reset-tree" class="btn btn-primary mt-1 mx-3" data-field-id="">'.t('Reset').'</button>'
+    ];
+
+    $form['search_wrapper']['node-comment-display'] = [
+      '#type' => 'container',
+      '#text' => '',
+      '#attributes' => [
+          'id' => 'node-comment-display',
+          'class' => ['mt-2', 'w-100'],
+          'display' => 'none'
+          //'style' => 'float:left',
+      ],
+    ];
 
     // $form['search_wrapper'] = [
     //   '#type' => 'inline_template',
