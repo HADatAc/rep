@@ -66,7 +66,7 @@
           $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
 
           $treeRoot.on('load_node.jstree open_node.jstree', function () {
-            console.log('Node loaded or opened.');
+            //console.log('Node loaded or opened.');
           });
 
           $treeRoot.on('select_node.jstree', function (e, data) {
@@ -480,6 +480,18 @@
           'box-sizing': '',
           'padding-right': '',
         });
+
+        // Recupera o ID do campo de texto onde o valor foi escrito.
+        var fieldId = $(this).data('field-id');
+        console.log(fieldId);
+        if (fieldId) {
+          // Um pequeno delay pode ajudar a garantir que o valor já esteja escrito.
+          setTimeout(function () {
+            console.log($('#' + fieldId));
+            // Dispara o evento blur apenas para o input desejado.
+            $('#' + fieldId).trigger('change');
+          }, 100);
+        }
       });
 
       $(document).on('click', '.ui-dialog-titlebar-close', function () {
