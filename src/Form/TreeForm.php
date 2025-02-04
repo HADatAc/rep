@@ -279,17 +279,6 @@ class TreeForm extends FormBase {
       '#template' => '<button type="button" id="reset-tree" class="btn btn-primary mt-1 mx-3" data-field-id="">'.t('Reset').'</button>'
     ];
 
-    $form['search_wrapper']['node-comment-display'] = [
-      '#type' => 'container',
-      '#text' => '',
-      '#attributes' => [
-          'id' => 'node-comment-display',
-          'class' => ['mt-2', 'w-100'],
-          'display' => 'none'
-          //'style' => 'float:left',
-      ],
-    ];
-
     // $form['search_wrapper'] = [
     //   '#type' => 'inline_template',
     //   '#template' => '
@@ -310,6 +299,17 @@ class TreeForm extends FormBase {
     $form['tree_root'] = [
       '#type' => 'markup',
       '#markup' => '<div id="tree-root" data-initial-uri="' . $this->getRootNode()->uri . '" style="display:none;"></div>',
+    ];
+
+    $form['node-comment-display'] = [
+      '#type' => 'container',
+      '#text' => '',
+      '#attributes' => [
+          'id' => 'node-comment-display',
+          'class' => ['mt-2', 'w-100'],
+          'display' => 'none'
+          //'style' => 'float:left',
+      ],
     ];
 
     if ($mode == 'modal')

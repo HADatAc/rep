@@ -483,11 +483,11 @@
 
         // Recupera o ID do campo de texto onde o valor foi escrito.
         var fieldId = $(this).data('field-id');
-        console.log(fieldId);
+        //console.log(fieldId);
         if (fieldId) {
           // Um pequeno delay pode ajudar a garantir que o valor já esteja escrito.
           setTimeout(function () {
-            console.log($('#' + fieldId));
+            //console.log($('#' + fieldId));
             // Dispara o evento blur apenas para o input desejado.
             $('#' + fieldId).trigger('change');
           }, 100);
