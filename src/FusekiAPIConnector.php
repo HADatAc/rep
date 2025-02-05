@@ -434,7 +434,7 @@ class FusekiAPIConnector {
     $payload = json_encode([
         'processuri' => $processUri,
         'instrumenturis' => $instrumentUris
-    ]);
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);  // Facilita a leitura no log
 
     $data = [
         'headers' => [
@@ -444,65 +444,40 @@ class FusekiAPIConnector {
         'body' => $payload
     ];
 
-    // // Log completo da requisição (URL, Headers e Payload)
-    // \Drupal::logger('rep')->notice('Requisição HTTP: @method @url', [
-    //     '@method' => $method,
-    //     '@url' => $api_url . $endpoint,
-    // ]);
+    // 📊 Log do Payload JSON
+    \Drupal::logger('rep')->notice('Payload enviado para API: @payload', [
+        '@payload' => $payload
+    ]);
 
-    // \Drupal::logger('rep')->notice('Headers da Requisição: @headers', [
-    //     '@headers' => json_encode($data['headers']),
-    // ]);
+    // Envia a requisição para a API
+    $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
 
-    // \Drupal::logger('rep')->notice('Payload da Requisição: @payload', [
-    //     '@payload' => $payload,
-    // ]);
+    return $response;
+  }
+
+  public function processInstrumentUpdate(array $processData) {
+    $endpoint = "/hascoapi/api/process/instrumentation";
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+
+    $payload = json_encode($processData);
+
+    \Drupal::logger('rep')->notice('Enviando instrumentos para o processo: @payload', [
+        '@payload' => $payload,
+    ]);
+
+    $data = [
+      'headers' => [
+          'Content-Type' => 'application/json',
+          'Authorization' => $this->bearer
+      ],
+      'body' => json_encode($processData)
+    ];
 
     $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
 
-    // // Log da resposta da API
-    // \Drupal::logger('rep')->notice('Resposta da API: @response', [
-    //     '@response' => $response,
-    // ]);
-
     return $response;
-}
-
-
-
-  // public function processInstrumentAdd($processUri, array $instrumentUris) {
-  //   $endpoint = "/hascoapi/api/process/instruments/".rawurlencode($processUri);
-  //   $method = "POST";
-  //   $api_url = $this->getApiUrl();
-  //   $data = $this->getHeader();
-
-  //   // Criar o payload
-  //   // $payload = json_encode([
-  //   //     $processUri,
-  //   //     //$instrumentUris
-  //   // ]);
-
-  //   //$data[] = 'Content-Type: application/json';
-  //   $data = $this->getHeader();
-
-  //   // // Registrar o log do payload enviado
-  //   // \Drupal::logger('rep')->notice('Enviando instrumentos para o processo: @processUri com payload: @payload', [
-  //   //     '@processUri' => $processUri,
-  //   //     '@payload' => $payload,
-  //   // ]);
-
-  //   // Enviar a requisição e capturar a resposta
-  //   $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
-
-  //   // Registrar o log da resposta recebida
-  //   \Drupal::logger('rep')->notice('Resposta da API para o processo @processUri: @response', [
-  //       '@processUri' => $processUri,
-  //       '@response' => $response,
-  //   ]);
-
-  //   return $response;
-  // }
-
+  }
 
   public function processInstrumentDel($processUri, $detectorUri) {
     $endpoint = "/hascoapi/api/process/instrument/remove/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
