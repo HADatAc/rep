@@ -77,7 +77,8 @@
                 .prop('disabled', false)
                 .removeClass('disabled')
                 .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
-                .data('field-id', $treeRoot.data('field-id'));
+                //data('field-id', $treeRoot.data('field-id'));
+                .data('field-id', $('#tree-root').data('field-id')); // Mantém o campo correto
             } else {
               $selectNodeButton
                 .prop('disabled', true)

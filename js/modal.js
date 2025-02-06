@@ -8,9 +8,14 @@
           e.preventDefault();
 
           const url = $(this).data('url');
-          const fieldId = $(this).data('field-id');
+          //const fieldId = $(this).data('field-id');
+          const fieldId = $('#tree-root').data('field-id') || $(this).data('field-id');
           const elementtype = $(this).data('elementtype');
           const searchValue = $(this).val();
+
+          $('#tree-root').data('field-id', fieldId);
+
+          console.log(fieldId);
 
           if (!drupalSettings.rep_tree) {
             drupalSettings.rep_tree = {};
@@ -148,10 +153,13 @@
           e.preventDefault();
 
           const selectedValue = $(this).data('selected-value');
-          const fieldId = $(this).data('field-id');
+          // const fieldId = $(this).data('field-id');
+          const fieldId = $('#tree-root').data('field-id') || $(this).data('field-id');
+
 
           if (fieldId && selectedValue) {
-            $(`[name="${fieldId}"], #${fieldId}`).val(selectedValue);
+            //$(`[name="${fieldId}"], #${fieldId}`).val(selectedValue);
+            $('#' + fieldId).val(selectedValue).trigger('change');
           }
           $('.ui-dialog-content').dialog('close');
         });
