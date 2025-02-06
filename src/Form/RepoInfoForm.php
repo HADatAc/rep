@@ -33,16 +33,22 @@
         // RETRIEVE CONFIGURATION FROM CURRENT IP
         $repoObj = $APIservice->parseObjectResponse($APIservice->repoInfo(),'repoInfo');
         if ($repoObj != NULL) {
+            //dpm($repoObj);
             $label = $repoObj->label;
             $name = $repoObj->title;
-            $domainUrl = $repoObj->hasDefaultNamespaceURL;
-            $domainNamespace = $repoObj->hasDefaultNamespaceAbbreviation;
+            $domainUrl = $repoObj->hasDomainURL;
+            $namespaceUrl = $repoObj->hasDefaultNamespaceURL;
+            $namespacePrefix = $repoObj->hasDefaultNamespacePrefix;
+            $namespaceSourceMime = $repoObj->hasDefaultNamespaceSourceMime;
+            $namespaceSource = $repoObj->hasDefaultNamespaceSource;
             $description = $repoObj->comment;
         } else {
             $label = "";
             $name = "<<FAILED TO LOAD CONFIGURATION>>";
             $domainUrl = "";
-            $domainNamespace = "";
+            $namespaceUrl = "";
+            $namespaceSourceMime = "";
+            $namespaceSource = "";
             $description = "";
         }
 
@@ -62,15 +68,36 @@
 
         $form['repository_domain_url'] = [
             '#type' => 'textfield',
-            '#title' => 'Repository Domain URL',
+            '#title' => 'Repository URL',
             '#default_value' => $domainUrl,
             '#disabled' => TRUE,
         ];
 
-        $form['repository_domain_namespace'] = [
+        $form['repository_namespace_url'] = [
             '#type' => 'textfield',
-            '#title' => 'Namespace for Domain URL',
-            '#default_value' => $domainNamespace,
+            '#title' => 'URL for Base Namespace',
+            '#default_value' => $namespaceUrl,
+            '#disabled' => TRUE,
+        ];
+
+        $form['repository_namespace_prefix'] = [
+            '#type' => 'textfield',
+            '#title' => 'Prefix for Base Namespace',
+            '#default_value' => $namespacePrefix,
+            '#disabled' => TRUE,
+        ];
+
+        $form['repository_namespace_source_mime'] = [
+            '#type' => 'textfield',
+            '#title' => 'Mime for Base Namespace',
+            '#default_value' => $namespaceSourceMime,
+            '#disabled' => TRUE,
+        ];
+
+        $form['repository_namespace_source'] = [
+            '#type' => 'textfield',
+            '#title' => 'Source for Base Namespace',
+            '#default_value' => $namespaceSource,
             '#disabled' => TRUE,
         ];
 

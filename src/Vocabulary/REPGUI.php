@@ -41,6 +41,9 @@
     const ADD_SEMANTIC_DATA_DICTIONARY   = "/sem/manage/addsemanticdatadictionary/";
     const EDIT_SEMANTIC_DATA_DICTIONARY  = "/sem/manage/editsemanticdatadictionary/";
 
+    const ADD_PROCESS          = "/sir/manage/addprocess/";
+    const EDIT_PROCESS         = "/sir/manage/editprocess/";
+
     const VIEW_STUDY_OBJECTS   = "/std/view/studyobjects/";
     const MANAGE_STUDY_OBJECTS = "/std/manage/studyobjects/";
 

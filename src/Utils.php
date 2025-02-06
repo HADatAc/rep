@@ -12,6 +12,7 @@ use Drupal\rep\Vocabulary\HASCO;
 use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Constant;
+use Drupal\rep\Vocabulary\VSTOI;
 
 class Utils {
 
@@ -170,6 +171,12 @@ class Utils {
       case "virtualcolumn":
         $short = Constant::PREFIX_VIRTUAL_COLUMN;
         break;
+      case "processstem":
+        $short = Constant::PREFIX_PROCESS_STEM;
+        break;
+      case "process":
+        $short = Constant::PREFIX_PROCESS;
+        break;
       default:
         $short = NULL;
     }
@@ -197,6 +204,10 @@ class Utils {
     }
     $uid = \Drupal::currentUser()->id();
     $iid = time().rand(10000,99999).$uid;
+    // dpm($elementType);
+    // dpm($repoUri);
+    // dpm($short);
+    // dpm($iid);
     return $repoUri . $short . $iid;
   }
 
@@ -354,7 +365,7 @@ class Utils {
   }
 
   public static function elementTypeModule($elementtype) {
-    $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation'];
+    $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'processstem', 'process'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];
@@ -496,5 +507,66 @@ class Utils {
     }
 
     return $value;
+  }
+
+  /**
+  * Check if an element is derived from another element.
+  */
+  public static function checkDerivedElements($uri, $elementType) {
+    $api = \Drupal::service('rep.api_connector');
+    $rawresponse = $api->getUri($uri);
+    $obj = json_decode($rawresponse);
+    $result = $obj->body;
+
+    $tmpStatus = true;
+
+    // Verifica se o elemento atual está em estado de rascunho e se foi derivado de outro
+    $oldElement = $api->getUri($result->wasDerivedFrom);
+    $oldObj = json_decode($oldElement);
+    $oldResult = $oldObj->body;
+
+    // Verifica se o conteúdo, idioma ou comentário são iguais
+    switch ($elementType) {
+      default:
+      case 'responseoption':
+        if (($oldResult->hasContent === $result->hasContent &&
+            $oldResult->hasLanguage === $result->hasLanguage &&
+            $oldResult->comment === $result->comment)
+        ) {
+          $tmpStatus = FALSE;
+        }
+        break;
+    }
+
+    // $currentTime = microtime(true); // Obtém o tempo atual em segundos com microsegundos
+    // $milliseconds = round($currentTime * 1000); // Converte para milissegundos
+    // dpm("Result: " . $result->uri . "<br>Old Result:" . $oldResult->uri . "<br>Hora: " . $milliseconds);
+
+    // OUTPUT
+    if ($tmpStatus === FALSE) {
+        return false;
+    } else {
+      if ($result->wasDerivedFrom !== NULL) {
+        return Utils::checkDerivedElements($result->wasDerivedFrom, $elementType);
+      } else {
+        return true;
+      }
+    }
+
+  }
+
+     /**
+   * Check if an element is derived from another element.
+   */
+  public static function plainStatus($status) {
+    if ($status == VSTOI::DRAFT) {
+      return 'Draft';
+    } else if ($status == VSTOI::UNDER_REVIEW) {
+      return 'Review';
+    } else if ($status == VSTOI::CURRENT) {
+      return 'Current';
+    } else if ($status == VSTOI::DEPRECATED) {
+      return 'Deprecated';
+    }
   }
 }

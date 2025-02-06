@@ -514,6 +514,37 @@ button.aprove-button:hover {
   transform: translateY(-50%);
 }
 
+button.review-element-button {
+  position: relative;
+  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+button.review-element-button::before {
+  content: "\f1d8"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.generate-ins-element-button {
+  position: relative;
+  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+button.generate-ins-element-button::before {
+  content: "\f013"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.75rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+
 /* TABS */
 .form-control.nav-link {
   color: rgb(45, 48, 48) !important; /* Define a cor do texto como preto */
@@ -715,13 +746,30 @@ div.toast {
 
 /* MODAL Open-Dialog */
 /* Ajustar altura máxima e rolagem do modal */
-.ui-dialog {
+/* .ui-dialog {
   position: fixed;
-  top: 10% !important; /* Garante que o modal esteja visível no topo */
+  top: 10% !important;
   bottom: auto;
-  max-height: 90vh; /* Limita o tamanho máximo vertical */
-  width: auto !important; /* Permite que o modal ajuste a largura conforme necessário */
-  overflow: auto; /* Adiciona rolagem interna se o conteúdo crescer */
+  max-height: 90vh;
+  width: auto !important;
+  overflow: auto;
+} */
+
+.ui-dialog {
+  width: calc(100% - 30%) !important; /* 15% de margem em ambos os lados */
+  left: 25% !important;
+  right: 25% !important;
+  top: 10% !important; /* Para dar algum espaço no topo */
+  transform: none !important; /* Remove qualquer transformação de centralização automática */
+  max-width: 1000px; /* Limita a largura máxima, se necessário */
+}
+
+#node-comment-display {
+  background-color: #e6e6e6;
+  font-size: 90%;
+  padding: 15px;
+  border-radius: 7px;
+  display: none;
 }
 
 .disabled-link {
@@ -733,4 +781,51 @@ div.toast {
 .ui-dialog-content {
   max-height: calc(90vh - 100px); /* Limita a altura interna do conteúdo */
   overflow-y: auto; /* Adiciona rolagem interna para conteúdo excedente */
+}
+
+
+/* SIR */
+div.vertical-tabs__panes {
+  border-left: 1px solid #ccc !important;
+  padding-left: 1.5rem!important;
+}
+
+li.vertical-tabs__menu-item.is-selected {
+  background-color: #0066004f!important;
+}
+
+li.vertical-tabs__menu-item.is-selected a .vertical-tabs__menu-item-title{
+  color: #3b3b3b!important;
+  text-decoration: none!important;
+}
+
+li.vertical-tabs__menu-item a .vertical-tabs__menu-item-title{
+  color: #3b3b3b!important;
+  text-decoration: none!important;
+}
+
+/* FIELDSETS */
+.fieldset-class {
+  border: 2px solid #ecebeb;
+  border-radius: 10px;
+  padding: 15px;
+  margin-top: 10px;
+
+}
+
+/* WIDTHs */
+.w-10 {
+  width: 10%!important;
+}
+
+.w-13 {
+  width: 13%!important;
+}
+
+.w-15 {
+  width: 15%!important;
+}
+
+.w-17 {
+  width: 17%!important;
 }

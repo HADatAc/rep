@@ -6,6 +6,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\rep\Vocabulary\SIO;
 use Drupal\rep\Vocabulary\VSTOI;
+use Drupal\rep\EntryPoints;
 use Drupal\Core\Url;
 
 class TreeForm extends FormBase {
@@ -45,13 +46,13 @@ class TreeForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL) {
 
-    // Validação básica dos parâmetros
+    // basic validation of parameters
     if (empty($mode) || empty($elementtype)) {
       \Drupal::messenger()->addError($this->t('Invalid parameters provided.'));
       return [];
     }
 
-    // Configurações adicionais do formulário
+    // Additional form settings
     $form['#attached']['library'][] = 'rep/rep_modal';
 
     $api = \Drupal::service('rep.api_connector');
@@ -72,110 +73,118 @@ class TreeForm extends FormBase {
 
     //$this->setElementType($elementtype);
 
-    // Tipos válidos padrão
+    // Valid types
     $validTypes = [
-      'attribute' => ["Attribute", SIO::ATTRIBUTE],
-      'entity' => ["Entity", SIO::ENTITY],
-      'unit' => ["Unit", SIO::UNIT],
-      'platform' => ["Platform", VSTOI::PLATFORM],
-      'instrument' => ["Instrument", VSTOI::INSTRUMENT],
-      'detector' => ["Detector", VSTOI::DETECTOR],
-      'detectorstem' => ["Detector Stem", VSTOI::DETECTOR_STEM]
+      'annotationstem' => ["Annotation Stem", EntryPoints::ANNOTATION_STEM],
+      'attribute' => ["Attribute", EntryPoints::ATTRIBUTE],
+      'detectorstem' => ["Detector Stem", EntryPoints::DETECTOR_STEM],
+      'entity' => ["Entity", EntryPoints::ENTITY],
+      'group' => ["Group", EntryPoints::GROUP],
+      'instrument' => ["Instrument", EntryPoints::INSTRUMENT],
+      'organization' => ["Organization", EntryPoints::ORGANIZATION],
+      'person' => ["Person", EntryPoints::PERSON],
+      'platform' => ["Platform", EntryPoints::PLATFORM],
+      'processstem' => ["Process Stem", EntryPoints::PROCESS_STEM],
+      'questionnaire' => ["Questionnaire", EntryPoints::QUESTIONNAIRE],
+      'responseoption' => ["Response Option", EntryPoints::RESPONSE_OPTION],
+      'study' => ["Study", EntryPoints::STUDY],
+      'unit' => ["Unit", EntryPoints::UNIT],
+      'detectorattribute' => ["Detector Attribute", EntryPoints::DETECTOR_ATTRIBUTE],
     ];
 
-    // Caso o $branches_param não seja fornecido, usamos um padrão
-    if ($branches_param === NULL) {
-      // Se não tiver sido passado, geramos um array default
-
-    }
     $branches_param = [
       [
+        'id' => 'annotationstem',
+        'uri' => EntryPoints::ANNOTATION_STEM,
+        'label' => 'Annotation Stem'
+      ],
+      [
         'id' => 'attribute',
-        'uri' => SIO::ATTRIBUTE,
-        'label' => 'Attributes'
-      ],
-      [
-        'id' => 'entity',
-        'uri' => SIO::ENTITY,
-        'label' => 'Entities'
-      ],
-      [
-        'id' => 'unit',
-        'uri' => SIO::UNIT,
-        'label' => 'Units'
-      ],
-      [
-        'id' => 'latitude',
-        'uri' => SIO::LATITUDE,
-        'label' => 'Latitude'
-      ],
-      [
-        'id' => 'longitude',
-        'uri' => SIO::LONGITUDE,
-        'label' => 'Longitude'
-      ],
-      [
-        'id' => 'instrument',
-        'uri' => VSTOI::INSTRUMENT,
-        'label' => 'Instruments'
+        'uri' => EntryPoints::ATTRIBUTE,
+        'label' => 'Attribute'
       ],
       [
         'id' => 'detectorstem',
-        'uri' => VSTOI::DETECTOR_STEM,
-        'label' => 'Detector Stems'
+        'uri' => EntryPoints::DETECTOR_STEM,
+        'label' => 'Detector Stem',
+        'typeNamespace' => EntryPoints::DETECTOR_STEM,
+        'uriNamespace' => EntryPoints::DETECTOR_STEM
       ],
       [
-        'id' => 'detector',
-        'uri' => VSTOI::DETECTOR,
-        'label' => 'Detectors'
+        'id' => 'detectorattribute',
+        'uri' => EntryPoints::DETECTOR_ATTRIBUTE,
+        'label' => 'Detector Attribute',
+        'typeNamespace' => EntryPoints::DETECTOR_ATTRIBUTE,
+        'uriNamespace' => EntryPoints::DETECTOR_ATTRIBUTE
+      ],
+      [
+        'id' => 'entity',
+        'uri' => EntryPoints::ENTITY,
+        'label' => 'Entity'
+      ],
+      [
+        'id' => 'group',
+        'uri' => EntryPoints::GROUP,
+        'label' => 'Group'
+      ],
+      [
+        'id' => 'instrument',
+        'uri' => EntryPoints::INSTRUMENT,
+        'label' => 'Instrument'
       ],
       [
         'id' => 'platform',
-        'uri' => VSTOI::PLATFORM,
-        'label' => 'Platforms'
+        'uri' => EntryPoints::PLATFORM,
+        'label' => 'Platform'
       ],
       [
-        'id' => 'codebook',
-        'uri' => VSTOI::CODEBOOK,
-        'label' => 'Codebook'
+        'id' => 'processstem',
+        'uri' => EntryPoints::PROCESS_STEM,
+        'label' => 'Process Stem'
       ],
       [
-        'id' => 'response_options',
-        'uri' => VSTOI::RESPONSE_OPTION,
-        'label' => 'Response Options'
+        'id' => 'questionnaire',
+        'uri' => EntryPoints::QUESTIONNAIRE,
+        'label' => 'Questionnaire'
       ],
       [
-        'id' => 'annotation_stems',
-        'uri' => VSTOI::ANNOTATION_STEM,
-        'label' => 'Annotation Stems'
+        'id' => 'responseoption',
+        'uri' => EntryPoints::RESPONSE_OPTION,
+        'label' => 'Response Option'
       ],
       [
-        'id' => 'annotations',
-        'uri' => VSTOI::ANNOTATION,
-        'label' => 'Annotations'
+        'id' => 'study',
+        'uri' => EntryPoints::STUDY,
+        'label' => 'Study'
       ],
+      [
+        'id' => 'unit',
+        'uri' => EntryPoints::UNIT,
+        'label' => 'Unit'
+      ],
+
     ];
 
-    // Dividir a string $elementtype em um array
+    // Divide string $elementtype into an array
     $elementtypesArray = explode(',', $elementtype);
 
-    // Filtrar tipos válidos a partir do array $validTypes
+    // Filter valid types from $validTypes array
     $validElementtypes = array_filter($elementtypesArray, function ($type) use ($validTypes) {
         return array_key_exists($type, $validTypes);
     });
 
-    // Verificar se algum tipo válido foi encontrado
+    // Check if any valid type was found
     if (empty($validElementtypes)) {
         \Drupal::messenger()->addError(t("No valid element type has been provided."));
         return [];
     }
 
-    // Preparar branches com base nos tipos válidos
+    // Prepare branches based on valid types
     $branches_param = array_values(array_filter($branches_param, function ($branch) use ($validElementtypes) {
         return in_array($branch['id'], $validElementtypes);
     }));
 
-    // Configurar o elemento principal (opcional, baseado no primeiro tipo válido)
+    // Set the primary element (optional, based on the first valid type)
     $firstType = reset($validElementtypes);
     if ($firstType && array_key_exists($firstType, $validTypes)) {
         [$elementName, $nodeUri] = $validTypes[$firstType];
@@ -184,18 +193,18 @@ class TreeForm extends FormBase {
         return [];
     }
 
-    // Dividir $elementtype e remover espaços
+    // Split $elementtype and remove spaces
     $elementtypesArray = array_map('trim', explode(',', $elementtype));
 
-    // Filtra
+    // Filter branches based on $elementtypesArray
     $branches_param = array_filter($branches_param, function ($branch) use ($elementtypesArray) {
       return in_array($branch['id'], $elementtypesArray);
     });
 
-    // Reindexa e garante array "limpo"
+    // Reindex and ensure clean array
     $branches_param = array_values($branches_param);
 
-    // Se ficou vazio, podemos repor um default
+    // If empty, we can replace with a default
     if (empty($branches_param)) {
       $branches_param = [
         [
@@ -205,17 +214,17 @@ class TreeForm extends FormBase {
         ],
       ];
     }
-    //dpm($elementtype, 'Debug $elementtype');           // Ver qual string está chegando
-    //dpm($branches_param, 'Debug $branches_param');     // Ver o array final de branches
+    //dpm($elementtype, 'Debug $elementtype');           // See which string is arriving
+    //dpm($branches_param, 'Debug $branches_param');     // See the final array of branches
 
-    // Recupera nó raiz
+    // Retrieve root node
     $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
     if ($this->getRootNode() == NULL) {
       \Drupal::messenger()->addError(t("Failed to retrieve root node " . $nodeUri . "."));
       return [];
     }
 
-    // Caso não seja fornecido o output_field_selector, usa o padrão
+    // If output_field_selector is not provided, use the default
     if ($output_field_selector === NULL) {
       $output_field_selector = '#edit-search-keyword--2';
     }
@@ -225,9 +234,13 @@ class TreeForm extends FormBase {
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
 
     $form['#attached']['drupalSettings']['rep_tree'] = [
-      'apiEndpoint' => $base_url . '/rep/getchildren', // Endpoint da API
+      'apiEndpoint' => $base_url . '/rep/getchildren',
+      'searchSubClassEndPoint' => $base_url . '/rep/subclasskeyword',
+      'searchSuperClassEndPoint' => $base_url . '/rep/getsuperclasses',
+      'superclass' => $branches_param[0]["uri"],
       'branches' => $branches_param,
-      'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]', // Usar o name como seletor
+      'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]',
+      'elementType' => $elementtype,
     ];
 
     if ($mode == 'browse')
@@ -239,16 +252,44 @@ class TreeForm extends FormBase {
     }
 
     $form['search_wrapper'] = [
-      '#type' => 'inline_template',
-      '#template' => '
-        <div style="position: relative; max-width: 350px;" class="js-form-wrapper form-wrapper mt-3" id="edit-search-wrapper" data-drupal-selector="edit-search-wrapper">
-          <div class="js-form-item js-form-type-textfield form-type-textfield js-form-item-search-input form-item-search-input form-no-label">
-            <input id="tree-search" class="form-control" placeholder="Search..." style="padding-right: 30px; margin-bottom: 10px;" autocomplete="off" data-drupal-selector="edit-search-input" type="text" name="search_input" value="" size="60" maxlength="128">
-          </div>
-          <button id="clear-search" type="button" style="position: absolute; top: 40%; right: 5px; transform: translateY(-50%); background: transparent; border: none; font-size: 16px; color: #888; cursor: pointer; display: none;" data-drupal-selector="edit-clear-button">×</button>
-        </div>
-      ',
+      '#type' => 'container',
     ];
+
+    $form['search_wrapper']['search_input'] = [
+      '#type' => 'textfield',
+      //'#title' => $this->t('Search'),
+      '#placeholder' => $this->t('Search'),
+      //'#autocomplete_route_name' => 'rep.get_subclasskeyword',
+      '#attributes' => [
+          'id' => 'search_input',
+          'class' => ['mt-2', 'w-75'],
+          'style' => 'float:left',
+          'autocomplete' => 'off'
+      ],
+      '#autocomplete' => 'off'
+    ];
+
+    $form['search_wrapper']['select_node'] = [
+      '#type' => 'inline_template',
+      '#attributes' => [
+        'id' => 'reset-tree',
+        'class' => ['btn', 'btn-primary', 'mt-4'],
+        'style' => 'float:right',
+      ],
+      '#template' => '<button type="button" id="reset-tree" class="btn btn-primary mt-1 mx-3" data-field-id="">'.t('Reset').'</button>'
+    ];
+
+    // $form['search_wrapper'] = [
+    //   '#type' => 'inline_template',
+    //   '#template' => '
+    //     <div style="position: relative; max-width: 350px;" class="js-form-wrapper form-wrapper mt-3" id="edit-search-wrapper" data-drupal-selector="edit-search-wrapper">
+    //       <div class="js-form-item js-form-type-textfield form-type-textfield js-form-item-search-input form-item-search-input form-no-label">"
+    //         <input id="tree-search" class="form-control" placeholder="Search..." style="padding-right: 30px; margin-bottom: 10px;" autocomplete="on" data-drupal-selector="edit-search-input" type="text" name="search_input" value="" size="60" maxlength="128">
+    //       </div>
+    //       <button id="clear-search" type="button" style="position: absolute; top: 40%; right: 5px; transform: translateY(-50%); background: transparent; border: none; font-size: 16px; color: #888; cursor: pointer; display: none;" data-drupal-selector="edit-clear-button">×</button>
+    //     </div>
+    //   ',
+    // ];
 
     $form['wait_message'] = [
       '#type' => 'markup',
@@ -258,6 +299,17 @@ class TreeForm extends FormBase {
     $form['tree_root'] = [
       '#type' => 'markup',
       '#markup' => '<div id="tree-root" data-initial-uri="' . $this->getRootNode()->uri . '" style="display:none;"></div>',
+    ];
+
+    $form['node-comment-display'] = [
+      '#type' => 'container',
+      '#text' => '',
+      '#attributes' => [
+          'id' => 'node-comment-display',
+          'class' => ['mt-2', 'w-100'],
+          'display' => 'none'
+          //'style' => 'float:left',
+      ],
     ];
 
     if ($mode == 'modal')
@@ -279,6 +331,6 @@ class TreeForm extends FormBase {
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // Sem lógica de submissão
+    // No submission logic
   }
 }

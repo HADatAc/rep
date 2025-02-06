@@ -2,6 +2,8 @@
 
 use Drupal\Core\Database\Database;
 use Drupal\Core\Path\AliasStorageInterface;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * Implements hook_install().
@@ -114,5 +116,45 @@ function rep_update_8001() {
 
   \Drupal::configFactory()->getEditable('system.site')->set('page.front', '/rep/list/instrument/_/_/1/12')->save();
 
+}
+
+/**
+ * Implementa hook_menu_links_discovered_alter().
+ */
+function rep_menu_links_discovered_alter(&$links) {
+  $target_links = [
+    'reviewer.top_level',
+    'reviewer.response_options',
+  ];
+
+  foreach ($target_links as $link_key) {
+    if (isset($links[$link_key])) {
+      // Define o requisito de acesso personalizado.
+      $links[$link_key]['requirements']['_custom_access_check'] = 'TRUE';
+    }
+  }
+}
+
+/**
+ * Função de callback de acesso personalizada.
+ *
+ * @param \Drupal\Core\Session\AccountInterface $account
+ *   A conta do usuário.
+ *
+ * @return \Drupal\Core\Access\AccessResultInterface
+ *   O resultado do acesso.
+ */
+function rep_custom_access_callback(AccountInterface $account) {
+  // Verifica se o utilizador possui o papel 'content_editor'.
+  $has_content_editor = $account->hasRole('content_editor');
+
+  // Verifica se o utilizador NÃO possui o papel 'administrator'.
+  $is_not_administrator = !$account->hasRole('administrator');
+
+  if ($has_content_editor && $is_not_administrator) {
+    return AccessResult::allowed()->cachePerUser();
+  }
+
+  return AccessResult::forbidden()->cachePerUser();
 }
 

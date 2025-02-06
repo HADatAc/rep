@@ -29,6 +29,8 @@
     const QUESTIONNAIRE                   = VSTOI::VSTOI . "Questionnaire";
     const RESPONSE_OPTION                 = VSTOI::VSTOI . "ResponseOption";
     const SUBCONTAINER                    = VSTOI::VSTOI . "Subcontainer";
+    const PROCESS_STEM                    = VSTOI::VSTOI . "ProcessStem";
+    const PROCESS                         = VSTOI::VSTOI . "Process";
 
     /*
      *    PROPERTIES
@@ -53,6 +55,8 @@
     const HAS_SIR_MANAGER_EMAIL           = VSTOI::VSTOI . "hasSIRManagerEmail";
     const HAS_VERSION                     = VSTOI::VSTOI . "hasVersion";
     const OF_CODEBOOK                     = VSTOI::VSTOI . "ofCodebook";
+    const HAS_PROCESS                     = VSTOI::VSTOI . "hasProcess";
+    const OF_PROCESS                      = VSTOI::VSTOI . "ofProcess";
 
     /*
      * STATUS

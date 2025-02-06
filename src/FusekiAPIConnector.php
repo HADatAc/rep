@@ -4,6 +4,7 @@ namespace Drupal\rep;
 
 use Drupal\Core\Http\ClientFactory;
 use Drupal\rep\JWT;
+use Drupal\rep\Vocabulary\VSTOI;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ConnectException;
@@ -62,6 +63,25 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function getSubclassesKeyword($superuri, $keyword) {
+    $endpoint = "/hascoapi/api/subclasses/keyword/".
+      rawurlencode($superuri) . '/' . rawurlencode($keyword);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function getSuperClasses($uri) {
+    $endpoint = "/hascoapi/api/superclasses/".
+      rawurlencode($uri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+
   public function getHascoType($uri) {
     $endpoint = "/hascoapi/api/hascotype/".rawurlencode($uri);
     $method = 'GET';
@@ -70,7 +90,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
+  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
   public function listByKeywordAndLanguage($elementType, $keyword, $language, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -85,7 +105,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
+  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
   public function listSizeByKeywordAndLanguage($elementType, $keyword, $language) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -122,7 +142,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
+  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
   public function listByManagerEmail($elementType, $manageremail, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -136,14 +156,12 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
-  public function listByManagerEmailStatus($elementType, $manageremail, $status="current", $withcurrent=0, $pageSize, $offset) {
+  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
+  public function listByReviewStatus($elementType, $status, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
-      "/manageremail/status/".
-      $status."/".
-      $manageremail."/".
-      $withcurrent."/".
+      "/status/".
+      rawurlencode($status)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
@@ -152,7 +170,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
+  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
   public function listSizeByManagerEmail($elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
       $elementType .
@@ -178,7 +196,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "responseoption"
+  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
   public function listSizeByManagerEmailByStudy($studyuri, $elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
       $elementType .
@@ -384,6 +402,108 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   PROCESS
+   */
+
+  public function processAdd($processJson) {
+    $endpoint = "/hascoapi/api/process/create/".rawurlencode($processJson);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function processDel($processUri) {
+    $endpoint = "/hascoapi/api/process/delete/".rawurlencode($processUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function processInstrumentAdd($processUri, array $instrumentUris) {
+    $endpoint = "/hascoapi/api/process/instruments";
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+
+    if ($this->bearer == NULL) {
+        $this->bearer = "Bearer " . JWT::jwt();
+    }
+
+    // Estrutura o payload JSON no formato esperado pela API
+    $payload = json_encode([
+        'processuri' => $processUri,
+        'instrumenturis' => $instrumentUris
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);  // Facilita a leitura no log
+
+    $data = [
+        'headers' => [
+            'Content-Type' => 'application/json',
+            'Authorization' => $this->bearer
+        ],
+        'body' => $payload
+    ];
+
+    // 📊 Log do Payload JSON
+    \Drupal::logger('rep')->notice('Payload enviado para API: @payload', [
+        '@payload' => $payload
+    ]);
+
+    // Envia a requisição para a API
+    $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
+
+    return $response;
+  }
+
+  public function processInstrumentUpdate(array $processData) {
+    $endpoint = "/hascoapi/api/process/instrumentation";
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+
+    $payload = json_encode($processData);
+
+    \Drupal::logger('rep')->notice('Enviando instrumentos para o processo: @payload', [
+        '@payload' => $payload,
+    ]);
+
+    $data = [
+      'headers' => [
+          'Content-Type' => 'application/json',
+          'Authorization' => $this->bearer
+      ],
+      'body' => json_encode($processData)
+    ];
+
+    $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
+
+    return $response;
+  }
+
+  public function processInstrumentDel($processUri, $detectorUri) {
+    $endpoint = "/hascoapi/api/process/instrument/remove/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function processDetectorAdd($processUri, $detectorUri) {
+    $endpoint = "/hascoapi/api/process/detector/add/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function processDetectorDel($processUri, $instrumentUri) {
+    $endpoint = "/hascoapi/api/process/detector/remove/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
    *
    *    CONTAINER SLOTS
    *
@@ -528,6 +648,26 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   PROCESS STEMS
+   */
+
+   public function processStemAdd($processStemJson) {
+    $endpoint = "/hascoapi/api/processstem/create/".rawurlencode($processStemJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function processStemDel($processStemUri) {
+    $endpoint = "/hascoapi/api/processstem/delete/".rawurlencode($processStemUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
    *   INSTRUMENTS
    */
 
@@ -553,6 +693,14 @@ class FusekiAPIConnector {
 
   public function instrumentDel($instrumentUri) {
     $endpoint = "/hascoapi/api/instrument/delete/".rawurlencode($instrumentUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function reviewRecursive($instrumentUri) {
+    $endpoint = "/hascoapi/api/review/recursive/".rawurlencode($instrumentUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1046,6 +1194,13 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function repoUpdateURL($api_url, $url) {
+    $endpoint = "/hascoapi/api/repo/url/".rawurlencode($url);
+    $method = "GET";
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   public function repoUpdateDescription($api_url, $description) {
     $endpoint = "/hascoapi/api/repo/description/".rawurlencode($description);
     $method = "GET";
@@ -1053,8 +1208,12 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function repoUpdateNamespace($api_url, $namespace, $baseUrl) {
-    $endpoint = "/hascoapi/api/repo/namespace/default/".rawurlencode($namespace)."/".rawurlencode($baseUrl);
+  public function repoUpdateNamespace($api_url, $prefix, $url, $mime, $source) {
+    $endpoint = "/hascoapi/api/repo/namespace/default/".
+      rawurlencode($prefix)."/".
+      rawurlencode($url)."/".
+      rawurlencode($mime)."/".
+      rawurlencode($source);
     $method = "GET";
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -1186,7 +1345,7 @@ class FusekiAPIConnector {
     ];
   }
 
-  public function uploadTemplate($concept,$template) {
+  public function uploadTemplate($concept,$template,$status) {
 
     // RETRIEVE FILE CONTENT FROM FID
     $file_entity = \Drupal\file\Entity\File::load($template->hasDataFile->id);
@@ -1200,9 +1359,13 @@ class FusekiAPIConnector {
       \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $template->dataFile->id . ']'));
       return FALSE;
     }
+    if ($status != "" && $status != VSTOI::DRAFT && $status != VSTOI::CURRENT) {
+      \Drupal::messenger()->addError(t('UploadTemplate: Invalid value for status: [' . $status . ']'));
+      return FALSE;
+    }
 
-    // APPEND DATAFILE URI TO ENDPOINT'S URL
-    $endpoint = "/hascoapi/api/ingest/".$concept."/".rawurlencode($template->uri);
+    // APPEND DATAFILE URI AND STATUS TO ENDPOINT'S URL
+    $endpoint = "/hascoapi/api/ingest/".rawurlencode($status)."/".$concept."/".rawurlencode($template->uri);
 
     // MAKE CALL TO API ENDPOINT
     $api_url = $this->getApiUrl();
@@ -1214,13 +1377,11 @@ class FusekiAPIConnector {
         ],
         'body' => $file_content,
       ]);
-      }
-    catch(ConnectException $e){
+    } catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
       return(NULL);
-    }
-    catch(ClientException $e){
+    } catch(ClientException $e){
       $res = $e->getResponse();
       if($res->getStatusCode() != '200') {
         $this->error=$res->getStatusCode();
@@ -1320,4 +1481,12 @@ class FusekiAPIConnector {
     return $totalValue;
   }
 
+  // Return List of Detector from Instrument to Fill on Process
+  public function detectorListFromInstrument($instrumentUri) {
+    $endpoint = "/hascoapi/api/instrument/detectors/".rawurlencode($instrumentUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
 }

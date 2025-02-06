@@ -9,15 +9,14 @@ use Drupal\file\Entity\File;
 use Drupal\rep\ListManagerEmailPage;
 use Drupal\rep\Utils;
 use Drupal\rep\Entity\MetadataTemplate;
+use Drupal\rep\Vocabulary\VSTOI;
 
-class REPSelectMTForm extends FormBase
-{
+class REPSelectMTForm extends FormBase {
 
   /**
    * {@inheritdoc}
    */
-  public function getFormId()
-  {
+  public function getFormId() {
     return 'rep_select_mt_form';
   }
 
@@ -39,33 +38,27 @@ class REPSelectMTForm extends FormBase
 
   protected $studyuri;
 
-  public function getMode()
-  {
+  public function getMode() {
     return $this->mode;
   }
 
-  public function setMode($mode)
-  {
+  public function setMode($mode) {
     return $this->mode = $mode;
   }
 
-  public function getList()
-  {
+  public function getList() {
     return $this->list;
   }
 
-  public function setList($list)
-  {
+  public function setList($list) {
     return $this->list = $list;
   }
 
-  public function getListSize()
-  {
+  public function getListSize() {
     return $this->list_size;
   }
 
-  public function setListSize($list_size)
-  {
+  public function setListSize($list_size) {
     return $this->list_size = $list_size;
   }
 
@@ -392,7 +385,23 @@ class REPSelectMTForm extends FormBase
       } else if ((sizeof($rows) > 1)) {
         \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be ingested simultaneously."));
       } else {
-        $this->performIngest($rows, $form_state);
+        $this->performIngest($rows, $form_state, "_");
+      }
+    } elseif ($button_name === 'ingest_mt_draft') {
+      if (sizeof($rows) < 1) {
+        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be ingested."));
+      } else if ((sizeof($rows) > 1)) {
+        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be ingested simultaneously."));
+      } else {
+        $this->performIngest($rows, $form_state, VSTOI::DRAFT);
+      }
+    } elseif ($button_name === 'ingest_mt_current') {
+      if (sizeof($rows) < 1) {
+        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be ingested."));
+      } else if ((sizeof($rows) > 1)) {
+        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be ingested simultaneously."));
+      } else {
+        $this->performIngest($rows, $form_state, VSTOI::CURRENT);
       }
     } elseif ($button_name === 'uningest_mt') {
       if (sizeof($rows) < 1) {
@@ -430,14 +439,47 @@ class REPSelectMTForm extends FormBase
         'class' => ['btn', 'btn-primary', 'delete-element-button'],
       ],
     ];
-    $form['ingest_mt'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected'),
-      '#name' => 'ingest_mt',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-      ],
-    ];
+    if ($this->element_type == "ins") {
+      $uid = \Drupal::currentUser()->id();
+      $user = \Drupal\user\Entity\User::load($uid);
+      //dpm($user->getRoles());
+      if ($user && $user->hasRole('content_editor')) {
+        $form['ingest_mt'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Draft'),
+          '#name' => 'ingest_mt_draft',
+          '#attributes' => [
+            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+          ],
+        ];
+        $form['ingest_mt_current'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Current'),
+          '#name' => 'ingest_mt_current',
+          '#attributes' => [
+            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+          ],
+        ];
+      } else {
+        $form['ingest_mt'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected'),
+          '#name' => 'ingest_mt_draft',
+          '#attributes' => [
+            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+          ],
+        ];
+      }
+    } else {
+      $form['ingest_mt'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected'),
+        '#name' => 'ingest_mt',
+        '#attributes' => [
+          'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+        ],
+      ];    
+    }
     $form['uningest_mt'] = [
       '#type' => 'submit',
       '#value' => $this->t('Uningest ' . $this->plural_class_name . ' Selected'),
@@ -603,7 +645,7 @@ class REPSelectMTForm extends FormBase
         '#element_uri' => $key,
       ];
 
-      // Botão Excluir
+      // Button Delete
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['delete'] = [
         '#type' => 'submit',
         '#value' => $this->t('Delete'),
@@ -617,7 +659,7 @@ class REPSelectMTForm extends FormBase
         '#element_uri' => $key,
       ];
 
-      // Botão Ingest
+      // Button Ingest
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['ingest'] = [
         '#type' => 'submit',
         '#value' => $this->t('Ingest'),
@@ -630,7 +672,7 @@ class REPSelectMTForm extends FormBase
         '#element_uri' => $key,
       ];
 
-      // Botão Uningest
+      // Button Uningest
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['uningest'] = [
         '#type' => 'submit',
         '#value' => $this->t('Uningest'),
@@ -697,7 +739,7 @@ class REPSelectMTForm extends FormBase
     $triggering_element = $form_state->getTriggeringElement();
     $uri = $triggering_element['#element_uri'];
 
-    $this->performIngest([$uri], $form_state);
+    $this->performIngest([$uri], $form_state, VSTOI::Draft);
   }
 
   /**
@@ -776,8 +818,7 @@ class REPSelectMTForm extends FormBase
   /**
    * INGEST CARD
    */
-  protected function performIngest(array $uris, FormStateInterface $form_state)
-  {
+  protected function performIngest(array $uris, FormStateInterface $form_state, String $status) {
     $api = \Drupal::service('rep.api_connector');
     $uri = reset($uris);
     $study = $api->parseObjectResponse($api->getUri($uri), 'getUri');
@@ -786,7 +827,7 @@ class REPSelectMTForm extends FormBase
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
-    $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $study), 'uploadTemplate');
+    $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $study, $status), 'uploadTemplateStatus');
     if ($msg == NULL) {
       \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILD to be submited for Ingestion."));
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
@@ -800,8 +841,7 @@ class REPSelectMTForm extends FormBase
   /**
    * UNINGEST CARD
    */
-  protected function performUningest(array $uris, FormStateInterface $form_state)
-  {
+  protected function performUningest(array $uris, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
     $uri = reset($uris);
     $newMT = new MetadataTemplate();
