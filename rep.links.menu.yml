@@ -155,6 +155,20 @@ reviewer.top_level:
 #   requirements:
 #     _review_access: 'TRUE'
 
+reviewer.detectorsstem:
+  title: Detector Stems
+  description: Manage Detectors Stem Reviews
+  menu_name: main
+  route_name: sir.select_review_element
+  route_parameters:
+    elementtype: 'detectorstem'
+    page: '1'
+    pagesize: '9'
+  parent: reviewer.top_level
+  weight: 20
+  requirements:
+    _review_access: 'TRUE'
+
 reviewer.detectors:
   title: Detectors
   description: Manage Detectors Reviews
