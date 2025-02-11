@@ -32,12 +32,17 @@ rep_modal:
     - core/jquery
     - core/drupal.dialog
     - core/drupal.ajax
-# rep_tree:
-#   version: VERSION
-#   css:
-#     css/rep_tree.css: {}
-#   js:
-#     js/rep_tree.js: {}
-#     js/jsTree.min.js: {}
-#   dependencies:
-#     - core/jquery
+directorytree:
+  version: 1.x
+  css:
+    theme:
+      https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css: {}
+  js:
+    https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js: {}
+    js/jstree_init.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+
+

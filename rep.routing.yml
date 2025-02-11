@@ -306,3 +306,13 @@ rep.sdd_autocomplete:
   requirements:
     _permission: 'access content'
 
+# TESTE
+
+rep.directory_tree:
+  path: '/rep/directory-tree/{folder}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\DirectoryTreeController::showTree'
+    _title: 'Directory Tree'
+  requirements:
+    _permission: 'access content'
+

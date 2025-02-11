@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Drupal\rep\Utils;
 use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\HASCO;
+use Drupal\Core\Ajax\AjaxResponse;
 
 class AddMTForm extends FormBase {
 
@@ -166,6 +167,26 @@ class AddMTForm extends FormBase {
         ];
       }
     }
+
+    // Nome da pasta
+    $folder_name = 'std';
+
+    $form['show_folder'] = [
+      '#type' => 'link',
+      '#title' => $this->t('Open folder '.$folder_name),
+      '#url' => \Drupal\Core\Url::fromRoute('rep.directory_tree', ['folder' => $folder_name]),
+      '#attributes' => [
+        'class' => ['use-ajax'],
+        'data-dialog-type' => 'modal',
+      ],
+      '#attached' => [
+        'library' => [
+          'core/drupal.dialog',
+          'core/drupal.dialog.ajax',
+        ],
+      ],
+    ];
+
     $form['mt_name'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Name'),
@@ -391,7 +412,7 @@ class AddMTForm extends FormBase {
     $uid = \Drupal::currentUser()->id();
     if ($this->elementType != 'da')
       $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.add_mt');
-    else  
+    else
       $previousUrl = Utils::trackingGetPreviousUrl($uid, 'std.manage_study_elements');
 
     if ($previousUrl) {
