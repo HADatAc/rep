@@ -30,6 +30,9 @@ class Constant {
   const PREFIX_PLATFORM_INSTANCE          = "PFI";
   const PREFIX_POSSIBLE_VALUE             = "PSV";
   const PREFIX_POSTAL_ADDRESS             = "PAD";
+  const PREFIX_PROCESS                    = "PC0";
+  const PREFIX_PROCESS_STEM               = "PST";
+  const PREFIX_REQUIRED_INSTRUMENTATION   = "RIN";
   const PREFIX_RESPONSE_OPTION            = "ROP";
   const PREFIX_SDD                        = "SDD";
   const PREFIX_SDD_ATTRIBUTE              = "SDDATT";
@@ -44,8 +47,6 @@ class Constant {
   const PREFIX_STREAM                     = "STM";
   const PREFIX_SUBCONTAINER               = "SCT";
   const PREFIX_VIRTUAL_COLUMN             = "VCO";
-  const PREFIX_PROCESS_STEM               = "PST";
-  const PREFIX_PROCESS                    = "PC";
 
   const FILE_STATUS_UNPROCESSED           = "UNPROCESSED";
   const FILE_STATUS_PROCESSED             = "PROCESSED";
