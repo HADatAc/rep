@@ -938,6 +938,15 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // ATTACH AND CHANGE R.O. STATUS
+  public function responseOptionAttachStatus($responseOptionUri,$containerSlotUri,$status = VSTOI::DRAFT) {
+    $endpoint = "/hascoapi/api/slots/codebook/attach/status/".rawurlencode($responseOptionUri)."/".rawurlencode($containerSlotUri)."/".rawurlencode($status);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**
    *   SEMANTIC VARIABLE
    */
