@@ -1359,7 +1359,7 @@ class FusekiAPIConnector {
       \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $template->dataFile->id . ']'));
       return FALSE;
     }
-    if ($status != "" && $status != VSTOI::DRAFT && $status != VSTOI::CURRENT) {
+    if ($status != "_" && $status != VSTOI::DRAFT && $status != VSTOI::CURRENT) {
       \Drupal::messenger()->addError(t('UploadTemplate: Invalid value for status: [' . $status . ']'));
       return FALSE;
     }
