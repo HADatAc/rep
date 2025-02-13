@@ -5,6 +5,10 @@ namespace Drupal\rep;
 class Constant {
 
   const DEFAULT_WAS_GENERATED_BY          = "http://hadatac.org/ont/vstoi#Original";
+  const WGB_ORIGINAL                      = "http://hadatac.org/ont/vstoi#Original";
+  const WGB_REFINEMENT                    = "http://hadatac.org/ont/vstoi#Refinement";
+  const WGB_SPECIALIZATION                = "http://hadatac.org/ont/vstoi#Specialization";
+  const WGB_TRANSLATION                   = "http://hadatac.org/ont/vstoi#Translation";
   const DEFAULT_LANGUAGE                  = "en";
   const DEFAULT_INFORMANT                 = "http://hadatac.org/ont/vstoi#Self";
 
