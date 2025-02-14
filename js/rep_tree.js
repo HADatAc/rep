@@ -545,6 +545,17 @@
         console.log("[DEBUG] - Chamando setupAutocomplete() para #search_input...");
         setupAutocomplete('#search_input');
 
+        // FORÇA que clicar no texto do nó selecione
+        $('#tree-root')
+        .off('click.jstree')  // remove outro handler, se houver
+        .on('click.jstree', '.jstree-anchor', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log("Clique simples capturado em .jstree-anchor. Forçando select_node().");
+          // $(this).jstree(true).select_node(this);
+        });
+
+
       }); // document.ready
       console.log("[DEBUG] - Drupal.behaviors.tree.attach - END");
     },
