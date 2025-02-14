@@ -1,79 +1,54 @@
 (function ($, Drupal, drupalSettings) {
-
-  /**
-   * Behavior principal, inicializa e gerencia a árvore (jstree).
-   */
   Drupal.behaviors.tree = {
     attach: function (context, settings) {
-      console.log("[DEBUG] - Drupal.behaviors.tree.attach - START");
-
-      // Envolvemos em ready para garantir que o DOM esteja pronto
-      $(document).ready(function () {
-        console.log("[DEBUG] - document.ready no behavior tree...");
-
-        const $treeRoot = $('#tree-root');
-        console.log("[DEBUG] - $treeRoot encontrado?", $treeRoot.length > 0);
-
-        if (!$treeRoot.length) {
-          console.warn("[DEBUG] - O elemento #tree-root não foi encontrado. Abortando init.");
-          return;
-        }
-
-        // Se houver valor pré-definido para busca, aplica no campo
+      once('jstree-initialized', '#tree-root', context).forEach((element) => {
+        // Preenche o campo de busca se existir valor definido
         if (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) {
-          console.log("[DEBUG] - SearchValue definido em drupalSettings:", drupalSettings.rep_tree.searchValue);
           $('#tree-search').val(drupalSettings.rep_tree.searchValue);
         }
 
-        // Seletores
-        const $selectNodeButton = $('#select-tree-node');
-        const $searchInput = $('#search_input');
-        const $clearButton = $('#clear-search');
-        const $waitMessage = $('#wait-message');
-
-        let searchTimeout;
-        let activityTimeout = null;
-        let initialSearchDone = false;
-        const activityDelay = 1000;
-
-        /**
-         * (1) Função para filtrar duplicatas dos nós raiz (compara label)
-         */
+        // Função para filtrar duplicatas dos nós raiz (compara o label)
         function getFilteredBranches() {
-          console.log("[DEBUG] - getFilteredBranches() chamado.");
           const seenLabels = new Set();
-          const filtered = drupalSettings.rep_tree.branches.filter(branch => {
+          return drupalSettings.rep_tree.branches.filter(branch => {
             if (seenLabels.has(branch.label)) {
-              console.warn("[DEBUG] - Duplicate branch removed:", branch.label);
+              console.warn("Duplicate branch removed:", branch);
               return false;
             }
             seenLabels.add(branch.label);
             return true;
           });
-          console.log("[DEBUG] - Branches após filtrar duplicados:", filtered);
-          return filtered;
         }
 
-        /**
-         * (2) Tratamento de tempo de atividade para exibir a árvore e esconder mensagem "aguarde"
-         */
+        // Seletores e variáveis de estado
+        const $treeRoot = $(element);
+        const $selectNodeButton = $('#select-tree-node', context);
+        const $searchInput = $('#search_input', context);
+        const $clearButton = $('#clear-search', context);
+        const $waitMessage = $('#wait-message', context);
+
+        let searchTimeout;
+        let treeReady = false;
+        let activityTimeout = null;
+        const activityDelay = 1000;
+        let initialSearchDone = false;
+
+        // Gerencia o tempo de atividade e exibição da árvore
         function resetActivityTimeout() {
-          console.log("[DEBUG] - resetActivityTimeout() chamado.");
           if (activityTimeout) {
             clearTimeout(activityTimeout);
           }
           activityTimeout = setTimeout(() => {
             if (!initialSearchDone) {
-              console.log("[DEBUG] - activityTimeout disparou e initialSearchDone == false. Fechando nós e mostrando árvore.");
               $treeRoot.jstree('close_all');
               $waitMessage.hide();
               $treeRoot.show();
+              treeReady = true;
               $searchInput.prop('disabled', false);
 
               const initialSearch = $searchInput.val().trim();
               if (initialSearch.length > 0) {
                 setTimeout(() => {
-                  console.log("[DEBUG] - Havia initialSearch, removendo handlers load_node e open_node.");
                   $treeRoot.off('load_node.jstree', resetActivityTimeout);
                   $treeRoot.off('open_node.jstree', resetActivityTimeout);
                   initialSearchDone = true;
@@ -85,64 +60,45 @@
           }, activityDelay);
         }
 
-        /**
-         * (3) Função para anexar eventos (select, hover, etc.)
-         */
+        // Anexa os eventos de seleção, tooltip e carregamento ao jstree
         function attachTreeEventListeners() {
-          console.log("[DEBUG] - attachTreeEventListeners() chamado.");
-          // Remove qualquer evento duplicado
+          // Remove eventos anteriores para evitar duplicação
           $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
 
-          // load/open
           $treeRoot.on('load_node.jstree open_node.jstree', function () {
-            console.log("[DEBUG] - load_node.jstree / open_node.jstree disparado.");
+            //console.log('Node loaded or opened.');
           });
 
-          // select_node
           $treeRoot.on('select_node.jstree', function (e, data) {
-            console.log("[DEBUG] - select_node.jstree disparado. data:", data);
-
             const selectedNode = data.node.original;
-            console.log("[DEBUG] - Node original:", selectedNode);
-
-            if (selectedNode && selectedNode.id) {
-              console.log("[DEBUG] - Ativando selectNodeButton. ID:", selectedNode.id);
+            // Atualiza o botão de seleção
+            if (selectedNode.id) {
               $selectNodeButton
                 .prop('disabled', false)
                 .removeClass('disabled')
-                .data('selected-value', selectedNode.uri
-                  ? selectedNode.text + " [" + selectedNode.uri + "]"
-                  : selectedNode.typeNamespace)
-                .data('field-id', $treeRoot.data('field-id'));
+                .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
+                //data('field-id', $treeRoot.data('field-id'));
+                .data('field-id', $('#tree-root').data('field-id')); // Mantém o campo correto
             } else {
-              console.log("[DEBUG] - Desabilitando selectNodeButton (sem ID).");
               $selectNodeButton
                 .prop('disabled', true)
                 .addClass('disabled')
                 .removeData('selected-value')
                 .removeData('field-id');
             }
-
-            // Exibe o comentário, se houver
-            const comment = data.node.data && data.node.data.comment;
-            console.log("[DEBUG] - Comentário do nó:", comment);
+            const comment = data.node.data.comment;
             if (comment && comment.trim().length > 0) {
-              console.log("[DEBUG] - Definindo HTML e exibindo #node-comment-display.");
-              $('#node-comment-display')
-                .html(`<strong>Description:</strong><br>${comment}`)
-                .show(); // ou fadeIn()
+              $('#node-comment-display').html(`<strong>Description:</strong><br>${comment}`).show();
             } else {
-              console.log("[DEBUG] - Escondendo #node-comment-display (sem comentário).");
               $('#node-comment-display').hide();
             }
+
+
           });
 
-          // hover_node
           $treeRoot.on('hover_node.jstree', function (e, data) {
-            console.log("[DEBUG] - hover_node.jstree disparado.");
-            const comment = data.node.data && data.node.data.comment || '';
+            const comment = data.node.data.comment || '';
             const nodeAnchor = $('#' + data.node.id + '_anchor');
-            console.log("[DEBUG] - anchor ID:", nodeAnchor.attr('id'), "comment:", comment);
             if (comment) {
               nodeAnchor.attr('title', comment);
             } else {
@@ -151,38 +107,29 @@
           });
         }
 
-        /**
-         * (4) Inicializa o jstree com dados iniciais
-         */
+        // Inicializa o jstree com os dados iniciais
         function initializeJstree() {
-          console.log("[DEBUG] - initializeJstree() chamado. Iniciando jstree...");
           $treeRoot.jstree({
             core: {
               data: function (node, cb) {
-                console.log("[DEBUG] - jstree core.data - node:", node);
                 if (node.id === '#') {
-                  console.log("[DEBUG] - Carregando nós raiz (branches).");
+                  // Utiliza os branches filtrados para evitar duplicatas (com base no label)
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
                     text: branch.label,
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
-                    data: {
-                      typeNamespace: branch.typeNamespace || '',
-                      comment: branch.comment || ''
-                    },
+                    data: { typeNamespace: branch.typeNamespace || '' },
                     icon: 'fas fa-folder',
                     children: true,
                   })));
                 } else {
-                  console.log("[DEBUG] - Carregando filhos via AJAX para nodeUri:", node.original.uri);
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
                     type: 'GET',
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-                      console.log("[DEBUG] - Sucesso AJAX para filhos, data:", data);
                       let uniqueChildren = [];
                       let seenChildIds = new Set();
                       data.forEach(item => {
@@ -193,28 +140,21 @@
                             text: item.label || 'Unnamed Node',
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
-                            data: {
-                              typeNamespace: item.typeNamespace || '',
-                              comment: item.comment || ''
-                            },
+                            comment: item.comment || '',
+                            data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
                             icon: 'fas fa-file-alt',
                             children: true,
                           });
                         }
                       });
-                      console.log("[DEBUG] - uniqueChildren:", uniqueChildren);
                       cb(uniqueChildren);
                     },
                     error: function () {
-                      console.warn("[DEBUG] - Erro AJAX ao carregar filhos. cb([])");
                       cb([]);
                     },
                   });
                 }
               },
-              "multiple": false,
-              "check_callback": true,
-              "dblclick_toggle": true
             },
             plugins: ['search', 'wholerow'],
             search: {
@@ -223,34 +163,30 @@
               show_only_matches_children: true,
               search_callback: function (str, node) {
                 const searchTerm = str.toLowerCase();
-                const nodeText = node.text.toLowerCase();
-                const hasTS = node.data.typeNamespace && node.data.typeNamespace.toLowerCase().includes(searchTerm);
-                const match = nodeText.includes(searchTerm) || hasTS;
-                return match;
+                return node.text.toLowerCase().includes(searchTerm) ||
+                  (node.data.typeNamespace && node.data.typeNamespace.toLowerCase().includes(searchTerm));
               },
             },
           });
 
-          // Eventos após jstree pronto
+          // Após a inicialização, anexa os eventos e configura o timeout de atividade
           $treeRoot.on('ready.jstree', function () {
-            console.log("[DEBUG] - jstree ready.jstree disparado. Chamando attachTreeEventListeners...");
             attachTreeEventListeners();
-
             $treeRoot.on('load_node.jstree', resetActivityTimeout);
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
-
+            if (drupalSettings.rep_tree.elementType !== 'detectorattribute') {
+              // Opcional: $treeRoot.jstree('open_all');
+            }
             resetActivityTimeout();
           });
         }
 
-        /**
-         * (5) Carrega a árvore via autocomplete, construindo hierarquia
-         */
+        // Constrói a hierarquia dos nós a partir dos dados da API
         function buildHierarchy(items) {
-          console.log("[DEBUG] - buildHierarchy() chamado. items:", items);
           const nodeMap = new Map();
           let root = null;
           items.forEach(item => {
+            // Cria cada nó com as propriedades necessárias para o jstree
             const node = {
               id: item.uri,
               text: item.label || 'Unnamed Node',
@@ -261,11 +197,11 @@
                 comment: item.comment || '',
                 typeNamespace: item.typeNamespace || ''
               },
-              children: []
+              children: []  // Inicialmente vazio; serão adicionados se houver filhos
             };
             nodeMap.set(item.uri, node);
           });
-
+          // Conecta cada nó ao seu pai (se houver)
           items.forEach(item => {
             const node = nodeMap.get(item.uri);
             if (item.superUri) {
@@ -274,32 +210,31 @@
                 parent.children.push(node);
               }
             } else {
+              // Se não há superUri, esse é o nó raiz
               root = node;
             }
           });
-          console.log("[DEBUG] - buildHierarchy() retornando root:", root);
           return root;
         }
 
+        // Carrega a árvore com base em uma URI específica (para o autocomplete)
         function populateTree(uri) {
-          console.log("[DEBUG] - populateTree() chamado com uri:", uri);
+          console.log('Loading tree data for URI:', uri);
           $.ajax({
             url: drupalSettings.rep_tree.searchSuperClassEndPoint,
             type: 'GET',
             data: { uri: encodeURI(uri) },
             dataType: 'json',
             success: function (data) {
-              console.log("[DEBUG] - populateTree() success, data:", data);
+              console.log('Tree data loaded:', data);
+
               const hierarchy = buildHierarchy(data);
               const formattedData = Array.isArray(hierarchy) ? hierarchy : [hierarchy];
 
-              const jstreeInstance = $treeRoot.jstree(true);
-              console.log("[DEBUG] - definindo jstreeInstance.settings.core.data com hierarchy formatada.");
-              jstreeInstance.settings.core.data = formattedData;
-              jstreeInstance.refresh();
+              $treeRoot.jstree(true).settings.core.data = formattedData;
+              $treeRoot.jstree(true).refresh();
 
               $treeRoot.on('refresh.jstree', function () {
-                console.log("[DEBUG] - refresh.jstree disparado. Expandindo nós recursivamente...");
                 const treeInstance = $treeRoot.jstree(true);
                 function openNodesRecursively(nodeId) {
                   treeInstance.open_node(nodeId, function () {
@@ -314,50 +249,42 @@
               });
             },
             error: function () {
-              console.error("[DEBUG] - populateTree() AJAX error para URI:", uri);
+              console.error('Error loading tree data for URI:', uri);
             },
           });
         }
 
-        /**
-         * (6) Reset da árvore
-         */
+        // Reinicializa a árvore (reset), aplicando novamente a filtragem e reanexando os eventos
         function resetTree() {
-          console.log("[DEBUG] - resetTree() chamado. Limpando search, destruindo e recriando jstree...");
+          console.log('Resetting the tree to its initial state...');
           $searchInput.val('');
           $clearButton.hide();
-
+          // Destroi a árvore atual e limpa o HTML residual
           $treeRoot.jstree('destroy').empty();
-
-          // Recria a árvore com dados iniciais (branches filtrados)
+          // Recria a árvore com os dados iniciais, utilizando os branches filtrados
           $treeRoot.jstree({
             core: {
               data: function (node, cb) {
-                console.log("[DEBUG] - resetTree() - jstree core.data, node:", node);
                 if (node.id === '#') {
-                  console.log("[DEBUG] - Raiz no resetTree(). Usando getFilteredBranches().");
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
                     text: branch.label,
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
-                    data: {
-                      typeNamespace: branch.typeNamespace || '',
-                      comment: branch.comment || ''
-                    },
+                    comment: branch.comment || '',
+                    data: { typeNamespace: branch.typeNamespace || '', comment: branch.comment || '' },
                     icon: 'fas fa-folder',
                     children: true,
                     state: { opened: false },
                   })));
                 } else {
-                  console.log("[DEBUG] - resetTree() - Carregando filhos via AJAX, nodeUri:", node.original.uri);
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
                     type: 'GET',
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-                      console.log("[DEBUG] - resetTree() - AJAX success, data:", data);
+                      // Aqui aplicamos a filtragem de duplicados para os filhos
                       let uniqueChildren = [];
                       let seenChildIds = new Set();
                       data.forEach(item => {
@@ -368,10 +295,8 @@
                             text: item.label || 'Unnamed Node',
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
-                            data: {
-                              typeNamespace: item.typeNamespace || '',
-                              comment: item.comment || ''
-                            },
+                            comment: item.comment || '',
+                            data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
                             icon: 'fas fa-file-alt',
                             children: true,
                           });
@@ -380,15 +305,11 @@
                       cb(uniqueChildren);
                     },
                     error: function () {
-                      console.warn("[DEBUG] - resetTree() - AJAX error, cb([])");
                       cb([]);
                     },
                   });
                 }
               },
-              "multiple": false,
-              "check_callback": true,
-              "dblclick_toggle": true
             },
             plugins: ['search', 'wholerow'],
             search: {
@@ -397,21 +318,16 @@
               show_only_matches_children: true,
             },
           });
-
-          // Reanexa eventos após jstree pronto
+          // Reanexa os eventos assim que a árvore estiver pronta
           $treeRoot.on('ready.jstree', function () {
-            console.log("[DEBUG] - resetTree() - ready.jstree. Chamando attachTreeEventListeners()");
             attachTreeEventListeners();
           });
-          console.log("[DEBUG] - resetTree() complete. Esperando ready.jstree para reanexar handlers.");
+          console.log('Tree reset complete. Only the root node is loaded.');
         }
 
-        /**
-         * (7) Eventos de busca e reset
-         */
+        // Eventos do campo de pesquisa e do botão de reset
         $searchInput.on('input', function () {
-          console.log("[DEBUG] - $searchInput on.input:", $(this).val());
-          const searchTerm = $(this).val();
+          const searchTerm = $searchInput.val();
           if (searchTerm.length > 0) {
             $clearButton.show();
           } else {
@@ -420,20 +336,19 @@
         });
 
         $searchInput.on('keyup', function (e) {
-          // Evita submit no Enter
           if (e.key === 'Enter') {
             e.preventDefault();
             return;
           }
           clearTimeout(searchTimeout);
           searchTimeout = setTimeout(() => {
-            console.log("[DEBUG] - searchTimeout disparado, valor:", $searchInput.val());
-            // Ex: performSearch($searchInput.val().trim());
+            // Aqui pode ser chamada uma função de pesquisa se necessário
+            // performSearch($searchInput.val().trim());
           }, 500);
         });
 
         $clearButton.on('click', function () {
-          console.log("[DEBUG] - $clearButton.on(click) -> Limpando busca e resetando árvore.");
+          console.log('Resetting tree after search clear.');
           $searchInput.val('');
           $clearButton.hide();
           $treeRoot.jstree('clear_search');
@@ -447,43 +362,31 @@
         });
 
         $('#reset-tree').on('click', function () {
-          console.log("[DEBUG] - #reset-tree.on(click). Chamando resetTree()...");
+          console.log('reset');
           resetTree();
         });
 
-        /**
-         * (8) Autocomplete
-         */
+        // Configuração do autocomplete
         function setupAutocomplete(inputField) {
-          console.log("[DEBUG] - setupAutocomplete() chamado para inputField:", inputField);
           $(inputField).on('input', function () {
             const searchTerm = $(this).val();
-            console.log("[DEBUG] - autocomplete - digitou:", searchTerm);
-
             if (searchTerm.length < 3) {
-              console.log("[DEBUG] - searchTerm < 3. Ocultando #autocomplete-suggestions.");
               $('#autocomplete-suggestions').hide();
               return;
             }
             $.ajax({
               url: drupalSettings.rep_tree.searchSubClassEndPoint,
               type: 'GET',
-              data: {
-                keyword: searchTerm,
-                superuri: drupalSettings.rep_tree.superclass
-              },
+              data: { keyword: searchTerm, superuri: drupalSettings.rep_tree.superclass },
               dataType: 'json',
               success: function (data) {
-                console.log("[DEBUG] - Autocomplete success, data:", data);
                 const suggestions = data.map(item => ({
                   id: item.nodeId,
                   label: item.label || 'Unnamed Node',
                   uri: item.uri,
                 }));
-
                 let suggestionBox = $('#autocomplete-suggestions');
                 if (suggestionBox.length === 0) {
-                  console.log("[DEBUG] - Criando #autocomplete-suggestions no DOM.");
                   suggestionBox = $('<div id="autocomplete-suggestions"></div>').css({
                     position: 'absolute',
                     border: '1px solid #ccc',
@@ -499,7 +402,6 @@
                     .text(suggestion.label)
                     .css({ padding: '5px', cursor: 'pointer' });
                   suggestionItem.on('click', function () {
-                    console.log("[DEBUG] - Clicou em suggestionItem:", suggestion);
                     populateTree(suggestion.uri);
                     suggestionBox.hide();
                     $(inputField).val(suggestion.label);
@@ -514,52 +416,40 @@
                 }).show();
               },
               error: function () {
-                console.error("[DEBUG] - Autocomplete AJAX error.");
+                console.error('Error fetching suggestions.');
               },
             });
           });
-
-          // Esconde a box se o input perder foco
           $(inputField).on('blur', function () {
             setTimeout(() => $('#autocomplete-suggestions').hide(), 200);
           });
         }
 
-        /**
-         * (9) Oculta a árvore e exibe mensagem de espera inicialmente
-         */
-        console.log("[DEBUG] - Escondendo árvore e mostrando mensagem de espera.");
+        // Inicialmente, oculta a árvore e exibe a mensagem de espera
         $treeRoot.hide();
         $waitMessage.show();
         $searchInput.prop('disabled', true);
 
-        /**
-         * (10) Inicializa a jstree
-         */
-        console.log("[DEBUG] - Chamando initializeJstree()...");
-        initializeJstree();
-
-        /**
-         * (11) Inicializa o autocomplete
-         */
-        console.log("[DEBUG] - Chamando setupAutocomplete() para #search_input...");
-        setupAutocomplete('#search_input');
-
-      }); // document.ready
-      console.log("[DEBUG] - Drupal.behaviors.tree.attach - END");
+        if ($treeRoot.length) {
+          initializeJstree();
+          // Inicializa o autocomplete
+          $(document).ready(function () {
+            setupAutocomplete('#search_input');
+          });
+        } else {
+          console.warn('Tree root not found. Initialization aborted.');
+        }
+      });
     },
   };
+})(jQuery, Drupal, drupalSettings);
 
-  /**
-   * Behavior adicional para corrigir issues de modal (caso uses jQuery UI Dialog).
-   */
+(function ($, Drupal) {
   Drupal.behaviors.modalFix = {
     attach: function (context, settings) {
-      console.log("[DEBUG] - Drupal.behaviors.modalFix.attach - START");
       const $selectNodeButton = $('#select-tree-node');
 
       function adjustModal() {
-        console.log("[DEBUG] - adjustModal() chamado. Ajustando CSS do .ui-dialog.");
         $('.ui-dialog').each(function () {
           $(this).css({
             width: 'calc(100% - 50%)',
@@ -574,12 +464,10 @@
       $(document).on('dialogopen', adjustModal);
 
       $(document).on('select_node.jstree', function () {
-        console.log("[DEBUG] - [modalFix] event select_node.jstree disparado. Chamando adjustModal...");
         setTimeout(adjustModal, 100);
       });
 
       $(document).on('dialog:afterclose', function () {
-        console.log("[DEBUG] - [modalFix] event dialog:afterclose. Restaurando CSS no <html>.");
         $('html').css({
           overflow: '',
           'box-sizing': '',
@@ -588,26 +476,26 @@
       });
 
       $selectNodeButton.on('click', function () {
-        console.log("[DEBUG] - $selectNodeButton.on(click). Restaurando overflow no <html> e disparando change do field.");
         $('html').css({
           overflow: '',
           'box-sizing': '',
           'padding-right': '',
         });
 
+        // Recupera o ID do campo de texto onde o valor foi escrito.
         var fieldId = $(this).data('field-id');
+        //console.log(fieldId);
         if (fieldId) {
-          console.log("[DEBUG] - fieldId encontrado:", fieldId, "disparando change no input.");
+          // Um pequeno delay pode ajudar a garantir que o valor já esteja escrito.
           setTimeout(function () {
+            //console.log($('#' + fieldId));
+            // Dispara o evento blur apenas para o input desejado.
             $('#' + fieldId).trigger('change');
           }, 100);
-        } else {
-          console.log("[DEBUG] - sem fieldId no data('field-id').");
         }
       });
 
       $(document).on('click', '.ui-dialog-titlebar-close', function () {
-        console.log("[DEBUG] - .ui-dialog-titlebar-close clicado. Restaurando <html> CSS.");
         $('html').css({
           overflow: '',
           'box-sizing': '',
@@ -619,8 +507,6 @@
       $('.ui-dialog-content').each(function () {
         observer.observe(this, { childList: true, subtree: true });
       });
-      console.log("[DEBUG] - Drupal.behaviors.modalFix.attach - END");
     },
   };
-
 })(jQuery, Drupal, drupalSettings);

@@ -301,13 +301,13 @@ class TreeForm extends FormBase {
       '#markup' => '<div id="tree-root" data-initial-uri="' . $this->getRootNode()->uri . '" style="display:none;"></div>',
     ];
 
-    $form['node-comment-display'] = [
+    $form['node_comment_display'] = [
       '#type' => 'container',
       '#text' => '',
       '#attributes' => [
           'id' => 'node-comment-display',
           'class' => ['mt-2', 'w-100'],
-          'display' => 'none'
+          'style' => 'display:none;'
           //'style' => 'float:left',
       ],
     ];
