@@ -82,6 +82,8 @@
       $message = "<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>";
     }
 
+    dpm($this->getElement());
+
     // Instantiate tables
     $tables = new Tables;
 

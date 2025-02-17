@@ -236,6 +236,7 @@ class TreeForm extends FormBase {
 
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'baseUrl' => $base_url,
+      'managerEmail' => \Drupal::currentUser()->getEmail(),
       'apiEndpoint' => $base_url . '/rep/getchildren',
       'searchSubClassEndPoint' => $base_url . '/rep/subclasskeyword',
       'searchSuperClassEndPoint' => $base_url . '/rep/getsuperclasses',

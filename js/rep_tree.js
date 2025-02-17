@@ -7,7 +7,10 @@
           $('#tree-search').val(drupalSettings.rep_tree.searchValue);
         }
 
-        // Função para filtrar duplicatas dos nós raiz (compara o label)
+        function sanitizeForId(str) {
+          return str.replace(/[^A-Za-z0-9_-]/g, '_');
+        }
+
         function getFilteredBranches() {
           const seenLabels = new Set();
           return drupalSettings.rep_tree.branches.filter(branch => {
@@ -151,13 +154,13 @@
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-                      let uniqueChildren = [];
+                      let tempNodes = [];
                       let seenChildIds = new Set();
                       data.forEach(item => {
-                        if (!seenChildIds.has(item.nodeId)) {
-                          seenChildIds.add(item.nodeId);
-                          uniqueChildren.push({
-                            id: `node_${item.nodeId}`,
+                        if (!seenChildIds.has(item.uri)) {
+                          seenChildIds.add(item.uri);
+                          const nodeObj = {
+                            id: 'node_' + sanitizeForId(item.uri),
                             text: item.label || 'Unnamed Node',
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
@@ -165,18 +168,25 @@
                             data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
                             icon: 'fas fa-file-alt',
                             children: true,
-                          });
-                        }
-                        //console.log(item);
-                        if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
-                          node.li_attr = { style: 'font-style: italic;' };
-                          node.state = { disabled: true };
-                        }else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
-                          node.li_attr = { style: 'font-style: italic; color:#ff0000' };
-                          node.state = { disabled: true };
+                            skip: false
+                          };
+                          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
+                            nodeObj.text += ' (Deprecated)';
+                            nodeObj.li_attr = { style: 'font-style: italic;' };
+                            nodeObj.state = { disabled: true };
+                          }
+                          else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+                            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                              nodeObj.text += ' (Draft)';
+                              nodeObj.a_attr = { style: 'font-style: italic; color: red;' };
+                            } else {
+                              nodeObj.skip = true;
+                            }
+                          }
+                          tempNodes.push(nodeObj);
                         }
                       });
-                      cb(uniqueChildren);
+                      cb(tempNodes.filter(n => !n.skip));
                     },
                     error: function () {
                       cb([]);
@@ -313,13 +323,13 @@
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-                      let uniqueChildren = [];
+                      let tempNodes = [];
                       let seenChildIds = new Set();
                       data.forEach(item => {
-                        if (!seenChildIds.has(item.nodeId)) {
-                          seenChildIds.add(item.nodeId);
-                          uniqueChildren.push({
-                            id: `node_${item.nodeId}`,
+                        if (!seenChildIds.has(item.uri)) {
+                          seenChildIds.add(item.uri);
+                          const nodeObj = {
+                            id: 'node_' + sanitizeForId(item.uri),
                             text: item.label || 'Unnamed Node',
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
@@ -327,18 +337,25 @@
                             data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
                             icon: 'fas fa-file-alt',
                             children: true,
-                          });
-                        }
-                        //console.log(item);
-                        if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
-                          node.li_attr = { style: 'font-style: italic; color:#ff0000' };
-                          node.state = { disabled: true };
-                        }else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
-                          node.li_attr = { style: 'color:#ff0000' };
-                          node.state = { disabled: true };
+                            skip: false
+                          };
+                          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
+                            nodeObj.text += ' (Deprecated)';
+                            nodeObj.li_attr = { style: 'font-style: italic;' };
+                            nodeObj.state = { disabled: true };
+                          }
+                          else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+                            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                              nodeObj.text += ' (Draft)';
+                              nodeObj.a_attr = { style: 'font-style: italic; color: red;' };
+                            } else {
+                              nodeObj.skip = true;
+                            }
+                          }
+                          tempNodes.push(nodeObj);
                         }
                       });
-                      cb(uniqueChildren);
+                      cb(tempNodes.filter(n => !n.skip));
                     },
                     error: function () {
                       cb([]);
