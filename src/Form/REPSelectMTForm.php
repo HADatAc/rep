@@ -829,7 +829,7 @@ class REPSelectMTForm extends FormBase {
     }
     $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $study, $status), 'uploadTemplateStatus');
     if ($msg == NULL) {
-      \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILD to be submited for Ingestion."));
+      \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion."));
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
