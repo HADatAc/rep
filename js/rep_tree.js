@@ -91,8 +91,8 @@
               <strong>URI:</strong>
               <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.typeNamespace)}"
                 target="_new">
-                View URI
-              </a>
+                ${selectedNode.uri}
+              </a><br />
             `;
             if (comment.trim().length > 0) {
               html += `

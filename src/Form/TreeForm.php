@@ -303,16 +303,19 @@ class TreeForm extends FormBase {
       '#markup' => '<div id="tree-root" data-initial-uri="' . $this->getRootNode()->uri . '" style="display:none;"></div>',
     ];
 
-    $form['node_comment_display'] = [
-      '#type' => 'container',
-      '#text' => '',
-      '#attributes' => [
-          'id' => 'node-comment-display',
-          'class' => ['mt-2', 'w-100'],
-          'style' => 'display:none;'
-          //'style' => 'float:left',
-      ],
-    ];
+    if ($mode == 'modal')
+    {
+      $form['node_comment_display'] = [
+        '#type' => 'container',
+        '#text' => '',
+        '#attributes' => [
+            'id' => 'node-comment-display',
+            'class' => ['mt-2', 'w-100'],
+            'style' => 'display:none;'
+            //'style' => 'float:left',
+        ],
+      ];
+    }
 
     if ($mode == 'modal')
     {
