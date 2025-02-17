@@ -833,3 +833,11 @@ li.vertical-tabs__menu-item a .vertical-tabs__menu-item-title{
 form#tree-form {
   max-width: 100%!important;
   width: 100%!important;}
+
+  #node-comment-display {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    width: 100%;
+
+  }

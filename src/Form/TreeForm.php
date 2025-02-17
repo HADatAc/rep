@@ -53,7 +53,8 @@ class TreeForm extends FormBase {
     }
 
     // Additional form settings
-    $form['#attached']['library'][] = 'rep/rep_modal';
+    if ($mode === 'modal')
+      $form['#attached']['library'][] = 'rep/rep_modal';
 
     $api = \Drupal::service('rep.api_connector');
 
@@ -234,6 +235,7 @@ class TreeForm extends FormBase {
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
 
     $form['#attached']['drupalSettings']['rep_tree'] = [
+      'baseUrl' => $base_url,
       'apiEndpoint' => $base_url . '/rep/getchildren',
       'searchSubClassEndPoint' => $base_url . '/rep/subclasskeyword',
       'searchSuperClassEndPoint' => $base_url . '/rep/getsuperclasses',
