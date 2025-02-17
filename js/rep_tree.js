@@ -86,17 +86,24 @@
                 .removeData('selected-value')
                 .removeData('field-id');
             }
-            const comment = data.node.data.comment;
-            if (comment && comment.trim().length > 0) {
-              $('#node-comment-display').html(`
-                <strong>URI:</strong> <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.typeNamespace)}" target="_new">View URI</a>
+            const comment = data.node.data.comment || "";
+            let html = `
+              <strong>URI:</strong>
+              <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.typeNamespace)}"
+                target="_new">
+                View URI
+              </a>
+            `;
+            if (comment.trim().length > 0) {
+              html += `
                 <br />
-                <strong>Description:</strong><br>${comment}`).show();
-            } else {
-              $('#node-comment-display').hide();
+                <strong>Description:</strong><br />
+                ${comment}
+              `;
             }
-
-
+            $('#node-comment-display')
+              .html(html)
+              .show();
           });
 
           $treeRoot.on('hover_node.jstree', function (e, data) {
