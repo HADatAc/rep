@@ -663,7 +663,7 @@ div.toast {
 /* TREE */
 #block-hasco-barrio-content form.tree-form{
   padding-left:5px;
-  max-width: 1110px !important; /* Garantir a largura máxima */
+  max-width: 1360px !important; Garantir a largura máxima
   overflow-x: auto; /* Adicionar barra de rolagem horizontal se necessário */
   white-space: nowrap; /* Impedir quebra de linha dos itens */
 }
@@ -829,3 +829,15 @@ li.vertical-tabs__menu-item a .vertical-tabs__menu-item-title{
 .w-17 {
   width: 17%!important;
 }
+
+form#tree-form {
+  max-width: 100%!important;
+  width: 100%!important;}
+
+  #node-comment-display {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    width: 100%;
+
+  }

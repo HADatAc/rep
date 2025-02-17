@@ -53,7 +53,8 @@ class TreeForm extends FormBase {
     }
 
     // Additional form settings
-    $form['#attached']['library'][] = 'rep/rep_modal';
+    if ($mode === 'modal')
+      $form['#attached']['library'][] = 'rep/rep_modal';
 
     $api = \Drupal::service('rep.api_connector');
 
@@ -234,6 +235,8 @@ class TreeForm extends FormBase {
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
 
     $form['#attached']['drupalSettings']['rep_tree'] = [
+      'baseUrl' => $base_url,
+      'managerEmail' => \Drupal::currentUser()->getEmail(),
       'apiEndpoint' => $base_url . '/rep/getchildren',
       'searchSubClassEndPoint' => $base_url . '/rep/subclasskeyword',
       'searchSuperClassEndPoint' => $base_url . '/rep/getsuperclasses',
@@ -301,16 +304,19 @@ class TreeForm extends FormBase {
       '#markup' => '<div id="tree-root" data-initial-uri="' . $this->getRootNode()->uri . '" style="display:none;"></div>',
     ];
 
-    $form['node-comment-display'] = [
-      '#type' => 'container',
-      '#text' => '',
-      '#attributes' => [
-          'id' => 'node-comment-display',
-          'class' => ['mt-2', 'w-100'],
-          'display' => 'none'
-          //'style' => 'float:left',
-      ],
-    ];
+    if ($mode == 'modal')
+    {
+      $form['node_comment_display'] = [
+        '#type' => 'container',
+        '#text' => '',
+        '#attributes' => [
+            'id' => 'node-comment-display',
+            'class' => ['mt-2', 'w-100'],
+            'style' => 'display:none;'
+            //'style' => 'float:left',
+        ],
+      ];
+    }
 
     if ($mode == 'modal')
     {

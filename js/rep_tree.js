@@ -7,7 +7,10 @@
           $('#tree-search').val(drupalSettings.rep_tree.searchValue);
         }
 
-        // Função para filtrar duplicatas dos nós raiz (compara o label)
+        function sanitizeForId(str) {
+          return str.replace(/[^A-Za-z0-9_-]/g, '_');
+        }
+
         function getFilteredBranches() {
           const seenLabels = new Set();
           return drupalSettings.rep_tree.branches.filter(branch => {
@@ -86,14 +89,24 @@
                 .removeData('selected-value')
                 .removeData('field-id');
             }
-            const comment = data.node.data.comment;
-            if (comment && comment.trim().length > 0) {
-              $('#node-comment-display').html(`<strong>Description:</strong><br>${comment}`).show();
-            } else {
-              $('#node-comment-display').hide();
+            const comment = data.node.data.comment || "";
+            let html = `
+              <strong>URI:</strong>
+              <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.typeNamespace)}"
+                target="_new">
+                ${selectedNode.uri}
+              </a><br />
+            `;
+            if (comment.trim().length > 0) {
+              html += `
+                <br />
+                <strong>Description:</strong><br />
+                ${comment}
+              `;
             }
-
-
+            $('#node-comment-display')
+              .html(html)
+              .show();
           });
 
           $treeRoot.on('hover_node.jstree', function (e, data) {
@@ -105,6 +118,17 @@
               nodeAnchor.removeAttr('title');
             }
           });
+        }
+
+        function base64EncodeUnicode(str) {
+          const utf8Bytes = new TextEncoder().encode(str);
+
+          let asciiStr = '';
+          for (let i = 0; i < utf8Bytes.length; i++) {
+            asciiStr += String.fromCharCode(utf8Bytes[i]);
+          }
+
+          return btoa(asciiStr);
         }
 
         // Inicializa o jstree com os dados iniciais
@@ -130,13 +154,13 @@
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-                      let uniqueChildren = [];
+                      let tempNodes = [];
                       let seenChildIds = new Set();
                       data.forEach(item => {
-                        if (!seenChildIds.has(item.nodeId)) {
-                          seenChildIds.add(item.nodeId);
-                          uniqueChildren.push({
-                            id: `node_${item.nodeId}`,
+                        if (!seenChildIds.has(item.uri)) {
+                          seenChildIds.add(item.uri);
+                          const nodeObj = {
+                            id: 'node_' + sanitizeForId(item.uri),
                             text: item.label || 'Unnamed Node',
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
@@ -144,10 +168,25 @@
                             data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
                             icon: 'fas fa-file-alt',
                             children: true,
-                          });
+                            skip: false
+                          };
+                          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
+                            nodeObj.text += ' (Deprecated)';
+                            nodeObj.li_attr = { style: 'font-style: italic;' };
+                            nodeObj.state = { disabled: true };
+                          }
+                          else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+                            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                              nodeObj.text += ' (Draft)';
+                              nodeObj.a_attr = { style: 'font-style: italic; color: red;' };
+                            } else {
+                              nodeObj.skip = true;
+                            }
+                          }
+                          tempNodes.push(nodeObj);
                         }
                       });
-                      cb(uniqueChildren);
+                      cb(tempNodes.filter(n => !n.skip));
                     },
                     error: function () {
                       cb([]);
@@ -284,14 +323,13 @@
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-                      // Aqui aplicamos a filtragem de duplicados para os filhos
-                      let uniqueChildren = [];
+                      let tempNodes = [];
                       let seenChildIds = new Set();
                       data.forEach(item => {
-                        if (!seenChildIds.has(item.nodeId)) {
-                          seenChildIds.add(item.nodeId);
-                          uniqueChildren.push({
-                            id: `node_${item.nodeId}`,
+                        if (!seenChildIds.has(item.uri)) {
+                          seenChildIds.add(item.uri);
+                          const nodeObj = {
+                            id: 'node_' + sanitizeForId(item.uri),
                             text: item.label || 'Unnamed Node',
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
@@ -299,10 +337,25 @@
                             data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
                             icon: 'fas fa-file-alt',
                             children: true,
-                          });
+                            skip: false
+                          };
+                          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
+                            nodeObj.text += ' (Deprecated)';
+                            nodeObj.li_attr = { style: 'font-style: italic;' };
+                            nodeObj.state = { disabled: true };
+                          }
+                          else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+                            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                              nodeObj.text += ' (Draft)';
+                              nodeObj.a_attr = { style: 'font-style: italic; color: red;' };
+                            } else {
+                              nodeObj.skip = true;
+                            }
+                          }
+                          tempNodes.push(nodeObj);
                         }
                       });
-                      cb(uniqueChildren);
+                      cb(tempNodes.filter(n => !n.skip));
                     },
                     error: function () {
                       cb([]);
