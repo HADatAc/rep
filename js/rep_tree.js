@@ -92,7 +92,7 @@
             const comment = data.node.data.comment || "";
             let html = `
               <strong>URI:</strong>
-              <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.typeNamespace)}"
+              <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}"
                 target="_new">
                 ${selectedNode.uri}
               </a><br />
