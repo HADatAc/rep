@@ -46,6 +46,10 @@ class TreeForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL) {
 
+    // Toggles
+    $hide_draft = $form_state->getValue('hide_draft') ?? true;
+    $hide_deprecated = $form_state->getValue('hide_deprecated') ?? true;
+
     // basic validation of parameters
     if (empty($mode) || empty($elementtype)) {
       \Drupal::messenger()->addError($this->t('Invalid parameters provided.'));
@@ -233,9 +237,9 @@ class TreeForm extends FormBase {
     $form['#attached']['library'][] = 'rep/rep_tree';
 
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
-
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'baseUrl' => $base_url,
+      'username' => \Drupal::currentUser()->getAccountName(),
       'managerEmail' => \Drupal::currentUser()->getEmail(),
       'apiEndpoint' => $base_url . '/rep/getchildren',
       'searchSubClassEndPoint' => $base_url . '/rep/subclasskeyword',
@@ -244,6 +248,8 @@ class TreeForm extends FormBase {
       'branches' => $branches_param,
       'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]',
       'elementType' => $elementtype,
+      'hideDraft' => $hide_draft,
+      'hideDeprecated' => $hide_deprecated,
     ];
 
     if ($mode == 'browse')
@@ -265,43 +271,89 @@ class TreeForm extends FormBase {
       //'#autocomplete_route_name' => 'rep.get_subclasskeyword',
       '#attributes' => [
           'id' => 'search_input',
-          'class' => ['mt-2', 'w-75'],
+          'class' => ['mt-2', 'w-50'],
           'style' => 'float:left',
           'autocomplete' => 'off'
       ],
       '#autocomplete' => 'off'
     ];
 
+    // $form['search_wrapper']['toggle_draft'] = [
+    //   '#type' => 'button',
+    //   '#value' => $hide_draft ? $this->t('Show Draft') : $this->t('Hide Draft'),
+    //   '#attributes' => [
+    //     'id' => 'toggle-draft',
+    //     'class' => ['btn', 'btn-secondary', 'w-10', 'mt-2', 'mx-3'],
+    //     'type' => 'button', // ensures it does not submit the form
+    //   ],
+    // ];
+
+    // $form['search_wrapper']['toggle_deprecated'] = [
+    //   '#type' => 'button',
+    //   '#value' => $hide_draft ? $this->t('Show Deprecated') : $this->t('Hide Deprecated'),
+    //   '#attributes' => [
+    //     'id' => 'toggle-deprecated',
+    //     'class' => ['btn', 'btn-secondary', 'w-10', 'mt-2', 'mx-3'],
+    //     'type' => 'button', // ensures it does not submit the form
+    //   ],
+    // ];
+
+    $form['search_wrapper']['toggle_draft'] = [
+      '#type' => 'submit',
+      '#value' => $hide_draft ? $this->t('Show Draft') : $this->t('Hide Draft'),
+      '#ajax' => [
+        'callback' => '::toggleDraftCallback',
+        'wrapper' => 'tree-wrapper',
+        'method' => 'replace',
+      ],
+      '#attributes' => [
+        'id' => 'toggle-draft',
+        'class' => ['btn', 'btn-primary', 'w-8', 'mt-2', 'ms-2', 'btn-success'],
+      ],
+    ];
+
+    $form['search_wrapper']['toggle_deprecated'] = [
+      '#type' => 'submit',
+      '#value' => $hide_deprecated ? $this->t('Show Deprecated') : $this->t('Hide Deprecated'),
+      '#ajax' => [
+        'callback' => '::toggleDeprecatedCallback',
+        'wrapper' => 'tree-wrapper',
+        'method' => 'replace',
+      ],
+      '#attributes' => [
+        'id' => 'toggle-deprecated',
+        'class' => ['btn', 'btn-primary', 'w-12', 'mt-2', 'ms-1', 'btn-success'],
+      ],
+    ];
+
     $form['search_wrapper']['select_node'] = [
       '#type' => 'inline_template',
       '#attributes' => [
         'id' => 'reset-tree',
-        'class' => ['btn', 'btn-primary', 'mt-4'],
+        'class' => ['btn', 'btn-primary', 'mt-2'],
         'style' => 'float:right',
       ],
-      '#template' => '<button type="button" id="reset-tree" class="btn btn-primary mt-1 mx-3" data-field-id="">'.t('Reset').'</button>'
+      '#template' => '<button type="button" id="reset-tree" class="btn btn-primary mt-2 ms-2" data-field-id="">'.t('Reset').'</button>'
     ];
-
-    // $form['search_wrapper'] = [
-    //   '#type' => 'inline_template',
-    //   '#template' => '
-    //     <div style="position: relative; max-width: 350px;" class="js-form-wrapper form-wrapper mt-3" id="edit-search-wrapper" data-drupal-selector="edit-search-wrapper">
-    //       <div class="js-form-item js-form-type-textfield form-type-textfield js-form-item-search-input form-item-search-input form-no-label">"
-    //         <input id="tree-search" class="form-control" placeholder="Search..." style="padding-right: 30px; margin-bottom: 10px;" autocomplete="on" data-drupal-selector="edit-search-input" type="text" name="search_input" value="" size="60" maxlength="128">
-    //       </div>
-    //       <button id="clear-search" type="button" style="position: absolute; top: 40%; right: 5px; transform: translateY(-50%); background: transparent; border: none; font-size: 16px; color: #888; cursor: pointer; display: none;" data-drupal-selector="edit-clear-button">×</button>
-    //     </div>
-    //   ',
-    // ];
 
     $form['wait_message'] = [
       '#type' => 'markup',
       '#markup' => '<div id="wait-message" style="text-align: center; font-style: italic; color: grey; margin-top: 10px;" class="mt-3 mb-3 '.($mode == 'modal' ?? 'text-center').'">Wait please...</div>',
     ];
 
-    $form['tree_root'] = [
+    $form['tree_container'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'tree-wrapper'],
+    ];
+
+    $form['tree_container']['tree_root'] = [
       '#type' => 'markup',
       '#markup' => '<div id="tree-root" data-initial-uri="' . $this->getRootNode()->uri . '" style="display:none;"></div>',
+    ];
+
+    $form['hide_draft'] = [
+      '#type' => 'hidden',
+      '#value' => $hide_draft
     ];
 
     if ($mode == 'modal')
@@ -334,6 +386,44 @@ class TreeForm extends FormBase {
     }
 
     return $form;
+  }
+
+  public function toggleDraftCallback(array &$form, FormStateInterface $form_state) {
+    // Flip the value
+    $current = $form_state->getValue('hide_draft') ?? false;
+    $new = !$current;
+    $form_state->setValue('hide_draft', $new);
+
+    // Update the label on the button
+    $form['search_wrapper']['toggle_draft']['#value'] = $new
+      ? $this->t('Show Draft')
+      : $this->t('Hide Draft');
+
+    // Also update the drupalSettings so JS sees the new hideDraft
+    $form['#attached']['drupalSettings']['rep_tree']['hideDraft'] = $new;
+
+    // Return the portion of the form that has the tree
+    // (assuming the tree is inside $form['tree_container'])
+    return $form['tree_container'];
+  }
+
+  public function toggleDeprecatedCallback(array &$form, FormStateInterface $form_state) {
+    // Flip the value
+    $current = $form_state->getValue('hide_deprecated') ?? false;
+    $new = !$current;
+    $form_state->setValue('hide_deprecated', $new);
+
+    // Update the label on the button
+    $form['search_wrapper']['toggle_deprecated']['#value'] = $new
+      ? $this->t('Show Deprecated')
+      : $this->t('Hide Deprecated');
+
+    // Also update the drupalSettings so JS sees the new hideDraft
+    $form['#attached']['drupalSettings']['rep_tree']['hideDeprecated'] = $new;
+
+    // Return the portion of the form that has the tree
+    // (assuming the tree is inside $form['tree_container'])
+    return $form['tree_container'];
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state) {

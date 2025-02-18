@@ -130,21 +130,7 @@
           const selectedNode = data.node.original;
           const typeNamespace = selectedNode.uri;
 
-          // console.log(selectedNode);
-
-          // if (selectedNode) {
-          //   console.log(typeNamespace);
-          //   $selectNodeButton
-          //     .prop('disabled', false)
-          //     .removeClass('disabled')
-          //     .data('data-selected-value', typeNamespace);
-          // } else {
-          //   //console.warn('typeNamespace não encontrado, botão permanece desativado.');
-          //   $selectNodeButton
-          //     .prop('disabled', true)
-          //     .addClass('disabled')
-          //     .removeData('selected-value');
-          // }
+          console.log(selectedNode);
         });
 
       $selectNodeButton
@@ -166,3 +152,4 @@
     },
   };
 })(Drupal, jQuery);
+
