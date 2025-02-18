@@ -167,10 +167,10 @@
             // Define the URIs for Draft and Deprecated statuses.
             const DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
             const DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
-            console.log("Selected node:", selectedNode);
-            console.log("Status:", selectedNode.hasStatus);
-            console.log("Owner:", selectedNode.hasSIRManagerEmail);
-            console.log("Autenticated:", drupalSettings.rep_tree.managerEmail);
+            // console.log("Selected node:", selectedNode);
+            // console.log("Status:", selectedNode.hasStatus);
+            // console.log("Owner:", selectedNode.hasSIRManagerEmail);
+            // console.log("Autenticated:", drupalSettings.rep_tree.managerEmail);
 
             // If the node is Draft or Deprecated, keep the button disabled.
             if ((selectedNode.hasStatus === DRAFT_URI || selectedNode.hasStatus === DEPRECATED_URI) && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) {
