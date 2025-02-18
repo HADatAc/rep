@@ -113,23 +113,75 @@
         }
 
         // Attach JSTree event listeners.
+        // function attachTreeEventListeners() {
+        //   $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
+        //   $treeRoot.on('load_node.jstree open_node.jstree', function () { });
+        //   $treeRoot.on('select_node.jstree', function (e, data) {
+        //     const selectedNode = data.node.original;
+        //     if (selectedNode.id) {
+        //       $selectNodeButton
+        //         .prop('disabled', false)
+        //         .removeClass('disabled')
+        //         .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
+        //         .data('field-id', $('#tree-root').data('field-id'));
+        //     } else {
+        //       $selectNodeButton
+        //         .prop('disabled', true)
+        //         .addClass('disabled')
+        //         .removeData('selected-value')
+        //         .removeData('field-id');
+        //     }
+        //     const comment = data.node.data.comment || "";
+        //     let html = `
+        //       <strong>URI:</strong>
+        //       <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}"
+        //         target="_new">
+        //         ${selectedNode.uri}
+        //       </a><br />
+        //     `;
+        //     if (comment.trim().length > 0) {
+        //       html += `
+        //         <br />
+        //         <strong>Description:</strong><br />
+        //         ${comment}
+        //       `;
+        //     }
+        //     $('#node-comment-display').html(html).show();
+        //   });
+        //   $treeRoot.on('hover_node.jstree', function (e, data) {
+        //     const comment = data.node.data.comment || '';
+        //     // Use $.escapeSelector for safety.
+        //     const nodeAnchor = $('#' + $.escapeSelector(data.node.id + '_anchor'));
+        //     if (comment) {
+        //       nodeAnchor.attr('title', comment);
+        //     } else {
+        //       nodeAnchor.removeAttr('title');
+        //     }
+        //   });
+        // }
         function attachTreeEventListeners() {
           $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
           $treeRoot.on('load_node.jstree open_node.jstree', function () { });
           $treeRoot.on('select_node.jstree', function (e, data) {
             const selectedNode = data.node.original;
-            if (selectedNode.id) {
+            // Define the URIs for Draft and Deprecated statuses.
+            const DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
+            const DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
+            console.log("Selected node:", selectedNode);
+            //console.log("Status:", selectedNode.hasStatus);
+
+            // If the node is Draft or Deprecated, keep the button disabled.
+            if ((selectedNode.hasStatus === DRAFT_URI || selectedNode.hasStatus === DEPRECATED_URI) && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) {
+              $selectNodeButton
+                .prop('disabled', true)
+                .addClass('disabled')
+                .removeData('selected-value');
+            } else {
               $selectNodeButton
                 .prop('disabled', false)
                 .removeClass('disabled')
                 .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
                 .data('field-id', $('#tree-root').data('field-id'));
-            } else {
-              $selectNodeButton
-                .prop('disabled', true)
-                .addClass('disabled')
-                .removeData('selected-value')
-                .removeData('field-id');
             }
             const comment = data.node.data.comment || "";
             let html = `
@@ -182,6 +234,8 @@
                     typeNamespace: branch.typeNamespace || '',
                     data: { typeNamespace: branch.typeNamespace || '' },
                     icon: 'fas fa-folder',
+                    hasStatus: branch.hasStatus,
+                    hasSIRManagerEmail: branch.hasSIRManagerEmail,
                     children: true,
                   })));
                 } else {
@@ -205,6 +259,8 @@
                             comment: item.comment || '',
                             data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
                             icon: 'fas fa-file-alt',
+                            hasStatus: item.hasStatus,
+                            hasSIRManagerEmail: item.hasSIRManagerEmail,
                             children: true,
                             skip: false
                           };
@@ -260,17 +316,29 @@
             },
           });
 
+          // Após a inicialização, anexa os eventos e configura o timeout de atividade
           $treeRoot.on('ready.jstree', function () {
             attachTreeEventListeners();
             $treeRoot.on('load_node.jstree', resetActivityTimeout);
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
+            if (drupalSettings.rep_tree.elementType !== 'detectorattribute') {
+              // Opcional: $treeRoot.jstree('open_all');
+            }
             resetActivityTimeout();
           });
         }
 
-        // Build Hierarchy function
-        function buildHierarchy(items) {
-          // 1) Remove duplicates from the raw data
+        /**
+         * Build a tree from the given items, but only return the subtree rooted at `forcedRootUri`.
+         * If `forcedRootUri` is missing or not found, we fall back to the first node with no parent.
+         *
+         * @param {Array} items - array of objects like:
+         *   { uri, label, comment, superUri, typeNamespace }
+         * @param {string|null} forcedRootUri - the URI to treat as the root of the subtree
+         * @returns {Object|null} - the root node (with children) for JSTree. If not found, returns null.
+         */
+        function buildHierarchy(items, forcedRootUri = null) {
+          // 1) Remove duplicates by URI.
           const uniqueItems = [];
           const seenUris = new Set();
           items.forEach(item => {
@@ -280,59 +348,130 @@
             }
           });
 
-          // 2) Build the node map
+          // 2) Build a node map (URI -> node object).
+          //    We apply the Draft/Deprecated checks while constructing each node.
           const nodeMap = new Map();
-          let root = null;
           uniqueItems.forEach(item => {
-            const node = {
+            let nodeText = item.label || 'Unnamed Node';
+            let a_attr = {}; // default: no special style
+            // Optionally, add a "skip" property to the item if needed.
+            item.skip = false;
+
+            if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
+              // Check if we should hide deprecated nodes (for non-owners).
+              if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+                // In your case, you want to show these nodes but with a specific style.
+                // So do not mark as skip; instead, append the text.
+                nodeText += ' (Deprecated)';
+                if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                  nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                } else {
+                  nodeText += ' (Another Person)';
+                }
+                a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
+              } else {
+                nodeText += ' (Deprecated)';
+                if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                  nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                } else {
+                  nodeText += ' (Another Person)';
+                }
+                a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
+              }
+            } else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+              // Check if we should hide draft nodes for non-owners.
+              if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+                item.skip = true;
+              } else {
+                nodeText += ' (Draft)';
+                if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                  nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                } else {
+                  nodeText += ' (Another Person)';
+                }
+                a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
+              }
+            }
+
+            // Create the node and store it in the nodeMap.
+            nodeMap.set(item.uri, {
               id: item.uri,
-              text: item.label || 'Unnamed Node',
+              text: nodeText,
               uri: item.uri,
+              superUri: item.superUri || null, // Keep parent pointer.
               typeNamespace: item.typeNamespace || '',
               icon: 'fas fa-file-alt',
+              hasStatus: item.hasStatus,
+              hasSIRManagerEmail: item.hasSIRManagerEmail,
               data: {
                 comment: item.comment || '',
                 typeNamespace: item.typeNamespace || ''
               },
+              a_attr: a_attr,
               children: []
-            };
-            nodeMap.set(item.uri, node);
+            });
           });
 
-          // 3) Connect each node to its parent if present
+          // 3) Link each node to its parent's children array, ignoring skipped nodes.
+          let root = null;
           uniqueItems.forEach(item => {
+            // If the item is marked to skip, do not link it.
+            if (item.skip) {
+              return;
+            }
             const node = nodeMap.get(item.uri);
-            if (item.superUri) {
+            if (item.superUri && !item.skip) {
               const parent = nodeMap.get(item.superUri);
-              if (parent) {
+              if (parent && !parent.skip) {
                 parent.children.push(node);
               }
             } else {
-              // If there's no superUri, we consider this the root
+              // If there is no superUri, this node becomes the root.
               root = node;
             }
           });
+
+          // 4) If forcedRootUri is provided, then force that node to be the root.
+          if (forcedRootUri && nodeMap.has(forcedRootUri)) {
+            root = nodeMap.get(forcedRootUri);
+          } else if (!root) {
+            // Fallback: if no root found, try to find any node without a parent.
+            for (const item of uniqueItems) {
+              if (!item.superUri) {
+                root = nodeMap.get(item.uri);
+                break;
+              }
+            }
+          }
 
           return root;
         }
 
         // populate Tree function
         function populateTree(uri) {
-          console.log('Loading tree data for URI:', uri);
+          //console.log('Loading tree data for URI:', uri);
           $.ajax({
             url: drupalSettings.rep_tree.searchSuperClassEndPoint,
             type: 'GET',
             data: { uri: encodeURI(uri) },
             dataType: 'json',
             success: function (data) {
-              console.log('Tree data loaded:', data);
+              //console.log('Tree data loaded:', data);
 
-              const hierarchy = buildHierarchy(data);
-              const formattedData = Array.isArray(hierarchy) ? hierarchy : [hierarchy];
+              // Suppose we want to treat drupalSettings.rep_tree.superclass as the forced root
+              const forcedRootUri = drupalSettings.rep_tree.superclass;
 
-              $treeRoot.jstree(true).settings.core.data = formattedData;
+              // Build the subtree
+              const rootNode = buildHierarchy(data, forcedRootUri);
+
+              // JSTree expects an array for top-level data
+              const treeData = rootNode ? [rootNode] : [];
+
+              // Refresh JSTree
+              $treeRoot.jstree(true).settings.core.data = treeData;
               $treeRoot.jstree(true).refresh();
 
+              // Optional: auto-open nodes
               $treeRoot.on('refresh.jstree', function () {
                 const treeInstance = $treeRoot.jstree(true);
                 function openNodesRecursively(nodeId) {
@@ -355,8 +494,8 @@
 
         // Reset tree function.
         function resetTree() {
-          console.log(hideDraft);
-          console.log('Resetting the tree to its initial state...');
+          //console.log(hideDraft);
+          //console.log('Resetting the tree to its initial state...');
           $searchInput.val('');
           $clearButton.hide();
           $treeRoot.jstree('destroy').empty();
@@ -372,6 +511,8 @@
                     comment: branch.comment || '',
                     data: { typeNamespace: branch.typeNamespace || '', comment: branch.comment || '' },
                     icon: 'fas fa-folder',
+                    hasStatus: branch.hasStatus,
+                    hasSIRManagerEmail: branch.hasSIRManagerEmail,
                     children: true,
                     state: { opened: false },
                   })));
@@ -395,6 +536,8 @@
                             comment: item.comment || '',
                             data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
                             icon: 'fas fa-file-alt',
+                            hasStatus: item.hasStatus,
+                            hasSIRManagerEmail: item.hasSIRManagerEmail,
                             children: true,
                             skip: false
                           };
@@ -447,8 +590,13 @@
           $treeRoot.on('ready.jstree', function () {
             attachTreeEventListeners();
           });
-          console.log('Tree reset complete. Only the root node is loaded.');
+          //console.log('Tree reset complete. Only the root node is loaded.');
         }
+
+        $('#reset-tree').on('click', function () {
+          //console.log('reset');
+          resetTree();
+        });
 
         // Autocomplete configuration.
         function setupAutocomplete(inputField) {
@@ -523,60 +671,6 @@
         } else {
           console.warn('Tree root not found. Initialization aborted.');
         }
-      });
-    },
-  };
-})(jQuery, Drupal, drupalSettings);
-
-(function ($, Drupal) {
-  Drupal.behaviors.modalFix = {
-    attach: function (context, settings) {
-      const $selectNodeButton = $('#select-tree-node');
-      function adjustModal() {
-        $('.ui-dialog').each(function () {
-          $(this).css({
-            width: 'calc(100% - 50%)',
-            left: '25%',
-            right: '25%',
-            transform: 'none',
-            top: '10%',
-          });
-        });
-      }
-      $(document).on('dialogopen', adjustModal);
-      $(document).on('select_node.jstree', function () {
-        setTimeout(adjustModal, 100);
-      });
-      $(document).on('dialog:afterclose', function () {
-        $('html').css({
-          overflow: '',
-          'box-sizing': '',
-          'padding-right': '',
-        });
-      });
-      $selectNodeButton.on('click', function () {
-        $('html').css({
-          overflow: '',
-          'box-sizing': '',
-          'padding-right': '',
-        });
-        var fieldId = $(this).data('field-id');
-        if (fieldId) {
-          setTimeout(function () {
-            $('#' + fieldId).trigger('change');
-          }, 100);
-        }
-      });
-      $(document).on('click', '.ui-dialog-titlebar-close', function () {
-        $('html').css({
-          overflow: '',
-          'box-sizing': '',
-          'padding-right': '',
-        });
-      });
-      const observer = new MutationObserver(adjustModal);
-      $('.ui-dialog-content').each(function () {
-        observer.observe(this, { childList: true, subtree: true });
       });
     },
   };

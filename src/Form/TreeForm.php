@@ -308,7 +308,7 @@ class TreeForm extends FormBase {
       ],
       '#attributes' => [
         'id' => 'toggle-draft',
-        'class' => ['btn', 'btn-secondary', 'w-8', 'mt-2', 'ms-2', 'btn-success'],
+        'class' => ['btn', 'btn-primary', 'w-8', 'mt-2', 'ms-2', 'btn-success'],
       ],
     ];
 
@@ -322,7 +322,7 @@ class TreeForm extends FormBase {
       ],
       '#attributes' => [
         'id' => 'toggle-deprecated',
-        'class' => ['btn', 'btn-secondary', 'w-12', 'mt-2', 'ms-1', 'btn-success'],
+        'class' => ['btn', 'btn-primary', 'w-12', 'mt-2', 'ms-1', 'btn-success'],
       ],
     ];
 
