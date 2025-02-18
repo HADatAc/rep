@@ -168,7 +168,9 @@
             const DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
             const DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
             console.log("Selected node:", selectedNode);
-            //console.log("Status:", selectedNode.hasStatus);
+            console.log("Status:", selectedNode.hasStatus);
+            console.log("Owner:", selectedNode.hasSIRManagerEmail);
+            console.log("Autenticated:", drupalSettings.rep_tree.managerEmail);
 
             // If the node is Draft or Deprecated, keep the button disabled.
             if ((selectedNode.hasStatus === DRAFT_URI || selectedNode.hasStatus === DEPRECATED_URI) && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) {
@@ -176,6 +178,17 @@
                 .prop('disabled', true)
                 .addClass('disabled')
                 .removeData('selected-value');
+            } else if (selectedNode.hasStatus === DEPRECATED_URI && selectedNode.hasSIRManagerEmail === drupalSettings.rep_tree.managerEmail) {
+              $selectNodeButton
+                .prop('disabled', true)
+                .addClass('disabled')
+                .removeData('selected-value');
+            } else if (selectedNode.hasStatus === DRAFT_URI && selectedNode.hasSIRManagerEmail === drupalSettings.rep_tree.managerEmail) {
+              $selectNodeButton
+                .prop('disabled', false)
+                .removeClass('disabled')
+                .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
+                .data('field-id', $('#tree-root').data('field-id'));
             } else {
               $selectNodeButton
                 .prop('disabled', false)
