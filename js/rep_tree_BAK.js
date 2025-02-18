@@ -2,7 +2,7 @@
   Drupal.behaviors.tree = {
     attach: function (context, settings) {
       once('jstree-initialized', '#tree-root', context).forEach((element) => {
-        // If a search value exists, fill in the search input.
+        // Preenche o campo de busca se existir valor definido
         if (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) {
           $('#tree-search').val(drupalSettings.rep_tree.searchValue);
         }
@@ -23,7 +23,7 @@
           });
         }
 
-        // Selectors and state variables.
+        // Seletores e variáveis de estado
         const $treeRoot = $(element);
         const $selectNodeButton = $('#select-tree-node', context);
         const $searchInput = $('#search_input', context);
@@ -35,58 +35,10 @@
         let activityTimeout = null;
         const activityDelay = 1000;
         let initialSearchDone = false;
-        // Read whether to hide Draft nodes from drupalSettings.
+        // Read whether we want to hide draft nodes
         let hideDraft = drupalSettings.rep_tree.hideDraft || false;
-        let hideDeprecated = drupalSettings.rep_tree.hideDeprecated || false;
 
-        // Attach a toggle switch click handler.
-        // Make sure an element with id "toggle-draft" exists in your page.
-        $('#toggle-draft').on('click.toggleDraft', function (e) {
-          e.preventDefault(); // Prevent full form submission
-          hideDraft = !hideDraft;
-
-          if (hideDraft) {
-            // If hiding drafts, label says "Show Draft"
-            $(this)
-              .text('Show Draft')
-              .removeClass('btn-danger')
-              .addClass('btn-success');
-          } else {
-            // If showing drafts, label says "Hide Draft"
-            $(this)
-              .text('Hide Draft')
-              .removeClass('btn-success')
-              .addClass('btn-danger');
-          }
-
-          // Rebuild the tree to update the view.
-          resetTree();
-        });
-
-
-        $('#toggle-deprecated').on('click.toggleDeprecated', function (e) {
-          e.preventDefault(); // Prevent full form submission
-          hideDeprecated = !hideDeprecated;
-
-          if (hideDeprecated) {
-            // If hiding Deprecated, label says "Show Draft"
-            $(this)
-              .text('Show Deprecated')
-              .removeClass('btn-danger')
-              .addClass('btn-success');
-          } else {
-            // If showing Deprecated, label says "Hide Draft"
-            $(this)
-              .text('Hide Deprecated')
-              .removeClass('btn-success')
-              .addClass('btn-danger');
-          }
-
-          // Rebuild the tree to update the view.
-          resetTree();
-        });
-
-        // Activity timeout handler.
+        // Gerencia o tempo de atividade e exibição da árvore
         function resetActivityTimeout() {
           if (activityTimeout) {
             clearTimeout(activityTimeout);
@@ -98,6 +50,7 @@
               $treeRoot.show();
               treeReady = true;
               $searchInput.prop('disabled', false);
+
               const initialSearch = $searchInput.val().trim();
               if (initialSearch.length > 0) {
                 setTimeout(() => {
@@ -112,18 +65,25 @@
           }, activityDelay);
         }
 
-        // Attach JSTree event listeners.
+        // Anexa os eventos de seleção, tooltip e carregamento ao jstree
         function attachTreeEventListeners() {
+          // Remove eventos anteriores para evitar duplicação
           $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
-          $treeRoot.on('load_node.jstree open_node.jstree', function () { });
+
+          $treeRoot.on('load_node.jstree open_node.jstree', function () {
+            //console.log('Node loaded or opened.');
+          });
+
           $treeRoot.on('select_node.jstree', function (e, data) {
             const selectedNode = data.node.original;
+            // Atualiza o botão de seleção
             if (selectedNode.id) {
               $selectNodeButton
                 .prop('disabled', false)
                 .removeClass('disabled')
                 .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
-                .data('field-id', $('#tree-root').data('field-id'));
+                //data('field-id', $treeRoot.data('field-id'));
+                .data('field-id', $('#tree-root').data('field-id')); // Mantém o campo correto
             } else {
               $selectNodeButton
                 .prop('disabled', true)
@@ -146,12 +106,14 @@
                 ${comment}
               `;
             }
-            $('#node-comment-display').html(html).show();
+            $('#node-comment-display')
+              .html(html)
+              .show();
           });
+
           $treeRoot.on('hover_node.jstree', function (e, data) {
             const comment = data.node.data.comment || '';
-            // Use $.escapeSelector for safety.
-            const nodeAnchor = $('#' + $.escapeSelector(data.node.id + '_anchor'));
+            const nodeAnchor = $('#' + data.node.id + '_anchor');
             if (comment) {
               nodeAnchor.attr('title', comment);
             } else {
@@ -162,19 +124,22 @@
 
         function base64EncodeUnicode(str) {
           const utf8Bytes = new TextEncoder().encode(str);
+
           let asciiStr = '';
           for (let i = 0; i < utf8Bytes.length; i++) {
             asciiStr += String.fromCharCode(utf8Bytes[i]);
           }
+
           return btoa(asciiStr);
         }
 
-        // Initialize JSTree with initial data.
+        // Inicializa o jstree com os dados iniciais
         function initializeJstree() {
           $treeRoot.jstree({
             core: {
               data: function (node, cb) {
                 if (node.id === '#') {
+                  // Utiliza os branches filtrados para evitar duplicatas (com base no label)
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
                     text: branch.label,
@@ -194,6 +159,11 @@
                       let tempNodes = [];
                       let seenChildIds = new Set();
                       data.forEach(item => {
+                        // If hideDraft is true, skip items with hasStatus=Draft
+                        if (hideDraft && item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+                          return; // skip
+                        }
+                        // Normalize the URI (trim and convert to lower case)
                         var normalizedUri = $.trim(item.uri).toLowerCase();
                         if (!seenChildIds.has(normalizedUri)) {
                           seenChildIds.add(normalizedUri);
@@ -203,37 +173,32 @@
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
-                            data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
+                            data: {
+                              typeNamespace: item.typeNamespace || '',
+                              comment: item.comment || ''
+                            },
                             icon: 'fas fa-file-alt',
                             children: true,
                             skip: false
                           };
                           if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
-                            if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
+                            nodeObj.text += ' (Deprecated)';
+                            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                              nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
                             } else {
-                              nodeObj.text += ' (Deprecated)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                              }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
-                              // nodeObj.state = { disabled: true };
+                              nodeObj.text += ' (Another Person)';
                             }
+                            nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
+                            nodeObj.state = { disabled: true };
                           }
                           else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
-                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
+                            nodeObj.text += ' (Draft)';
+                            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                              nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
                             } else {
-                              nodeObj.text += ' (Draft)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                              }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
+                              nodeObj.text += ' (Another Person)';
                             }
+                            nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                           }
                           tempNodes.push(nodeObj);
                         }
@@ -244,6 +209,7 @@
                       cb([]);
                     },
                   });
+
                 }
               },
             },
@@ -260,15 +226,67 @@
             },
           });
 
+          // Após a inicialização, anexa os eventos e configura o timeout de atividade
           $treeRoot.on('ready.jstree', function () {
             attachTreeEventListeners();
             $treeRoot.on('load_node.jstree', resetActivityTimeout);
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
+            if (drupalSettings.rep_tree.elementType !== 'detectorattribute') {
+              // Opcional: $treeRoot.jstree('open_all');
+            }
             resetActivityTimeout();
+          });
+
+          $('#toggle-draft').on('click', function () {
+            hideDraft = !hideDraft;
+
+            // Update the button text or checkbox label to reflect the new state
+            if (hideDraft) {
+              $(this).text('Show Draft');
+            } else {
+              $(this).text('Hide Draft');
+            }
+
+            // Rebuild or refresh the tree
+            resetTree();
           });
         }
 
-        // Build Hierarchy function
+        // Constrói a hierarquia dos nós a partir dos dados da API
+        // function buildHierarchy(items) {
+        //   const nodeMap = new Map();
+        //   let root = null;
+        //   items.forEach(item => {
+        //     // Cria cada nó com as propriedades necessárias para o jstree
+        //     const node = {
+        //       id: item.uri,
+        //       text: item.label || 'Unnamed Node',
+        //       uri: item.uri,
+        //       typeNamespace: item.typeNamespace || '',
+        //       icon: 'fas fa-file-alt',
+        //       data: {
+        //         comment: item.comment || '',
+        //         typeNamespace: item.typeNamespace || ''
+        //       },
+        //       children: []  // Inicialmente vazio; serão adicionados se houver filhos
+        //     };
+        //     nodeMap.set(item.uri, node);
+        //   });
+        //   // Conecta cada nó ao seu pai (se houver)
+        //   items.forEach(item => {
+        //     const node = nodeMap.get(item.uri);
+        //     if (item.superUri) {
+        //       const parent = nodeMap.get(item.superUri);
+        //       if (parent) {
+        //         parent.children.push(node);
+        //       }
+        //     } else {
+        //       // Se não há superUri, esse é o nó raiz
+        //       root = node;
+        //     }
+        //   });
+        //   return root;
+        // }
         function buildHierarchy(items) {
           // 1) Remove duplicates from the raw data
           const uniqueItems = [];
@@ -316,7 +334,43 @@
           return root;
         }
 
-        // populate Tree function
+
+        // Carrega a árvore com base em uma URI específica (para o autocomplete)
+        // function populateTree(uri) {
+        //   console.log('Loading tree data for URI:', uri);
+        //   $.ajax({
+        //     url: drupalSettings.rep_tree.searchSuperClassEndPoint,
+        //     type: 'GET',
+        //     data: { uri: encodeURI(uri) },
+        //     dataType: 'json',
+        //     success: function (data) {
+        //       console.log('Tree data loaded:', data);
+
+        //       const hierarchy = buildHierarchy(data);
+        //       const formattedData = Array.isArray(hierarchy) ? hierarchy : [hierarchy];
+
+        //       $treeRoot.jstree(true).settings.core.data = formattedData;
+        //       $treeRoot.jstree(true).refresh();
+
+        //       $treeRoot.on('refresh.jstree', function () {
+        //         const treeInstance = $treeRoot.jstree(true);
+        //         function openNodesRecursively(nodeId) {
+        //           treeInstance.open_node(nodeId, function () {
+        //             const children = treeInstance.get_node(nodeId).children;
+        //             if (children && children.length > 0) {
+        //               children.forEach(childId => openNodesRecursively(childId));
+        //             }
+        //           });
+        //         }
+        //         const rootNodeIds = treeInstance.get_node('#').children;
+        //         rootNodeIds.forEach(rootId => openNodesRecursively(rootId));
+        //       });
+        //     },
+        //     error: function () {
+        //       console.error('Error loading tree data for URI:', uri);
+        //     },
+        //   });
+        // }
         function populateTree(uri) {
           console.log('Loading tree data for URI:', uri);
           $.ajax({
@@ -353,13 +407,15 @@
           });
         }
 
-        // Reset tree function.
+
+        // Reinicializa a árvore (reset), aplicando novamente a filtragem e reanexando os eventos
         function resetTree() {
-          console.log(hideDraft);
           console.log('Resetting the tree to its initial state...');
           $searchInput.val('');
           $clearButton.hide();
+          // Destroi a árvore atual e limpa o HTML residual
           $treeRoot.jstree('destroy').empty();
+          // Recria a árvore com os dados iniciais, utilizando os branches filtrados
           $treeRoot.jstree({
             core: {
               data: function (node, cb) {
@@ -385,6 +441,11 @@
                       let tempNodes = [];
                       let seenChildIds = new Set();
                       data.forEach(item => {
+                        // If hideDraft is true, skip items with hasStatus=Draft
+                        if (hideDraft && item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+                          return; // skip
+                        }
+
                         if (!seenChildIds.has(item.uri)) {
                           seenChildIds.add(item.uri);
                           const nodeObj = {
@@ -399,31 +460,23 @@
                             skip: false
                           };
                           if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
-                            if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
+                            nodeObj.text += ' (Deprecated)';
+                            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                              nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
                             } else {
-                              nodeObj.text += ' (Deprecated)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                              }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
-                              // nodeObj.state = { disabled: true };
+                              nodeObj.text += ' (Another Person)';
                             }
+                            nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
+                            nodeObj.state = { disabled: true };
                           }
                           else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
-                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
+                            nodeObj.text += ' (Draft)';
+                            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                              nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
                             } else {
-                              nodeObj.text += ' (Draft)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                              }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
+                              nodeObj.text += ' (Another Person)';
                             }
+                            nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                           }
                           tempNodes.push(nodeObj);
                         }
@@ -444,13 +497,55 @@
               show_only_matches_children: true,
             },
           });
+          // Reanexa os eventos assim que a árvore estiver pronta
           $treeRoot.on('ready.jstree', function () {
             attachTreeEventListeners();
           });
           console.log('Tree reset complete. Only the root node is loaded.');
         }
 
-        // Autocomplete configuration.
+        // Eventos do campo de pesquisa e do botão de reset
+        $searchInput.on('input', function () {
+          const searchTerm = $searchInput.val();
+          if (searchTerm.length > 0) {
+            $clearButton.show();
+          } else {
+            $clearButton.hide();
+          }
+        });
+
+        $searchInput.on('keyup', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            return;
+          }
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => {
+            // Aqui pode ser chamada uma função de pesquisa se necessário
+            // performSearch($searchInput.val().trim());
+          }, 500);
+        });
+
+        $clearButton.on('click', function () {
+          console.log('Resetting tree after search clear.');
+          $searchInput.val('');
+          $clearButton.hide();
+          $treeRoot.jstree('clear_search');
+          resetTree();
+        });
+
+        $(document).on('keypress', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+          }
+        });
+
+        $('#reset-tree').on('click', function () {
+          console.log('reset');
+          resetTree();
+        });
+
+        // Configuração do autocomplete
         function setupAutocomplete(inputField) {
           $(inputField).on('input', function () {
             const searchTerm = $(this).val();
@@ -466,7 +561,7 @@
               success: function (data) {
                 const suggestions = data.map(item => ({
                   id: item.nodeId,
-                  label: item.label || 'Unnamed Node',
+                  label: item.label|| 'Unnamed Node',
                   uri: item.uri,
                 }));
                 let suggestionBox = $('#autocomplete-suggestions');
@@ -509,14 +604,14 @@
           });
         }
 
-        // Initially, hide the tree and show the wait message.
+        // Inicialmente, oculta a árvore e exibe a mensagem de espera
         $treeRoot.hide();
         $waitMessage.show();
         $searchInput.prop('disabled', true);
 
         if ($treeRoot.length) {
           initializeJstree();
-          // Initialize autocomplete.
+          // Inicializa o autocomplete
           $(document).ready(function () {
             setupAutocomplete('#search_input');
           });
@@ -532,6 +627,7 @@
   Drupal.behaviors.modalFix = {
     attach: function (context, settings) {
       const $selectNodeButton = $('#select-tree-node');
+
       function adjustModal() {
         $('.ui-dialog').each(function () {
           $(this).css({
@@ -543,10 +639,13 @@
           });
         });
       }
+
       $(document).on('dialogopen', adjustModal);
+
       $(document).on('select_node.jstree', function () {
         setTimeout(adjustModal, 100);
       });
+
       $(document).on('dialog:afterclose', function () {
         $('html').css({
           overflow: '',
@@ -554,19 +653,27 @@
           'padding-right': '',
         });
       });
+
       $selectNodeButton.on('click', function () {
         $('html').css({
           overflow: '',
           'box-sizing': '',
           'padding-right': '',
         });
+
+        // Recupera o ID do campo de texto onde o valor foi escrito.
         var fieldId = $(this).data('field-id');
+        //console.log(fieldId);
         if (fieldId) {
+          // Um pequeno delay pode ajudar a garantir que o valor já esteja escrito.
           setTimeout(function () {
+            //console.log($('#' + fieldId));
+            // Dispara o evento blur apenas para o input desejado.
             $('#' + fieldId).trigger('change');
           }, 100);
         }
       });
+
       $(document).on('click', '.ui-dialog-titlebar-close', function () {
         $('html').css({
           overflow: '',
@@ -574,6 +681,7 @@
           'padding-right': '',
         });
       });
+
       const observer = new MutationObserver(adjustModal);
       $('.ui-dialog-content').each(function () {
         observer.observe(this, { childList: true, subtree: true });
