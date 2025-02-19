@@ -52,6 +52,9 @@ class TreeForm extends FormBase {
     $hide_draft = $form_state->getValue('hide_draft') ?? true;
     $hide_deprecated = $form_state->getValue('hide_deprecated') ?? true;
     $show_namespace = $form_state->getValue('show_namespace') ?? true;
+    $show_prefix = $form_state->getValue('show_prefix') ?? true;
+
+    $show_label = $form_state->getValue('show_label') ?? 'label';
 
     // basic validation of parameters
     if (empty($mode) || empty($elementtype)) {
@@ -266,7 +269,7 @@ class TreeForm extends FormBase {
       'typeNameSpace' => $branches_param[0]["uriNamespace"],
       'hideDraft' => $hide_draft,
       'hideDeprecated' => $hide_deprecated,
-      'showNameSpace' => $show_namespace,
+      'showLabel' => $show_label,
       'nameSpacesList' => $tables->getNamespaces()
     ];
 
@@ -296,54 +299,6 @@ class TreeForm extends FormBase {
       '#autocomplete' => 'off'
     ];
 
-    // $form['search_wrapper']['toggle_draft'] = [
-    //   '#type' => 'button',
-    //   '#value' => $hide_draft ? $this->t('Show Draft') : $this->t('Hide Draft'),
-    //   '#attributes' => [
-    //     'id' => 'toggle-draft',
-    //     'class' => ['btn', 'btn-secondary', 'w-10', 'mt-2', 'mx-3'],
-    //     'type' => 'button', // ensures it does not submit the form
-    //   ],
-    // ];
-
-    // $form['search_wrapper']['toggle_deprecated'] = [
-    //   '#type' => 'button',
-    //   '#value' => $hide_draft ? $this->t('Show Deprecated') : $this->t('Hide Deprecated'),
-    //   '#attributes' => [
-    //     'id' => 'toggle-deprecated',
-    //     'class' => ['btn', 'btn-secondary', 'w-10', 'mt-2', 'mx-3'],
-    //     'type' => 'button', // ensures it does not submit the form
-    //   ],
-    // ];
-
-    // $form['search_wrapper']['toggle_draft'] = [
-    //   '#type' => 'submit',
-    //   '#value' => $hide_draft ? $this->t('Show Draft') : $this->t('Hide Draft'),
-    //   '#ajax' => [
-    //     'callback' => '::toggleDraftCallback',
-    //     'wrapper' => 'tree-wrapper',
-    //     'method' => 'replace',
-    //   ],
-    //   '#attributes' => [
-    //     'id' => 'toggle-draft',
-    //     'class' => ['btn', 'btn-primary', 'w-8', 'mt-2', 'ms-2', 'btn-success'],
-    //   ],
-    // ];
-
-    // $form['search_wrapper']['toggle_deprecated'] = [
-    //   '#type' => 'submit',
-    //   '#value' => $hide_deprecated ? $this->t('Show Deprecated') : $this->t('Hide Deprecated'),
-    //   '#ajax' => [
-    //     'callback' => '::toggleDeprecatedCallback',
-    //     'wrapper' => 'tree-wrapper',
-    //     'method' => 'replace',
-    //   ],
-    //   '#attributes' => [
-    //     'id' => 'toggle-deprecated',
-    //     'class' => ['btn', 'btn-primary', 'w-12', 'mt-2', 'ms-1', 'btn-success'],
-    //   ],
-    // ];
-
     $form['search_wrapper']['select_node'] = [
       '#type' => 'inline_template',
       '#attributes' => [
@@ -357,13 +312,15 @@ class TreeForm extends FormBase {
     $form['search_wrapper']['filters'] = [
       '#type' => 'container',
       '#attributes' => [
-        'class' => ['d-flex', 'mt-2', 'mx-0']
+        'class' => ['d-flex', 'mt-2', 'mx-0'],
+        'id' => 'edit-filters'
       ]
     ];
 
     $form['search_wrapper']['filters']['toggle_draft'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Hide Another Users Draft\'s?&nbsp;&nbsp;&nbsp;'),
+      '#prefix' => '<div class="filter-label">Content to be shown:&nbsp;&nbsp;</div>',
+      '#title' => $this->t('Hide Other User\'s Draft?&nbsp;&nbsp;&nbsp;'),
       '#default_value' => $hide_draft,
       // AJAX to rebuild the tree when toggled
       '#ajax' => [
@@ -373,14 +330,14 @@ class TreeForm extends FormBase {
       ],
       '#attributes' => [
         'id' => 'toggle-draft',
-        // Add any classes you want
         'class' => ['mb-2', 'me-2'],
+        'title' => $this->t('Click to show/hide Another User\'s Draft elements'),
       ],
     ];
 
     $form['search_wrapper']['filters']['toggle_deprecated'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Hide Another Users Deprecated\'s?&nbsp;&nbsp;&nbsp;'),
+      '#title' => $this->t('Hide Other User\'s Deprecated?&nbsp;&nbsp;&nbsp;'),
       '#default_value' => $hide_deprecated,
       '#ajax' => [
         'callback' => '::toggleDeprecatedCallback',
@@ -390,21 +347,38 @@ class TreeForm extends FormBase {
       '#attributes' => [
         'id' => 'toggle-deprecated',
         'class' => ['mb-2'],
+        'title' => $this->t('Click to show/hide Another User\'s Deprecated elements'),
       ],
     ];
 
-    $form['search_wrapper']['filters']['toggle_shownamespace'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Hide Name Space\'s'),
-      '#default_value' => $show_namespace,
+    $form['search_wrapper']['labels'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['d-flex', 'mt-2', 'mx-0'],
+        'id' => 'edit-labels'
+      ]
+    ];
+
+    $form['search_wrapper']['labels']['label_mode'] = [
+      '#type' => 'radios',
+      '#prefix' => '<div>Rendering mode:&nbsp;',
+      '#suffix' => '</div>',
+      '#options' => [
+        'label' => $this->t('Just Label'),
+        'labelprefix' => $this->t('Prefix:Label'),
+        'uri' => $this->t('URI'),
+        'uriprefix' => $this->t('Prefix:URI'),
+      ],
+      '#default_value' => $show_label ?? 'label',
       '#ajax' => [
-        'callback' => '::toggleShowNameSpaceCallback',
+        'callback' => '::toggleLabelModeCallback',
         'wrapper' => 'tree-wrapper',
         'method' => 'replace',
+        'event' => 'change',
       ],
       '#attributes' => [
-        'id' => 'toggle-shownamespace',
-        'class' => ['mb-2'],
+        'id' => 'toggle-label-mode',
+        'class' => ['radios-inline'],
       ],
     ];
 
@@ -490,6 +464,25 @@ class TreeForm extends FormBase {
 
     return $form['tree_container'];
   }
+
+  public function toggleShowPrefixCallback(array &$form, FormStateInterface $form_state) {
+    $new = $form_state->getValue('toggle_showprefix') ? false : true;
+    $form_state->setValue('show_prefix', $new);
+
+    $form['#attached']['drupalSettings']['rep_tree']['showPrefix'] = $new;
+
+    return $form['tree_container'];
+  }
+
+  public function toggleLabelModeCallback(array &$form, FormStateInterface $form_state) {
+    // The name of the radio group is 'label_mode' in the example above
+    $value = $form_state->getValue('label_mode');
+
+    $form['#attached']['drupalSettings']['rep_tree']['showLabel'] = $value;
+
+    return $form['tree_container'];
+  }
+
 
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // No submission logic

@@ -27,6 +27,24 @@
           return uri;
         }
 
+        function namespacePrefixUri(uri) {
+          // Assuming drupalSettings.rep_tree.namespaces is an object, e.g.:
+          // { "ABC": "http://abc.org/", "XYZ": "http://xyz.org/" }
+          const namespaces = drupalSettings.rep_tree.nameSpacesList;
+          for (const abbrev in namespaces) {
+            if (namespaces.hasOwnProperty(abbrev)) {
+              const ns = namespaces[abbrev];
+              // Check that both the abbreviation and the namespace URI exist.
+              if (abbrev && ns && uri.startsWith(ns)) {
+                const replacement = abbrev + ":";
+                return replacement;
+                // return uri.replace(ns, replacement);
+              }
+            }
+          }
+          return uri;
+        }
+
         function sanitizeForId(str) {
           return str.replace(/[^A-Za-z0-9_-]/g, '_');
         }
@@ -50,15 +68,14 @@
         const $clearButton = $('#clear-search', context);
         const $waitMessage = $('#wait-message', context);
 
-        let searchTimeout;
-        let treeReady = false;
         let activityTimeout = null;
         const activityDelay = 1000;
         let initialSearchDone = false;
         // Read whether to hide Draft nodes from drupalSettings.
         let hideDraft = drupalSettings.rep_tree.hideDraft || false;
         let hideDeprecated = drupalSettings.rep_tree.hideDeprecated || false;
-        let showNameSpace = drupalSettings.rep_tree.showNameSpace || false;
+
+        let showLabel = drupalSettings.rep_tree.showLabel || 'label';
 
         $('#toggle-draft').on('change', function () {
           // If checkbox is checked, hideDraft = true; else false
@@ -75,17 +92,89 @@
           resetTree();
         });
 
-        $('#toggle-shownamespace').on('change', function () {
-          showNameSpace = $(this).is(':checked');
-          if (!showNameSpace) {
-            $('label[for="toggle-shownamespace"]').text("Show Name Space's");
-          } else {
-            $('label[for="toggle-shownamespace"]').text("Hide Name Space's");
+        $(document).on('change', 'input[name="label_mode"]', function () {
+          const selectedValue = $(this).val();
+          // console.log("Radio changed, value:", selectedValue);
+
+          const treeInstance = $('#tree-root').jstree(true);
+          if (!treeInstance) {
+            return;
           }
-          // Rebuild the tree with the new showNameSpace value.
-          resetTree();
+
+          // Iterate over all nodes in the jsTree internal model.
+          for (let nodeId in treeInstance._model.data) {
+            if (nodeId === '#') continue;
+            const node = treeInstance._model.data[nodeId];
+            if (node && node.data) {
+              let nodeText;
+              switch (selectedValue) {
+                case 'labelprefix':
+                  nodeText = node.data.originalPrefixLabel;
+                  break;
+                case 'uri':
+                  nodeText = node.data.originalUri ?? node.uri;
+                  break;
+                case 'uriprefix':
+                  nodeText = node.data.originalPrefixUri;
+                  break;
+                default: // 'label'
+                  nodeText = node.data.originalLabel;
+                  break;
+              }
+              if (node.text !== nodeText) {
+                treeInstance.rename_node(nodeId, nodeText);
+              }
+            }
+          }
         });
 
+        function setNodeText(item) {
+
+          const selectedValue = $('input[name="label_mode"]:checked').val();
+
+          // console.log(selectedValue);
+
+          let nodeText;
+
+          switch (selectedValue) {
+            case 'labelprefix':
+              nodeText = namespacePrefixUri(item.uri) + item.label;
+              break;
+            case 'uri':
+              nodeText = item.uri;
+              break;
+            case 'uriprefix':
+              nodeText = namespaceUri(item.uri);
+              break;
+            default: // 'label'
+              nodeText = item.label;
+              break;
+          }
+          return nodeText;
+        }
+
+        function setTitleSufix(item) {
+          let sufix = '';
+          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
+            sufix += ' (Deprecated)';
+            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+              sufix += ' (' + drupalSettings.rep_tree.username + ')';
+            } else {
+              sufix += ' (Another Person)';
+            }
+          }
+
+          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+            sufix += ' (Draft)';
+            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+              sufix += ' (' + drupalSettings.rep_tree.username + ')';
+            } else {
+              sufix += ' (Another Person)';
+            }
+          }
+
+          return sufix;
+        }
 
         // Activity timeout handler.
         function resetActivityTimeout() {
@@ -151,7 +240,11 @@
                 .data('field-id', $('#tree-root').data('field-id'));
             }
 
+            // console.log(selectedNode);
             let html = `
+              <strong>Label:</strong>
+              ${selectedNode.label}
+              <br />
               <strong>URI:</strong>
               <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}"
                 target="_new">
@@ -206,15 +299,21 @@
         function initializeJstree() {
           $treeRoot.jstree({
             core: {
+              check_callback: true,
               data: function (node, cb) {
                 if (node.id === '#') {
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
                     // text: (showNameSpace ? branch.label : branch.typeNamespace),
-                    text: (showNameSpace ? branch.label : drupalSettings.rep_tree.typeNameSpace ?? namespaceUri(branch.uri)),
+                    text: branch.label,
+                    label: branch.label,
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
                     data: {
+                      originalLabel: branch.label + setTitleSufix(branch),
+                      originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
+                      originalUri: branch.uri + setTitleSufix(branch),
+                      originalPrefixUri: namespaceUri(branch.uri) + setTitleSufix(branch),
                       typeNamespace: branch.typeNamespace || '',
                       comment: branch.comment || '',
                       hasWebDocument: branch.hasWebDocument,
@@ -242,11 +341,16 @@
                           seenChildIds.add(normalizedUri);
                           const nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
-                            text: (showNameSpace ? item.label : item.typeNamespace ?? namespaceUri(item.uri)),
+                            text: setNodeText(item),
+                            label: item.label,
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
                             data: {
+                              originalLabel: item.label + setTitleSufix(item),
+                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
+                              originalUri: item.uri + setTitleSufix(item),
+                              originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
                               typeNamespace: item.typeNamespace || '',
                               comment: item.comment || '',
                               hasWebDocument: item.hasWebDocument,
@@ -347,7 +451,28 @@
           //    We apply the Draft/Deprecated checks while constructing each node.
           const nodeMap = new Map();
           uniqueItems.forEach(item => {
-            let nodeText = (showNameSpace ? item.label : item.typeNamespace ?? namespaceUri(item.uri));
+            let nodeText;
+            if (showLabel) {
+              switch (showLabel) {
+                case 'labelprefix':
+                  nodeText = namespacePrefixUri(item.uri)+item.label;
+                  break;
+
+                case 'uri':
+                    nodeText = namespacePrefixUri(item.uri)+item.label;
+                    break;
+
+                case 'uriprefix':
+                  nodeText = namespaceUri(item.uri);
+                  break;
+
+                default:
+                case 'label':
+                  nodeText = item.label;
+                  break;
+              }
+            }
+
             let a_attr = {}; // default: no special style
             // Optionally, add a "skip" property to the item if needed.
             item.skip = false;
@@ -392,6 +517,7 @@
             nodeMap.set(item.uri, {
               id: item.uri,
               text: nodeText,
+              label: item.label,
               uri: item.uri,
               superUri: item.superUri || null, // Keep parent pointer.
               typeNamespace: item.typeNamespace || '',
@@ -401,6 +527,10 @@
               hasWebDocument: item.hasWebDocument,
               hasImageUri: item.hasImageUri,
               data: {
+                originalLabel: item.label + setTitleSufix(item),
+                originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
+                originalUri: item.uri + setTitleSufix(item),
+                originalPrefixUri: namespaceUri(item.uri + setTitleSufix(item)),
                 comment: item.comment || '',
                 typeNamespace: item.typeNamespace || '',
                 hasWebDocument: item.hasWebDocument,
@@ -500,16 +630,22 @@
           $treeRoot.jstree('destroy').empty();
           $treeRoot.jstree({
             core: {
+              check_callback: true,
               data: function (node, cb) {
                 if (node.id === '#') {
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
                     // text: (showNameSpace ? branch.label : branch.typeNamespace),
-                    text: (showNameSpace ? branch.label : drupalSettings.rep_tree.typeNameSpace ?? namespaceUri(branch.uri)),
+                    text: branch.label,
+                    label: branch.label,
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
                     comment: branch.comment || '',
                     data: {
+                      originalLabel: branch.label + setTitleSufix(branch),
+                      originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
+                      originalUri: branch.Uri + setTitleSufix(branch),
+                      originalPrefixUri: namespaceUri(branch.uri) + setTitleSufix(branch),
                       typeNamespace: branch.typeNamespace || '',
                       comment: branch.comment || '',
                       hasWebDocument: branch.hasWebDocument,
@@ -537,11 +673,16 @@
                           seenChildIds.add(item.uri);
                           const nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
-                            text: (showNameSpace ? item.label : item.typeNamespace ?? namespaceUri(item.uri)),
+                            text: setNodeText(item),
+                            label: item.label,
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
                             data: {
+                              originalLabel: item.label + setTitleSufix(item),
+                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
+                              originalUri: item.Uri + setTitleSufix(item),
+                              originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
                               typeNamespace: item.typeNamespace || '',
                               comment: item.comment || '',
                               hasWebDocument: item.hasWebDocument,
