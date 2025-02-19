@@ -38,53 +38,34 @@
         // Read whether to hide Draft nodes from drupalSettings.
         let hideDraft = drupalSettings.rep_tree.hideDraft || false;
         let hideDeprecated = drupalSettings.rep_tree.hideDeprecated || false;
+        let showNameSpace = drupalSettings.rep_tree.showNameSpace || false;
 
-        // Attach a toggle switch click handler.
-        // Make sure an element with id "toggle-draft" exists in your page.
-        $('#toggle-draft').on('click.toggleDraft', function (e) {
-          e.preventDefault(); // Prevent full form submission
-          hideDraft = !hideDraft;
-
-          if (hideDraft) {
-            // If hiding drafts, label says "Show Draft"
-            $(this)
-              .text('Show Draft')
-              .removeClass('btn-danger')
-              .addClass('btn-success');
-          } else {
-            // If showing drafts, label says "Hide Draft"
-            $(this)
-              .text('Hide Draft')
-              .removeClass('btn-success')
-              .addClass('btn-danger');
-          }
-
-          // Rebuild the tree to update the view.
+        $('#toggle-draft').on('change', function () {
+          // If checkbox is checked, hideDraft = true; else false
+          hideDraft = $(this).is(':checked');
+          // console.log("Hide Draft toggled to:", hideDraft);
+          // Rebuild the tree with the new hideDraft value
           resetTree();
         });
 
-
-        $('#toggle-deprecated').on('click.toggleDeprecated', function (e) {
-          e.preventDefault(); // Prevent full form submission
-          hideDeprecated = !hideDeprecated;
-
-          if (hideDeprecated) {
-            // If hiding Deprecated, label says "Show Draft"
-            $(this)
-              .text('Show Deprecated')
-              .removeClass('btn-danger')
-              .addClass('btn-success');
-          } else {
-            // If showing Deprecated, label says "Hide Draft"
-            $(this)
-              .text('Hide Deprecated')
-              .removeClass('btn-success')
-              .addClass('btn-danger');
-          }
-
-          // Rebuild the tree to update the view.
+        $('#toggle-deprecated').on('change', function () {
+          hideDeprecated = $(this).is(':checked');
+          // console.log("Hide Deprecated toggled to:", hideDeprecated);
+          // Rebuild the tree with the new hideDraft value
           resetTree();
         });
+
+        $('#toggle-shownamespace').on('change', function () {
+          showNameSpace = $(this).is(':checked');
+          if (!showNameSpace) {
+            $('label[for="toggle-shownamespace"]').text("Show Name Space's");
+          } else {
+            $('label[for="toggle-shownamespace"]').text("Hide Name Space's");
+          }
+          // Rebuild the tree with the new showNameSpace value.
+          resetTree();
+        });
+
 
         // Activity timeout handler.
         function resetActivityTimeout() {
@@ -112,53 +93,6 @@
           }, activityDelay);
         }
 
-        // Attach JSTree event listeners.
-        // function attachTreeEventListeners() {
-        //   $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
-        //   $treeRoot.on('load_node.jstree open_node.jstree', function () { });
-        //   $treeRoot.on('select_node.jstree', function (e, data) {
-        //     const selectedNode = data.node.original;
-        //     if (selectedNode.id) {
-        //       $selectNodeButton
-        //         .prop('disabled', false)
-        //         .removeClass('disabled')
-        //         .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
-        //         .data('field-id', $('#tree-root').data('field-id'));
-        //     } else {
-        //       $selectNodeButton
-        //         .prop('disabled', true)
-        //         .addClass('disabled')
-        //         .removeData('selected-value')
-        //         .removeData('field-id');
-        //     }
-        //     const comment = data.node.data.comment || "";
-        //     let html = `
-        //       <strong>URI:</strong>
-        //       <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}"
-        //         target="_new">
-        //         ${selectedNode.uri}
-        //       </a><br />
-        //     `;
-        //     if (comment.trim().length > 0) {
-        //       html += `
-        //         <br />
-        //         <strong>Description:</strong><br />
-        //         ${comment}
-        //       `;
-        //     }
-        //     $('#node-comment-display').html(html).show();
-        //   });
-        //   $treeRoot.on('hover_node.jstree', function (e, data) {
-        //     const comment = data.node.data.comment || '';
-        //     // Use $.escapeSelector for safety.
-        //     const nodeAnchor = $('#' + $.escapeSelector(data.node.id + '_anchor'));
-        //     if (comment) {
-        //       nodeAnchor.attr('title', comment);
-        //     } else {
-        //       nodeAnchor.removeAttr('title');
-        //     }
-        //   });
-        // }
         function attachTreeEventListeners() {
           $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
           $treeRoot.on('load_node.jstree open_node.jstree', function () { });
@@ -242,7 +176,7 @@
                 if (node.id === '#') {
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
-                    text: branch.label,
+                    text: (showNameSpace ? branch.label : branch.typeNamespace),
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
                     data: { typeNamespace: branch.typeNamespace || '' },
@@ -266,7 +200,7 @@
                           seenChildIds.add(normalizedUri);
                           const nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
-                            text: item.label || 'Unnamed Node',
+                            text: (showNameSpace ? item.label : item.typeNamespace),
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
@@ -365,7 +299,7 @@
           //    We apply the Draft/Deprecated checks while constructing each node.
           const nodeMap = new Map();
           uniqueItems.forEach(item => {
-            let nodeText = item.label || 'Unnamed Node';
+            let nodeText = (showNameSpace ? item.label : item.typeNamespace);
             let a_attr = {}; // default: no special style
             // Optionally, add a "skip" property to the item if needed.
             item.skip = false;
@@ -518,7 +452,7 @@
                 if (node.id === '#') {
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
-                    text: branch.label,
+                    text: (showNameSpace ? branch.label : branch.typeNamespace),
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
                     comment: branch.comment || '',
@@ -543,7 +477,7 @@
                           seenChildIds.add(item.uri);
                           const nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
-                            text: item.label || 'Unnamed Node',
+                            text: (showNameSpace ? item.label : item.typeNamespace),
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
