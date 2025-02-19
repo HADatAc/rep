@@ -834,10 +834,22 @@ form#tree-form {
   max-width: 100%!important;
   width: 100%!important;}
 
-  #node-comment-display {
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-    width: 100%;
+#node-comment-display {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  width: 100%;
 
-  }
+}
+
+#edit-labels div {
+  width: 100%;
+  display: ruby!important;
+  margin-right: 1em!important;
+}
+
+#edit-filters,
+#edit-labels,
+#edit-filters div {
+  margin-bottom: 0!important;
+}

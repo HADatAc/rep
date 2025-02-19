@@ -2,9 +2,47 @@
   Drupal.behaviors.tree = {
     attach: function (context, settings) {
       once('jstree-initialized', '#tree-root', context).forEach((element) => {
+
+        // console.log(drupalSettings.rep_tree);
+
         // If a search value exists, fill in the search input.
         if (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) {
           $('#tree-search').val(drupalSettings.rep_tree.searchValue);
+        }
+
+        function namespaceUri(uri) {
+          // Assuming drupalSettings.rep_tree.namespaces is an object, e.g.:
+          // { "ABC": "http://abc.org/", "XYZ": "http://xyz.org/" }
+          const namespaces = drupalSettings.rep_tree.nameSpacesList;
+          for (const abbrev in namespaces) {
+            if (namespaces.hasOwnProperty(abbrev)) {
+              const ns = namespaces[abbrev];
+              // Check that both the abbreviation and the namespace URI exist.
+              if (abbrev && ns && uri.startsWith(ns)) {
+                const replacement = abbrev + ":";
+                return uri.replace(ns, replacement);
+              }
+            }
+          }
+          return uri;
+        }
+
+        function namespacePrefixUri(uri) {
+          // Assuming drupalSettings.rep_tree.namespaces is an object, e.g.:
+          // { "ABC": "http://abc.org/", "XYZ": "http://xyz.org/" }
+          const namespaces = drupalSettings.rep_tree.nameSpacesList;
+          for (const abbrev in namespaces) {
+            if (namespaces.hasOwnProperty(abbrev)) {
+              const ns = namespaces[abbrev];
+              // Check that both the abbreviation and the namespace URI exist.
+              if (abbrev && ns && uri.startsWith(ns)) {
+                const replacement = abbrev + ":";
+                return replacement;
+                // return uri.replace(ns, replacement);
+              }
+            }
+          }
+          return uri;
         }
 
         function sanitizeForId(str) {
@@ -30,8 +68,6 @@
         const $clearButton = $('#clear-search', context);
         const $waitMessage = $('#wait-message', context);
 
-        let searchTimeout;
-        let treeReady = false;
         let activityTimeout = null;
         const activityDelay = 1000;
         let initialSearchDone = false;
@@ -39,52 +75,106 @@
         let hideDraft = drupalSettings.rep_tree.hideDraft || false;
         let hideDeprecated = drupalSettings.rep_tree.hideDeprecated || false;
 
-        // Attach a toggle switch click handler.
-        // Make sure an element with id "toggle-draft" exists in your page.
-        $('#toggle-draft').on('click.toggleDraft', function (e) {
-          e.preventDefault(); // Prevent full form submission
-          hideDraft = !hideDraft;
+        let showLabel = drupalSettings.rep_tree.showLabel || 'label';
 
-          if (hideDraft) {
-            // If hiding drafts, label says "Show Draft"
-            $(this)
-              .text('Show Draft')
-              .removeClass('btn-danger')
-              .addClass('btn-success');
-          } else {
-            // If showing drafts, label says "Hide Draft"
-            $(this)
-              .text('Hide Draft')
-              .removeClass('btn-success')
-              .addClass('btn-danger');
-          }
-
-          // Rebuild the tree to update the view.
+        $('#toggle-draft').on('change', function () {
+          // If checkbox is checked, hideDraft = true; else false
+          hideDraft = $(this).is(':checked');
+          // console.log("Hide Draft toggled to:", hideDraft);
+          // Rebuild the tree with the new hideDraft value
           resetTree();
         });
 
-
-        $('#toggle-deprecated').on('click.toggleDeprecated', function (e) {
-          e.preventDefault(); // Prevent full form submission
-          hideDeprecated = !hideDeprecated;
-
-          if (hideDeprecated) {
-            // If hiding Deprecated, label says "Show Draft"
-            $(this)
-              .text('Show Deprecated')
-              .removeClass('btn-danger')
-              .addClass('btn-success');
-          } else {
-            // If showing Deprecated, label says "Hide Draft"
-            $(this)
-              .text('Hide Deprecated')
-              .removeClass('btn-success')
-              .addClass('btn-danger');
-          }
-
-          // Rebuild the tree to update the view.
+        $('#toggle-deprecated').on('change', function () {
+          hideDeprecated = $(this).is(':checked');
+          // console.log("Hide Deprecated toggled to:", hideDeprecated);
+          // Rebuild the tree with the new hideDraft value
           resetTree();
         });
+
+        $(document).on('change', 'input[name="label_mode"]', function () {
+          const selectedValue = $(this).val();
+          // console.log("Radio changed, value:", selectedValue);
+
+          const treeInstance = $('#tree-root').jstree(true);
+          if (!treeInstance) {
+            return;
+          }
+
+          // Iterate over all nodes in the jsTree internal model.
+          for (let nodeId in treeInstance._model.data) {
+            if (nodeId === '#') continue;
+            const node = treeInstance._model.data[nodeId];
+            if (node && node.data) {
+              let nodeText;
+              switch (selectedValue) {
+                case 'labelprefix':
+                  nodeText = node.data.originalPrefixLabel;
+                  break;
+                case 'uri':
+                  nodeText = node.data.originalUri ?? node.uri;
+                  break;
+                case 'uriprefix':
+                  nodeText = node.data.originalPrefixUri;
+                  break;
+                default: // 'label'
+                  nodeText = node.data.originalLabel;
+                  break;
+              }
+              if (node.text !== nodeText) {
+                treeInstance.rename_node(nodeId, nodeText);
+              }
+            }
+          }
+        });
+
+        function setNodeText(item) {
+
+          const selectedValue = $('input[name="label_mode"]:checked').val();
+
+          // console.log(selectedValue);
+
+          let nodeText;
+
+          switch (selectedValue) {
+            case 'labelprefix':
+              nodeText = namespacePrefixUri(item.uri) + item.label;
+              break;
+            case 'uri':
+              nodeText = item.uri;
+              break;
+            case 'uriprefix':
+              nodeText = namespaceUri(item.uri);
+              break;
+            default: // 'label'
+              nodeText = item.label;
+              break;
+          }
+          return nodeText;
+        }
+
+        function setTitleSufix(item) {
+          let sufix = '';
+          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
+            sufix += ' (Deprecated)';
+            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+              sufix += ' (' + drupalSettings.rep_tree.username + ')';
+            } else {
+              sufix += ' (Another Person)';
+            }
+          }
+
+          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+            sufix += ' (Draft)';
+            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+              sufix += ' (' + drupalSettings.rep_tree.username + ')';
+            } else {
+              sufix += ' (Another Person)';
+            }
+          }
+
+          return sufix;
+        }
 
         // Activity timeout handler.
         function resetActivityTimeout() {
@@ -112,53 +202,6 @@
           }, activityDelay);
         }
 
-        // Attach JSTree event listeners.
-        // function attachTreeEventListeners() {
-        //   $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
-        //   $treeRoot.on('load_node.jstree open_node.jstree', function () { });
-        //   $treeRoot.on('select_node.jstree', function (e, data) {
-        //     const selectedNode = data.node.original;
-        //     if (selectedNode.id) {
-        //       $selectNodeButton
-        //         .prop('disabled', false)
-        //         .removeClass('disabled')
-        //         .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
-        //         .data('field-id', $('#tree-root').data('field-id'));
-        //     } else {
-        //       $selectNodeButton
-        //         .prop('disabled', true)
-        //         .addClass('disabled')
-        //         .removeData('selected-value')
-        //         .removeData('field-id');
-        //     }
-        //     const comment = data.node.data.comment || "";
-        //     let html = `
-        //       <strong>URI:</strong>
-        //       <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}"
-        //         target="_new">
-        //         ${selectedNode.uri}
-        //       </a><br />
-        //     `;
-        //     if (comment.trim().length > 0) {
-        //       html += `
-        //         <br />
-        //         <strong>Description:</strong><br />
-        //         ${comment}
-        //       `;
-        //     }
-        //     $('#node-comment-display').html(html).show();
-        //   });
-        //   $treeRoot.on('hover_node.jstree', function (e, data) {
-        //     const comment = data.node.data.comment || '';
-        //     // Use $.escapeSelector for safety.
-        //     const nodeAnchor = $('#' + $.escapeSelector(data.node.id + '_anchor'));
-        //     if (comment) {
-        //       nodeAnchor.attr('title', comment);
-        //     } else {
-        //       nodeAnchor.removeAttr('title');
-        //     }
-        //   });
-        // }
         function attachTreeEventListeners() {
           $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
           $treeRoot.on('load_node.jstree open_node.jstree', function () { });
@@ -196,14 +239,31 @@
                 .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
                 .data('field-id', $('#tree-root').data('field-id'));
             }
-            const comment = data.node.data.comment || "";
+
+            // console.log(selectedNode);
             let html = `
+              <strong>Label:</strong>
+              ${selectedNode.label}
+              <br />
               <strong>URI:</strong>
               <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}"
                 target="_new">
                 ${selectedNode.uri}
               </a><br />
             `;
+
+            const webdocument = data.node.data.hasWebDocument || "";
+            if (webdocument.trim().length > 0) {
+              html += `
+                <strong>Web Document:</strong>
+                <a href="${webdocument}"
+                  target="_new">
+                  ${webdocument}
+                </a><br />
+              `;
+            }
+
+            const comment = data.node.data.comment || "";
             if (comment.trim().length > 0) {
               html += `
                 <br />
@@ -211,6 +271,7 @@
                 ${comment}
               `;
             }
+
             $('#node-comment-display').html(html).show();
           });
           $treeRoot.on('hover_node.jstree', function (e, data) {
@@ -238,17 +299,31 @@
         function initializeJstree() {
           $treeRoot.jstree({
             core: {
+              check_callback: true,
               data: function (node, cb) {
                 if (node.id === '#') {
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
+                    // text: (showNameSpace ? branch.label : branch.typeNamespace),
                     text: branch.label,
+                    label: branch.label,
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
-                    data: { typeNamespace: branch.typeNamespace || '' },
+                    data: {
+                      originalLabel: branch.label + setTitleSufix(branch),
+                      originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
+                      originalUri: branch.uri + setTitleSufix(branch),
+                      originalPrefixUri: namespaceUri(branch.uri) + setTitleSufix(branch),
+                      typeNamespace: branch.typeNamespace || '',
+                      comment: branch.comment || '',
+                      hasWebDocument: branch.hasWebDocument,
+                      hasImageUri: branch.hasImageUri,
+                    },
                     icon: 'fas fa-folder',
                     hasStatus: branch.hasStatus,
                     hasSIRManagerEmail: branch.hasSIRManagerEmail,
+                    hasWebDocument: branch.hasWebDocument,
+                    hasImageUri: branch.hasImageUri,
                     children: true,
                   })));
                 } else {
@@ -266,14 +341,25 @@
                           seenChildIds.add(normalizedUri);
                           const nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
-                            text: item.label || 'Unnamed Node',
+                            text: setNodeText(item),
+                            label: item.label,
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
-                            data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
+                            data: {
+                              originalLabel: item.label + setTitleSufix(item),
+                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
+                              originalUri: item.uri + setTitleSufix(item),
+                              originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+                              typeNamespace: item.typeNamespace || '',
+                              comment: item.comment || '',
+                              hasWebDocument: item.hasWebDocument,
+                              hasImageUri: item.hasImageUri, },
                             icon: 'fas fa-file-alt',
                             hasStatus: item.hasStatus,
                             hasSIRManagerEmail: item.hasSIRManagerEmail,
+                            hasWebDocument: item.hasWebDocument,
+                            hasImageUri: item.hasImageUri,
                             children: true,
                             skip: false
                           };
@@ -365,7 +451,28 @@
           //    We apply the Draft/Deprecated checks while constructing each node.
           const nodeMap = new Map();
           uniqueItems.forEach(item => {
-            let nodeText = item.label || 'Unnamed Node';
+            let nodeText;
+            if (showLabel) {
+              switch (showLabel) {
+                case 'labelprefix':
+                  nodeText = namespacePrefixUri(item.uri)+item.label;
+                  break;
+
+                case 'uri':
+                    nodeText = namespacePrefixUri(item.uri)+item.label;
+                    break;
+
+                case 'uriprefix':
+                  nodeText = namespaceUri(item.uri);
+                  break;
+
+                default:
+                case 'label':
+                  nodeText = item.label;
+                  break;
+              }
+            }
+
             let a_attr = {}; // default: no special style
             // Optionally, add a "skip" property to the item if needed.
             item.skip = false;
@@ -410,15 +517,24 @@
             nodeMap.set(item.uri, {
               id: item.uri,
               text: nodeText,
+              label: item.label,
               uri: item.uri,
               superUri: item.superUri || null, // Keep parent pointer.
               typeNamespace: item.typeNamespace || '',
               icon: 'fas fa-file-alt',
               hasStatus: item.hasStatus,
               hasSIRManagerEmail: item.hasSIRManagerEmail,
+              hasWebDocument: item.hasWebDocument,
+              hasImageUri: item.hasImageUri,
               data: {
+                originalLabel: item.label + setTitleSufix(item),
+                originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
+                originalUri: item.uri + setTitleSufix(item),
+                originalPrefixUri: namespaceUri(item.uri + setTitleSufix(item)),
                 comment: item.comment || '',
-                typeNamespace: item.typeNamespace || ''
+                typeNamespace: item.typeNamespace || '',
+                hasWebDocument: item.hasWebDocument,
+                hasImageUri: item.hasImageUri,
               },
               a_attr: a_attr,
               children: []
@@ -514,18 +630,32 @@
           $treeRoot.jstree('destroy').empty();
           $treeRoot.jstree({
             core: {
+              check_callback: true,
               data: function (node, cb) {
                 if (node.id === '#') {
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
+                    // text: (showNameSpace ? branch.label : branch.typeNamespace),
                     text: branch.label,
+                    label: branch.label,
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
                     comment: branch.comment || '',
-                    data: { typeNamespace: branch.typeNamespace || '', comment: branch.comment || '' },
+                    data: {
+                      originalLabel: branch.label + setTitleSufix(branch),
+                      originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
+                      originalUri: branch.Uri + setTitleSufix(branch),
+                      originalPrefixUri: namespaceUri(branch.uri) + setTitleSufix(branch),
+                      typeNamespace: branch.typeNamespace || '',
+                      comment: branch.comment || '',
+                      hasWebDocument: branch.hasWebDocument,
+                      hasImageUri: branch.hasImageUri,
+                    },
                     icon: 'fas fa-folder',
                     hasStatus: branch.hasStatus,
                     hasSIRManagerEmail: branch.hasSIRManagerEmail,
+                    hasWebDocument: branch.hasWebDocument,
+                    hasImageUri: branch.hasImageUri,
                     children: true,
                     state: { opened: false },
                   })));
@@ -543,14 +673,26 @@
                           seenChildIds.add(item.uri);
                           const nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
-                            text: item.label || 'Unnamed Node',
+                            text: setNodeText(item),
+                            label: item.label,
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
-                            data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
+                            data: {
+                              originalLabel: item.label + setTitleSufix(item),
+                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
+                              originalUri: item.Uri + setTitleSufix(item),
+                              originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+                              typeNamespace: item.typeNamespace || '',
+                              comment: item.comment || '',
+                              hasWebDocument: item.hasWebDocument,
+                              hasImageUri: item.hasImageUri,
+                            },
                             icon: 'fas fa-file-alt',
                             hasStatus: item.hasStatus,
                             hasSIRManagerEmail: item.hasSIRManagerEmail,
+                            hasWebDocument: item.hasWebDocument,
+                            hasImageUri: item.hasImageUri,
                             children: true,
                             skip: false
                           };
@@ -622,7 +764,11 @@
             $.ajax({
               url: drupalSettings.rep_tree.searchSubClassEndPoint,
               type: 'GET',
-              data: { keyword: searchTerm, superuri: drupalSettings.rep_tree.superclass },
+              data: {
+                keyword: searchTerm,
+                superuri: drupalSettings.rep_tree.superclass,
+                typeNameSpace: searchTerm,
+              },
               dataType: 'json',
               success: function (data) {
                 const suggestions = data.map(item => ({
@@ -684,6 +830,73 @@
         } else {
           console.warn('Tree root not found. Initialization aborted.');
         }
+      });
+    },
+  };
+})(jQuery, Drupal, drupalSettings);
+
+(function ($, Drupal) {
+  Drupal.behaviors.modalFix = {
+    attach: function (context, settings) {
+      const $selectNodeButton = $('#select-tree-node');
+
+      function adjustModal() {
+        $('.ui-dialog').each(function () {
+          $(this).css({
+            width: 'calc(100% - 50%)',
+            left: '25%',
+            right: '25%',
+            transform: 'none',
+            top: '10%',
+          });
+        });
+      }
+
+      $(document).on('dialogopen', adjustModal);
+
+      $(document).on('select_node.jstree', function () {
+        setTimeout(adjustModal, 100);
+      });
+
+      $(document).on('dialog:afterclose', function () {
+        $('html').css({
+          overflow: '',
+          'box-sizing': '',
+          'padding-right': '',
+        });
+      });
+
+      $selectNodeButton.on('click', function () {
+        $('html').css({
+          overflow: '',
+          'box-sizing': '',
+          'padding-right': '',
+        });
+
+        // Recupera o ID do campo de texto onde o valor foi escrito.
+        var fieldId = $(this).data('field-id');
+        //console.log(fieldId);
+        if (fieldId) {
+          // Um pequeno delay pode ajudar a garantir que o valor já esteja escrito.
+          setTimeout(function () {
+            //console.log($('#' + fieldId));
+            // Dispara o evento blur apenas para o input desejado.
+            $('#' + fieldId).trigger('change');
+          }, 100);
+        }
+      });
+
+      $(document).on('click', '.ui-dialog-titlebar-close', function () {
+        $('html').css({
+          overflow: '',
+          'box-sizing': '',
+          'padding-right': '',
+        });
+      });
+
+      const observer = new MutationObserver(adjustModal);
+      $('.ui-dialog-content').each(function () {
+        observer.observe(this, { childList: true, subtree: true });
       });
     },
   };
