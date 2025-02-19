@@ -2,6 +2,9 @@
   Drupal.behaviors.tree = {
     attach: function (context, settings) {
       once('jstree-initialized', '#tree-root', context).forEach((element) => {
+
+        // console.log(drupalSettings.rep_tree);
+
         // If a search value exists, fill in the search input.
         if (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) {
           $('#tree-search').val(drupalSettings.rep_tree.searchValue);
@@ -130,7 +133,7 @@
                 .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
                 .data('field-id', $('#tree-root').data('field-id'));
             }
-            const comment = data.node.data.comment || "";
+
             let html = `
               <strong>URI:</strong>
               <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}"
@@ -138,6 +141,19 @@
                 ${selectedNode.uri}
               </a><br />
             `;
+
+            const webdocument = data.node.data.hasWebDocument || "";
+            if (webdocument.trim().length > 0) {
+              html += `
+                <strong>Web Document:</strong>
+                <a href="${webdocument}"
+                  target="_new">
+                  ${webdocument}
+                </a><br />
+              `;
+            }
+
+            const comment = data.node.data.comment || "";
             if (comment.trim().length > 0) {
               html += `
                 <br />
@@ -145,6 +161,7 @@
                 ${comment}
               `;
             }
+
             $('#node-comment-display').html(html).show();
           });
           $treeRoot.on('hover_node.jstree', function (e, data) {
@@ -176,13 +193,21 @@
                 if (node.id === '#') {
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
-                    text: (showNameSpace ? branch.label : branch.typeNamespace),
+                    // text: (showNameSpace ? branch.label : branch.typeNamespace),
+                    text: (showNameSpace ? branch.label : drupalSettings.rep_tree.typeNameSpace),
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
-                    data: { typeNamespace: branch.typeNamespace || '' },
+                    data: {
+                      typeNamespace: branch.typeNamespace || '',
+                      comment: branch.comment || '',
+                      hasWebDocument: branch.hasWebDocument,
+                      hasImageUri: branch.hasImageUri,
+                    },
                     icon: 'fas fa-folder',
                     hasStatus: branch.hasStatus,
                     hasSIRManagerEmail: branch.hasSIRManagerEmail,
+                    hasWebDocument: branch.hasWebDocument,
+                    hasImageUri: branch.hasImageUri,
                     children: true,
                   })));
                 } else {
@@ -204,10 +229,16 @@
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
-                            data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
+                            data: {
+                              typeNamespace: item.typeNamespace || '',
+                              comment: item.comment || '',
+                              hasWebDocument: item.hasWebDocument,
+                              hasImageUri: item.hasImageUri, },
                             icon: 'fas fa-file-alt',
                             hasStatus: item.hasStatus,
                             hasSIRManagerEmail: item.hasSIRManagerEmail,
+                            hasWebDocument: item.hasWebDocument,
+                            hasImageUri: item.hasImageUri,
                             children: true,
                             skip: false
                           };
@@ -350,9 +381,13 @@
               icon: 'fas fa-file-alt',
               hasStatus: item.hasStatus,
               hasSIRManagerEmail: item.hasSIRManagerEmail,
+              hasWebDocument: item.hasWebDocument,
+              hasImageUri: item.hasImageUri,
               data: {
                 comment: item.comment || '',
-                typeNamespace: item.typeNamespace || ''
+                typeNamespace: item.typeNamespace || '',
+                hasWebDocument: item.hasWebDocument,
+                hasImageUri: item.hasImageUri,
               },
               a_attr: a_attr,
               children: []
@@ -452,14 +487,22 @@
                 if (node.id === '#') {
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
-                    text: (showNameSpace ? branch.label : branch.typeNamespace),
+                    // text: (showNameSpace ? branch.label : branch.typeNamespace),
+                    text: (showNameSpace ? branch.label : drupalSettings.rep_tree.typeNameSpace),
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
                     comment: branch.comment || '',
-                    data: { typeNamespace: branch.typeNamespace || '', comment: branch.comment || '' },
+                    data: {
+                      typeNamespace: branch.typeNamespace || '',
+                      comment: branch.comment || '',
+                      hasWebDocument: branch.hasWebDocument,
+                      hasImageUri: branch.hasImageUri,
+                    },
                     icon: 'fas fa-folder',
                     hasStatus: branch.hasStatus,
                     hasSIRManagerEmail: branch.hasSIRManagerEmail,
+                    hasWebDocument: branch.hasWebDocument,
+                    hasImageUri: branch.hasImageUri,
                     children: true,
                     state: { opened: false },
                   })));
@@ -481,10 +524,17 @@
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
-                            data: { typeNamespace: item.typeNamespace || '', comment: item.comment || '' },
+                            data: {
+                              typeNamespace: item.typeNamespace || '',
+                              comment: item.comment || '',
+                              hasWebDocument: item.hasWebDocument,
+                              hasImageUri: item.hasImageUri,
+                            },
                             icon: 'fas fa-file-alt',
                             hasStatus: item.hasStatus,
                             hasSIRManagerEmail: item.hasSIRManagerEmail,
+                            hasWebDocument: item.hasWebDocument,
+                            hasImageUri: item.hasImageUri,
                             children: true,
                             skip: false
                           };

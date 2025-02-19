@@ -8,6 +8,7 @@ use Drupal\rep\Vocabulary\SIO;
 use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\rep\EntryPoints;
 use Drupal\Core\Url;
+use Drupal\rep\Utils;
 
 class TreeForm extends FormBase {
 
@@ -102,12 +103,14 @@ class TreeForm extends FormBase {
       [
         'id' => 'annotationstem',
         'uri' => EntryPoints::ANNOTATION_STEM,
-        'label' => 'Annotation Stem'
+        'label' => 'Annotation Stem',
+        'uriNamespace' => EntryPoints::ANNOTATION_STEM
       ],
       [
         'id' => 'attribute',
         'uri' => EntryPoints::ATTRIBUTE,
-        'label' => 'Attribute'
+        'label' => 'Attribute',~
+        'uriNamespace' => EntryPoints::ATTRIBUTE
       ],
       [
         'id' => 'detectorstem',
@@ -136,37 +139,44 @@ class TreeForm extends FormBase {
       [
         'id' => 'instrument',
         'uri' => EntryPoints::INSTRUMENT,
-        'label' => 'Instrument'
+        'label' => 'Instrument',
+        'uriNamespace' => Utils::namespaceUri(EntryPoints::INSTRUMENT),
       ],
       [
         'id' => 'platform',
         'uri' => EntryPoints::PLATFORM,
-        'label' => 'Platform'
+        'label' => 'Platform',
+        'uriNamespace' => EntryPoints::PLATFORM
       ],
       [
         'id' => 'processstem',
         'uri' => EntryPoints::PROCESS_STEM,
-        'label' => 'Process Stem'
+        'label' => 'Process Stem',
+        'uriNamespace' => EntryPoints::PROCESS_STEM
       ],
       [
         'id' => 'questionnaire',
         'uri' => EntryPoints::QUESTIONNAIRE,
-        'label' => 'Questionnaire'
+        'label' => 'Questionnaire',
+        'uriNamespace' => EntryPoints::QUESTIONNAIRE,
       ],
       [
         'id' => 'responseoption',
         'uri' => EntryPoints::RESPONSE_OPTION,
-        'label' => 'Response Option'
+        'label' => 'Response Option',~
+        'uriNamespace' => EntryPoints::RESPONSE_OPTION,
       ],
       [
         'id' => 'study',
         'uri' => EntryPoints::STUDY,
-        'label' => 'Study'
+        'label' => 'Study',
+        'uriNamespace' => EntryPoints::STUDY,
       ],
       [
         'id' => 'unit',
         'uri' => EntryPoints::UNIT,
-        'label' => 'Unit'
+        'label' => 'Unit',
+        'uriNamespace' => EntryPoints::UNIT,
       ],
 
     ];
@@ -216,7 +226,8 @@ class TreeForm extends FormBase {
         [
           'id' => 'instrument',
           'uri' => VSTOI::INSTRUMENT,
-          'label' => 'Instruments'
+          'label' => 'Instruments',
+          'uriNamespace' => Utils::namespaceUri(EntryPoints::INSTRUMENT),
         ],
       ];
     }
@@ -249,6 +260,7 @@ class TreeForm extends FormBase {
       'branches' => $branches_param,
       'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]',
       'elementType' => $elementtype,
+      'typeNameSpace' => $branches_param[0]["uriNamespace"],
       'hideDraft' => $hide_draft,
       'hideDeprecated' => $hide_deprecated,
       'showNameSpace' => $show_namespace,
