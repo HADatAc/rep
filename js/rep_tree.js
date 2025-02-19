@@ -688,3 +688,70 @@
     },
   };
 })(jQuery, Drupal, drupalSettings);
+
+(function ($, Drupal) {
+  Drupal.behaviors.modalFix = {
+    attach: function (context, settings) {
+      const $selectNodeButton = $('#select-tree-node');
+
+      function adjustModal() {
+        $('.ui-dialog').each(function () {
+          $(this).css({
+            width: 'calc(100% - 50%)',
+            left: '25%',
+            right: '25%',
+            transform: 'none',
+            top: '10%',
+          });
+        });
+      }
+
+      $(document).on('dialogopen', adjustModal);
+
+      $(document).on('select_node.jstree', function () {
+        setTimeout(adjustModal, 100);
+      });
+
+      $(document).on('dialog:afterclose', function () {
+        $('html').css({
+          overflow: '',
+          'box-sizing': '',
+          'padding-right': '',
+        });
+      });
+
+      $selectNodeButton.on('click', function () {
+        $('html').css({
+          overflow: '',
+          'box-sizing': '',
+          'padding-right': '',
+        });
+
+        // Recupera o ID do campo de texto onde o valor foi escrito.
+        var fieldId = $(this).data('field-id');
+        //console.log(fieldId);
+        if (fieldId) {
+          // Um pequeno delay pode ajudar a garantir que o valor já esteja escrito.
+          setTimeout(function () {
+            //console.log($('#' + fieldId));
+            // Dispara o evento blur apenas para o input desejado.
+            $('#' + fieldId).trigger('change');
+          }, 100);
+        }
+      });
+
+      $(document).on('click', '.ui-dialog-titlebar-close', function () {
+        $('html').css({
+          overflow: '',
+          'box-sizing': '',
+          'padding-right': '',
+        });
+      });
+
+      const observer = new MutationObserver(adjustModal);
+      $('.ui-dialog-content').each(function () {
+        observer.observe(this, { childList: true, subtree: true });
+      });
+    },
+  };
+})(jQuery, Drupal, drupalSettings);
