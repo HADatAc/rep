@@ -10,6 +10,23 @@
           $('#tree-search').val(drupalSettings.rep_tree.searchValue);
         }
 
+        function namespaceUri(uri) {
+          // Assuming drupalSettings.rep_tree.namespaces is an object, e.g.:
+          // { "ABC": "http://abc.org/", "XYZ": "http://xyz.org/" }
+          const namespaces = drupalSettings.rep_tree.nameSpacesList;
+          for (const abbrev in namespaces) {
+            if (namespaces.hasOwnProperty(abbrev)) {
+              const ns = namespaces[abbrev];
+              // Check that both the abbreviation and the namespace URI exist.
+              if (abbrev && ns && uri.startsWith(ns)) {
+                const replacement = abbrev + ":";
+                return uri.replace(ns, replacement);
+              }
+            }
+          }
+          return uri;
+        }
+
         function sanitizeForId(str) {
           return str.replace(/[^A-Za-z0-9_-]/g, '_');
         }
@@ -194,7 +211,7 @@
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
                     // text: (showNameSpace ? branch.label : branch.typeNamespace),
-                    text: (showNameSpace ? branch.label : drupalSettings.rep_tree.typeNameSpace),
+                    text: (showNameSpace ? branch.label : drupalSettings.rep_tree.typeNameSpace ?? namespaceUri(branch.uri)),
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
                     data: {
@@ -225,7 +242,7 @@
                           seenChildIds.add(normalizedUri);
                           const nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
-                            text: (showNameSpace ? item.label : item.typeNamespace),
+                            text: (showNameSpace ? item.label : item.typeNamespace ?? namespaceUri(item.uri)),
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
@@ -330,7 +347,7 @@
           //    We apply the Draft/Deprecated checks while constructing each node.
           const nodeMap = new Map();
           uniqueItems.forEach(item => {
-            let nodeText = (showNameSpace ? item.label : item.typeNamespace);
+            let nodeText = (showNameSpace ? item.label : item.typeNamespace ?? namespaceUri(item.uri));
             let a_attr = {}; // default: no special style
             // Optionally, add a "skip" property to the item if needed.
             item.skip = false;
@@ -488,7 +505,7 @@
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
                     // text: (showNameSpace ? branch.label : branch.typeNamespace),
-                    text: (showNameSpace ? branch.label : drupalSettings.rep_tree.typeNameSpace),
+                    text: (showNameSpace ? branch.label : drupalSettings.rep_tree.typeNameSpace ?? namespaceUri(branch.uri)),
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
                     comment: branch.comment || '',
@@ -520,7 +537,7 @@
                           seenChildIds.add(item.uri);
                           const nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
-                            text: (showNameSpace ? item.label : item.typeNamespace),
+                            text: (showNameSpace ? item.label : item.typeNamespace ?? namespaceUri(item.uri)),
                             uri: item.uri,
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
@@ -606,7 +623,11 @@
             $.ajax({
               url: drupalSettings.rep_tree.searchSubClassEndPoint,
               type: 'GET',
-              data: { keyword: searchTerm, superuri: drupalSettings.rep_tree.superclass },
+              data: {
+                keyword: searchTerm,
+                superuri: drupalSettings.rep_tree.superclass,
+                typeNameSpace: searchTerm,
+              },
               dataType: 'json',
               success: function (data) {
                 const suggestions = data.map(item => ({

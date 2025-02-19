@@ -9,6 +9,7 @@ use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\rep\EntryPoints;
 use Drupal\Core\Url;
 use Drupal\rep\Utils;
+use Drupal\rep\Entity\Tables;
 
 class TreeForm extends FormBase {
 
@@ -248,6 +249,8 @@ class TreeForm extends FormBase {
 
     $form['#attached']['library'][] = 'rep/rep_tree';
 
+    $tables = new Tables;
+
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'baseUrl' => $base_url,
@@ -264,6 +267,7 @@ class TreeForm extends FormBase {
       'hideDraft' => $hide_draft,
       'hideDeprecated' => $hide_deprecated,
       'showNameSpace' => $show_namespace,
+      'nameSpacesList' => $tables->getNamespaces()
     ];
 
     if ($mode == 'browse')
