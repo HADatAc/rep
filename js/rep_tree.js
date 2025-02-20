@@ -94,7 +94,7 @@
 
         $(document).on('change', 'input[name="label_mode"]', function () {
           const selectedValue = $(this).val();
-          // console.log("Radio changed, value:", selectedValue);
+          //console.log("Radio changed, value:", selectedValue);
 
           const treeInstance = $('#tree-root').jstree(true);
           if (!treeInstance) {
@@ -106,13 +106,14 @@
             if (nodeId === '#') continue;
             const node = treeInstance._model.data[nodeId];
             if (node && node.data) {
+              // console.log(node);
               let nodeText;
               switch (selectedValue) {
                 case 'labelprefix':
                   nodeText = node.data.originalPrefixLabel;
                   break;
                 case 'uri':
-                  nodeText = node.data.originalUri ?? node.uri;
+                  nodeText = node.data.originalUri;
                   break;
                 case 'uriprefix':
                   nodeText = node.data.originalPrefixUri;
@@ -147,7 +148,7 @@
               nodeText = namespaceUri(item.uri);
               break;
             default: // 'label'
-              nodeText = item.label;
+              nodeText = item.label ?? item.uri; // Case label empty present uri by default
               break;
           }
           return nodeText;
@@ -305,7 +306,7 @@
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
                     // text: (showNameSpace ? branch.label : branch.typeNamespace),
-                    text: branch.label,
+                    text: setNodeText(branch),
                     label: branch.label,
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
@@ -477,6 +478,10 @@
             // Optionally, add a "skip" property to the item if needed.
             item.skip = false;
 
+            // console.log(item);
+
+            nodeText = setNodeText(item);
+
             if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
               // Check if we should hide deprecated nodes (for non-owners).
               if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
@@ -636,7 +641,7 @@
                   cb(getFilteredBranches().map(branch => ({
                     id: branch.id,
                     // text: (showNameSpace ? branch.label : branch.typeNamespace),
-                    text: branch.label,
+                    text: setNodeText(branch),
                     label: branch.label,
                     uri: branch.uri,
                     typeNamespace: branch.typeNamespace || '',
@@ -644,7 +649,7 @@
                     data: {
                       originalLabel: branch.label + setTitleSufix(branch),
                       originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
-                      originalUri: branch.Uri + setTitleSufix(branch),
+                      originalUri: branch.uri + setTitleSufix(branch),
                       originalPrefixUri: namespaceUri(branch.uri) + setTitleSufix(branch),
                       typeNamespace: branch.typeNamespace || '',
                       comment: branch.comment || '',
@@ -681,7 +686,7 @@
                             data: {
                               originalLabel: item.label + setTitleSufix(item),
                               originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
-                              originalUri: item.Uri + setTitleSufix(item),
+                              originalUri: item.uri + setTitleSufix(item),
                               originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
                               typeNamespace: item.typeNamespace || '',
                               comment: item.comment || '',
