@@ -844,8 +844,13 @@ form#tree-form {
 
 #edit-labels div {
   width: 100%;
-  display: ruby!important;
+  display: contents!important;
   margin-right: 1em!important;
+}
+
+#edit-labels div input {
+  margin-left: .5em;
+  margin-right: .5em;
 }
 
 #edit-filters,
