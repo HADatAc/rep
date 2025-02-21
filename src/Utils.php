@@ -571,32 +571,40 @@ class Utils {
   }
 
   /**
- * Recursively checks if an element has a superUri that is of type VSTOI::QUESTIONAIRE.
- */
-public static function hasQuestionnaireAncestor($uri) {
-  $api = \Drupal::service('rep.api_connector');
-  $rawResponse = $api->getUri($uri);
-  $obj = json_decode($rawResponse);
+   * Recursively checks if an element has a superUri that is of type VSTOI::QUESTIONAIRE.
+   */
+  public static function hasQuestionnaireAncestor($uri) {
+    $api = \Drupal::service('rep.api_connector');
+    $rawResponse = $api->getUri($uri);
+    $obj = json_decode($rawResponse);
 
-  // Verifica se a resposta da API é válida e se contém um corpo
-  if (!$obj || !isset($obj->body)) {
-      return false;
+    // Verifica se a resposta da API é válida e se contém um corpo
+    if (!$obj || !isset($obj->body)) {
+        return false;
+    }
+
+    $result = $obj->body;
+
+    // Se o elemento atual for do tipo QUESTIONAIRE, retorna true
+    if (isset($result->superUri) && $result->superUri === VSTOI::QUESTIONNAIRE) {
+        return true;
+    }
+
+    // Se existir um superUri, chama a função recursivamente
+    if (!empty($result->superUri)) {
+        return self::hasQuestionnaireAncestor($result->superUri);
+    }
+
+    // Se não encontrou nenhum QUESTIONAIRE na hierarquia, retorna false
+    return false;
   }
 
-  $result = $obj->body;
-
-  // Se o elemento atual for do tipo QUESTIONAIRE, retorna true
-  if (isset($result->superUri) && $result->superUri === VSTOI::QUESTIONNAIRE) {
-      return true;
+  public static function getLabelFromURI($text) {
+    // Split the string at the "[" character.
+    $parts = explode('[', $text);
+    // Trim any whitespace from the first part to get the label.
+    $label = trim($parts[0]);
+    return $label; // Outputs: calf
   }
-
-  // Se existir um superUri, chama a função recursivamente
-  if (!empty($result->superUri)) {
-      return self::hasQuestionnaireAncestor($result->superUri);
-  }
-
-  // Se não encontrou nenhum QUESTIONAIRE na hierarquia, retorna false
-  return false;
-}
 
 }

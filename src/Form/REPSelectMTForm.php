@@ -444,17 +444,17 @@ class REPSelectMTForm extends FormBase {
       $user = \Drupal\user\Entity\User::load($uid);
       //dpm($user->getRoles());
       if ($user && $user->hasRole('content_editor')) {
-        $form['ingest_mt'] = [
-          '#type' => 'submit',
-          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Draft'),
-          '#name' => 'ingest_mt_draft',
-          '#attributes' => [
-            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-          ],
-        ];
+        // $form['ingest_mt'] = [
+        //   '#type' => 'submit',
+        //   '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Draft'),
+        //   '#name' => 'ingest_mt_draft',
+        //   '#attributes' => [
+        //     'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+        //   ],
+        // ];
         $form['ingest_mt_current'] = [
           '#type' => 'submit',
-          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Current'),
+          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected'/* as Current'*/),
           '#name' => 'ingest_mt_current',
           '#attributes' => [
             'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
@@ -478,7 +478,7 @@ class REPSelectMTForm extends FormBase {
         '#attributes' => [
           'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
         ],
-      ];    
+      ];
     }
     $form['uningest_mt'] = [
       '#type' => 'submit',
