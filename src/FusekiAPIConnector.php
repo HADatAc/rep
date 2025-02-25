@@ -600,6 +600,54 @@ class FusekiAPIConnector {
   }
 
   /**
+   *   ACTUATORS
+   */
+
+   public function actuatorAdd($actuatorJson) {
+    $endpoint = "/hascoapi/api/actuator/create/".rawurlencode($actuatorJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function actuatorDel($actuatorUri) {
+    $endpoint = "/hascoapi/api/actuator/delete/".rawurlencode($actuatorUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function actuatorAttach($actuatorUri,$containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($actuatorUri)."/".rawurlencode($containerslotUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
+   *   ACTUATOR STEMS
+   */
+
+   public function actuatorStemAdd($actuatorStemJson) {
+    $endpoint = "/hascoapi/api/actuatorstem/create/".rawurlencode($actuatorStemJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function actuatorStemDel($actuatorStemUri) {
+    $endpoint = "/hascoapi/api/actuatorstem/delete/".rawurlencode($actuatorStemUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
    *   DETECTORS
    */
 
