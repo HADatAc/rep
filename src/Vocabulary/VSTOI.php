@@ -9,7 +9,9 @@
     /*
      *    CLASSES
      */
-
+    const ACTUATOR                        = VSTOI::VSTOI . "Actuator";
+    const ACTUATOR_INSTANCE               = VSTOI::VSTOI . "ActuatorInstance";
+    const ACTUATOR_STEM                   = VSTOI::VSTOI . "ActuatorStem";
     const ANNOTATION                      = VSTOI::VSTOI . "Annotation";
     const ANNOTATION_STEM                 = VSTOI::VSTOI . "AnnotationStem";
     const CODEBOOK                        = VSTOI::VSTOI . "Codebook";
