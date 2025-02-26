@@ -533,6 +533,14 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function containerslotAttach($actuatorUri,$containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($actuatorUri)."/".rawurlencode($containerslotUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**
    *   DATAFILE
    */
@@ -614,14 +622,6 @@ class FusekiAPIConnector {
   public function actuatorDel($actuatorUri) {
     $endpoint = "/hascoapi/api/actuator/delete/".rawurlencode($actuatorUri);
     $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
-
-  public function actuatorAttach($actuatorUri,$containerslotUri) {
-    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($actuatorUri)."/".rawurlencode($containerslotUri);
-    $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
