@@ -371,10 +371,11 @@
                               nodeObj.text += ' (Deprecated)';
                               if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                                 nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                               } else {
                                 nodeObj.text += ' (Another Person)';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                               }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                               // nodeObj.state = { disabled: true };
                             }
                           }
@@ -385,10 +386,12 @@
                               nodeObj.text += ' (Draft)';
                               if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                                 nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                               } else {
                                 nodeObj.text += ' (Another Person)';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                               }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
+
                             }
                           }
                           tempNodes.push(nodeObj);
@@ -490,18 +493,21 @@
                 nodeText += ' (Deprecated)';
                 if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                   nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                  a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                 } else {
                   nodeText += ' (Another Person)';
-                }
-                a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
+                  a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };                }
+
               } else {
                 nodeText += ' (Deprecated)';
                 if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                   nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                  a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                 } else {
                   nodeText += ' (Another Person)';
+                  a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                 }
-                a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
+
               }
             } else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
               // Check if we should hide draft nodes for non-owners.
@@ -511,10 +517,11 @@
                 nodeText += ' (Draft)';
                 if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                   nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                  nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                 } else {
                   nodeText += ' (Another Person)';
+                  nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                 }
-                a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
               }
             }
 
@@ -708,24 +715,25 @@
                               nodeObj.text += ' (Deprecated)';
                               if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                                 nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                               } else {
                                 nodeObj.text += ' (Another Person)';
-                              }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                               // nodeObj.state = { disabled: true };
+                              }
                             }
-                          }
-                          else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+                          } else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
                             if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
                               nodeObj.skip = true;
                             } else {
                               nodeObj.text += ' (Draft)';
                               if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                                 nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                               } else {
                                 nodeObj.text += ' (Another Person)';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                               }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                             }
                           }
                           tempNodes.push(nodeObj);
