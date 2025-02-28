@@ -562,7 +562,7 @@ class Utils {
     if ($status == VSTOI::DRAFT) {
       return 'Draft';
     } else if ($status == VSTOI::UNDER_REVIEW) {
-      return 'Review';
+      return 'Under Review';
     } else if ($status == VSTOI::CURRENT) {
       return 'Current';
     } else if ($status == VSTOI::DEPRECATED) {

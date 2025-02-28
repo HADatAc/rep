@@ -155,6 +155,21 @@ reviewer.top_level:
 #   requirements:
 #     _review_access: 'TRUE'
 
+
+reviewer.instruments:
+  title: Simulators
+  description: Manage Simulator Reviews
+  menu_name: main
+  route_name: sir.select_review_element
+  route_parameters:
+    elementtype: 'instrument'
+    page: '1'
+    pagesize: '9'
+  parent: reviewer.top_level
+  weight: 10
+  requirements:
+    _review_access: 'TRUE'
+
 reviewer.detectorsstem:
   title: Detector Stems
   description: Manage Detectors Stem Reviews
@@ -183,6 +198,34 @@ reviewer.detectors:
   requirements:
     _review_access: 'TRUE'
 
+reviewer.actuatorstem:
+  title: Actuator Stems
+  description: Manage Actuators Stem Reviews
+  menu_name: main
+  route_name: sir.select_review_element
+  route_parameters:
+    elementtype: 'actuatorstem'
+    page: '1'
+    pagesize: '9'
+  parent: reviewer.top_level
+  weight: 40
+  requirements:
+    _review_access: 'TRUE'
+
+reviewer.actuators:
+  title: Detectors
+  description: Manage Actuators Reviews
+  menu_name: main
+  route_name: sir.select_review_element
+  route_parameters:
+    elementtype: 'actuator'
+    page: '1'
+    pagesize: '9'
+  parent: reviewer.top_level
+  weight: 50
+  requirements:
+    _review_access: 'TRUE'
+
 reviewer.codebooks:
   title: Codebooks
   description: Manage Codebooks Reviews
@@ -193,7 +236,7 @@ reviewer.codebooks:
     page: '1'
     pagesize: '9'
   parent: reviewer.top_level
-  weight: 40
+  weight: 60
   requirements:
     _review_access: 'TRUE'
 
@@ -207,6 +250,6 @@ reviewer.response_options:
     page: '1'
     pagesize: '9'
   parent: reviewer.top_level
-  weight: 50
+  weight: 70
   requirements:
     _review_access: 'TRUE'
