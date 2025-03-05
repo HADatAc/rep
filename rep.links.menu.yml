@@ -213,7 +213,7 @@ reviewer.actuatorstem:
     _review_access: 'TRUE'
 
 reviewer.actuators:
-  title: Detectors
+  title: Actuators
   description: Manage Actuators Reviews
   menu_name: main
   route_name: sir.select_review_element
