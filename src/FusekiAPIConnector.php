@@ -1546,4 +1546,13 @@ class FusekiAPIConnector {
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
+
+  // Return List of Component elements from Instrument to Fill on Process
+  public function componentListFromInstrument($instrumentUri) {
+    $endpoint = "/hascoapi/api/instrument/components/".rawurlencode($instrumentUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
 }
