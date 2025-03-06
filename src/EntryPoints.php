@@ -14,6 +14,7 @@
     const ATTRIBUTE             = SIO::ATTRIBUTE;
     const DETECTOR_ATTRIBUTE    = "http://purl.obolibrary.org/obo/UBERON_0000061";
     const DETECTOR_STEM         = VSTOI::DETECTOR_STEM;
+    const ACTUATOR_STEM         = VSTOI::ACTUATOR_STEM;
     const ENTITY                = SIO::ENTITY;
     const GROUP                 = FOAF::GROUP;
     const INSTRUMENT            = VSTOI::INSTRUMENT;

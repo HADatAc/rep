@@ -607,4 +607,161 @@ class Utils {
     return $label; // Outputs: calf
   }
 
+  /**
+ * Build and render slot elements in either a table or a tree format, recursively.
+ *
+ * @param string $containerUri
+ *   The URI of the container (or subcontainer).
+ * @param object $api
+ *   Your API/service object that can fetch slotElements, getUri, etc.
+ * @param string $renderMode
+ *   The rendering mode: 'table' (default) or 'tree'.
+ *
+ * @return array|string
+ *   If $renderMode is 'table', returns a Drupal render array (#type => 'table').
+ *   If $renderMode is 'tree', returns an HTML string with nested <ul>.
+ */
+public static function buildSlotElements($containerUri, $api, $renderMode = 'table') {
+  // ------------------------------------------
+  // 1) Internal recursive function to build a "tree" data structure
+  //    from the slot elements, so we have a consistent representation
+  //    for both table and tree renderings.
+  // ------------------------------------------
+  $buildTree = function($uri, $api) use (&$buildTree) {
+    // Fetch slotElements for this container
+    $slotElements = $api->parseObjectResponse($api->slotElements($uri), 'slotElements');
+    if (empty($slotElements)) {
+      return [];
+    }
+
+    $tree = [];
+
+    foreach ($slotElements as $slotElement) {
+      // Prepare a basic structure for each slotElement
+      $item = [
+        'uri'      => $slotElement->uri ?? '',
+        'type'     => isset($slotElement->hascoTypeUri) ? Utils::namespaceUri($slotElement->hascoTypeUri) : '',
+        'label'    => $slotElement->label ?? '',
+        'priority' => $slotElement->hasPriority ?? '',
+        'element'  => '', // This will store any custom content/markup
+        'children' => [],
+      ];
+
+      // Example logic to fill 'element' or other data
+      if ($item['type'] === Utils::namespaceUri(VSTOI::CONTAINER_SLOT)) {
+        // Example: if it's a container slot (detector/actuator), do your custom logic
+        // e.g. $item['element'] = buildContainerSlotElement(...);
+        $item['element'] = 'ContainerSlot content here...';
+      }
+      elseif ($item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
+        // If it's a subcontainer, call recursively
+        $item['element'] = 'Subcontainer: ' . ($slotElement->label ?? '[no label]');
+        if (!empty($item['uri'])) {
+          $item['children'] = $buildTree($item['uri'], $api);
+        }
+      }
+      else {
+        // Unknown or other type
+        $item['element'] = '(Unknown type)';
+      }
+
+      $tree[] = $item;
+    }
+
+    return $tree;
+  };
+
+  // ------------------------------------------
+  // 2) Internal function to render the tree data as a nested <ul>
+  // ------------------------------------------
+  $renderAsTree = function(array $tree) use (&$renderAsTree) {
+    if (empty($tree)) {
+      return '';
+    }
+
+    $html = '<ul>';
+    foreach ($tree as $item) {
+      // Build a display text, e.g. "[Type] Label (priority)"
+      $title = '[' . $item['type'] . '] ' . $item['label']
+             . ' (priority: ' . $item['priority'] . ')';
+
+      $html .= '<li>';
+      $html .= '<div>' . $title . '</div>';
+      $html .= '<div>' . $item['element'] . '</div>';
+
+      // If there are children, render them recursively
+      if (!empty($item['children'])) {
+        $html .= $renderAsTree($item['children']);
+      }
+
+      $html .= '</li>';
+    }
+    $html .= '</ul>';
+
+    return $html;
+  };
+
+  // ------------------------------------------
+  // 3) Internal function to render the tree data as nested tables
+  // ------------------------------------------
+  $renderAsTable = function(array $tree) use (&$renderAsTable) {
+    // Define the table header
+    $header = [
+      t('Type'),
+      t('Label'),
+      t('Priority'),
+      t('Element'),
+    ];
+
+    $rows = [];
+    foreach ($tree as $item) {
+      // Build a single row for this item
+      $rows[] = [
+        $item['type'],
+        $item['label'],
+        $item['priority'],
+        // You could also place HTML markup in a 'markup' array key, but
+        // simply storing as text will often work. If you need markup, do:
+        // ['data' => $item['element'], 'escape' => FALSE],
+        $item['element'],
+      ];
+
+      // If there are children, render them as a sub-table in a new row
+      if (!empty($item['children'])) {
+        $subTable = $renderAsTable($item['children']);
+        // Insert a row with a single cell containing the sub-table
+        $rows[] = [
+          [
+            'data' => $subTable,
+            'colspan' => 4, // spanning all columns
+          ],
+        ];
+      }
+    }
+
+    // Return the Drupal render array for the table
+    return [
+      '#type'   => 'table',
+      '#header' => $header,
+      '#rows'   => $rows,
+      '#empty'  => t('No response options found'),
+    ];
+  };
+
+  // ------------------------------------------
+  // 4) Build the tree data structure, then render based on $renderMode
+  // ------------------------------------------
+  $tree = $buildTree($containerUri, $api);
+
+  if ($renderMode === 'tree') {
+    // Return an HTML string with nested <ul>
+    return $renderAsTree($tree);
+  }
+  else {
+    // Return a Drupal render array with nested tables
+    return $renderAsTable($tree);
+  }
+}
+
+
 }
