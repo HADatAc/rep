@@ -747,8 +747,8 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function reviewRecursive($instrumentUri) {
-    $endpoint = "/hascoapi/api/review/recursive/".rawurlencode($instrumentUri);
+  public function reviewRecursive($instrumentUri,$status = VSTOI::DRAFT) {
+    $endpoint = "/hascoapi/api/review/recursive/".rawurlencode($instrumentUri)."/".rawurlencode($status);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
