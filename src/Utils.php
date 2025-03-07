@@ -829,7 +829,7 @@ public static function buildSlotElements($containerUri, $api, $renderMode = 'tab
               $item['children'] = $buildTree($componentObj->uri);
             }
             // If the component is a DETECTOR, ACTUATOR, or other "leaf" type
-            else if ($componentType === VSTOI::DETECTOR) {
+            else if ($componentType === VSTOI::DETECTOR || $componentType === VSTOI::ACTUATOR) {
               $type = self::namespaceUri($componentObj->hascoTypeUri);
               if (isset($componentObj->uri)) {
                 // $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
@@ -851,10 +851,6 @@ public static function buildSlotElements($containerUri, $api, $renderMode = 'tab
               $item['element'] = $componentUri . " " . $content . " " . $codebook;
               // $item['element'] = 'Detector: ' . ($componentObj->label ?? '[no label]');
               // No recursion, as a detector is typically a leaf
-            }
-            else if ($componentType === VSTOI::ACTUATOR) {
-              $item['element'] = 'Actuator: ' . ($componentObj->label ?? '[no label]');
-              // Also a leaf
             }
             else {
               // Unknown or other type
