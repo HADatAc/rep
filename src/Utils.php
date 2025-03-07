@@ -13,6 +13,7 @@ use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\VSTOI;
+use Drupal\Component\Render\Markup;
 
 class Utils {
 
@@ -831,15 +832,19 @@ public static function buildSlotElements($containerUri, $api, $renderMode = 'tab
             else if ($componentType === VSTOI::DETECTOR) {
               $type = self::namespaceUri($componentObj->hascoTypeUri);
               if (isset($componentObj->uri)) {
-                $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
+                // $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
+                $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>('.Utils::plainStatus($componentObj->hasStatus).')]');
               }
               if (isset($componentObj->isAttributeOf)) {
-                $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(self::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. self::namespaceUri($componentObj->isAttributeOf) . "</a>]";
+                // $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(self::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. self::namespaceUri($componentObj->isAttributeOf) . "</a>]";
+                $attributOfStatus = $api->parseObjectResponse($api->getUri($componentObj->isAttributeOf),'getUri');
+                $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(Utils::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. Utils::namespaceUri($componentObj->isAttributeOf) . "</a>(".(Utils::plainStatus($attributOfStatus->hasStatus)??"Current").")]";
               } else {
                 $content = '<b>Attribute Of</b>: [EMPTY]';
               }
               if (isset($componentObj->codebook->label)) {
-                $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a>]";
+                // $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a>]";
+                $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a>(".Utils::plainStatus($componentObj->codebook->hasStatus).")]";
               } else {
                 $codebook = '<b>CB</b>: [EMPTY]';
               }
@@ -943,7 +948,7 @@ public static function buildSlotElements($containerUri, $api, $renderMode = 'tab
           $item['priority'],
           // If you need HTML markup in 'element', do: ['data' => $item['element'], 'escape' => FALSE],
           // $item['element'],
-          ['data' => $item['element'], 'escape' => FALSE],
+          ['data' => t($item['element'])],
         ];
       }
 
