@@ -340,15 +340,15 @@ std.manage_sdd_template:
     _permission: 'access content'
     _role: 'content_editor'
 
-reviewer.divider1:
-  title: '_________________________________'
-  parent: reviewer.uploadingest_review
-  menu_name: main
-  weight: 15
-  route_name: '<none>'
-  requirements:
-    _permission: 'access content'
-    _role: 'content_editor'
+# reviewer.divider1:
+#   title: '_________________________________'
+#   parent: reviewer.uploadingest_review
+#   menu_name: main
+#   weight: 15
+#   route_name: '<none>'
+#   requirements:
+#     _permission: 'access content'
+#     _role: 'content_editor'
 
 reviewer.manage_ins_files_dp2:
   title: Manage DP2 Templates
