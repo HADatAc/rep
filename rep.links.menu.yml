@@ -139,9 +139,8 @@ reviewer.top_level:
   menu_name: main
   weight: 100
   requirements:
-    _permission: 'access content'
     _role: 'content_editor'
-  expand: TRUE
+
 
 reviewer.elements_review:
   title: Review Content
@@ -153,7 +152,7 @@ reviewer.elements_review:
   requirements:
     _permission: 'access content'
     _role: 'content_editor'
-  expand: TRUE
+
 
 reviewer.instruments:
   title: Simulators
@@ -271,7 +270,7 @@ reviewer.uploadingest_review:
   requirements:
     _permission: 'access content'
     _role: 'content_editor'
-  expand: TRUE
+
 
 reviewer.manage_ins_files:
   title: Manage INS Templates
@@ -288,7 +287,7 @@ reviewer.manage_ins_files:
   weight: 10
   requirements:
     _permission: 'access content'
-    _role: 'authenticated'
+    _role: 'content_editor'
 
 std.manage_dsg_template:
   title: Manage DSG Templates
@@ -305,7 +304,7 @@ std.manage_dsg_template:
   weight: 12
   requirements:
     _permission: 'access content'
-    _role: 'authenticated'
+    _role: 'content_editor'
 
 std.manage_dd_template:
   title: Manage DD Templates
@@ -322,7 +321,7 @@ std.manage_dd_template:
   weight: 13
   requirements:
     _permission: 'access content'
-    _role: 'authenticated'
+    _role: 'content_editor'
 
 std.manage_sdd_template:
   title: Manage SDD Templates
@@ -339,7 +338,7 @@ std.manage_sdd_template:
   weight: 14
   requirements:
     _permission: 'access content'
-    _role: 'authenticated'
+    _role: 'content_editor'
 
 reviewer.divider1:
   title: '_________________________________'
@@ -349,7 +348,7 @@ reviewer.divider1:
   route_name: '<none>'
   requirements:
     _permission: 'access content'
-    _role: 'authenticated'
+    _role: 'content_editor'
 
 reviewer.manage_ins_files_dp2:
   title: Manage DP2 Templates
@@ -366,7 +365,7 @@ reviewer.manage_ins_files_dp2:
   weight: 16
   requirements:
     _permission: 'access content'
-    _role: 'authenticated'
+    _role: 'content_editor'
 
 reviewer.manage_ins_files_str:
   title: Manage STR Templates
@@ -383,7 +382,7 @@ reviewer.manage_ins_files_str:
   weight: 17
   requirements:
     _permission: 'access content'
-    _role: 'authenticated'
+    _role: 'content_editor'
 
 
 # OPTION 3
@@ -396,8 +395,8 @@ reviewer.generate_review:
   weight: 30
   requirements:
     _permission: 'access content'
-    _role: 'authenticated'
-  expand: TRUE
+    _role: 'content_editor'
+
 
 reviewer.generate_ins_file:
   title: INS
@@ -408,4 +407,4 @@ reviewer.generate_ins_file:
   weight: 10
   requirements:
     _permission: 'access content'
-    _role: 'authenticated'
+    _role: 'content_editor'
