@@ -91,6 +91,15 @@ class Utils {
       case "deployment":
         $short = Constant::PREFIX_DEPLOYMENT;
         break;
+      case "actuator":
+        $short = Constant::PREFIX_ACTUATOR;
+        break;
+      case "actuatorinstance":
+        $short = Constant::PREFIX_ACTUATOR_INSTANCE;
+        break;
+      case "actuatorstem":
+        $short = Constant::PREFIX_ACTUATOR_STEM;
+        break;
       case "detector":
         $short = Constant::PREFIX_DETECTOR;
         break;
@@ -366,11 +375,11 @@ class Utils {
   }
 
   public static function elementTypeModule($elementtype) {
-    $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'processstem', 'process'];
+    $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'actuatorstem', 'actuator', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'processstem', 'process'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];
-    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance',  'deployment'];
+    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance', 'actuatorinstance', 'deployment'];
     $meugrafo = ['kgr','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
