@@ -452,42 +452,43 @@ class REPSelectMTForm extends FormBase {
         //     'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
         //   ],
         // ];
-        $form['ingest_mt_current'] = [
-          '#type' => 'submit',
-          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected'/* as Current'*/),
-          '#name' => 'ingest_mt_current',
-          '#attributes' => [
-            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-          ],
-        ];
-      } else {
         $form['ingest_mt'] = [
           '#type' => 'submit',
-          '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected'),
+          '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected as Draft'),
           '#name' => 'ingest_mt_draft',
           '#attributes' => [
             'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
           ],
         ];
+        $form['ingest_mt_current'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Current'),
+          '#name' => 'ingest_mt_current',
+          '#attributes' => [
+            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+          ],
+        ];
+
+        $form['uningest_mt'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Uningest ' . $this->plural_class_name . ' Selected'),
+          '#name' => 'uningest_mt',
+          '#attributes' => [
+            'class' => ['btn', 'btn-primary', 'uningest_mt-element-button'],
+          ],
+        ];
       }
-    } else {
-      $form['ingest_mt'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected'),
-        '#name' => 'ingest_mt',
-        '#attributes' => [
-          'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-        ],
-      ];
-    }
-    $form['uningest_mt'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Uningest ' . $this->plural_class_name . ' Selected'),
-      '#name' => 'uningest_mt',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'uningest_mt-element-button'],
-      ],
-    ];
+    // } else {
+    //   $form['ingest_mt'] = [
+    //     '#type' => 'submit',
+    //     '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected'),
+    //     '#name' => 'ingest_mt',
+    //     '#attributes' => [
+    //       'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+    //     ],
+    //   ];
+  	}
+
     $form['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
