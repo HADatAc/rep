@@ -139,22 +139,21 @@ reviewer.top_level:
   menu_name: main
   weight: 100
   requirements:
-    _review_access: 'TRUE'
+    _permission: 'access content'
+    _role: 'content_editor'
+  expand: TRUE
 
-# reviewer.processes:
-#   title: Processes
-#   description: Manage Processes Reviews
-#   menu_name: main
-#   route_name: sir.select_review_element
-#   route_parameters:
-#     elementtype: 'process'
-#     page: '1'
-#     pagesize: '9'
-#   parent: reviewer.top_level
-#   weight: 30
-#   requirements:
-#     _review_access: 'TRUE'
-
+reviewer.elements_review:
+  title: Review Content
+  description: ''
+  menu_name: main
+  route_name: '<none>'
+  parent: reviewer.top_level
+  weight: 10
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+  expand: TRUE
 
 reviewer.instruments:
   title: Simulators
@@ -165,10 +164,11 @@ reviewer.instruments:
     elementtype: 'instrument'
     page: '1'
     pagesize: '9'
-  parent: reviewer.top_level
+  parent: reviewer.elements_review
   weight: 10
   requirements:
-    _review_access: 'TRUE'
+    _permission: 'access content'
+    _role: 'content_editor'
 
 reviewer.detectorsstem:
   title: Detector Stems
@@ -179,10 +179,11 @@ reviewer.detectorsstem:
     elementtype: 'detectorstem'
     page: '1'
     pagesize: '9'
-  parent: reviewer.top_level
+  parent: reviewer.elements_review
   weight: 20
   requirements:
-    _review_access: 'TRUE'
+    _permission: 'access content'
+    _role: 'content_editor'
 
 reviewer.detectors:
   title: Detectors
@@ -193,10 +194,11 @@ reviewer.detectors:
     elementtype: 'detector'
     page: '1'
     pagesize: '9'
-  parent: reviewer.top_level
+  parent: reviewer.elements_review
   weight: 30
   requirements:
-    _review_access: 'TRUE'
+    _permission: 'access content'
+    _role: 'content_editor'
 
 reviewer.actuatorstem:
   title: Actuator Stems
@@ -207,10 +209,11 @@ reviewer.actuatorstem:
     elementtype: 'actuatorstem'
     page: '1'
     pagesize: '9'
-  parent: reviewer.top_level
+  parent: reviewer.elements_review
   weight: 40
   requirements:
-    _review_access: 'TRUE'
+    _permission: 'access content'
+    _role: 'content_editor'
 
 reviewer.actuators:
   title: Actuators
@@ -221,10 +224,11 @@ reviewer.actuators:
     elementtype: 'actuator'
     page: '1'
     pagesize: '9'
-  parent: reviewer.top_level
+  parent: reviewer.elements_review
   weight: 50
   requirements:
-    _review_access: 'TRUE'
+    _permission: 'access content'
+    _role: 'content_editor'
 
 reviewer.codebooks:
   title: Codebooks
@@ -235,10 +239,11 @@ reviewer.codebooks:
     elementtype: 'codebook'
     page: '1'
     pagesize: '9'
-  parent: reviewer.top_level
+  parent: reviewer.elements_review
   weight: 60
   requirements:
-    _review_access: 'TRUE'
+    _permission: 'access content'
+    _role: 'content_editor'
 
 reviewer.response_options:
   title: Response Options
@@ -249,7 +254,158 @@ reviewer.response_options:
     elementtype: 'responseoption'
     page: '1'
     pagesize: '9'
-  parent: reviewer.top_level
+  parent: reviewer.elements_review
   weight: 70
   requirements:
-    _review_access: 'TRUE'
+    _permission: 'access content'
+    _role: 'content_editor'
+
+# OPTION 2
+reviewer.uploadingest_review:
+  title: Upload and Ingest MT's
+  description: ''
+  menu_name: main
+  route_name: '<none>'
+  parent: reviewer.top_level
+  weight: 20
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+  expand: TRUE
+
+reviewer.manage_ins_files:
+  title: Manage INS Templates
+  description: Manage INS Templates
+  route_name: rep.select_mt_element
+  route_parameters:
+    elementtype: 'ins'
+    mode: 'table'
+    page: '1'
+    pagesize: '9'
+    studyuri: 'none'
+  parent: reviewer.uploadingest_review
+  menu_name: main
+  weight: 10
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+std.manage_dsg_template:
+  title: Manage DSG Templates
+  description: Manage DSG Templates
+  route_name: rep.select_mt_element
+  route_parameters:
+    elementtype: 'dsg'
+    mode: 'table'
+    page: '1'
+    pagesize: '9'
+    studyuri: 'none'
+  parent: reviewer.uploadingest_review
+  menu_name: main
+  weight: 12
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+std.manage_dd_template:
+  title: Manage DD Templates
+  description: Manage DD Templates
+  route_name: rep.select_mt_element
+  route_parameters:
+    elementtype: 'dd'
+    mode: 'table'
+    page: '1'
+    pagesize: '9'
+    studyuri: 'none'
+  parent: reviewer.uploadingest_review
+  menu_name: main
+  weight: 13
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+std.manage_sdd_template:
+  title: Manage SDD Templates
+  description: Manage SDD Templates
+  route_name: rep.select_mt_element
+  route_parameters:
+    elementtype: 'sdd'
+    mode: 'table'
+    page: '1'
+    pagesize: '9'
+    studyuri: 'none'
+  parent: reviewer.uploadingest_review
+  menu_name: main
+  weight: 14
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+reviewer.divider1:
+  title: '_________________________________'
+  parent: reviewer.uploadingest_review
+  menu_name: main
+  weight: 15
+  route_name: '<none>'
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+reviewer.manage_ins_files_dp2:
+  title: Manage DP2 Templates
+  description: Manage DP2 Templates
+  route_name: rep.select_mt_element
+  route_parameters:
+    elementtype: 'dp2'
+    mode: 'table'
+    page: '1'
+    pagesize: '9'
+    studyuri: 'none'
+  parent: reviewer.uploadingest_review
+  menu_name: main
+  weight: 16
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+reviewer.manage_ins_files_str:
+  title: Manage STR Templates
+  description: Manage STR Templates
+  route_name: rep.select_mt_element
+  route_parameters:
+    elementtype: 'str'
+    mode: 'table'
+    page: '1'
+    pagesize: '9'
+    studyuri: 'none'
+  parent: reviewer.uploadingest_review
+  menu_name: main
+  weight: 17
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+
+# OPTION 3
+reviewer.generate_review:
+  title: Generate MT's
+  description: ''
+  menu_name: main
+  route_name: '<none>'
+  parent: reviewer.top_level
+  weight: 30
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+  expand: TRUE
+
+reviewer.generate_ins_file:
+  title: INS
+  description: Generate INS File
+  route_name: sir.generate_ins
+  parent: reviewer.generate_review
+  menu_name: main
+  weight: 10
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
