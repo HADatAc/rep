@@ -929,7 +929,7 @@ public static function buildSlotElements($containerUri, $api, $renderMode = 'tab
         // Insert a row that says "Sub-container: X"
         $rows[] = [
           [
-            'data' => t('<strong>Sub-container: @label</strong>', ['@label' => $item['label']]),
+            'data' => t('Sub-container: <strong>@label</strong>', ['@label' => $item['label']]),
             'colspan' => 4,  // Spans all columns
             'class' => ['subcontainer-title'], // Optional CSS class
           ],
@@ -971,7 +971,7 @@ public static function buildSlotElements($containerUri, $api, $renderMode = 'tab
         if (empty($item['children']) && $item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
           $rows[] = [
             [
-              'data' => t('<span style="padding-left:50px;"><em>Sub-container do not have elements</em></span>'),
+              'data' => t('<span style="padding-left:50px;"><em>Sub-container has no elements!</em></span>'),
               'colspan' => 4,
             ],
           ];
