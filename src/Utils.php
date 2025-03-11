@@ -819,7 +819,7 @@ public static function buildSlotElements($containerUri, $api, $renderMode = 'tab
       elseif ($typeUri === VSTOI::CONTAINER_SLOT) {
         // Possibly a container slot with a component
         // (detector, actuator, or even another subcontainer)
-        $item['element'] = 'ContainerSlot content here...'; // Adjust as needed
+        $item['element'] = 'No element was added to slot.'; // Adjust as needed
 
         if (!empty($slotElement->hasComponent)) {
           // 1. Get the "component" data
