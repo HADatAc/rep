@@ -129,7 +129,7 @@ rep.admin_settings_link:
 #
 
 reviewer.top_level:
-  title: Reviewer
+  title: Reviewer Operations
   description: Manage Reviews
   route_name: sir.select_review_element
   route_parameters:
@@ -261,7 +261,7 @@ reviewer.response_options:
 
 # OPTION 2
 reviewer.uploadingest_review:
-  title: Upload and Ingest MT's
+  title: Upload and Ingest MTs
   description: ''
   menu_name: main
   route_name: '<none>'
@@ -273,7 +273,7 @@ reviewer.uploadingest_review:
 
 
 reviewer.manage_ins_files:
-  title: Manage INS Templates
+  title: INS Templates
   description: Manage INS Templates
   route_name: rep.select_mt_element
   route_parameters:
@@ -290,7 +290,7 @@ reviewer.manage_ins_files:
     _role: 'content_editor'
 
 std.manage_dsg_template:
-  title: Manage DSG Templates
+  title: DSG Templates
   description: Manage DSG Templates
   route_name: rep.select_mt_element
   route_parameters:
@@ -307,7 +307,7 @@ std.manage_dsg_template:
     _role: 'content_editor'
 
 std.manage_dd_template:
-  title: Manage DD Templates
+  title: DD Templates
   description: Manage DD Templates
   route_name: rep.select_mt_element
   route_parameters:
@@ -324,7 +324,7 @@ std.manage_dd_template:
     _role: 'content_editor'
 
 std.manage_sdd_template:
-  title: Manage SDD Templates
+  title: SDD Templates
   description: Manage SDD Templates
   route_name: rep.select_mt_element
   route_parameters:
@@ -351,7 +351,7 @@ std.manage_sdd_template:
 #     _role: 'content_editor'
 
 reviewer.manage_ins_files_dp2:
-  title: Manage DP2 Templates
+  title: DP2 Templates
   description: Manage DP2 Templates
   route_name: rep.select_mt_element
   route_parameters:
@@ -368,7 +368,7 @@ reviewer.manage_ins_files_dp2:
     _role: 'content_editor'
 
 reviewer.manage_ins_files_str:
-  title: Manage STR Templates
+  title: STR Templates
   description: Manage STR Templates
   route_name: rep.select_mt_element
   route_parameters:
@@ -387,7 +387,7 @@ reviewer.manage_ins_files_str:
 
 # OPTION 3
 reviewer.generate_review:
-  title: Generate MT's
+  title: Generate MTs
   description: ''
   menu_name: main
   route_name: '<none>'
