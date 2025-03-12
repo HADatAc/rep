@@ -740,7 +740,7 @@ class REPSelectMTForm extends FormBase {
     $triggering_element = $form_state->getTriggeringElement();
     $uri = $triggering_element['#element_uri'];
 
-    $this->performIngest([$uri], $form_state, VSTOI::Draft);
+    $this->performIngest([$uri], $form_state, VSTOI::DRAFT);
   }
 
   /**
@@ -755,7 +755,7 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * ADD CARD
+   * ADD FUNCTION
    */
   protected function performAdd(FormStateInterface $form_state)
   {
@@ -771,7 +771,7 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * EDIT CARD
+   * EDIT FUNCTION
    */
   protected function performEdit($uri, FormStateInterface $form_state)
   {
@@ -787,37 +787,55 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * DELETE CARD
-   */
-  protected function performDelete(array $uris, FormStateInterface $form_state)
-  {
+   * DELETE FUNCTION
+  */
+  protected function performDelete(array $uris, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
+    $file_system = \Drupal::service('file_system');
+
     foreach ($uris as $uri) {
-      $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
-      if ($mt != NULL && $mt->hasDataFile != NULL) {
+        $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
+        if ($mt != NULL && $mt->hasDataFile != NULL) {
 
-        // DELETE FILE
-        if (isset($mt->hasDataFile->id)) {
-          $file = File::load($mt->hasDataFile->id);
-          if ($file) {
-            $file->delete();
-            \Drupal::messenger()->addMessage(t("Archive with ID " . $mt->hasDataFile->id . " deleted."));
-          }
-        }
+            // DELETE FILE
+            if (isset($mt->hasDataFile->id)) {
+                $file = File::load($mt->hasDataFile->id);
+                if ($file) {
+                    // Remove referências do file_usage
+                    \Drupal::service('file.usage')->delete($file, 'custom_module', 'entity_type', $file->id());
 
-        // DELETE DATAFILE
-        if (isset($mt->hasDataFile->uri)) {
-          $api->dataFileDel($mt->hasDataFile->uri);
-          \Drupal::messenger()->addMessage(t("DataFile with URI " . $mt->hasDataFile->uri . " deleted."));
+                    // Obtém o caminho real do ficheiro
+                    $file_path = $file->getFileUri();
+                    $real_path = $file_system->realpath($file_path);
+
+                    // Eliminar o ficheiro fisicamente
+                    if ($real_path && file_exists($real_path)) {
+                        $file_system->delete($file_path);
+                    }
+
+                    // Remover da base de dados
+                    \Drupal::database()->delete('file_managed')->condition('fid', $file->id())->execute();
+
+                    // Irrelevant info for user
+                    // \Drupal::messenger()->addMessage(t("File with ID " . $mt->hasDataFile->id . " deleted."));
+                }
+            }
+
+            // DELETE DATAFILE
+            if (isset($mt->hasDataFile->uri)) {
+                $api->dataFileDel($mt->hasDataFile->uri);
+                \Drupal::messenger()->addMessage(t("DataFile with URI " . $mt->hasDataFile->uri . " deleted."));
+            }
         }
-      }
     }
+
     \Drupal::messenger()->addMessage(t("The " . $this->plural_class_name . " selected were deleted successfully."));
+    \Drupal::service('cache.default')->invalidateAll();
     $form_state->setRebuild();
   }
 
   /**
-   * INGEST CARD
+   * INGEST FUNCTION
    */
   protected function performIngest(array $uris, FormStateInterface $form_state, String $status) {
     $api = \Drupal::service('rep.api_connector');
@@ -840,7 +858,7 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * UNINGEST CARD
+   * UNINGEST FUNCTION
    */
   protected function performUningest(array $uris, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
