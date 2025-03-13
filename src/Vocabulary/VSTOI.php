@@ -33,6 +33,8 @@
     const SUBCONTAINER                    = VSTOI::VSTOI . "Subcontainer";
     const PROCESS_STEM                    = VSTOI::VSTOI . "ProcessStem";
     const PROCESS                         = VSTOI::VSTOI . "Process";
+    const TASK                            = VSTOI::VSTOI . "Task";
+
 
     /*
      *    PROPERTIES
