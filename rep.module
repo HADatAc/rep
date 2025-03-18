@@ -4,6 +4,7 @@ use Drupal\Core\Database\Database;
 use Drupal\Core\Path\AliasStorageInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Form\FormStateInterface;
 
 /**
  * Implements hook_install().
@@ -47,13 +48,13 @@ function rep_install() {
  * Implements hook_form_alter().
  */
 function rep_form_alter(&$form, &$form_state, $form_id) {
-    // Check if the form ID matches your configuration form.
-    if ($form_id == 'rep_form_namespace' ||
-        $form_id == 'rep_form_preferred_names' ||
-        $form_id == 'rep_form_update_namespace') {
-        // Remove the default "Save configuration" button.
-      unset($form['actions']['submit']);
-    }
+  // Check if the form ID matches your configuration form.
+  if ($form_id == 'rep_form_namespace' ||
+      $form_id == 'rep_form_preferred_names' ||
+      $form_id == 'rep_form_update_namespace') {
+      // Remove the default "Save configuration" button.
+    unset($form['actions']['submit']);
+  }
 }
 
 /**
