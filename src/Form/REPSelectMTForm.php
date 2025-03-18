@@ -457,6 +457,7 @@ class REPSelectMTForm extends FormBase {
           '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected as Draft'),
           '#name' => 'ingest_mt_draft',
           '#attributes' => [
+            'onclick' => 'if(!confirm("Really Ingest file has DRAFT?")){return false;}',
             'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
           ],
         ];
@@ -465,6 +466,7 @@ class REPSelectMTForm extends FormBase {
           '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Current'),
           '#name' => 'ingest_mt_current',
           '#attributes' => [
+            'onclick' => 'if(!confirm("Really Ingest file has CURRENT?")){return false;}',
             'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
           ],
         ];
