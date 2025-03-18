@@ -759,7 +759,7 @@ div.toast {
   width: calc(100% - 30%) !important; /* 15% de margem em ambos os lados */
   left: 25% !important;
   right: 25% !important;
-  top: 5% !important; /* Para dar algum espaço no topo */
+  top: 10% !important; /* Para dar algum espaço no topo */
   transform: none !important; /* Remove qualquer transformação de centralização automática */
   max-width: 1000px; /* Limita a largura máxima, se necessário */
 }

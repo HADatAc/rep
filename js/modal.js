@@ -59,7 +59,7 @@
             width: 800,
             modal: true,
             close: function () {
-              const currentelementtype = $(this).data('elementtype') || ['desconhecido'];
+              const currentelementtype = $(this).data('elementtype') || ['unknown'];
 
               const initialValue = $(this).data('initial-value');
               if (initialValue) {
