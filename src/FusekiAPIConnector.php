@@ -1209,6 +1209,12 @@ class FusekiAPIConnector {
   }
 
   public function repoUpdateNamespace($api_url, $prefix, $url, $mime, $source) {
+    if ($mime == '') {
+      $mime = '_';
+    }
+    if ($source == '') {
+      $source = '_';
+    }
     $endpoint = "/hascoapi/api/repo/namespace/default/".
       rawurlencode($prefix)."/".
       rawurlencode($url)."/".

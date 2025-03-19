@@ -105,6 +105,9 @@ class Utils {
       case "dsg":
         $short = Constant::PREFIX_DSG;
         break;
+      case "fundingscheme":
+        $short = Constant::PREFIX_FUNDING_SCHEME;
+        break;
       case "ins":
         $short = Constant::PREFIX_INS;
         break;
@@ -134,6 +137,9 @@ class Utils {
         break;
       case "postaladdress":
         $short = Constant::PREFIX_POSTAL_ADDRESS;
+        break;
+      case "project":
+        $short = Constant::PREFIX_PROJECT;
         break;
       case "responseoption":
         $short = Constant::PREFIX_RESPONSE_OPTION;
