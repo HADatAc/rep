@@ -48,7 +48,7 @@ class ListKeywordLanguagePage {
     $api = \Drupal::service('rep.api_connector');
     $elements = $api->parseObjectResponse($api->listByManagerEmail($elementtype,$manageremail,$pagesize,$offset),'listByManagerEmail');
 
-    dpm($elements);
+    // dpm($elements);
 
     return $elements;
 
