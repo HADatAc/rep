@@ -4,6 +4,7 @@ package: Semantic Tools
 core_version_requirement: ^9 || ^10
 dependencies:
   - drupal:key
+  - drupal:user
 type: module
 version: '0.8.0'
 configure: rep.admin_settings

@@ -8,7 +8,7 @@ rep.home:
   requirements:
     _permission: 'access content'
 
-# Main menu options 
+# Main menu options
 
 rep.describe_element:
   path: 'rep/uri/{elementuri}'
@@ -16,9 +16,9 @@ rep.describe_element:
     _form: '\Drupal\rep\Form\DescribeForm'
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
 
-# Element URI 
+# Element URI
 
 rep.element_uri:
   path: 'rep/uriform'
@@ -26,7 +26,7 @@ rep.element_uri:
     _form: '\Drupal\rep\Form\UriForm'
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
 
@@ -43,7 +43,7 @@ rep.search:
     pagesize: '12'
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
 
@@ -56,7 +56,7 @@ rep.back_url:
     _title: "Record previous URL"
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
 
 # Delete Element
 
@@ -67,7 +67,7 @@ rep.delete_element:
     _title: "Delete Element"
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'  
+    _custom_access_check: 'TRUE'
 
 # List/Select Element
 
@@ -77,7 +77,7 @@ rep.list_element:
     _form: '\Drupal\rep\Form\REPInfiniteListForm'
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
 
@@ -87,17 +87,17 @@ rep.select_element:
     _form: '\Drupal\rep\Form\REPSelectForm'
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
-    
+
 rep.select_mt_element:
   path: 'rep/select/mt/{elementtype}/{mode}/{page}/{pagesize}/{studyuri}'
   defaults:
     _form: '\Drupal\rep\Form\REPSelectMTForm'
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
 
@@ -109,7 +109,7 @@ rep.browse_tree:
     _form: '\Drupal\rep\Form\TreeForm'
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
 
@@ -121,11 +121,35 @@ rep.get_child:
   requirements:
     _permission: 'access content'
 
+rep.get_subclasskeyword:
+  path: '/rep/subclasskeyword'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getSubclassesKeyword'
+    _title: 'Search Sub Class Nodes'
+  requirements:
+    _permission: 'access content'
+
+rep.get_superclass:
+  path: '/rep/getsuperclasses'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getSuperClasses'
+    _title: 'Search Super Class nodes'
+  requirements:
+    _permission: 'access content'
+
 rep.get_node:
   path: '/rep/getnode'
   defaults:
     _controller: '\Drupal\rep\Controller\TreeController::getNode'
     _title: 'Get Node'
+  requirements:
+    _permission: 'access content'
+
+rep.tree_form:
+  path: '/rep/tree-form/{mode}/{elementtype}'
+  defaults:
+    _form: '\Drupal\rep\Form\TreeForm'
+    _title: 'Tree Form'
   requirements:
     _permission: 'access content'
 
@@ -135,10 +159,10 @@ rep.add_mt:
   path: 'rep/manage/addmt/{elementtype}/{studyuri}/{fixstd}'
   defaults:
     _form: '\Drupal\rep\Form\AddMTForm'
-    # _title: 'Add Metadata Template'    
+    # _title: 'Add Metadata Template'
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
     parameters:
@@ -150,10 +174,10 @@ rep.edit_mt:
   path: 'std/manage/editmt/{elementtype}/{elementuri}/{fixstd}'
   defaults:
     _form: '\Drupal\rep\Form\EditMTForm'
-    # _title: 'Edit Metadata Template'    
+    # _title: 'Edit Metadata Template'
   requirements:
-    _permission: 'access content'  
-    _custom_access_check: 'TRUE'      
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
 
@@ -166,7 +190,7 @@ rep.datafile_showlog:
     _title: "Data File's Log"
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
 
 rep.datafile_download:
   path: 'rep/download/{datafileuri}'
@@ -175,7 +199,7 @@ rep.datafile_download:
     _title: "Data File's Download"
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
 
 # Configuration option
 
@@ -238,10 +262,10 @@ rep.repo_info:
   path: 'rep/repo/info'
   defaults:
     _form: '\Drupal\rep\Form\RepoInfoForm'
-    _title: 'Current Repository Configuration'    
+    _title: 'Current Repository Configuration'
   requirements:
     _permission: 'access content'
-    _custom_access_check: 'TRUE'    
+    _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
 

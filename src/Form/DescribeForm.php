@@ -82,6 +82,8 @@
       $message = "<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>";
     }
 
+    //dpm($this->getElement());
+
     // Instantiate tables
     $tables = new Tables;
 
@@ -101,14 +103,24 @@
       }
     }
 
+    // $form['submit'] = [
+    //   '#type' => 'submit',
+    //   '#value' => $this->t('Back'),
+    //   '#name' => 'back',
+    //   '#attributes' => [
+    //     'class' => ['btn', 'btn-primary', 'back-button'],
+    //   ],
+    // ];
     $form['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Back'),
       '#name' => 'back',
       '#attributes' => [
         'class' => ['btn', 'btn-primary', 'back-button'],
+        'onclick' => 'if(window.opener){ window.opener.focus(); window.close(); return false; } else { return true; }',
       ],
     ];
+
     $form['space'] = [
       '#type' => 'markup',
       '#markup' => $this->t("<br><br>"),
@@ -143,13 +155,17 @@
   }
 
   function backUrl() {
-    $uid = \Drupal::currentUser()->id();
-    $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.describe_element');
-    if ($previousUrl) {
-      $response = new RedirectResponse($previousUrl);
-      $response->send();
-      return;
-    }
+    // $uid = \Drupal::currentUser()->id();
+    // $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.describe_element');
+    // if ($previousUrl) {
+    //   $response = new RedirectResponse($previousUrl);
+    //   $response->send();
+    //   return;
+    // }
+    $url = Url::fromRoute('rep.element_uri')->toString();
+    $response = new RedirectResponse($url);
+    $response->send();
+    return;
   }
 
  }

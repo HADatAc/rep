@@ -22,7 +22,7 @@ class LandingPage extends FormBase {
      */
     public function getFormId() {
         return "rep_landing_page";
-        
+
     }
 
 
@@ -31,10 +31,10 @@ class LandingPage extends FormBase {
      */
 
      public function buildForm(array $form, FormStateInterface $form_state){
-        
+
         $form['rep_home'] = [
             '#type' => 'item',
-            '#title' => '<br>This is an instance of the <a href="http://hadatac.org/software/hascoapp/">HAScO App</a> knowledge repository ' . 
+            '#title' => '<br>This is an instance of the <a href="http://hadatac.org/software/hascoapp/">HAScO App</a> knowledge repository ' .
                 'developed by <a href="http://hadatac.org/">HADatAc.org</a> community.<br>',
         ];
 
@@ -59,11 +59,13 @@ class LandingPage extends FormBase {
 
         $totalsInst = '<h3>Instrument Elements</h3>';
         $totalsInst .= '<ul>';
-        $totalsInst .=  '<li> ' . About::total('ins') . ' <a href="'.Utils::selectBackUrl('ins')->toString().'">INS(s)</a> (MT)</li>'; 
-        $totalsInst .=  '<li> ' . About::total('instrument') . ' <a href="'.Utils::selectBackUrl('instrument')->toString().'">instrument(s)</a></li>'; 
+        $totalsInst .=  '<li> ' . About::total('ins') . ' <a href="'.Utils::selectBackUrl('ins')->toString().'">INS(s)</a> (MT)</li>';
+        $totalsInst .=  '<li> ' . About::total('instrument') . ' <a href="'.Utils::selectBackUrl('instrument')->toString().'">instrument(s)</a></li>';
+        $totalsInst .=  '<li> ' . About::total('processstem') . ' <a href="'.Utils::selectBackUrl('processstem')->toString().'">process stem(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('detectorstem') . ' <a href="'.Utils::selectBackUrl('detectorstem')->toString().'">detector stem(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('detector') . ' <a href="'.Utils::selectBackUrl('detector')->toString().'">detector(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('codebook') . ' <a href="'.Utils::selectBackUrl('codebook')->toString().'">codebook(s)</a></li>';
+        $totalsInst .=  '<li> ' . About::total('process') . ' <a href="'.Utils::selectBackUrl('process')->toString().'">process(es)</a></li>';
         $totalsInst .=  '<li> ' . About::total('responseoption') . ' <a href="'.Utils::selectBackUrl('responseoption')->toString().'">response option(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('annotationstem') . ' <a href="'.Utils::selectBackUrl('annotationstem')->toString().'">annotation stem(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('annotation') . ' <a href="'.Utils::selectBackUrl('annotation')->toString().'">annotation(s)</a></li>';
@@ -77,7 +79,7 @@ class LandingPage extends FormBase {
                 '#markup' => '<div class="card"><div class="card-body">' . $totalsInst . '</div></div>',
             ),
         );
-        
+
         $form['row']['column1']['filler'] = [
             '#type' => 'markup',
             '#markup' => '<br><br><br><br>',
@@ -86,14 +88,14 @@ class LandingPage extends FormBase {
         $totalsStudy = '<h3>Study Elements</h3>';
         $totalsStudy .= '<ul>';
         $totalsStudy .=  '<li> ' . About::total('dsg') . ' <a href="'.Utils::selectBackUrl('dsg')->toString().'">DSG(s)</a> (MT)</li>';
-        $totalsStudy .=  '<li> ' . About::total('dd') . ' <a href="'.Utils::selectBackUrl('dd')->toString().'">DDs</a> (MT)</li>'; 
+        $totalsStudy .=  '<li> ' . About::total('dd') . ' <a href="'.Utils::selectBackUrl('dd')->toString().'">DDs</a> (MT)</li>';
         $totalsStudy .=  '<li> ' . About::total('sdd') . ' <a href="'.Utils::selectBackUrl('sdd')->toString().'">SDD(s)</a> (MT)</li>';
-        $totalsStudy .=  '<li> ' . About::total('study') . ' <a href="'.Utils::selectBackUrl('study')->toString().'">study(ies)</a></li>'; 
+        $totalsStudy .=  '<li> ' . About::total('study') . ' <a href="'.Utils::selectBackUrl('study')->toString().'">study(ies)</a></li>';
         $totalsStudy .=  '<li> ' . About::total('studyrole') . ' <a href="'.Utils::selectBackUrl('studyrole')->toString().'">studyrole(s)</a></li>';
         $totalsStudy .=  '<li> ' . About::total('virtualcolumn') . ' <a href="'.Utils::selectBackUrl('virtualcolumn')->toString().'">virtualcolumn(s)</a></li>';
-        $totalsStudy .=  '<li> ' . About::total('studyobjectcollection') . ' <a href="'.Utils::selectBackUrl('studyobjectcollection')->toString().'">studyobjectcollection(s)</a></li>'; 
+        $totalsStudy .=  '<li> ' . About::total('studyobjectcollection') . ' <a href="'.Utils::selectBackUrl('studyobjectcollection')->toString().'">studyobjectcollection(s)</a></li>';
         $totalsStudy .=  '<li> ' . About::total('studyobject') . ' <a href="'.Utils::selectBackUrl('studyobject')->toString().'">studyobject(s)</a></li>';
-        $totalsStudy .= '</ul>';        
+        $totalsStudy .= '</ul>';
 
         $form['row']['column1']['card2'] = array(
             '#type' => 'container',
@@ -104,7 +106,7 @@ class LandingPage extends FormBase {
             ),
         );
 
-        
+
         $module_handler = \Drupal::service('module_handler');
 
         $module_path = "";
@@ -117,8 +119,8 @@ class LandingPage extends FormBase {
 
         //
         // SECOND COLUMN: MAIN IMAGE
-        // 
-        
+        //
+
         $form['row']['column2'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-4')),
@@ -130,7 +132,7 @@ class LandingPage extends FormBase {
 
         //
         // THIRD COLUMN: MAIN IMAGE
-        // 
+        //
 
         $form['row']['column3'] = array(
             '#type' => 'container',
@@ -154,7 +156,7 @@ class LandingPage extends FormBase {
             '#attributes' => array('class' => array('col-md-12')),
             'card' => array(
                 '#type' => 'markup',
-                '#markup' => '<div class="card"><div class="card-body">' . $totalsDeploy . '</div></div>', 
+                '#markup' => '<div class="card"><div class="card-body">' . $totalsDeploy . '</div></div>',
             ),
         );
 
@@ -167,32 +169,32 @@ class LandingPage extends FormBase {
         $totalsData .= '<h5>Data Content</h5>';
         $totalsData .= '<ul>';
         $totalsData .=  '<li> ' . About::total('da') . ' <a href="'.Utils::selectBackUrl('da')->toString().'">dataset\'s data file(s)</a></li>';
-        $totalsData .=  '<li> ' . About::total('value') . ' <a href="'.Utils::selectBackUrl('da')->toString().'">data value(s)</a></li>'; 
+        $totalsData .=  '<li> ' . About::total('value') . ' <a href="'.Utils::selectBackUrl('da')->toString().'">data value(s)</a></li>';
         $totalsData .= '</ul>';
         $totalsData .= '<h5>Data Semantics</h5>';
         $totalsData .= '<ul>';
         $totalsData .=  '<li> ' . About::total('sdd') . ' <a href="'.Utils::selectBackUrl('sdd')->toString().'">semantic data dictionary(ies)</a> (MT)</li>';
-        $totalsData .=  '<li> ' . About::total('semanticvariable') . ' <a href="'.Utils::selectBackUrl('semanticvariable')->toString().'">semantic variable(s)</a></li>'; 
+        $totalsData .=  '<li> ' . About::total('semanticvariable') . ' <a href="'.Utils::selectBackUrl('semanticvariable')->toString().'">semantic variable(s)</a></li>';
         $totalsData .=  '<li> ' . About::total('entity') . ' <a href="'.Utils::selectBackUrl('entity')->toString().'">entity(ies)</a></li>';
         $totalsData .=  '<li> ' . About::total('attribute') . ' <a href="'.Utils::selectBackUrl('attribute')->toString().'">attribute(s)</a></li>';
         $totalsData .=  '<li> ' . About::total('unit') . ' <a href="'.Utils::selectBackUrl('unit')->toString().'">unit(s)</a></li>';
         $totalsData .= '</ul>';
-        
+
         // Define each card individually
         $form['row']['column3']['card4'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-12')),
             'card' => array(
                 '#type' => 'markup',
-                '#markup' => '<div class="card"><div class="card-body">' . $totalsData . '</div></div>', 
+                '#markup' => '<div class="card"><div class="card-body">' . $totalsData . '</div></div>',
             ),
         );
 
         //
         // FORTH COLUMN: ONTOLOGIES AND SOCIAL GRAPH
-        // 
+        //
 
-        // Second row with 3 cards 
+        // Second row with 3 cards
         $form['row']['column4'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-4')),
@@ -238,7 +240,7 @@ class LandingPage extends FormBase {
             '#attributes' => array('class' => array('col-md-12')),
             'card' => array(
                 '#type' => 'markup',
-                '#markup' => '<div class="card"><div class="card-body">' . $ontologies . '</div></div>', 
+                '#markup' => '<div class="card"><div class="card-body">' . $ontologies . '</div></div>',
                 //'<div class="card-footer text-center"><a href="(link)" class="btn btn-secondary">Manage</a></div></div>',
             ),
         );
@@ -257,7 +259,7 @@ class LandingPage extends FormBase {
             '#attributes' => array('class' => array('col-md-12')),
             'card' => array(
                 '#type' => 'markup',
-                '#markup' => '<div class="card"><div class="card-body">' . $totalsSocial . '</div></div>', 
+                '#markup' => '<div class="card"><div class="card-body">' . $totalsSocial . '</div></div>',
                 //'<div class="card-footer text-center"><a href="(link)" class="btn btn-secondary">Manage</a></div></div>',
             ),
         );
@@ -266,11 +268,11 @@ class LandingPage extends FormBase {
             '#type' => 'item',
             '#title' => '<br><br>',
         ];
-      
+
         return $form;
 
      }
-     
+
     /**
     * {@inheritdoc}
     */
@@ -283,7 +285,7 @@ class LandingPage extends FormBase {
       //  $url = Url::fromRoute('rep.home');
       //  $form_state->setRedirectUrl($url);
       //  return;
-      //} 
+      //}
 
     }
 

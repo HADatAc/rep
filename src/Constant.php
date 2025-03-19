@@ -5,6 +5,10 @@ namespace Drupal\rep;
 class Constant {
 
   const DEFAULT_WAS_GENERATED_BY          = "http://hadatac.org/ont/vstoi#Original";
+  const WGB_ORIGINAL                      = "http://hadatac.org/ont/vstoi#Original";
+  const WGB_REFINEMENT                    = "http://hadatac.org/ont/vstoi#Refinement";
+  const WGB_SPECIALIZATION                = "http://hadatac.org/ont/vstoi#Specialization";
+  const WGB_TRANSLATION                   = "http://hadatac.org/ont/vstoi#Translation";
   const DEFAULT_LANGUAGE                  = "en";
   const DEFAULT_INFORMANT                 = "http://hadatac.org/ont/vstoi#Self";
 
@@ -16,13 +20,16 @@ class Constant {
   const PREFIX_DD                         = "DD0";
   const PREFIX_DP2                        = "DP2";
   const PREFIX_DEPLOYMENT                 = "DPL";
+  const PREFIX_ACTUATOR_STEM              = "ACS";
+  const PREFIX_ACTUATOR                   = "ACT";
+  const PREFIX_ACTUATOR_INSTANCE          = "ACI";
   const PREFIX_DETECTOR_STEM              = "DSM";
   const PREFIX_DETECTOR                   = "DTC";
   const PREFIX_DETECTOR_INSTANCE          = "DTI";
   const PREFIX_DSG                        = "DSG";
-  const PREFIX_INSTRUMENT                 = "IS0";
+  const PREFIX_INSTRUMENT                 = "INS";
   const PREFIX_INSTRUMENT_INSTANCE        = "INI";
-  const PREFIX_INS                        = "INS";
+  const PREFIX_INS                        = "INF";
   const PREFIX_ORGANIZATION               = "ORG";
   const PREFIX_PERSON                     = "PER";
   const PREFIX_PLACE                      = "PLC";
@@ -30,6 +37,9 @@ class Constant {
   const PREFIX_PLATFORM_INSTANCE          = "PFI";
   const PREFIX_POSSIBLE_VALUE             = "PSV";
   const PREFIX_POSTAL_ADDRESS             = "PAD";
+  const PREFIX_PROCESS                    = "PC0";
+  const PREFIX_PROCESS_STEM               = "PST";
+  const PREFIX_REQUIRED_INSTRUMENTATION   = "RIN";
   const PREFIX_RESPONSE_OPTION            = "ROP";
   const PREFIX_SDD                        = "SDD";
   const PREFIX_SDD_ATTRIBUTE              = "SDDATT";
@@ -44,6 +54,7 @@ class Constant {
   const PREFIX_STREAM                     = "STM";
   const PREFIX_SUBCONTAINER               = "SCT";
   const PREFIX_VIRTUAL_COLUMN             = "VCO";
+  const PREFIX_TASK                       = "TAS";
 
   const FILE_STATUS_UNPROCESSED           = "UNPROCESSED";
   const FILE_STATUS_PROCESSED             = "PROCESSED";

@@ -7,6 +7,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\rep\ListManagerEmailPage;
 use Drupal\rep\Entity\DataFile;
+use Drupal\file\Entity\File;
 
 class REPSelectForm extends FormBase
 {
@@ -216,27 +217,105 @@ class REPSelectForm extends FormBase
     }
 
     // DELETE ELEMENT
+    // if ($button_name === 'delete_element') {
+    //   if (sizeof($rows) <= 0) {
+    //     \Drupal::messenger()->addMessage(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));
+    //   } else {
+    //     $api = \Drupal::service('rep.api_connector');
+    //     $success = TRUE;
+    //     foreach ($rows as $uri) {
+    //       if ($this->element_type == 'datafile') {
+    //         $resp = $api->parseObjectResponse($api->datafileDel($uri), 'datafileDel');
+    //         if ($resp == NULL) {
+    //           \Drupal::messenger()->addMessage(t("Failed to delete the following " . $this->$single_class_name . ": " . $uri));
+    //           $success = FALSE;
+    //         }
+    //       }
+    //     }
+    //     if ($success) {
+    //       \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));
+    //     }
+    //   }
+    // }
     if ($button_name === 'delete_element') {
       if (sizeof($rows) <= 0) {
-        \Drupal::messenger()->addMessage(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));
+          \Drupal::messenger()->addMessage(t("At least one " . $this->single_class_name . " needs to be selected to be deleted."));
       } else {
-        $api = \Drupal::service('rep.api_connector');
-        $success = TRUE;
-        foreach ($rows as $uri) {
-          if ($this->element_type == 'datafile') {
-            $resp = $api->parseObjectResponse($api->datafileDel($uri), 'datafileDel');
-            if ($resp == NULL) {
-              \Drupal::messenger()->addMessage(t("Failed to delete the following " . $this->$single_class_name . ": " . $uri));
-              $success = FALSE;
-            }
+          $api = \Drupal::service('rep.api_connector');
+          $file_system = \Drupal::service('file_system');
+          $logger = \Drupal::logger('REP'); // Logger for debugging
+          $success = TRUE;
+
+          foreach ($rows as $uri) {
+              if ($this->element_type == 'datafile') {
+                  // $logger->info("Attempting to delete file with URI: " . $uri);
+                  $file = $api->parseObjectResponse($api->getUri($uri), 'getUri');
+                  $resp = $api->parseObjectResponse($api->datafileDel($uri), 'datafileDel');
+
+                  if ($resp == NULL) {
+                      \Drupal::messenger()->addMessage(t("Failed to delete the following " . $this->single_class_name . ": " . $uri));
+                      $logger->error("API response failed for URI: " . $uri);
+                      $success = FALSE;
+                  } else {
+                      // 1. Fetch file ID from the database
+                      $fid = \Drupal::database()->select('file_managed', 'fm')
+                          ->fields('fm', ['fid'])
+                          ->condition('fid', $file->id)
+                          ->execute()
+                          ->fetchField();
+
+                      if ($fid) {
+                          // $logger->info("File found in database with FID: " . $fid);
+                          $file = File::load($fid);
+                          if ($file) {
+                              // 2. Remove file usage references
+                              \Drupal::service('file.usage')->delete($file, 'custom_module', 'entity_type', $file->id());
+
+                              // 3. Get the real file path and check if it exists
+                              $file_path = $file->getFileUri();
+                              $real_path = $file_system->realpath($file_path);
+
+                              if ($real_path && file_exists($real_path)) {
+                                  // $logger->info("File exists at: " . $real_path . " - Proceeding to delete.");
+                                  if ($file_system->delete($file_path)) {
+                                      // $logger->info("File successfully deleted from filesystem: " . $file_path);
+                                  } else {
+                                      // $logger->error("Failed to delete file from filesystem: " . $file_path);
+                                      \Drupal::messenger()->addError(t("Failed to delete file physically: " . $file_path));
+                                  }
+                              } else {
+                                  $logger->warning("File not found on filesystem: " . $file_path);
+                              }
+
+                              // 4. Delete file from database
+                              $file->delete();
+                              $deleted = \Drupal::database()->delete('file_managed')
+                                  ->condition('fid', $file->id())
+                                  ->execute();
+
+                              if (!$deleted) {
+                                  $logger->error("Failed to remove file entry from database for FID: " . $file->id());
+                              }
+
+                              \Drupal::messenger()->addMessage(t("File with URI " . $uri . " deleted."));
+                          } else {
+                              $logger->warning("File entity could not be loaded for FID: " . $fid);
+                          }
+                      } else {
+                          \Drupal::messenger()->addWarning(t("File not found in database: " . $uri));
+                      }
+                  }
+              }
           }
-        }
-        if ($success) {
-          \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));
-        }
+
+          if ($success) {
+              \Drupal::messenger()->addMessage(t("Selected " . $this->plural_class_name . " has/have been deleted successfully."));
+          }
+
+          // 5. Clear cache to ensure updated data
+          \Drupal::service('cache.default')->invalidateAll();
       }
     }
-
 
     // BACK TO MAIN PAGE
     if ($button_name === 'back') {
