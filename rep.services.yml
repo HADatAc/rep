@@ -20,3 +20,9 @@ services:
     arguments: ['@config.factory']
     tags:
         - { name: event_subscriber }
+
+  rep.block_config_update_subscriber:
+    class: Drupal\rep\EventSubscriber\BlockConfigUpdateSubscriber
+    tags:
+      - { name: event_subscriber }
+

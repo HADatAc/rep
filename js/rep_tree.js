@@ -174,6 +174,15 @@
             }
           }
 
+          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#UnderReview') {
+            sufix += ' (Under Review)';
+            if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+              sufix += ' (' + drupalSettings.rep_tree.username + ')';
+            } else {
+              sufix += ' (Another Person)';
+            }
+          }
+
           return sufix;
         }
 
@@ -211,13 +220,14 @@
             // Define the URIs for Draft and Deprecated statuses.
             const DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
             const DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
+            const UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
             // console.log("Selected node:", selectedNode);
             // console.log("Status:", selectedNode.hasStatus);
             // console.log("Owner:", selectedNode.hasSIRManagerEmail);
             // console.log("Autenticated:", drupalSettings.rep_tree.managerEmail);
 
             // If the node is Draft or Deprecated, keep the button disabled.
-            if ((selectedNode.hasStatus === DRAFT_URI || selectedNode.hasStatus === DEPRECATED_URI) && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) {
+            if ((selectedNode.hasStatus === DRAFT_URI || selectedNode.hasStatus === DEPRECATED_URI || selectedNode.hasStatus === UNDERREVIEW_URI) && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) {
               $selectNodeButton
                 .prop('disabled', true)
                 .addClass('disabled')
@@ -233,6 +243,11 @@
                 .removeClass('disabled')
                 .data('selected-value', selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace)
                 .data('field-id', $('#tree-root').data('field-id'));
+            } else if (selectedNode.hasStatus === UNDERREVIEW_URI && selectedNode.hasSIRManagerEmail === drupalSettings.rep_tree.managerEmail) {
+              $selectNodeButton
+                .prop('disabled', true)
+                .addClass('disabled')
+                .removeData('selected-value');
             } else {
               $selectNodeButton
                 .prop('disabled', false)
@@ -371,10 +386,11 @@
                               nodeObj.text += ' (Deprecated)';
                               if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                                 nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                               } else {
                                 nodeObj.text += ' (Another Person)';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                               }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                               // nodeObj.state = { disabled: true };
                             }
                           }
@@ -385,10 +401,26 @@
                               nodeObj.text += ' (Draft)';
                               if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                                 nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                               } else {
                                 nodeObj.text += ' (Another Person)';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                               }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
+
+                            }
+                          } else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#UnderReview') {
+                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+                              nodeObj.skip = true;
+                            } else {
+                              nodeObj.text += ' (Under Review)';
+                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgb(172, 164, 164);' };
+                              } else {
+                                nodeObj.text += ' (Another Person)';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(206, 103, 19, 0.77);' };
+                              }
+
                             }
                           }
                           tempNodes.push(nodeObj);
@@ -437,6 +469,9 @@
          * @param {string|null} forcedRootUri - the URI to treat as the root of the subtree
          * @returns {Object|null} - the root node (with children) for JSTree. If not found, returns null.
          */
+
+        // populate Tree function
+
         function buildHierarchy(items, forcedRootUri = null) {
           // 1) Remove duplicates by URI.
           const uniqueItems = [];
@@ -448,25 +483,32 @@
             }
           });
 
+          // 1.1) If forcedRootUri is provided, limit the chain so that we only use items
+          // from the result (first element) up to the forced top node.
+          let filteredItems = uniqueItems;
+          if (forcedRootUri) {
+            const forcedIndex = uniqueItems.findIndex(item => item.uri === forcedRootUri);
+            if (forcedIndex !== -1) {
+              filteredItems = uniqueItems.slice(0, forcedIndex + 1);
+            }
+          }
+
           // 2) Build a node map (URI -> node object).
           //    We apply the Draft/Deprecated checks while constructing each node.
           const nodeMap = new Map();
-          uniqueItems.forEach(item => {
+          filteredItems.forEach(item => {
             let nodeText;
             if (showLabel) {
               switch (showLabel) {
                 case 'labelprefix':
-                  nodeText = namespacePrefixUri(item.uri)+item.label;
+                  nodeText = namespacePrefixUri(item.uri) + item.label;
                   break;
-
                 case 'uri':
-                    nodeText = namespacePrefixUri(item.uri)+item.label;
-                    break;
-
+                  nodeText = namespacePrefixUri(item.uri) + item.label;
+                  break;
                 case 'uriprefix':
                   nodeText = namespaceUri(item.uri);
                   break;
-
                 default:
                 case 'label':
                   nodeText = item.label;
@@ -478,30 +520,30 @@
             // Optionally, add a "skip" property to the item if needed.
             item.skip = false;
 
-            // console.log(item);
-
+            // Set the node text using a helper function.
             nodeText = setNodeText(item);
 
             if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
               // Check if we should hide deprecated nodes (for non-owners).
               if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                // In your case, you want to show these nodes but with a specific style.
-                // So do not mark as skip; instead, append the text.
+                // Show deprecated nodes with a specific style.
                 nodeText += ' (Deprecated)';
                 if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                   nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                  a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                 } else {
                   nodeText += ' (Another Person)';
+                  a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                 }
-                a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
               } else {
                 nodeText += ' (Deprecated)';
                 if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                   nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                  a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                 } else {
                   nodeText += ' (Another Person)';
+                  a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                 }
-                a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
               }
             } else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
               // Check if we should hide draft nodes for non-owners.
@@ -511,10 +553,25 @@
                 nodeText += ' (Draft)';
                 if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                   nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                  a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                 } else {
                   nodeText += ' (Another Person)';
+                  a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                 }
-                a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
+              }
+            } else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#UnderReview') {
+              // Check if we should hide draft nodes for non-owners.
+              if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+                item.skip = true;
+              } else {
+                nodeText += ' (Under Review)';
+                if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                  nodeText += ' (' + drupalSettings.rep_tree.username + ')';
+                  a_attr = { style: 'font-style: italic; color:rgb(172, 164, 164);' };
+                } else {
+                  nodeText += ' (Another Person)';
+                  a_attr = { style: 'font-style: italic; color:rgba(206, 103, 19, 0.77);' };
+                }
               }
             }
 
@@ -548,29 +605,53 @@
 
           // 3) Link each node to its parent's children array, ignoring skipped nodes.
           let root = null;
-          uniqueItems.forEach(item => {
-            // If the item is marked to skip, do not link it.
-            if (item.skip) {
-              return;
-            }
-            const node = nodeMap.get(item.uri);
-            if (item.superUri && !item.skip) {
-              const parent = nodeMap.get(item.superUri);
-              if (parent && !parent.skip) {
-                parent.children.push(node);
+          if (forcedRootUri) {
+            // When forcedRootUri is provided, we assume the API returns a sequential chain
+            // (first element is the result and the last is the top parent).
+            // We ignore the superUri values and build the chain based solely on the array order.
+            const chain = filteredItems.slice(); // Copy the filtered items.
+            // Reverse the chain so that the forced top becomes the root.
+            chain.reverse();
+            chain.forEach((item, index) => {
+              const node = nodeMap.get(item.uri);
+              if (index === 0) {
+                // The first node (after reverse) is the forced root.
+                root = node;
+              } else {
+                // Always attach the current node as the child of the last node in the chain.
+                let current = root;
+                // Since it's a chain, traverse down the only child.
+                while (current.children && current.children.length > 0) {
+                  current = current.children[0];
+                }
+                current.children.push(node);
               }
-            } else {
-              // If there is no superUri, this node becomes the root.
-              root = node;
-            }
-          });
+            });
+          } else {
+            // Original linking using the superUri property.
+            filteredItems.forEach(item => {
+              if (item.skip) {
+                return;
+              }
+              const node = nodeMap.get(item.uri);
+              if (item.superUri && !item.skip) {
+                const parent = nodeMap.get(item.superUri);
+                if (parent && !parent.skip) {
+                  parent.children.push(node);
+                }
+              } else {
+                // If there is no superUri, this node becomes the root.
+                root = node;
+              }
+            });
+          }
 
           // 4) If forcedRootUri is provided, then force that node to be the root.
           if (forcedRootUri && nodeMap.has(forcedRootUri)) {
             root = nodeMap.get(forcedRootUri);
           } else if (!root) {
             // Fallback: if no root found, try to find any node without a parent.
-            for (const item of uniqueItems) {
+            for (const item of filteredItems) {
               if (!item.superUri) {
                 root = nodeMap.get(item.uri);
                 break;
@@ -581,7 +662,7 @@
           return root;
         }
 
-        // populate Tree function
+
         function populateTree(uri) {
           //console.log('Loading tree data for URI:', uri);
           $.ajax({
@@ -708,24 +789,38 @@
                               nodeObj.text += ' (Deprecated)';
                               if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                                 nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                               } else {
                                 nodeObj.text += ' (Another Person)';
-                              }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                               // nodeObj.state = { disabled: true };
+                              }
                             }
-                          }
-                          else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+                          } else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
                             if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
                               nodeObj.skip = true;
                             } else {
                               nodeObj.text += ' (Draft)';
                               if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
                                 nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                               } else {
                                 nodeObj.text += ' (Another Person)';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                               }
-                              nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
+                            }
+                          } else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#UnderReview') {
+                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+                              nodeObj.skip = true;
+                            } else {
+                              nodeObj.text += ' (Under Review)';
+                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgb(172, 164, 164);' };
+                              } else {
+                                nodeObj.text += ' (Another Person)';
+                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(206, 103, 19, 0.77);' };
+                              }
                             }
                           }
                           tempNodes.push(nodeObj);

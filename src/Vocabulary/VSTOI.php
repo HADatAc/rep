@@ -9,7 +9,9 @@
     /*
      *    CLASSES
      */
-
+    const ACTUATOR                        = VSTOI::VSTOI . "Actuator";
+    const ACTUATOR_INSTANCE               = VSTOI::VSTOI . "ActuatorInstance";
+    const ACTUATOR_STEM                   = VSTOI::VSTOI . "ActuatorStem";
     const ANNOTATION                      = VSTOI::VSTOI . "Annotation";
     const ANNOTATION_STEM                 = VSTOI::VSTOI . "AnnotationStem";
     const CODEBOOK                        = VSTOI::VSTOI . "Codebook";
@@ -31,6 +33,8 @@
     const SUBCONTAINER                    = VSTOI::VSTOI . "Subcontainer";
     const PROCESS_STEM                    = VSTOI::VSTOI . "ProcessStem";
     const PROCESS                         = VSTOI::VSTOI . "Process";
+    const TASK                            = VSTOI::VSTOI . "Task";
+
 
     /*
      *    PROPERTIES

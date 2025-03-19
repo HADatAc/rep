@@ -5,6 +5,10 @@ namespace Drupal\rep;
 class Constant {
 
   const DEFAULT_WAS_GENERATED_BY          = "http://hadatac.org/ont/vstoi#Original";
+  const WGB_ORIGINAL                      = "http://hadatac.org/ont/vstoi#Original";
+  const WGB_REFINEMENT                    = "http://hadatac.org/ont/vstoi#Refinement";
+  const WGB_SPECIALIZATION                = "http://hadatac.org/ont/vstoi#Specialization";
+  const WGB_TRANSLATION                   = "http://hadatac.org/ont/vstoi#Translation";
   const DEFAULT_LANGUAGE                  = "en";
   const DEFAULT_INFORMANT                 = "http://hadatac.org/ont/vstoi#Self";
 
@@ -16,6 +20,9 @@ class Constant {
   const PREFIX_DD                         = "DD0";
   const PREFIX_DP2                        = "DP2";
   const PREFIX_DEPLOYMENT                 = "DPL";
+  const PREFIX_ACTUATOR_STEM              = "ACS";
+  const PREFIX_ACTUATOR                   = "ACT";
+  const PREFIX_ACTUATOR_INSTANCE          = "ACI";
   const PREFIX_DETECTOR_STEM              = "DSM";
   const PREFIX_DETECTOR                   = "DTC";
   const PREFIX_DETECTOR_INSTANCE          = "DTI";
@@ -47,6 +54,7 @@ class Constant {
   const PREFIX_STREAM                     = "STM";
   const PREFIX_SUBCONTAINER               = "SCT";
   const PREFIX_VIRTUAL_COLUMN             = "VCO";
+  const PREFIX_TASK                       = "TAS";
 
   const FILE_STATUS_UNPROCESSED           = "UNPROCESSED";
   const FILE_STATUS_PROCESSED             = "PROCESSED";

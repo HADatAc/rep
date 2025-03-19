@@ -45,13 +45,20 @@
             '#type' => 'textfield',
             '#title' => 'URI to be described',
             '#required' => TRUE,
+            '#attributes' => [
+              'class' => ['w-50']
+            ]
         ];
         $form['note1'] = [
-            '#type' => 'item',
-            '#title' => $this->t('The provided value can be in plain URI format (something like <b>http://example.com/mydomain/concept</b>). ' .
-                'The provided value can also be based on a known namespace prefix (something like <b>myproject:concept</b>). ' .
-                'If using a prefix it needs to be a prefix registered in this repository.'),
+          '#type' => 'item',
+          '#title' => $this->t('The provided value can be in plain URI format (something like <b>http://example.com/mydomain/concept</b>). ' .
+            'The provided value can also be based on a known namespace prefix (something like <b>myproject:concept</b>). ' .
+            'If using a prefix it needs to be a prefix registered in this repository.'),
+          '#wrapper_attributes' => [
+            'class' => ['w-50'],
+          ],
         ];
+
         $form['submit_describe'] = [
             '#type' => 'submit',
             '#value' => $this->t('Describe'),
@@ -68,6 +75,7 @@
             '#type' => 'submit',
             '#value' => $this->t('Back'),
             '#name' => 'back',
+            '#limit_validation_errors' => [],
             '#attributes' => [
               'class' => ['btn', 'btn-primary', 'back-button'],
             ],
@@ -82,6 +90,13 @@
     }
 
     public function validateForm(array &$form, FormStateInterface $form_state) {
+      $triggering_element = $form_state->getTriggeringElement();
+      $button_name = $triggering_element['#name'];
+      if ($button_name === 'back') {
+        $url = Url::fromRoute('rep.home');
+        $form_state->setRedirectUrl($url);
+        return;
+      }
     }
 
     /**
@@ -99,10 +114,16 @@
         }
 
         if ($button_name === 'describe') {
-            $newUri = Utils::plainUri($form_state->getValue('element_uri'));
-            $url = Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($newUri)]);
-            $form_state->setRedirectUrl($url);
-            return;
+          $uid = \Drupal::currentUser()->id();
+          $previousUrl = \Drupal::request()->getRequestUri();
+          Utils::trackingStoreUrls($uid, $previousUrl, 'rep.element_uri');
+
+          $newUri = Utils::plainUri($form_state->getValue('element_uri'));
+          $url = Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($newUri)]);
+          $form_state->setRedirectUrl($url);
+
+          // dpm($previousUrl);
+          return;
         }
 
         $url = Url::fromRoute('rep.home');

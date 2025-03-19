@@ -89,6 +89,7 @@ class TreeForm extends FormBase {
       'annotationstem' => ["Annotation Stem", EntryPoints::ANNOTATION_STEM],
       'attribute' => ["Attribute", EntryPoints::ATTRIBUTE],
       'detectorstem' => ["Detector Stem", EntryPoints::DETECTOR_STEM],
+      'actuatorstem' => ["Actuator Stem", EntryPoints::ACTUATOR_STEM],
       'entity' => ["Entity", EntryPoints::ENTITY],
       'group' => ["Group", EntryPoints::GROUP],
       'instrument' => ["Instrument", EntryPoints::INSTRUMENT],
@@ -115,6 +116,13 @@ class TreeForm extends FormBase {
         'uri' => EntryPoints::ATTRIBUTE,
         'label' => 'Attribute',~
         'uriNamespace' => EntryPoints::ATTRIBUTE
+      ],
+      [
+        'id' => 'actuatorstem',
+        'uri' => EntryPoints::ACTUATOR_STEM,
+        'label' => 'Actuator Stem',
+        'typeNamespace' => EntryPoints::ACTUATOR_STEM,
+        'uriNamespace' => EntryPoints::ACTUATOR_STEM
       ],
       [
         'id' => 'detectorstem',

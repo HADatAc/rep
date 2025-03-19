@@ -444,11 +444,20 @@ class REPSelectMTForm extends FormBase {
       $user = \Drupal\user\Entity\User::load($uid);
       //dpm($user->getRoles());
       if ($user && $user->hasRole('content_editor')) {
+        // $form['ingest_mt'] = [
+        //   '#type' => 'submit',
+        //   '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Draft'),
+        //   '#name' => 'ingest_mt_draft',
+        //   '#attributes' => [
+        //     'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+        //   ],
+        // ];
         $form['ingest_mt'] = [
           '#type' => 'submit',
-          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Draft'),
+          '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected as Draft'),
           '#name' => 'ingest_mt_draft',
           '#attributes' => [
+            'onclick' => 'if(!confirm("Really Ingest file has DRAFT?")){return false;}',
             'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
           ],
         ];
@@ -457,37 +466,31 @@ class REPSelectMTForm extends FormBase {
           '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Current'),
           '#name' => 'ingest_mt_current',
           '#attributes' => [
+            'onclick' => 'if(!confirm("Really Ingest file has CURRENT?")){return false;}',
             'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
           ],
         ];
-      } else {
-        $form['ingest_mt'] = [
+
+        $form['uningest_mt'] = [
           '#type' => 'submit',
-          '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected'),
-          '#name' => 'ingest_mt_draft',
+          '#value' => $this->t('Uningest ' . $this->plural_class_name . ' Selected'),
+          '#name' => 'uningest_mt',
           '#attributes' => [
-            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+            'class' => ['btn', 'btn-primary', 'uningest_mt-element-button'],
           ],
         ];
       }
-    } else {
-      $form['ingest_mt'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected'),
-        '#name' => 'ingest_mt',
-        '#attributes' => [
-          'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-        ],
-      ];    
-    }
-    $form['uningest_mt'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Uningest ' . $this->plural_class_name . ' Selected'),
-      '#name' => 'uningest_mt',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'uningest_mt-element-button'],
-      ],
-    ];
+    // } else {
+    //   $form['ingest_mt'] = [
+    //     '#type' => 'submit',
+    //     '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected'),
+    //     '#name' => 'ingest_mt',
+    //     '#attributes' => [
+    //       'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+    //     ],
+    //   ];
+  	}
+
     $form['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
@@ -739,7 +742,7 @@ class REPSelectMTForm extends FormBase {
     $triggering_element = $form_state->getTriggeringElement();
     $uri = $triggering_element['#element_uri'];
 
-    $this->performIngest([$uri], $form_state, VSTOI::Draft);
+    $this->performIngest([$uri], $form_state, VSTOI::DRAFT);
   }
 
   /**
@@ -754,7 +757,7 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * ADD CARD
+   * ADD FUNCTION
    */
   protected function performAdd(FormStateInterface $form_state)
   {
@@ -770,7 +773,7 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * EDIT CARD
+   * EDIT FUNCTION
    */
   protected function performEdit($uri, FormStateInterface $form_state)
   {
@@ -786,37 +789,55 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * DELETE CARD
-   */
-  protected function performDelete(array $uris, FormStateInterface $form_state)
-  {
+   * DELETE FUNCTION
+  */
+  protected function performDelete(array $uris, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
+    $file_system = \Drupal::service('file_system');
+
     foreach ($uris as $uri) {
-      $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
-      if ($mt != NULL && $mt->hasDataFile != NULL) {
+        $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
+        if ($mt != NULL && $mt->hasDataFile != NULL) {
 
-        // DELETE FILE
-        if (isset($mt->hasDataFile->id)) {
-          $file = File::load($mt->hasDataFile->id);
-          if ($file) {
-            $file->delete();
-            \Drupal::messenger()->addMessage(t("Archive with ID " . $mt->hasDataFile->id . " deleted."));
-          }
-        }
+            // DELETE FILE
+            if (isset($mt->hasDataFile->id)) {
+                $file = File::load($mt->hasDataFile->id);
+                if ($file) {
+                    // Remove referências do file_usage
+                    \Drupal::service('file.usage')->delete($file, 'custom_module', 'entity_type', $file->id());
 
-        // DELETE DATAFILE
-        if (isset($mt->hasDataFile->uri)) {
-          $api->dataFileDel($mt->hasDataFile->uri);
-          \Drupal::messenger()->addMessage(t("DataFile with URI " . $mt->hasDataFile->uri . " deleted."));
+                    // Obtém o caminho real do ficheiro
+                    $file_path = $file->getFileUri();
+                    $real_path = $file_system->realpath($file_path);
+
+                    // Eliminar o ficheiro fisicamente
+                    if ($real_path && file_exists($real_path)) {
+                        $file_system->delete($file_path);
+                    }
+
+                    // Remover da base de dados
+                    \Drupal::database()->delete('file_managed')->condition('fid', $file->id())->execute();
+
+                    // Irrelevant info for user
+                    // \Drupal::messenger()->addMessage(t("File with ID " . $mt->hasDataFile->id . " deleted."));
+                }
+            }
+
+            // DELETE DATAFILE
+            if (isset($mt->hasDataFile->uri)) {
+                $api->dataFileDel($mt->hasDataFile->uri);
+                \Drupal::messenger()->addMessage(t("DataFile with URI " . $mt->hasDataFile->uri . " deleted."));
+            }
         }
-      }
     }
+
     \Drupal::messenger()->addMessage(t("The " . $this->plural_class_name . " selected were deleted successfully."));
+    \Drupal::service('cache.default')->invalidateAll();
     $form_state->setRebuild();
   }
 
   /**
-   * INGEST CARD
+   * INGEST FUNCTION
    */
   protected function performIngest(array $uris, FormStateInterface $form_state, String $status) {
     $api = \Drupal::service('rep.api_connector');
@@ -839,7 +860,7 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
-   * UNINGEST CARD
+   * UNINGEST FUNCTION
    */
   protected function performUningest(array $uris, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');

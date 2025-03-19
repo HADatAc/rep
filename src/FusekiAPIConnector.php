@@ -533,6 +533,14 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function containerslotAttach($actuatorUri,$containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($actuatorUri)."/".rawurlencode($containerslotUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**
    *   DATAFILE
    */
@@ -594,6 +602,46 @@ class FusekiAPIConnector {
     $endpoint = "/hascoapi/api/deploymentbyplatforminstance/total/".
       rawurlencode($platformInstanceUri);
     $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
+   *   ACTUATORS
+   */
+
+   public function actuatorAdd($actuatorJson) {
+    $endpoint = "/hascoapi/api/actuator/create/".rawurlencode($actuatorJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function actuatorDel($actuatorUri) {
+    $endpoint = "/hascoapi/api/actuator/delete/".rawurlencode($actuatorUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
+   *   ACTUATOR STEMS
+   */
+
+   public function actuatorStemAdd($actuatorStemJson) {
+    $endpoint = "/hascoapi/api/actuatorstem/create/".rawurlencode($actuatorStemJson);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function actuatorStemDel($actuatorStemUri) {
+    $endpoint = "/hascoapi/api/actuatorstem/delete/".rawurlencode($actuatorStemUri);
+    $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -699,8 +747,8 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function reviewRecursive($instrumentUri) {
-    $endpoint = "/hascoapi/api/review/recursive/".rawurlencode($instrumentUri);
+  public function reviewRecursive($instrumentUri,$status = VSTOI::UNDER_REVIEW) {
+    $endpoint = "/hascoapi/api/review/recursive/".rawurlencode($instrumentUri)."/".rawurlencode($status);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -932,6 +980,15 @@ class FusekiAPIConnector {
 
   public function responseOptionAttach($responseOptionUri,$containerSlotUri) {
     $endpoint = "/hascoapi/api/slots/codebook/attach/".rawurlencode($responseOptionUri)."/".rawurlencode($containerSlotUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // ATTACH AND CHANGE R.O. STATUS
+  public function responseOptionAttachStatus($responseOptionUri,$containerSlotUri,$status = VSTOI::DRAFT) {
+    $endpoint = "/hascoapi/api/slots/codebook/attach/status/".rawurlencode($responseOptionUri)."/".rawurlencode($containerSlotUri)."/".rawurlencode($status);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1481,9 +1538,40 @@ class FusekiAPIConnector {
     return $totalValue;
   }
 
-  // Return List of Detector from Instrument to Fill on Process
-  public function detectorListFromInstrument($instrumentUri) {
-    $endpoint = "/hascoapi/api/instrument/detectors/".rawurlencode($instrumentUri);
+  // Return List of Component elements from Instrument to Fill on Process
+  public function componentListFromInstrument($instrumentUri) {
+    $endpoint = "/hascoapi/api/instrument/components/".rawurlencode($instrumentUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GENERATE INS METHODS
+  // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:status/:filename
+  // Per status
+  public function generateINSPerStatus($status, $filename) {
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/ins/".rawurlencode($status)."/".rawurlencode($filename);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/mt/gen/perinstrument/:elementtype/:instrumenturi/:filename
+  // Per Instrument
+  public function generateINSPerInstrument($instrumentUri, $filename) {
+    $endpoint = "/hascoapi/api/mt/gen/perinstrument/ins/".rawurlencode($instrumentUri)."/".rawurlencode($filename);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/mt/gen/peruser/:elementtype/:useremail/:status/:filename
+  // Per User and Status
+  public function generateINSPerUserStatus($userEmail, $status, $filename) {
+    $endpoint = "/hascoapi/api/mt/gen/peruser/ins/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
