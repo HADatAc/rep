@@ -31,6 +31,7 @@ class Constant {
   const PREFIX_INSTRUMENT                 = "INS";
   const PREFIX_INSTRUMENT_INSTANCE        = "INI";
   const PREFIX_INS                        = "INF";
+  const PREFIX_KGR                        = "KGR";
   const PREFIX_ORGANIZATION               = "ORG";
   const PREFIX_PERSON                     = "PER";
   const PREFIX_PLACE                      = "PLC";
