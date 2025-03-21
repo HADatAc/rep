@@ -97,8 +97,7 @@ class MetadataTemplate
   private static function generateOutputWithMode($elementType, $list, $mode)
   {
 
-    //dpm($list);
-
+    $useremail = \Drupal::currentUser()->getEmail();
 
     // ROOT URL
     $root_url = \Drupal::request()->getBaseUrl();
@@ -236,45 +235,47 @@ class MetadataTemplate
           'style' => 'margin-right: 10px;',
         ];
 
-        $edit_bto = Link::fromTextAndUrl(
-          Markup::create('<i class="fa-solid fa-pen-to-square"></i>'),
-          $edit_da
-        )->toRenderable();
-        $edit_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'btn-secondary'],
-          'style' => 'margin-right: 10px;',
-        ];
+        if ($element->hasSIRManagerEmail === $useremail) {
+          $edit_bto = Link::fromTextAndUrl(
+            Markup::create('<i class="fa-solid fa-pen-to-square"></i>'),
+            $edit_da
+          )->toRenderable();
+          $edit_bto['#attributes'] = [
+            'class' => ['btn', 'btn-sm', 'btn-secondary'],
+            'style' => 'margin-right: 10px;',
+          ];
+        }
 
-        // Criar a URL real do botão de delete (use o método toString)
+        // Dete button
         $data_url = $delete_da instanceof Url ? $delete_da->toString() : '#';
 
-        // Criar o botão de delete manualmente
-        $delete_bto = [
-          '#markup' => Markup::create('<a href="#" class="btn btn-sm btn-secondary btn-danger delete-button"
-            data-url="' . $data_url . '"
-            onclick="return false;">
-            <i class="fa-solid fa-trash-can"></i>
-            </a>'),
-        ];
+        if ($element->hasSIRManagerEmail === $useremail) {
+          $delete_bto = [
+            '#markup' => Markup::create('<a href="#" class="btn btn-sm btn-secondary btn-danger delete-button"
+              data-url="' . $data_url . '"
+              onclick="return false;">
+              <i class="fa-solid fa-trash-can"></i>
+              </a>'),
+          ];
 
-        $ingest_bto = Link::fromTextAndUrl(
-          Markup::create('<i class="fa-solid fa-download"></i>'),
-          $view_da
-        )->toRenderable();
-        $ingest_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'btn-secondary', !$element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
-          'style' => 'margin-right: 10px;',
-        ];
+          $ingest_bto = Link::fromTextAndUrl(
+            Markup::create('<i class="fa-solid fa-download"></i>'),
+            $view_da
+          )->toRenderable();
+          $ingest_bto['#attributes'] = [
+            'class' => ['btn', 'btn-sm', 'btn-secondary', !$element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
+            'style' => 'margin-right: 10px;',
+          ];
 
-        $uningest_bto = Link::fromTextAndUrl(
-          Markup::create('<i class="fa-solid fa-upload"></i>'),
-          $view_da
-        )->toRenderable();
-        $uningest_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
-          'style' => 'margin-right: 10px;',
-        ];
-
+          $uningest_bto = Link::fromTextAndUrl(
+            Markup::create('<i class="fa-solid fa-upload"></i>'),
+            $view_da
+          )->toRenderable();
+          $uningest_bto['#attributes'] = [
+            'class' => ['btn', 'btn-sm', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
+            'style' => 'margin-right: 10px;',
+          ];
+        }
 
         $download_bto = [
           '#type' => 'link',
@@ -516,8 +517,8 @@ class MetadataTemplate
       ];
 
       // Set the image: if an image exists in the element, use it; otherwise, use a placeholder.
-      if (isset($element->image) && !empty($element->image)) {
-        $image_uri = $element->image;
+      if (isset($element->hasImageUri) && !empty($element->hasImageUri)) {
+        $image_uri = $element->hasImageUri;
       }
       else {
         $image_uri = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/std_placeholder.png';
