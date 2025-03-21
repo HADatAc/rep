@@ -448,10 +448,10 @@ class MetadataTemplate
           '</p>');
       }
       else {
-        $properties = '<p class="card-text">' .
-          '<b>URI</b>: ' . $uri . '<br>' .
+        $properties = t('<p class="card-text">' .
+          '<b>URI</b>: ' . $link . '<br>' .
           '<b>File Name</b>: ' . $filename . ' (' . $filestatus . ')<br>' .
-          '</p>';
+          '</p>');
       }
 
       // Generate action links.
