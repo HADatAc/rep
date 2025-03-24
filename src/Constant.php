@@ -27,9 +27,11 @@ class Constant {
   const PREFIX_DETECTOR                   = "DTC";
   const PREFIX_DETECTOR_INSTANCE          = "DTI";
   const PREFIX_DSG                        = "DSG";
+  const PREFIX_FUNDING_SCHEME             = "FSC";
   const PREFIX_INSTRUMENT                 = "INS";
   const PREFIX_INSTRUMENT_INSTANCE        = "INI";
   const PREFIX_INS                        = "INF";
+  const PREFIX_KGR                        = "KGR";
   const PREFIX_ORGANIZATION               = "ORG";
   const PREFIX_PERSON                     = "PER";
   const PREFIX_PLACE                      = "PLC";
@@ -39,6 +41,7 @@ class Constant {
   const PREFIX_POSTAL_ADDRESS             = "PAD";
   const PREFIX_PROCESS                    = "PC0";
   const PREFIX_PROCESS_STEM               = "PST";
+  const PREFIX_PROJECT                    = "PJT";
   const PREFIX_REQUIRED_INSTRUMENTATION   = "RIN";
   const PREFIX_RESPONSE_OPTION            = "ROP";
   const PREFIX_SDD                        = "SDD";

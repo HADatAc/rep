@@ -15,6 +15,7 @@
     const DSG                           = HASCO::HASCO . "DSG";
     const INS                           = HASCO::HASCO . "INS";
     const KNOWLEDGE_GRAPH               = HASCO::HASCO . "KnowledgeGraph";
+    const KGR                           = HASCO::HASCO . "KGR";
     const MANAGED_ONTOLOGY              = HASCO::HASCO . "ManagedOntology";
     const ONTOLOGY                      = HASCO::HASCO . "Ontology";
     const POSSIBLE_VALUE                = HASCO::HASCO . "PossibleValue";
