@@ -70,6 +70,15 @@ class Utils {
       return NULL;
     }
     switch ($elementType) {
+      case "actuator":
+        $short = Constant::PREFIX_ACTUATOR;
+        break;
+      case "actuatorinstance":
+        $short = Constant::PREFIX_ACTUATOR_INSTANCE;
+        break;
+      case "actuatorstem":
+        $short = Constant::PREFIX_ACTUATOR_STEM;
+        break;
       case "annotation":
         $short = Constant::PREFIX_ANNOTATION;
         break;
@@ -82,23 +91,14 @@ class Utils {
       case "da":
         $short = Constant::PREFIX_DA;
         break;
-      case "dd":
-        $short = Constant::PREFIX_DD;
-        break;
       case "datafile":
         $short = Constant::PREFIX_DATAFILE;
         break;
+      case "dd":
+        $short = Constant::PREFIX_DD;
+        break;
       case "deployment":
         $short = Constant::PREFIX_DEPLOYMENT;
-        break;
-      case "actuator":
-        $short = Constant::PREFIX_ACTUATOR;
-        break;
-      case "actuatorinstance":
-        $short = Constant::PREFIX_ACTUATOR_INSTANCE;
-        break;
-      case "actuatorstem":
-        $short = Constant::PREFIX_ACTUATOR_STEM;
         break;
       case "detector":
         $short = Constant::PREFIX_DETECTOR;
@@ -148,6 +148,12 @@ class Utils {
       case "postaladdress":
         $short = Constant::PREFIX_POSTAL_ADDRESS;
         break;
+      case "process":
+        $short = Constant::PREFIX_PROCESS;
+        break;
+      case "processstem":
+        $short = Constant::PREFIX_PROCESS_STEM;
+        break;
       case "project":
         $short = Constant::PREFIX_PROJECT;
         break;
@@ -187,14 +193,6 @@ class Utils {
       case "virtualcolumn":
         $short = Constant::PREFIX_VIRTUAL_COLUMN;
         break;
-      case "processstem":
-        $short = Constant::PREFIX_PROCESS_STEM;
-        break;
-      case "process":
-        $short = Constant::PREFIX_PROCESS;
-        break;
-      default:
-        $short = NULL;
     }
     return $short;
   }
