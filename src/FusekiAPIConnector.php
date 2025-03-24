@@ -504,9 +504,35 @@ class FusekiAPIConnector {
   }
 
   /**
-   *
+   *    PROJECTS
+   */
+
+   public function projectMemberUpdate(array $projectData) {
+    $endpoint = "/hascoapi/api/project/member";
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+
+    $payload = json_encode($projectData);
+
+    \Drupal::logger('rep')->notice('Sending member data to project: @payload', [
+        '@payload' => $payload,
+    ]);
+
+    $data = [
+      'headers' => [
+          'Content-Type' => 'application/json',
+          'Authorization' => $this->bearer
+      ],
+      'body' => json_encode($projectData)
+    ];
+
+    $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
+
+    return $response;
+  }
+
+  /**
    *    CONTAINER SLOTS
-   *
    */
 
   public function containerslotAdd($containerUri,$totalContainerSlots) {
@@ -1419,7 +1445,7 @@ class FusekiAPIConnector {
     $file_uri = $file_entity->getFileUri();
     $file_content = file_get_contents($file_uri);
     if ($file_content == NULL) {
-      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $template->dataFile->id . ']'));
+      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $template->hasDataFile->id . ']'));
       return FALSE;
     }
     if ($status != "_" && $status != VSTOI::DRAFT && $status != VSTOI::CURRENT) {
@@ -1443,12 +1469,14 @@ class FusekiAPIConnector {
     } catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
+      \Drupal::messenger()->addError(t('UploadTemplate: Invalid value for status: [' . $this->error_message . ']'));
       return(NULL);
     } catch(ClientException $e){
       $res = $e->getResponse();
       if($res->getStatusCode() != '200') {
         $this->error=$res->getStatusCode();
         $this->error_message = "API request returned the following status code: " . $res->getStatusCode();
+        \Drupal::messenger()->addError(t('UploadTemplate: Invalid value for status: [' . $this->error_message . ']'));
         return(NULL);
       }
     }

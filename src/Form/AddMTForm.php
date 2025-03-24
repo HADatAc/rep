@@ -4,8 +4,11 @@ namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Url;
+use Drupal\Core\Database\Database;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\file\FileInterface;
+use Drupal\file\Entity\File;
+use Drupal\Core\Url;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Drupal\rep\Utils;
 use Drupal\rep\Constant;
@@ -198,17 +201,27 @@ class AddMTForm extends FormBase {
         '#type' => 'managed_file',
         '#title' => $this->t('File Upload'),
         '#description' => $this->t('Upload a file.'),
-        '#upload_location' => 'private://std/'.basename($this->getStudy()->uri).'/'.$this->getElementType().'/',
+        '#upload_location' => 'private://upload/std/'.basename($this->getStudy()->uri).'/'.$this->getElementType().'/',
         '#upload_validators' => [
           'file_validate_extensions' => ['csv'],
         ],
       ];
     } else {
+      if ($this->getElementType() == 'kgr') {
+        $upload_path = 'private://social/' . $this->getElementType() . '/';
+      } else {
+        $upload_path = 'private://' . $this->getElementType() . '/';
+      }
+
+      if (!\Drupal::service('file_system')->prepareDirectory($upload_path, FileSystemInterface::CREATE_DIRECTORY)) {
+        \Drupal::messenger()->addError(t("Upload directory could not be prepared: " . $upload_path));
+        return;
+      }
       $form['mt_filename'] = [
         '#type' => 'managed_file',
         '#title' => $this->t('File Upload'),
         '#description' => $this->t('Upload a file.'),
-        '#upload_location' => 'private://'.$this->getElementType().'/',
+        '#upload_location' => $upload_path,
         '#upload_validators' => [
           'file_validate_extensions' => ['xlsx'],
         ],
@@ -373,7 +386,14 @@ class AddMTForm extends FormBase {
         if ($msg1 != NULL && $msg2 != NULL) {
           \Drupal::messenger()->addMessage(t($this->getElementName() . " has been added successfully."));
         } else {
-          \Drupal::messenger()->addError(t("Something went wrong while adding " . $this->getElementName() . "."));
+          $error = '';
+          if ($msg1 != NULL) {
+            $error .= $msg1;
+          }
+          if ($msg2 != NULL) {
+            $error .= $msg2;
+          }
+          \Drupal::messenger()->addError(t("Something went wrong while adding " . $this->getElementName() . ": " . $error));
         }
         self::backUrl();
         return;
@@ -400,6 +420,5 @@ class AddMTForm extends FormBase {
       return;
     }
   }
-
 
 }

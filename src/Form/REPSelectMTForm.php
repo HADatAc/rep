@@ -835,15 +835,16 @@ class REPSelectMTForm extends FormBase {
    * INGEST FUNCTION
    */
   protected function performIngest(array $uris, FormStateInterface $form_state, String $status) {
+    //($status);
     $api = \Drupal::service('rep.api_connector');
     $uri = reset($uris);
-    $study = $api->parseObjectResponse($api->getUri($uri), 'getUri');
-    if ($study == NULL) {
+    $template = $api->parseObjectResponse($api->getUri($uri), 'getUri');
+    if ($template == NULL) {
       \Drupal::messenger()->addError(t("Failed to retrieve the datafile to be ingested."));
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
-    $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $study, $status), 'uploadTemplateStatus');
+    $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $template, $status), 'uploadTemplateStatus');
     if ($msg == NULL) {
       \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion."));
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));

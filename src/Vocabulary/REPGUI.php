@@ -50,7 +50,10 @@
     const MANAGE_DEPLOYMENTS   = "/dpl/manage/deployments/";
     const MANAGE_STREAMS       = "/dpl/manage/streams/";
 
-    const ADD_TASK          = "/sir/manage/addtask/";
-    const EDIT_TASK         = "/sir/manage/edittask/";
+    const ADD_TASK             = "/sir/manage/addtask/";
+    const EDIT_TASK            = "/sir/manage/edittask/";
+
+    const ADD_PROJECT          = "/meugrafo/manage/addproject/";
+    const EDIT_PROJECT         = "/meugrafo/manage/editproject/";
 
   }
