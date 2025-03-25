@@ -268,15 +268,39 @@
               </a><br />
             `;
 
+            // const webdocument = data.node.data.hasWebDocument || "";
+            // if (webdocument.trim().length > 0) {
+            //   html += `
+            //     <strong>Web Document:</strong>
+            //     <a href="${webdocument}"
+            //       target="_new">
+            //       ${webdocument}
+            //     </a><br />
+            //   `;
+            // }
             const webdocument = data.node.data.hasWebDocument || "";
             if (webdocument.trim().length > 0) {
-              html += `
-                <strong>Web Document:</strong>
-                <a href="${webdocument}"
-                  target="_new">
-                  ${webdocument}
-                </a><br />
-              `;
+              if (webdocument.trim().toLowerCase().startsWith("http")) {
+                // If webdocument starts with "http", render the <a> element as is.
+                html += `
+                  <strong>Web Document:</strong>
+                  <a href="${webdocument}" target="_new">
+                    ${webdocument}
+                  </a><br />
+                `;
+              } else {
+                // Extract the part after "#/" from selectedNode.uri if it exists.
+                const uriPart = selectedNode.uri.includes('#/') ? selectedNode.uri.split('#/')[1] : selectedNode.uri;
+                // Build the download endpoint URL using the new controller.
+                const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webdocument)}`;
+
+                html += `
+                  <strong>Web Document:</strong>
+                  <a href="${downloadUrl}">
+                    ${webdocument}
+                  </a><br />
+                `;
+              }
             }
 
             const comment = data.node.data.comment || "";
