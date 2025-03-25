@@ -159,3 +159,31 @@ function rep_custom_access_callback(AccountInterface $account) {
   return AccessResult::forbidden()->cachePerUser();
 }
 
+/**
+ * Implements hook_file_download().
+ *
+ * Allow authenticated users to download images from private://resources/.
+ *
+ * @param string $uri
+ *   The file URI being requested.
+ *
+ * @return array|int
+ *   An empty array to allow access or -1 to deny.
+ */
+function rep_file_download($uri) {
+  // Check if the URI starts with "private://resources/".
+  if (strpos($uri, 'private://resources/') === 0) {
+    if (\Drupal::currentUser()->isAuthenticated()) {
+      return [
+        'Content-Type' => 'image/jpeg',
+      ];
+    }
+    else {
+      return -1;
+    }
+  }
+  return -1;
+}
+
+
+
