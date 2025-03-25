@@ -270,28 +270,29 @@
         //update Repository configuration
         $api = \Drupal::service('rep.api_connector');
 
+        $resp = '';
         //label
-        $api->repoUpdateLabel(
+        $resp .= $api->repoUpdateLabel(
             $form_state->getValue('api_url'),
             $form_state->getValue('site_label'));
 
         //title
-        $api->repoUpdateTitle(
+        $resp .= $api->repoUpdateTitle(
             $form_state->getValue('api_url'),
             $form_state->getValue('site_name'));
 
         //domain URL
-        $api->repoUpdateURL(
+        $resp .= $api->repoUpdateURL(
             $form_state->getValue('api_url'),
             $form_state->getValue('repository_domain_url'));
 
         //description
-        $api->repoUpdateDescription(
+        $resp .= $api->repoUpdateDescription(
             $form_state->getValue('api_url'),
             $form_state->getValue('repository_description'));
 
         //namespace
-        $api->repoUpdateNamespace(
+        $resp .= $api->repoUpdateNamespace(
             $form_state->getValue('api_url'),
             $form_state->getValue('repository_namespace_prefix'),
             $form_state->getValue('repository_namespace_url'),
@@ -304,7 +305,7 @@
         //  ->save();
 
         $messenger = \Drupal::service('messenger');
-        $messenger->addMessage($this->t('Your new rep configuration has been saved'));
+        $messenger->addMessage($this->t('Your new rep configuration has been saved [' . $resp . ']'));
 
         $url = Url::fromRoute('rep.repo_info');
         $form_state->setRedirectUrl($url);

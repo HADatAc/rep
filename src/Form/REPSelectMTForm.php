@@ -164,6 +164,12 @@ class REPSelectMTForm extends FormBase {
         $header = MetadataTemplate::generateHeader();
         $output = MetadataTemplate::generateOutput('dd', $this->getList());
         break;
+      case "kgr":
+        $this->single_class_name = "KGR";
+        $this->plural_class_name = "KGRs";
+        $header = MetadataTemplate::generateHeader();
+        $output = MetadataTemplate::generateOutput('kgr', $this->getList());
+        break;
       case "sdd":
         $this->single_class_name = "SDD";
         $this->plural_class_name = "SDDs";
