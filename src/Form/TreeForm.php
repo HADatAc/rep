@@ -95,6 +95,7 @@ class TreeForm extends FormBase {
       'instrument' => ["Instrument", EntryPoints::INSTRUMENT],
       'organization' => ["Organization", EntryPoints::ORGANIZATION],
       'person' => ["Person", EntryPoints::PERSON],
+      'place' => ["Place", EntryPoints::PLACE],
       'platform' => ["Platform", EntryPoints::PLATFORM],
       'processstem' => ["Process Stem", EntryPoints::PROCESS_STEM],
       'questionnaire' => ["Questionnaire", EntryPoints::QUESTIONNAIRE],
@@ -153,6 +154,18 @@ class TreeForm extends FormBase {
         'uri' => EntryPoints::INSTRUMENT,
         'label' => 'Instrument',
         'uriNamespace' => Utils::namespaceUri(EntryPoints::INSTRUMENT),
+      ],
+      [
+        'id' => 'organization',
+        'uri' => EntryPoints::ORGANIZATION,
+        'label' => 'Organization',
+        'uriNamespace' => EntryPoints::ORGANIZATION,
+      ],
+      [
+        'id' => 'place',
+        'uri' => EntryPoints::PLACE,
+        'label' => 'Place',
+        'uriNamespace' => EntryPoints::PLACE,
       ],
       [
         'id' => 'platform',

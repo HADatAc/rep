@@ -1581,11 +1581,11 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // GENERATE INS METHODS
+  // GENERATE MT METHODS
   // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:status/:filename
   // Per status
-  public function generateINSPerStatus($status, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/perstatus/ins/".rawurlencode($status)."/".rawurlencode($filename);
+  public function generateMTPerStatus($elementtype, $status, $filename) {
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1594,8 +1594,18 @@ class FusekiAPIConnector {
 
   // GET     /hascoapi/api/mt/gen/perinstrument/:elementtype/:instrumenturi/:filename
   // Per Instrument
-  public function generateINSPerInstrument($instrumentUri, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/perinstrument/ins/".rawurlencode($instrumentUri)."/".rawurlencode($filename);
+  public function generateMTPerInstrument($elementtype, $instrumentUri, $filename) {
+    $endpoint = "/hascoapi/api/mt/gen/perinstrument/".rawurlencode($elementtype)."/".rawurlencode($instrumentUri)."/".rawurlencode($filename);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/mt/gen/perproject/:elementtype/:projecturi/:filename
+  // Per Project
+  public function generateMTPerProject($elementtype, $projectUri, $filename) {
+    $endpoint = "/hascoapi/api/mt/gen/perproject/".rawurlencode($elementtype)."/".rawurlencode($projectUri)."/".rawurlencode($filename);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1604,8 +1614,8 @@ class FusekiAPIConnector {
 
   // GET     /hascoapi/api/mt/gen/peruser/:elementtype/:useremail/:status/:filename
   // Per User and Status
-  public function generateINSPerUserStatus($userEmail, $status, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/peruser/ins/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename);
+  public function generateMTPerUserStatus($elementtype,$userEmail, $status, $filename) {
+    $endpoint = "/hascoapi/api/mt/gen/peruser/".rawurlencode($elementtype)."/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
