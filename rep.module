@@ -170,13 +170,39 @@ function rep_custom_access_callback(AccountInterface $account) {
  * @return array|int
  *   An empty array to allow access or -1 to deny.
  */
+// function rep_file_download($uri) {
+//   // Check if the URI starts with "private://resources/".
+//   if (strpos($uri, 'private://resources/') === 0) {
+//     if (\Drupal::currentUser()->isAuthenticated()) {
+//       return [
+//         'Content-Type' => 'image/jpeg',
+//       ];
+//     }
+//     else {
+//       return -1;
+//     }
+//   }
+//   return -1;
+// }
 function rep_file_download($uri) {
-  // Check if the URI starts with "private://resources/".
+  // Verifica se o URI começa com "private://resources/"
   if (strpos($uri, 'private://resources/') === 0) {
     if (\Drupal::currentUser()->isAuthenticated()) {
-      return [
-        'Content-Type' => 'image/jpeg',
-      ];
+      // Obtém a extensão do arquivo
+      $extension = pathinfo($uri, PATHINFO_EXTENSION);
+
+      // Verifica se a extensão é 'pdf'
+      if (strtolower($extension) === 'pdf') {
+        return [
+          'Content-Type' => 'application/pdf',
+        ];
+      }
+      // Caso contrário, retorna como imagem JPEG (ou outro tipo que você desejar)
+      else {
+        return [
+          'Content-Type' => 'image/jpeg',
+        ];
+      }
     }
     else {
       return -1;
@@ -184,6 +210,7 @@ function rep_file_download($uri) {
   }
   return -1;
 }
+
 
 
 

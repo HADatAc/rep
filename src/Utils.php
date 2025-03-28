@@ -1050,4 +1050,23 @@ class Utils {
     return \Drupal::service('file_url_generator')->generateAbsoluteString($file_uri);
   }
 
+  public static function getAccessibleDocumentUrl($uri, $api_document) {
+
+    // Format URI
+    $uri = explode(":/", utils::namespaceUri($uri))[1];
+
+    // Use the API image value if available; otherwise, fallback to the placeholder.
+    if (empty($api_document)) {
+      return '';
+    }
+    // If the document value starts with "http", assume it is a complete URL and return it.
+    if (strpos($api_document, 'http') === 0) {
+      return $api_document;
+    }
+    // Otherwise, build the file URI according to the given structure.
+    $file_uri = 'private://resources/' . $uri . '/webdocument/' . $api_document;
+    // Generate the accessible URL using the file_url_generator service.
+    return \Drupal::service('file_url_generator')->generateAbsoluteString($file_uri);
+  }
+
 }
