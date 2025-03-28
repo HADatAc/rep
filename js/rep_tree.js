@@ -292,10 +292,11 @@
                 // Extrai a parte após "#/" de selectedNode.uri, se existir.
                 const uriPart = selectedNode.uri.includes('#/') ? selectedNode.uri.split('#/')[1] : selectedNode.uri;
                 // Constrói a URL de download usando o novo controller.
+                // const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webdocument)}`;
                 const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webdocument)}`;
                 html += `
                   <strong>Web Document:</strong>
-                  <a href="#" onclick="openModalWithDoc('${downloadUrl}'); return false;">
+                  <a href="#" class="view-media-button" data-view-url="${downloadUrl}">
                     ${webdocument}
                   </a><br />
                 `;
