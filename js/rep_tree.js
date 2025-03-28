@@ -281,7 +281,7 @@
             const webdocument = data.node.data.hasWebDocument || "";
             if (webdocument.trim().length > 0) {
               if (webdocument.trim().toLowerCase().startsWith("http")) {
-                // If webdocument starts with "http", render the <a> element as is.
+                // Se webdocument começar com "http", renderiza o <a> normalmente.
                 html += `
                   <strong>Web Document:</strong>
                   <a href="${webdocument}" target="_new">
@@ -289,14 +289,13 @@
                   </a><br />
                 `;
               } else {
-                // Extract the part after "#/" from selectedNode.uri if it exists.
+                // Extrai a parte após "#/" de selectedNode.uri, se existir.
                 const uriPart = selectedNode.uri.includes('#/') ? selectedNode.uri.split('#/')[1] : selectedNode.uri;
-                // Build the download endpoint URL using the new controller.
+                // Constrói a URL de download usando o novo controller.
                 const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webdocument)}`;
-
                 html += `
                   <strong>Web Document:</strong>
-                  <a href="${downloadUrl}">
+                  <a href="#" onclick="openModalWithDoc('${downloadUrl}'); return false;">
                     ${webdocument}
                   </a><br />
                 `;
