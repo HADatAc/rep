@@ -291,7 +291,7 @@ reviewer.response_options:
 
 # OPTION 2
 reviewer.uploadingest_review:
-  title: Upload and Ingest MTs
+  title: Manage MTs
   description: ''
   menu_name: main
   route_name: '<none>'
