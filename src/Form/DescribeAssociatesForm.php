@@ -122,7 +122,7 @@
 
         if ($this->getElement()->hascoTypeUri === VSTOI::DEPLOYMENT) {
           AssocDeployment::process($this->getElement(), $form, $form_state);
-        } else if ($this->getElement()->hascoTypeUri === FOAF::ORGANIZATION) {
+        } else if ($this->getElement()->hascoTypeUri === SCHEMA::ORGANIZATION) {
           AssocOrganization::process($this->getElement(), $form, $form_state);
         } else if ($this->getElement()->hascoTypeUri === SCHEMA::PLACE) {
           AssocPlace::process($this->getElement(), $form, $form_state);
