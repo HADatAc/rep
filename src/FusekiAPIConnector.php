@@ -1464,7 +1464,7 @@ class FusekiAPIConnector {
       $res = $client->post($api_url.$endpoint, [
         'headers' => [
           'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'Authorization' => $this->bearer
+          // 'Authorization' => $this->bearer
         ],
         'body' => $file_content,
       ]);
