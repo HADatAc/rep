@@ -1067,4 +1067,27 @@ class Utils {
     return \Drupal::service('file_url_generator')->generateAbsoluteString($file_uri);
   }
 
+  public static function getAPIImage($uri, $apiImage, $placeholder_image) {
+
+    // Empty Value return Placeholder
+    if ($apiImage === '')
+      return $placeholder_image;
+
+    // Image starts with http so return the link
+    if (strpos($apiImage, 'http') === 0)
+      return $apiImage;
+
+    // Return API image
+    $api = \Drupal::service('rep.api_connector');
+    $response = $api->downloadFile($uri, $apiImage);
+
+    if ($response) {
+        $file_content = $response->getContent();
+        $content_type = $response->headers->get('Content-Type');
+        $base64_image = base64_encode($file_content);
+        return "data:" . $content_type . ";base64," . $base64_image;
+    } else {
+      return $placeholder_image;
+    }
+  }
 }

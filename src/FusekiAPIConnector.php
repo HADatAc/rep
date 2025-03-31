@@ -1628,21 +1628,22 @@ class FusekiAPIConnector {
   public function uploadFile($elementuri, $fileId) {
     // RETRIEVE FILE CONTENT FROM FID
     $file_entity = \Drupal\file\Entity\File::load($fileId);
-
     if ($file_entity == NULL) {
       \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $fileId . ']'));
       return FALSE;
     }
 
+    $filename = $file_entity->getFilename();
     $file_uri = $file_entity->getFileUri();
     $file_content = file_get_contents($file_uri);
+
     if ($file_content == NULL) {
       \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $fileId . ']'));
       return FALSE;
     }
 
     // APPEND ELEMENT URI ENDPOINT'S URL
-    $endpoint = "/hascoapi/api/uploadFile/".rawurlencode($elementuri);
+    $endpoint = "/hascoapi/api/uploadFile/".rawurlencode($elementuri). "/" . rawurlencode($filename);;
 
     // MAKE CALL TO API ENDPOINT
     $api_url = $this->getApiUrl();
