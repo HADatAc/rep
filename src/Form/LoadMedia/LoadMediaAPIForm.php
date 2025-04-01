@@ -150,7 +150,7 @@ class LoadMediaApiForm extends FormBase {
     $fid = reset($zip_fids);
 
     // Call the API method, passing the Drupal file ID and the filename.
-    $result = $api_service->generateINSPerInstrument($fid, $filename);
+    $result = $api_service->uploadMediaFile($fid, $filename);
 
     // Display a success message.
     \Drupal::messenger()->addMessage($this->t('File successfully sent.'));
