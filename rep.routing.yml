@@ -311,7 +311,7 @@ rep.load_media_api:
   path: '/rep/loadmediaapi'
   defaults:
     _form: '\Drupal\rep\Form\LoadMedia\LoadMediaApiForm'
-    _title: 'Load Media'
+    _title: 'Upload Media'
   requirements:
     _permission: 'access content'
     _custom_access_check: 'TRUE'

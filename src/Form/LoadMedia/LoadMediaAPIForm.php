@@ -34,14 +34,21 @@ class LoadMediaApiForm extends FormBase {
    *   The modified form structure.
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
+
+    $form['upload_media_container'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['mt-3', 'w-25'],
+      ],
+    ];
     // Add a text field for Folder Name.
-    $form['folder_name'] = [
+    $form['upload_media_container']['folder_name'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Folder Name'),
       '#required' => TRUE,
     ];
 
-    $form['zip_upload'] = [
+    $form['upload_media_container']['zip_upload'] = [
       '#type' => 'managed_file',
       '#title' => $this->t('Upload ZIP File'),
       '#upload_validators' => [
@@ -53,11 +60,11 @@ class LoadMediaApiForm extends FormBase {
     ];
 
     // Create the actions container.
-    $form['actions'] = [
+    $form['upload_media_container']['actions'] = [
       '#type' => 'actions',
     ];
     // Add the submit button with conditional state: enabled only when both fields are filled.
-    $form['actions']['submit'] = [
+    $form['upload_media_container']['actions']['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Submit'),
       '#states' => [
@@ -72,7 +79,7 @@ class LoadMediaApiForm extends FormBase {
     ];
 
     // Cancel button: separate callback, skips validation.
-    $form['actions']['cancel'] = [
+    $form['upload_media_container']['actions']['cancel'] = [
       '#type' => 'submit',
       '#value' => $this->t('Cancel'),
       '#name' => 'cancel',

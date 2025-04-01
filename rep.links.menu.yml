@@ -442,7 +442,7 @@ reviewer.generate_ins_file:
 
 # OPTION 4
 reviewer.load_media:
-  title: Load Media
+  title: Upload Media
   description: ''
   menu_name: main
   route_name: rep.load_media_api
