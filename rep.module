@@ -193,7 +193,7 @@ function rep_user_insert($account) {
 function rep_user_update($account) {
   $json_data = json_encode([
     'acc_id' => $account->id(),
-    'acc_repo_instance' => 'hascorepo1',
+    'acc_repo_instance' => \Drupal::request()->getHost(),
     'acc_name' => $account->getDisplayName(),
     'acc_email' => $account->getEmail(),
     'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
