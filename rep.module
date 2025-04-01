@@ -218,7 +218,9 @@ function rep_user_update($account) {
  * É chamado quando um usuário é removido no Drupal.
  */
 function rep_user_delete($account) {
-  $url = 'http://localhost/sguser/account/delete/' . $account->id() . '/hascorepo1';
+  $acc_repo_instance = \Drupal::request()->getHost();
+
+  $url = 'http://localhost/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
 
   try {
     $response = \Drupal::httpClient()->delete($url);
