@@ -39,21 +39,17 @@ class LoadMediaApiForm extends FormBase {
       '#type' => 'textfield',
       '#title' => $this->t('Folder Name'),
       '#required' => TRUE,
-      '#attributes' => [
-        'placeholder' => $this->t('Enter folder name'),
-      ],
     ];
 
-    // Add a managed file field for uploading a ZIP file.
     $form['zip_upload'] = [
       '#type' => 'managed_file',
       '#title' => $this->t('Upload ZIP File'),
       '#upload_validators' => [
-        // Allow only files with the .zip extension.
         'file_validate_extensions' => ['zip'],
       ],
       '#required' => TRUE,
-      '#description' => $this->t('Only ZIP files are allowed.'),
+      // Example: if you only allow one file, set this to FALSE.
+      '#multiple' => FALSE,
     ];
 
     // Create the actions container.
@@ -65,11 +61,12 @@ class LoadMediaApiForm extends FormBase {
       '#type' => 'submit',
       '#value' => $this->t('Submit'),
       '#states' => [
+        // Enable the button only if both fields are filled.
         'enabled' => [
-          // The folder_name field must be filled.
+          // folder_name must be filled.
           ':input[name="folder_name"]' => ['filled' => TRUE],
-          // The zip_upload field (specifically the file IDs array) must be filled.
-          ':input[name="zip_upload[fids]"]' => ['filled' => TRUE],
+          // zip_upload[fids][] must be filled (meaning at least one file ID).
+          ':input[name="zip_upload[fids][]"]' => ['filled' => TRUE],
         ],
       ],
     ];

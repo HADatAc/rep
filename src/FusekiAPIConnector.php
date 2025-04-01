@@ -1697,7 +1697,7 @@ class FusekiAPIConnector {
     return $response;
   }
 
-  // /hascoapi/api/uploadMedia/$filename<[^/]+>
+  // /hascoapi/api/uploadMedia/:foldername/:filename
   public function uploadMediaFile($fileId, $foldername) {
     // RETRIEVE FILE CONTENT FROM FID
     $file_entity = \Drupal\file\Entity\File::load($fileId);
@@ -1706,6 +1706,7 @@ class FusekiAPIConnector {
       return FALSE;
     }
 
+    $filename = $file_entity->getFilename();
     $file_uri = $file_entity->getFileUri();
     $file_content = file_get_contents($file_uri);
 
@@ -1715,7 +1716,7 @@ class FusekiAPIConnector {
     }
 
     // APPEND ELEMENT URI ENDPOINT'S URL
-    $endpoint = "/hascoapi/api/uploadMedia/".rawurlencode($foldername);;
+    $endpoint = "/hascoapi/api/uploadMedia/".rawurlencode($foldername) . '/' . rawurlencode($filename);
 
     // MAKE CALL TO API ENDPOINT
     $api_url = $this->getApiUrl();
