@@ -159,3 +159,74 @@ function rep_custom_access_callback(AccountInterface $account) {
   return AccessResult::forbidden()->cachePerUser();
 }
 
+/**
+ * Implementa hook_user_insert().
+ * É chamado quando um novo usuário é criado no Drupal.
+ */
+function rep_user_insert($account) {
+  $json_data = json_encode([
+    'acc_id' => $account->id(),
+    'acc_repo_instance' => \Drupal::request()->getHost(),
+    'acc_name' => $account->getDisplayName(),
+    'acc_email' => $account->getEmail(),
+    'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
+  ]);
+
+  try {
+    $response = \Drupal::httpClient()->post('http://localhost/sguser/account/add', [
+      'headers' => ['Content-Type' => 'application/json'],
+      'body' => $json_data,
+    ]);
+
+    if ($response->getStatusCode() == 201) {
+      \Drupal::logger('rep')->notice("Conta {$account->id()} enviada para sguser.");
+    }
+  } catch (RequestException $e) {
+    \Drupal::logger('rep')->error("Erro ao enviar conta {$account->id()} para sguser: " . $e->getMessage());
+  }
+}
+
+/**
+ * Implementa hook_user_update().
+ * É chamado quando um usuário é atualizado no Drupal.
+ */
+function rep_user_update($account) {
+  $json_data = json_encode([
+    'acc_id' => $account->id(),
+    'acc_repo_instance' => 'hascorepo1',
+    'acc_name' => $account->getDisplayName(),
+    'acc_email' => $account->getEmail(),
+    'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
+  ]);
+
+  try {
+    $response = \Drupal::httpClient()->post('http://localhost/sguser/account/update', [
+      'headers' => ['Content-Type' => 'application/json'],
+      'body' => $json_data,
+    ]);
+
+    if ($response->getStatusCode() == 200) {
+      \Drupal::logger('rep')->notice("Conta {$account->id()} atualizada no sguser.");
+    }
+  } catch (RequestException $e) {
+    \Drupal::logger('rep')->error("Erro ao atualizar conta {$account->id()} no sguser: " . $e->getMessage());
+  }
+}
+
+/**
+ * Implementa hook_user_delete().
+ * É chamado quando um usuário é removido no Drupal.
+ */
+function rep_user_delete($account) {
+  $url = 'http://localhost/sguser/account/delete/' . $account->id() . '/hascorepo1';
+
+  try {
+    $response = \Drupal::httpClient()->delete($url);
+
+    if ($response->getStatusCode() == 200) {
+      \Drupal::logger('rep')->notice("Conta {$account->id()} removida do sguser.");
+    }
+  } catch (RequestException $e) {
+    \Drupal::logger('rep')->error("Erro ao remover conta {$account->id()} do sguser: " . $e->getMessage());
+  }
+}
