@@ -306,3 +306,13 @@ rep.sdd_autocomplete:
   requirements:
     _permission: 'access content'
 
+# LOADMEDIA FORM
+rep.load_media_api:
+  path: '/rep/loadmediaapi'
+  defaults:
+    _form: '\Drupal\rep\Form\LoadMedia\LoadMediaApiForm'
+    _title: 'Load Media'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'
+
