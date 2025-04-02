@@ -268,15 +268,39 @@
               </a><br />
             `;
 
+            // const webdocument = data.node.data.hasWebDocument || "";
+            // if (webdocument.trim().length > 0) {
+            //   html += `
+            //     <strong>Web Document:</strong>
+            //     <a href="${webdocument}"
+            //       target="_new">
+            //       ${webdocument}
+            //     </a><br />
+            //   `;
+            // }
             const webdocument = data.node.data.hasWebDocument || "";
             if (webdocument.trim().length > 0) {
-              html += `
-                <strong>Web Document:</strong>
-                <a href="${webdocument}"
-                  target="_new">
-                  ${webdocument}
-                </a><br />
-              `;
+              if (webdocument.trim().toLowerCase().startsWith("http")) {
+                // Se webdocument começar com "http", renderiza o <a> normalmente.
+                html += `
+                  <strong>Web Document:</strong>
+                  <a href="${webdocument}" target="_new">
+                    ${webdocument}
+                  </a><br />
+                `;
+              } else {
+                // Extrai a parte após "#/" de selectedNode.uri, se existir.
+                const uriPart = selectedNode.uri.includes('#/') ? selectedNode.uri.split('#/')[1] : selectedNode.uri;
+                // Constrói a URL de download usando o novo controller.
+                // const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webdocument)}`;
+                const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webdocument)}`;
+                html += `
+                  <strong>Web Document:</strong>
+                  <a href="#" class="view-media-button" data-view-url="${downloadUrl}">
+                    ${webdocument}
+                  </a><br />
+                `;
+              }
             }
 
             const comment = data.node.data.comment || "";

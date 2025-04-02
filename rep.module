@@ -159,3 +159,58 @@ function rep_custom_access_callback(AccountInterface $account) {
   return AccessResult::forbidden()->cachePerUser();
 }
 
+/**
+ * Implements hook_file_download().
+ *
+ * Allow authenticated users to download images from private://resources/.
+ *
+ * @param string $uri
+ *   The file URI being requested.
+ *
+ * @return array|int
+ *   An empty array to allow access or -1 to deny.
+ */
+// function rep_file_download($uri) {
+//   // Check if the URI starts with "private://resources/".
+//   if (strpos($uri, 'private://resources/') === 0) {
+//     if (\Drupal::currentUser()->isAuthenticated()) {
+//       return [
+//         'Content-Type' => 'image/jpeg',
+//       ];
+//     }
+//     else {
+//       return -1;
+//     }
+//   }
+//   return -1;
+// }
+function rep_file_download($uri) {
+  // Verifica se o URI começa com "private://resources/"
+  if (strpos($uri, 'private://resources/') === 0) {
+    if (\Drupal::currentUser()->isAuthenticated()) {
+      // Obtém a extensão do arquivo
+      $extension = pathinfo($uri, PATHINFO_EXTENSION);
+
+      // Verifica se a extensão é 'pdf'
+      if (strtolower($extension) === 'pdf') {
+        return [
+          'Content-Type' => 'application/pdf',
+        ];
+      }
+      // Caso contrário, retorna como imagem JPEG (ou outro tipo que você desejar)
+      else {
+        return [
+          'Content-Type' => 'image/jpeg',
+        ];
+      }
+    }
+    else {
+      return -1;
+    }
+  }
+  return -1;
+}
+
+
+
+

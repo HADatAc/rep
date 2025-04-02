@@ -6,7 +6,7 @@ dependencies:
   - drupal:key
   - drupal:user
 type: module
-version: '0.8.0'
+version: '0.9.1'
 configure: rep.admin_settings
 libraries:
   - rep/rep_js_css

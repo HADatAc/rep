@@ -169,20 +169,20 @@ reviewer.instruments:
     _permission: 'access content'
     _role: 'content_editor'
 
-reviewer.processsstem:
-  title: Process Stems
-  description: Manage Process Stem Reviews
-  menu_name: main
-  route_name: sir.select_review_element
-  route_parameters:
-    elementtype: 'processstem'
-    page: '1'
-    pagesize: '9'
-  parent: reviewer.elements_review
-  weight: 20
-  requirements:
-    _permission: 'access content'
-    _role: 'content_editor'
+# reviewer.processsstem:
+#   title: Process Stems
+#   description: Manage Process Stem Reviews
+#   menu_name: main
+#   route_name: sir.select_review_element
+#   route_parameters:
+#     elementtype: 'processstem'
+#     page: '1'
+#     pagesize: '9'
+#   parent: reviewer.elements_review
+#   weight: 20
+#   requirements:
+#     _permission: 'access content'
+#     _role: 'content_editor'
 
 # reviewer.process:
 #   title: Process
@@ -291,7 +291,7 @@ reviewer.response_options:
 
 # OPTION 2
 reviewer.uploadingest_review:
-  title: Upload and Ingest MTs
+  title: Manage MTs
   description: ''
   menu_name: main
   route_name: '<none>'
