@@ -153,6 +153,14 @@ rep.tree_form:
   requirements:
     _permission: 'access content'
 
+rep.webdocdownload:
+  path: '/rep/webdocdownload/{instrumenturi}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::downloadFile'
+    _title: 'Download File'
+  requirements:
+    _permission: 'access content'
+
 # MT CRUD options
 
 rep.add_mt:

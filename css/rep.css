@@ -858,3 +858,10 @@ form#tree-form {
 #edit-filters div {
   margin-bottom: 0!important;
 }
+
+.form-managed-file .file a {
+  pointer-events: none;
+  cursor: default;
+  text-decoration: none;
+  color: inherit;
+}

@@ -10,6 +10,7 @@ use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ConnectException;
 use Exception;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class FusekiAPIConnector {
   private $client;
@@ -1463,6 +1464,7 @@ class FusekiAPIConnector {
       $res = $client->post($api_url.$endpoint, [
         'headers' => [
           'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          // 'Authorization' => $this->bearer
         ],
         'body' => $file_content,
       ]);
