@@ -440,14 +440,15 @@ reviewer.generate_ins_file:
     _permission: 'access content'
     _role: 'content_editor'
 
+
 # OPTION 4
-# reviewer.manage_ontology:
-#   title: Manage Ontology
-#   description: Use this to clean the ontology nodes
-#   menu_name: main
-#   route_name: rep.select_mt_element
-#   parent: reviewer.top_level
-#   weight: 40
-#   requirements:
-#     _permission: 'access content'
-#     _role: 'content_editor'
+reviewer.manage_ontology:
+  title: Manage Ontology
+  description: Used for clean some ontology nodes
+  menu_name: main
+  route_name: '>none>'
+  parent: reviewer.top_level
+  weight: 31
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
