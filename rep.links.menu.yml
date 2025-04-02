@@ -438,3 +438,16 @@ reviewer.generate_ins_file:
   requirements:
     _permission: 'access content'
     _role: 'content_editor'
+
+
+# OPTION 4
+reviewer.load_media:
+  title: Upload Media
+  description: ''
+  menu_name: main
+  route_name: rep.load_media_api
+  parent: reviewer.top_level
+  weight: 40
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'

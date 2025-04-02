@@ -1698,4 +1698,53 @@ class FusekiAPIConnector {
     $response->headers->set('Content-Type', $content_type);
     return $response;
   }
+
+  // /hascoapi/api/uploadMedia/:foldername/:filename
+  public function uploadMediaFile($fileId, $foldername) {
+    // RETRIEVE FILE CONTENT FROM FID
+    $file_entity = \Drupal\file\Entity\File::load($fileId);
+    if ($file_entity == NULL) {
+      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $fileId . ']'));
+      return FALSE;
+    }
+
+    $filename = $file_entity->getFilename();
+    $file_uri = $file_entity->getFileUri();
+    $file_content = file_get_contents($file_uri);
+
+    if ($file_content == NULL) {
+      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $fileId . ']'));
+      return FALSE;
+    }
+
+    // APPEND ELEMENT URI ENDPOINT'S URL
+    $endpoint = "/hascoapi/api/uploadMedia/".rawurlencode($foldername) . '/' . rawurlencode($filename);
+
+    // MAKE CALL TO API ENDPOINT
+    $api_url = $this->getApiUrl();
+    $client = new Client();
+    try {
+      $res = $client->post($api_url.$endpoint, [
+        'headers' => [
+          'Content-Type' => $file_entity->getMimeType(),
+          'Authorization' => $this->bearer
+        ],
+        'body' => $file_content,
+      ]);
+    } catch(ConnectException $e){
+      $this->error="CON";
+      $this->error_message = "Connection error the following message: " . $e->getMessage();
+      \Drupal::messenger()->addError(t('Upload: Invalid value for status: [' . $this->error_message . ']'));
+      return(NULL);
+    } catch(ClientException $e){
+      $res = $e->getResponse();
+      if($res->getStatusCode() != '200') {
+        $this->error=$res->getStatusCode();
+        $this->error_message = "API request returned the following status code: " . $res->getStatusCode();
+        \Drupal::messenger()->addError(t('Upload: Invalid value for status: [' . $this->error_message . ']'));
+        return(NULL);
+      }
+    }
+    return($res->getBody());
+  }
 }
