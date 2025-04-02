@@ -446,9 +446,34 @@ reviewer.manage_ontology:
   title: Manage Ontology
   description: Used for clean some ontology nodes
   menu_name: main
-  route_name: '>none>'
+  route_name: rep.select_mt_element
+  route_parameters:
+    elementtype: 'ins'
+    mode: 'table'
+    page: '1'
+    pagesize: '9'
+    studyuri: 'none'
+  parent: reviewer.generate_review
+  weight: 20
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+
+
+# OPTION 4
+reviewer.manage_ontology:
+  title: Manage Ontology
+  description: Used for clean some ontology nodes
+  menu_name: main
+  route_name: rep.select_mt_element
+  route_parameters:
+    elementtype: 'ins'
+    mode: 'table'
+    page: '1'
+    pagesize: '9'
+    studyuri: 'none'
   parent: reviewer.top_level
-  weight: 31
+  weight: 40
   requirements:
     _permission: 'access content'
     _role: 'content_editor'
