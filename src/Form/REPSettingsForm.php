@@ -343,7 +343,8 @@
         $repo_instance = \Drupal::request()->getHost();
         \Drupal::logger('rep')->notice('Iniciando sincronização de utilizadores...');
 
-    
+        \Drupal::logger('rep')->notice("Sagres Base Url: " . $sagres_base_url);
+
         // Obter a lista de usuários do sguser de uma só vez
         try {
             $response = \Drupal::httpClient()->get("{$sagres_base_url}/sguser/account/list", [
