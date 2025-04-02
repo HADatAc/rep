@@ -461,11 +461,11 @@ reviewer.manage_ontology:
 
 
 # OPTION 4
-reviewer.manage_ontology:
-  title: Manage Ontology
+reviewer.ontology_cleaner:
+  title: Ontology Cleaner
   description: Used for clean some ontology nodes
   menu_name: main
-  route_name: rep.select_mt_element
+  route_name: rep.ontology_cleaner
   route_parameters:
     elementtype: 'ins'
     mode: 'table'
