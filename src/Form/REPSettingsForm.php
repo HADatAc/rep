@@ -251,7 +251,7 @@
     public function submitForm(array &$form, FormStateInterface $form_state) {
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
-
+        \Drupal::logger('rep')->notice('Botão pressionado: ' . $button_name);
         if ($button_name === 'namespace') {
           $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
           return;
@@ -263,6 +263,7 @@
         }
 
         if ($button_name === 'sync_sagres') {
+            \Drupal::logger('rep')->notice('Chamando syncUsersWithSagres()');
             $this->syncUsersWithSagres();
             $messenger = \Drupal::service('messenger');
             $messenger->addMessage($this->t('User synchronization with Sagres completed!'));
@@ -340,6 +341,8 @@
         $config = $this->config(static::CONFIGNAME);
         $sagres_base_url = $config->get("sagres_base_url");
         $repo_instance = \Drupal::request()->getHost();
+        \Drupal::logger('rep')->notice('Iniciando sincronização de utilizadores...');
+
     
         // Obter a lista de usuários do sguser de uma só vez
         try {
@@ -347,6 +350,7 @@
                 'headers' => ['Accept' => 'application/json'],
             ]);
             $sguser_users = json_decode($response->getBody(), true);
+            \Drupal::logger('rep')->notice('Lista de utilizadores obtida com sucesso');
         } catch (\Exception $e) {
             \Drupal::logger('rep')->error("Erro ao obter lista de utilizadores do sguser: " . $e->getMessage());
             return;
@@ -365,9 +369,10 @@
     
         foreach ($users as $user) {
             if ($user->id() == 0 || $user->isBlocked()) {
+                \Drupal::logger('rep')->notice("Utilizador ignorado: " . $user->id());
                 continue;
             }
-    
+            \Drupal::logger('rep')->notice("Processando utilizador: " . $user->getEmail());
             $user_data = [
                 'acc_id' => $user->id(),
                 'acc_repo_instance' => $repo_instance,
