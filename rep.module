@@ -173,7 +173,7 @@ function rep_user_insert($account) {
   ]);
 
   try {
-    $response = \Drupal::httpClient()->post('http://localhost/sguser/account/add', [
+    $response = \Drupal::httpClient()->post('http://192.168.1.73/sguser/account/add', [
       'headers' => ['Content-Type' => 'application/json'],
       'body' => $json_data,
     ]);
@@ -200,7 +200,7 @@ function rep_user_update($account) {
   ]);
 
   try {
-    $response = \Drupal::httpClient()->post('http://localhost/sguser/account/update', [
+    $response = \Drupal::httpClient()->post('http://192.168.1.73/sguser/account/update', [
       'headers' => ['Content-Type' => 'application/json'],
       'body' => $json_data,
     ]);
@@ -220,7 +220,7 @@ function rep_user_update($account) {
 function rep_user_delete($account) {
   $acc_repo_instance = \Drupal::request()->getHost();
 
-  $url = 'http://localhost/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
+  $url = 'http://192.168.1.73/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
 
   try {
     $response = \Drupal::httpClient()->delete($url);
