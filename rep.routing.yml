@@ -101,6 +101,16 @@ rep.select_mt_element:
   options:
     no_cache: 'TRUE'
 
+rep.ontology_cleaner:
+  path: 'rep/select/mt/{elementtype}/{mode}/{page}/{pagesize}/{studyuri}'
+  defaults:
+    _form: '\Drupal\rep\Form\REPSelectMTForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'
+  options:
+    no_cache: 'TRUE'
+
 # Tree support
 
 rep.browse_tree:
