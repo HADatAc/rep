@@ -198,6 +198,14 @@
             '#default_value' => $config->get("jwt_secret"),
         ];
 
+        $form['sagres_jwt'] = [
+            '#type' => 'key_select',
+            '#title' => 'Sagres JWT Secret',
+            '#key_filters' => ['type' => 'authentication'],
+            '#default_value' => $config->get("sagres_jwt"),
+            '#description' => 'Token JWT usado para comunicação segura com Sagres.',
+        ];        
+
         $form['filler_1'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
@@ -285,6 +293,7 @@
         $config->set("sagres_base_url", $form_state->getValue('sagres_base_url'));
         $config->set("api_url", $form_state->getValue('api_url'));
         $config->set("jwt_secret", $form_state->getValue('jwt_secret'));
+        $config->set("sagres_jwt", $form_state->getValue('sagres_jwt'));
         $config->save();
 
         //site name
@@ -340,6 +349,7 @@
     private function syncUsersWithSagres() {
         $config = $this->config(static::CONFIGNAME);
         $sagres_base_url = $config->get("sagres_base_url");
+        $sagres_token = $config->get("sagres_jwt");
         $repo_instance = \Drupal::request()->getHost();
         \Drupal::logger('rep')->notice('Iniciando sincronização de utilizadores...');
 
@@ -348,7 +358,10 @@
         // Obter a lista de usuários do sguser de uma só vez
         try {
             $response = \Drupal::httpClient()->get("{$sagres_base_url}/sguser/account/list", [
-                'headers' => ['Accept' => 'application/json'],
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'Authorization' => "Bearer {$sagres_token}"
+                ],
             ]);
             $sguser_users = json_decode($response->getBody(), true);
             \Drupal::logger('rep')->notice('Lista de utilizadores obtida com sucesso');
@@ -390,7 +403,10 @@
                     try {
                         \Drupal::httpClient()->patch("{$sagres_base_url}/sguser/account/update", [
                             'json' => $user_data,
-                            'headers' => ['Content-Type' => 'application/json'],
+                            'headers' => [
+                                'Content-Type' => 'application/json',
+                                'Authorization' => "Bearer {$sagres_token}"
+                            ],
                         ]);
                         $users_updated++;
                     } catch (\Exception $e) {
@@ -402,7 +418,10 @@
                 try {
                     \Drupal::httpClient()->post("{$sagres_base_url}/sguser/account/add", [
                         'json' => $user_data,
-                        'headers' => ['Content-Type' => 'application/json'],
+                        'headers' => [
+                            'Content-Type' => 'application/json',
+                            'Authorization' => "Bearer {$sagres_token}"
+                        ],
                     ]);
                     $users_created++;
                 } catch (\Exception $e) {
