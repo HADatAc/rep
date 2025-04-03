@@ -211,6 +211,11 @@ function rep_file_download($uri) {
   return -1;
 }
 
+function rep_page_attachments(array &$attachments) {
+  $attachments['#attached']['library'][] = 'rep/rep_js_css';
+}
+
+
 
 
 
