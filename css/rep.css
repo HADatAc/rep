@@ -880,3 +880,7 @@ form#tree-form {
   text-decoration: none;
   color: inherit;
 }
+
+.js-form-wrapper.form-wrapper {
+  margin-bottom: 0!important;
+}
