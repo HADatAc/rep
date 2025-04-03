@@ -21,15 +21,15 @@
         const scrollThreshold = 20;
         const loadState = $("#list_state").val();
 
-        // Se há mais itens para carregar e estamos perto do final da página
+        // IF THERE ARE MORE ITENS LOAD THEM
         if (loadState == 1 && $(window).scrollTop() + $(window).height() >= $(document).height() - scrollThreshold && !isLoading) {
           isLoading = true;
           $('#loading-overlay').show();
-          $('#load-more-button').trigger('click'); // Dispara o clique no botão "Load More"
+          $('#load-more-button').trigger('click');
         }
       }
 
-      // Quando o carregamento é concluído, esconder o indicador e liberar para próximo carregamento
+      // SHOW NEXT BUTTON
       $(document).ajaxComplete(function () {
         $('#loading-overlay').hide();
         isLoading = false;
