@@ -53,10 +53,11 @@
     $api = \Drupal::service('rep.api_connector');
     $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
 
-    //dpm($this->getElement());
+    // dpm($this->getElement());
 
     $objectProperties = GenericObject::inspectObject($this->getElement());
 
+    // dpm($objectProperties);
     //($objectProperties);
 
     //if ($objectProperties !== null) {
@@ -95,11 +96,13 @@
     foreach ($objectProperties['literals'] as $propertyName => $propertyValue) {
       // Add a textfield element for each property
       if ($propertyValue !== NULL && $propertyValue !== "") {
-        $prettyName = DescribeForm::prettyProperty($propertyName);
-        $form[$propertyName] = [
-          '#type' => 'markup',
-          '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
-        ];
+        if ($propertyName !== 'hasImageUri') {
+          $prettyName = DescribeForm::prettyProperty($propertyName);
+          $form[$propertyName] = [
+            '#type' => 'markup',
+            '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
+          ];
+        }
       }
     }
 
