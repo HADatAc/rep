@@ -884,3 +884,7 @@ form#tree-form {
 .js-form-wrapper.form-wrapper {
   margin-bottom: 0!important;
 }
+
+.row.js-form-wrapper.form-wrapper {
+  margin-top: 1rem;
+}
