@@ -885,6 +885,7 @@ form#tree-form {
   margin-bottom: 0!important;
 }
 
-.row.js-form-wrapper.form-wrapper {
+.row.js-form-wrapper.form-wrapper,
+#cards-wrapper .col-md-4.js-form-wrapper.form-wrapper {
   margin-top: 1rem;
 }
