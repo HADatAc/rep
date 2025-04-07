@@ -103,6 +103,7 @@ class TreeForm extends FormBase {
       'study' => ["Study", EntryPoints::STUDY],
       'unit' => ["Unit", EntryPoints::UNIT],
       'detectorattribute' => ["Detector Attribute", EntryPoints::DETECTOR_ATTRIBUTE],
+      'actuatorattribute' => ["Actuator Attribute", EntryPoints::ACTUATOR_ATTRIBUTE],
     ];
 
     $branches_param = [
@@ -124,6 +125,13 @@ class TreeForm extends FormBase {
         'label' => 'Actuator Stem',
         'typeNamespace' => EntryPoints::ACTUATOR_STEM,
         'uriNamespace' => EntryPoints::ACTUATOR_STEM
+      ],
+      [
+        'id' => 'actuatorattribute',
+        'uri' => EntryPoints::ACTUATOR_ATTRIBUTE,
+        'label' => 'Actuator Attribute',
+        'typeNamespace' => EntryPoints::ACTUATOR_ATTRIBUTE,
+        'uriNamespace' => EntryPoints::ACTUATOR_ATTRIBUTE
       ],
       [
         'id' => 'detectorstem',

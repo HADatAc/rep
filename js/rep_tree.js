@@ -459,9 +459,6 @@
             attachTreeEventListeners();
             $treeRoot.on('load_node.jstree', resetActivityTimeout);
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
-            if (drupalSettings.rep_tree.elementType !== 'detectorattribute') {
-              // Opcional: $treeRoot.jstree('open_all');
-            }
             resetActivityTimeout();
           });
         }
