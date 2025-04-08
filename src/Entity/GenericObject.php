@@ -132,7 +132,7 @@ class GenericObject {
       // Construct the potential corresponding object key with "Uri" suffix
       $objectKey = GenericObject::removeTrailingUri($uriKey);
 
-      if ($objectKey === 'hasStatus' || $objectKey === 'hasUrl') {
+      if ($objectKey === 'hasStatus' || $objectKey === 'hasUrl' || $objectKey === 'hasInformant') {
         $urisWithoutObject[$objectKey] = $uriValue;
       } else {
         // Check if the constructed object key exists in the objects array

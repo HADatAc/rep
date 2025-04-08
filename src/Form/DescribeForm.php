@@ -96,12 +96,19 @@
     foreach ($objectProperties['literals'] as $propertyName => $propertyValue) {
       // Add a textfield element for each property
       if ($propertyValue !== NULL && $propertyValue !== "") {
-        if ($propertyName !== 'hasImageUri') {
+        if ($propertyName !== 'hasImageUri' && $propertyName !== 'hasWebDocument') {
           $prettyName = DescribeForm::prettyProperty($propertyName);
           $form[$propertyName] = [
             '#type' => 'markup',
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
           ];
+        } else if ($propertyName === 'hasWebDocument') {
+          if ( isset($this->getElement()->hasWebDocument) ) {
+            // hascoTypeLabel
+            $hasWebDocument = (isset($this->getElement()->hasWebDocument) && !empty($this->getElement()->hasWebDocument))
+                            ? Utils::getAPIImage($this->getElement()->uri, $this->getElement()->hasWebDocument, '')
+                            : '';
+          }
         }
       }
     }
