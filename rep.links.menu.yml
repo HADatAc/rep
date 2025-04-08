@@ -131,7 +131,7 @@ rep.admin_settings_link:
 reviewer.top_level:
   title: Reviewer Operations
   description: Manage Reviews
-  route_name: '<none>'
+  route_name: '<nolink>'
   menu_name: main
   weight: 100
   requirements:
@@ -141,7 +141,7 @@ reviewer.uploadingest_review:
   title: Manage MTs
   description: ''
   menu_name: main
-  route_name: '<none>'
+  route_name: '<nolink>'
   parent: reviewer.top_level
   weight: 20
   requirements:
@@ -152,7 +152,7 @@ reviewer.generate_review:
   title: Generate MTs
   description: ''
   menu_name: main
-  route_name: '<none>'
+  route_name: '<nolink>'
   parent: reviewer.top_level
   weight: 30
   requirements:
