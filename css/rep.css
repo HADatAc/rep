@@ -893,3 +893,8 @@ form#tree-form {
 #tree-wrapper {
   margin-top: 1rem!important;
 }
+
+button.view-active {
+  background-color: var(--bs-btn-active-bg)!important;
+  color:var(--bs-gray-200)!important;
+}

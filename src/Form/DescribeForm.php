@@ -17,6 +17,7 @@
  use Drupal\rep\Entity\GenericObject;
  use Drupal\rep\Vocabulary\REPGUI;
  use Drupal\rep\Vocabulary\VSTOI;
+ use Drupal\Core\Render\Markup;
 
  class DescribeForm extends FormBase {
 
@@ -46,6 +47,15 @@
    */
 
   public function buildForm(array $form, FormStateInterface $form_state, $elementuri=NULL){
+
+    // MODAL
+    $form['#attached']['library'][] = 'rep/webdoc_modal';
+    $form['#attached']['library'][] = 'core/drupal.dialog';
+    $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    $form['#attached']['drupalSettings']['webdoc_modal'] = [
+      'baseUrl' => $base_url,
+    ];
+    $form['#attached']['library'][] = 'rep/pdfjs';
 
     // RETRIEVE REQUESTED ELEMENT
     $uri_decode=base64_decode($elementuri);
@@ -103,12 +113,31 @@
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
           ];
         } else if ($propertyName === 'hasWebDocument') {
-          if ( isset($this->getElement()->hasWebDocument) ) {
-            // hascoTypeLabel
-            $hasWebDocument = (isset($this->getElement()->hasWebDocument) && !empty($this->getElement()->hasWebDocument))
-                            ? Utils::getAPIImage($this->getElement()->uri, $this->getElement()->hasWebDocument, '')
-                            : '';
+          // Retrieve the URI from the element.
+          $uri = $this->getElement()->uri;
+
+          // If the URI contains "#/", extract the portion after "#/", otherwise use the full URI.
+          if (strpos($uri, '#/') !== false) {
+            $parts = explode('#/', $uri);
+            $uriPart = $parts[1];
           }
+          else {
+            $uriPart = $uri;
+          }
+
+          // Build the download URL using the base URL, the endpoint, and the encoded parameters.
+          // Here, we assume that "hasWebDocument" holds the document identifier.
+          $downloadUrl = $base_url . '/rep/webdocdownload/' . rawurlencode($uriPart) . '?doc=' . rawurlencode($this->getElement()->hasWebDocument);
+
+          // Create a markup element that outputs the clickable document link.
+          // The class "view-media-button" should be handled by your modal JavaScript.
+          $form['document_link'] = [
+            '#type' => 'markup',
+            '#markup' => '<strong>Web Document:</strong> ' .
+              '<a href="#" class="view-media-button" data-view-url="' . htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8') . '">' .
+              htmlspecialchars($this->getElement()->hasWebDocument, ENT_QUOTES, 'UTF-8') .
+              '</a><br /><br />',
+          ];
         }
       }
     }
@@ -134,6 +163,20 @@
     $form['space'] = [
       '#type' => 'markup',
       '#markup' => $this->t("<br><br>"),
+    ];
+
+    $form['modal'] = [
+      '#type' => 'markup',
+      '#markup' => Markup::create('
+        <div id="modal-container" class="modal-media hidden">
+          <div class="modal-content">
+            <button class="close-btn" type="button">&times;</button>
+            <div id="pdf-scroll-container"></div>
+            <div id="modal-content"></div>
+          </div>
+          <div class="modal-backdrop"></div>
+        </div>
+      '),
     ];
 
     return $form;

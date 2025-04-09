@@ -1090,4 +1090,47 @@ class Utils {
       return $placeholder_image;
     }
   }
+
+  /**
+   * Retorna o documento da API como um Data URI.
+   *
+   * @param string $uri
+   *   A URI base ou relativa para a requisição.
+   * @param string $apiDocument
+   *   O identificador do documento na API.
+   *
+   * @return string
+   *   Se o documento for encontrado, retorna o Data URI do documento (base64),
+   *   ou a URL completa se já estiver em formato HTTP. Caso contrário,
+   *   retorna uma string vazia.
+   */
+  public static function getAPIDocument($uri, $apiDocument) {
+    // Se o valor do documento estiver vazio, retorna vazio (não há placeholder).
+    if ($apiDocument === '') {
+      return '';
+    }
+
+    // Se o documento já for uma URL completa (inicia com 'http'),
+    // retorna-o diretamente.
+    if (strpos($apiDocument, 'http') === 0) {
+      return $apiDocument;
+    }
+
+    // Usa o serviço rep.api_connector para baixar o documento.
+    $api = \Drupal::service('rep.api_connector');
+    $response = $api->downloadFile($uri, $apiDocument);
+
+    if ($response) {
+      $file_content = $response->getContent();
+      $content_type = $response->headers->get('Content-Type');
+      // Codifica o conteúdo do arquivo em base64 para montar um Data URI.
+      $base64_document = base64_encode($file_content);
+      return "data:" . $content_type . ";base64," . $base64_document;
+    }
+    else {
+      // Se não houver resposta, retorna string vazia.
+      return '';
+    }
+  }
+
 }
