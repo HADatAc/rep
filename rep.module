@@ -108,6 +108,26 @@ function rep_update_8001() {
 }
 
 /**
+ * Ensure the sidebar first width setting is set to 3 cols.
+ */
+function rep_update_8002() {
+  // Retrieve the editable configuration for the Bootstrap Barrio theme.
+  $config = \Drupal::configFactory()->getEditable('bootstrap_barrio.settings');
+
+  // Get the current value of the sidebar first width setting.
+  $current_value = $config->get('bootstrap_barrio_sidebar_first_width');
+
+  // Check if the current value is not equal to 3.
+  if ($current_value != 3) {
+    // Update the setting to 3.
+    $config->set('bootstrap_barrio_sidebar_first_width', 3)->save();
+
+    // Optionally, add a message to inform the administrator about the change.
+    \Drupal::messenger()->addMessage(t('The Sidebar First Width has been updated to 3 cols.'));
+  }
+}
+
+/**
  * Implements hook_menu_links_discovered_alter().
  */
 function rep_menu_links_discovered_alter(&$links) {
