@@ -164,6 +164,14 @@ function rep_custom_access_callback(AccountInterface $account) {
  * É chamado quando um novo usuário é criado no Drupal.
  */
 function rep_user_insert($account) {
+
+  $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
+  
+  if (!$sagres_token) {
+    \Drupal::logger('rep')->error("Token não encontrado na sessão.");
+    return;
+  }
+
   $json_data = json_encode([
     'acc_id' => $account->id(),
     'acc_repo_instance' => \Drupal::request()->getHost(),
@@ -174,7 +182,10 @@ function rep_user_insert($account) {
 
   try {
     $response = \Drupal::httpClient()->post('http://192.168.1.73/sguser/account/add', [
-      'headers' => ['Content-Type' => 'application/json'],
+      'headers' => [
+        'Content-Type' => 'application/json',
+        'Authorization' => "Bearer {$sagres_token}",
+      ],
       'body' => $json_data,
     ]);
 
@@ -191,6 +202,14 @@ function rep_user_insert($account) {
  * É chamado quando um usuário é atualizado no Drupal.
  */
 function rep_user_update($account) {
+
+  $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
+
+  if (!$sagres_token) {
+    \Drupal::logger('rep')->error("Token não encontrado na sessão.");
+    return;
+  }
+
   $json_data = json_encode([
     'acc_id' => $account->id(),
     'acc_repo_instance' => \Drupal::request()->getHost(),
@@ -201,7 +220,10 @@ function rep_user_update($account) {
 
   try {
     $response = \Drupal::httpClient()->post('http://192.168.1.73/sguser/account/update', [
-      'headers' => ['Content-Type' => 'application/json'],
+      'headers' => [
+        'Content-Type' => 'application/json',
+        'Authorization' => "Bearer {$sagres_token}", // Adicionando o token aqui
+      ],
       'body' => $json_data,
     ]);
 
@@ -218,12 +240,24 @@ function rep_user_update($account) {
  * É chamado quando um usuário é removido no Drupal.
  */
 function rep_user_delete($account) {
+
+  $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
+
+  if (!$sagres_token) {
+    \Drupal::logger('rep')->error("Token não encontrado na sessão.");
+    return;
+  }
+
   $acc_repo_instance = \Drupal::request()->getHost();
 
   $url = 'http://192.168.1.73/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
 
   try {
-    $response = \Drupal::httpClient()->delete($url);
+    $response = \Drupal::httpClient()->delete($url, [
+      'headers' => [
+        'Authorization' => "Bearer {$sagres_token}",
+      ],
+    ]);
 
     if ($response->getStatusCode() == 200) {
       \Drupal::logger('rep')->notice("Conta {$account->id()} removida do sguser.");
