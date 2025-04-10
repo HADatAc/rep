@@ -306,3 +306,26 @@ rep.sdd_autocomplete:
   requirements:
     _permission: 'access content'
 
+rep.sagres.config_form:
+  path: '/rep/sagres/config'
+  defaults:
+    _form: '\Drupal\rep\Form\Sagres\OAuthConfigForm'
+    _title: "Sagres Config"
+  requirements:
+    _permission: 'access administration pages'
+
+rep.sagres.status_form:
+  path: '/rep/sagres/status'
+  defaults:
+    _form: '\Drupal\rep\Form\Sagres\OAuthStatusForm'
+    _title: "Sagres Status"
+  requirements:
+    _permission: 'access administration pages'
+
+rep.oauth_token:
+  path: '/rep/oauth/token'
+  defaults:
+    _controller: '\Drupal\meugrafo\Controller\OAuthController::getAccessToken'
+    _title: 'OAuth Token'
+  requirements:
+    _permission: 'administer site configuration'

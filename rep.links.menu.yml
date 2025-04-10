@@ -123,7 +123,27 @@ rep.admin_settings_link:
     _permission: 'access content'
     _role: 'authenticated'
 
+rep.sagres_config:
+  title: Sagres Conection Config
+  description: Semantic Repository Settings
+  menu_name: main
+  route_name: rep.sagres.config_form
+  parent: rep.top_level
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
 
+rep.sagres_status:
+  title: Sagres Conection Status
+  description: Semantic Repository Settings
+  menu_name: main
+  route_name: rep.sagres.status_form
+  parent: rep.top_level
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
 #
 # REVIEWER
 #

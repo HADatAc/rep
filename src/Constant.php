@@ -68,5 +68,7 @@ class Constant {
   const TOT_PER_PAGE                      = 6;
   const TOT_OBJS_PER_PAGE                 = 20;
   const TOT_SOCS_PER_PAGE                 = 40;
+  const CONFIG_SAGRES                   = "sagres.oauth.settings";
+
 
 }
