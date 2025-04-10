@@ -139,7 +139,7 @@ function rep_menu_links_discovered_alter(&$links) {
   $config = \Drupal::config('rep.settings');
   $sagres_enabled = $config->get('sagres_conf');
 
-  if (!$sagres_enabled) {
+  if ($sagres_enabled == 0) {
     $to_hide = [
       'rep.sagres',
       'rep.sagres_config',
