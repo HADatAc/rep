@@ -138,7 +138,7 @@ function rep_menu_links_discovered_alter(&$links) {
 
   $config = \Drupal::config('rep.settings');
   $sagres_enabled = $config->get('sagres_conf');
-  \Drupal::logger('rep')->notice('sagres_conf: ' . $form_state->getValue('sagres_conf'));
+  \Drupal::logger('rep')->notice('sagres_conf: ' . $sagres_enabled);
 
 
   if ($sagres_enabled == 0) {
