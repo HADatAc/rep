@@ -68,14 +68,17 @@
 
         // Build custom modal markup (the pdf-container goes inside the modal wrapper).
         const modalMarkup = `
-          <div id="pdf-container"></div>
+          <div class="modal-content">
+            <button id="modal-close" class="close-btn" type="button">&times;</button>
+            <div id="pdf-container"></div>
+          </div>
           <div class="my-modal-backdrop"></div>
         `;
 
         // Inject the custom markup into the native Drupal modal.
         if (drupalModal) {
           drupalModal.innerHTML = modalMarkup;
-          // Make the modal visible.
+          // Torna o modal visível.
           drupalModal.style.display = "block";
         }
 
@@ -108,8 +111,8 @@
 
       // Bind the close event on the close button and the backdrop.
       $(document)
-        .off("click", "#modal-close, .my-modal-backdrop, .pdf-pages-container")
-        .on("click", "#modal-close, .my-modal-backdrop, .pdf-pages-container", function (e) {
+        .off("click", "#modal-close, .close-btn, .my-modal-backdrop, .pdf-pages-container")
+        .on("click", "#modal-close, .close-btn, .my-modal-backdrop, .pdf-pages-container", function (e) {
           e.preventDefault();
           const drupalModal = document.getElementById("drupal-modal");
           if (drupalModal) {

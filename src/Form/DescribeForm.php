@@ -113,10 +113,10 @@
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
           ];
         } else if ($propertyName === 'hasWebDocument') {
-          // Retrieve the URI from the element.
+          // Recupera o URI do elemento.
           $uri = $this->getElement()->uri;
 
-          // If the URI contains "#/", extract the portion after "#/", otherwise use the full URI.
+          // Se o URI contiver "#/", extrai a parte após "#/", caso contrário, utiliza o URI completo.
           if (strpos($uri, '#/') !== false) {
             $parts = explode('#/', $uri);
             $uriPart = $parts[1];
@@ -125,18 +125,32 @@
             $uriPart = $uri;
           }
 
-          // Build the download URL using the base URL, the endpoint, and the encoded parameters.
-          // Here, we assume that "hasWebDocument" holds the document identifier.
-          $downloadUrl = $base_url . '/rep/webdocdownload/' . rawurlencode($uriPart) . '?doc=' . rawurlencode($this->getElement()->hasWebDocument);
+          // Chama o método para obter o documento via API.
+          // Supondo que o método getAPIDocument esteja na mesma classe, use self::getAPIDocument() ou o namespace apropriado.
+          $documentDataURI = Utils::getAPIDocument($uri, $this->getElement()->hasWebDocument);
 
-          // Create a markup element that outputs the clickable document link.
-          // The class "view-media-button" should be handled by your modal JavaScript.
+          // Se o método não conseguiu retornar um Data URI, você pode exibir uma mensagem de erro ou fallback.
+          if (!$documentDataURI) {
+            $documentDataURI = '#';
+          }
+
+          // Monta o elemento markup para exibir o botão com o atributo que contém o Data URI.
+          // Aqui, o JavaScript do modal deverá capturar o atributo "data-view-url" e carregar o conteúdo, por exemplo, num iframe dentro do modal.
           $form['document_link'] = [
-            '#type' => 'markup',
-            '#markup' => '<strong>Web Document:</strong> ' .
-              '<a href="#" class="view-media-button" data-view-url="' . htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8') . '">' .
-              htmlspecialchars($this->getElement()->hasWebDocument, ENT_QUOTES, 'UTF-8') .
-              '</a><br /><br />',
+            '#type' => 'container',
+            '#attributes' => ['class' => ['document-link-container']],
+          ];
+
+          // Cria o botão com o elemento "html_tag".
+          $form['document_link']['button'] = [
+            '#type' => 'html_tag',
+            '#tag' => 'button',
+            '#value' => $this->t('View associated WebDocument'),
+            '#attributes' => [
+              'class' => ['view-media-button', 'btn', 'btn-primary', 'mb-3'],
+              'data-view-url' => $documentDataURI,
+              'type' => 'button',
+            ],
           ];
         }
       }
@@ -178,6 +192,7 @@
         </div>
       '),
     ];
+
 
     return $form;
 
