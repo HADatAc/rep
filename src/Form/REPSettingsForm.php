@@ -302,10 +302,7 @@
         $config->set("api_url", $form_state->getValue('api_url'));
         $config->set("jwt_secret", $form_state->getValue('jwt_secret'));
         $config->save();
-        
-        \Drupal::logger('rep')->notice('rep_home: ' . $form_state->getValue('rep_home'));
-        \Drupal::logger('rep')->notice('sagres_conf: ' . $form_state->getValue('sagres_conf'));
-
+ 
         //site name
         $configdrupal = \Drupal::service('config.factory')->getEditable('system.site');
         $configdrupal->set('name', $form_state->getValue('site_name'));
