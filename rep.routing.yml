@@ -325,7 +325,7 @@ rep.sagres.status_form:
 rep.oauth_token:
   path: '/rep/oauth/token'
   defaults:
-    _controller: '\Drupal\meugrafo\Controller\OAuthController::getAccessToken'
+    _controller: '\Drupal\rep\Controller\OAuthController::getAccessToken'
     _title: 'OAuth Token'
   requirements:
     _permission: 'administer site configuration'
