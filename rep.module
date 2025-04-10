@@ -5,6 +5,7 @@ use Drupal\Core\Path\AliasStorageInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Menu\MenuLinkTreeInterface;
 
 /**
  * Implements hook_install().
@@ -265,4 +266,27 @@ function rep_user_delete($account) {
   } catch (RequestException $e) {
     \Drupal::logger('rep')->error("Erro ao remover conta {$account->id()} do sguser: " . $e->getMessage());
   }
+}
+
+function rep_menu_links_discovered_alter(&$links) {
+    $config = \Drupal::config('rep.settings');
+    $sagres_enabled = $config->get('sagres_conf');
+
+    if (!$sagres_enabled) {
+        // Lista de menu_links para esconder
+        $to_hide = [
+            'rep.sagres',
+            'rep.sagres_config',
+            'rep.sagres_status',
+        ];
+
+        foreach ($links as $key => $link) {
+            if (in_array($link['route_name'], [
+                'rep.sagres.status_form',
+                'rep.sagres.config_form'
+            ]) || in_array($key, $to_hide)) {
+                unset($links[$key]);
+            }
+        }
+    }
 }
