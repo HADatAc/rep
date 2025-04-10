@@ -10,6 +10,8 @@
  use Drupal\Core\Form\ConfigFormBase;
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\Core\Url;
+ use Drupal\rep\Constant;
+
 
  class REPSettingsForm extends ConfigFormBase {
 
@@ -175,6 +177,13 @@
             '#default_value' => $config->get("sagres_base_url") ?? 'https://52.214.194.214',
             '#description' => 'Sagres Base URL for Users Synchronization.',
         ];
+
+        $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
+        $form['sagres_access_token'] = [
+            '#type' => 'item',
+            '#title' => $this->t('Sagres Access Token'),
+            '#markup' => $sagres_token ? $sagres_token : $this->t('No token found'),
+        ];
         
         $form['api_url'] = [
             '#type' => 'textfield',
@@ -196,15 +205,7 @@
             '#title' => 'JWT Secret',
             '#key_filters' => ['type' => 'authentication'],
             '#default_value' => $config->get("jwt_secret"),
-        ];
-
-        $form['sagres_jwt'] = [
-            '#type' => 'key_select',
-            '#title' => 'Sagres JWT Secret',
-            '#key_filters' => ['type' => 'authentication'],
-            '#default_value' => $config->get("sagres_jwt"),
-            '#description' => 'Token JWT usado para comunicação segura com Sagres.',
-        ];        
+        ];       
 
         $form['filler_1'] = [
             '#type' => 'item',
@@ -293,7 +294,6 @@
         $config->set("sagres_base_url", $form_state->getValue('sagres_base_url'));
         $config->set("api_url", $form_state->getValue('api_url'));
         $config->set("jwt_secret", $form_state->getValue('jwt_secret'));
-        $config->set("sagres_jwt", $form_state->getValue('sagres_jwt'));
         $config->save();
 
         //site name
@@ -349,7 +349,13 @@
     private function syncUsersWithSagres() {
         $config = $this->config(static::CONFIGNAME);
         $sagres_base_url = $config->get("sagres_base_url");
-        $sagres_token = $config->get("sagres_jwt");
+        $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
+    
+        if (!$sagres_token) {
+            \Drupal::logger('rep')->error("Token não encontrado na sessão.");
+            return;
+        }
+
         $repo_instance = \Drupal::request()->getHost();
         \Drupal::logger('rep')->notice('Iniciando sincronização de utilizadores...');
 
@@ -382,11 +388,14 @@
         $users = \Drupal::entityTypeManager()->getStorage('user')->loadMultiple();
     
         foreach ($users as $user) {
+
             if ($user->id() == 0 || $user->isBlocked()) {
                 \Drupal::logger('rep')->notice("Utilizador ignorado: " . $user->id());
                 continue;
             }
+
             \Drupal::logger('rep')->notice("Processando utilizador: " . $user->getEmail());
+
             $user_data = [
                 'acc_id' => $user->id(),
                 'acc_repo_instance' => $repo_instance,
@@ -408,13 +417,20 @@
                                 'Authorization' => "Bearer {$sagres_token}"
                             ],
                         ]);
-                        $users_updated++;
+
+                        if ($response->getStatusCode() === 200) {
+                            $users_updated++;
+                        } else {
+                            \Drupal::logger('rep')->error("Erro ao atualizar utilizador {$user->id()}. Status: " . $response->getStatusCode());
+                        }
+
                     } catch (\Exception $e) {
                         \Drupal::logger('rep')->error("Erro ao atualizar utilizador {$user->id()}: " . $e->getMessage());
                     }
                 }
+
             } else {
-                // Usuário ainda não existe no sguser, criar novo
+
                 try {
                     \Drupal::httpClient()->post("{$sagres_base_url}/sguser/account/add", [
                         'json' => $user_data,
@@ -423,7 +439,13 @@
                             'Authorization' => "Bearer {$sagres_token}"
                         ],
                     ]);
-                    $users_created++;
+
+                    if ($response->getStatusCode() === 201) {
+                        $users_created++;
+                    } else {
+                        \Drupal::logger('rep')->error("Erro ao criar utilizador {$user->id()}. Status: " . $response->getStatusCode());
+                    }
+
                 } catch (\Exception $e) {
                     \Drupal::logger('rep')->error("Erro ao criar utilizador {$user->id()}: " . $e->getMessage());
                 }
