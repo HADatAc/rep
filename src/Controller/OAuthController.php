@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\rep\Controller\Sagres;
+namespace Drupal\rep\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Url;
