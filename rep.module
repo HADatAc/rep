@@ -147,11 +147,11 @@ function rep_menu_links_discovered_alter(&$links) {
     ];
 
     foreach ($links as $key => $link) {
-      if (in_array($link['route_name'], [
-        'rep.sagres.status_form',
-        'rep.sagres.config_form'
-      ]) || in_array($key, $to_hide)) {
-        unset($links[$key]);
+      if ((isset($link['route_name']) && in_array($link['route_name'], [
+              'rep.sagres.status_form',
+              'rep.sagres.config_form'
+          ])) || in_array($key, $to_hide)) {
+          unset($links[$key]);
       }
     }
   }
