@@ -49,7 +49,7 @@ class OAuthStatusForm extends FormBase {
 
   public function refreshToken(array &$form, FormStateInterface $form_state) {
     $callable = \Drupal::service('controller_resolver')
-    ->getControllerFromDefinition('Drupal\rep\Controller\Sagres\OAuthController::getAccessToken');
+    ->getControllerFromDefinition('Drupal\rep\Controller\OAuthController::getAccessToken');
   
     $response = call_user_func($callable);
 
