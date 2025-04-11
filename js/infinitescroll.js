@@ -31,7 +31,7 @@
       function onScroll() {
         // Skip processing if scroll detection is disabled.
         if (window.myInfiniteScroll.disableScrollDetection) return;
-        var scrollThreshold = 20;
+        var scrollThreshold = 0;
         var loadState = $("#list_state").val();
         if (
           loadState == 1 &&
@@ -45,7 +45,7 @@
       }
 
       // Bind the debounced scroll event on window (using a custom event namespace).
-      $(window).on('scroll.repInfiniteScroll', debounce(onScroll, 1500));
+      $(window).on('scroll.repInfiniteScroll', debounce(onScroll, 1000));
 
       // After each AJAX request completes, hide the loading overlay and reset isLoading flag.
       $(document).ajaxComplete(function () {
@@ -67,13 +67,13 @@
         // Delay to ensure the DOM is fully updated.
         setTimeout(function () {
           // Scroll to near the bottom of the document (adjust offset as needed).
-          window.scrollTo({ top: document.body.scrollHeight - 250, behavior: 'smooth' });
+          document.documentElement.scrollTop = document.body.scrollHeight - 1500;
           // After the scroll, re-enable scroll detection.
           setTimeout(function () {
             window.myInfiniteScroll.disableScrollDetection = false;
             drupalSettings.meugrafo.scrollAfterAjax = false;
-          }, 3000);
-        }, 200);
+          }, 500);
+        }, 100);
       }
     }
   };

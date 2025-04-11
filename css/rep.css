@@ -576,11 +576,11 @@ button.generate-ins-element-button::before {
 /* Infinite Scroll */
 #loading-overlay {
   position: fixed;
-  top: 0;
+  bottom: 50px;
   right: 0;
   width: 100px;
   height: 100px;
-  background: rgba(77, 76, 76, 0.85);
+  background: rgba(77, 76, 76, 0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -917,4 +917,48 @@ button.view-active {
 
 #edit-submit[name='back'] {
   margin-top: 1rem;
+}
+
+
+/* CARDS */
+.card {
+  height: 100% !important;
+  min-height: 280px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  /* padding: 1rem !important; */
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #ddd !important;
+  border-radius: 8px !important;
+}
+
+/* Garante que o corpo e o rodapé do card ocupem espaço adequadamente */
+.card-body {
+  flex-grow: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+/* Controla a imagem */
+.card-body img {
+  max-height: 160px !important;
+  object-fit: contain !important;
+}
+
+/* Corrige o rodapé para alinhar botões na base do card */
+.card-footer {
+  margin-top: auto !important;
+}
+
+.row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+}
+.col-md-4 {
+  display: flex !important;
+}
+.card {
+  width: 100% !important;
 }
