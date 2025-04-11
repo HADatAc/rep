@@ -1689,7 +1689,7 @@ class FusekiAPIConnector {
       $content_type = $res->getHeaderLine('Content-Type');
     }
     catch (\Exception $e) {
-      \Drupal::messenger()->addError(t('Error Downloading image: @msg', ['@msg' => $e->getMessage()]));
+      // \Drupal::messenger()->addError(t('Error Downloading image: @msg', ['@msg' => $e->getMessage()]));
       return NULL;
     }
 

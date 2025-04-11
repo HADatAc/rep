@@ -221,10 +221,6 @@
             const DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
             const DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
             const UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
-            // console.log("Selected node:", selectedNode);
-            // console.log("Status:", selectedNode.hasStatus);
-            // console.log("Owner:", selectedNode.hasSIRManagerEmail);
-            // console.log("Autenticated:", drupalSettings.rep_tree.managerEmail);
 
             // If the node is Draft or Deprecated, keep the button disabled.
             if ((selectedNode.hasStatus === DRAFT_URI || selectedNode.hasStatus === DEPRECATED_URI || selectedNode.hasStatus === UNDERREVIEW_URI) && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) {
@@ -268,20 +264,9 @@
               </a><br />
             `;
 
-            // const webdocument = data.node.data.hasWebDocument || "";
-            // if (webdocument.trim().length > 0) {
-            //   html += `
-            //     <strong>Web Document:</strong>
-            //     <a href="${webdocument}"
-            //       target="_new">
-            //       ${webdocument}
-            //     </a><br />
-            //   `;
-            // }
             const webdocument = data.node.data.hasWebDocument || "";
             if (webdocument.trim().length > 0) {
               if (webdocument.trim().toLowerCase().startsWith("http")) {
-                // Se webdocument começar com "http", renderiza o <a> normalmente.
                 html += `
                   <strong>Web Document:</strong>
                   <a href="${webdocument}" target="_new">
@@ -289,9 +274,7 @@
                   </a><br />
                 `;
               } else {
-                // Extrai a parte após "#/" de selectedNode.uri, se existir.
                 const uriPart = selectedNode.uri.includes('#/') ? selectedNode.uri.split('#/')[1] : selectedNode.uri;
-                // Constrói a URL de download usando o novo controller.
                 // const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webdocument)}`;
                 const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webdocument)}`;
                 html += `
@@ -472,14 +455,10 @@
             },
           });
 
-          // Após a inicialização, anexa os eventos e configura o timeout de atividade
           $treeRoot.on('ready.jstree', function () {
             attachTreeEventListeners();
             $treeRoot.on('load_node.jstree', resetActivityTimeout);
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
-            if (drupalSettings.rep_tree.elementType !== 'detectorattribute') {
-              // Opcional: $treeRoot.jstree('open_all');
-            }
             resetActivityTimeout();
           });
         }
@@ -997,14 +976,11 @@
           'padding-right': '',
         });
 
-        // Recupera o ID do campo de texto onde o valor foi escrito.
         var fieldId = $(this).data('field-id');
         //console.log(fieldId);
         if (fieldId) {
-          // Um pequeno delay pode ajudar a garantir que o valor já esteja escrito.
           setTimeout(function () {
             //console.log($('#' + fieldId));
-            // Dispara o evento blur apenas para o input desejado.
             $('#' + fieldId).trigger('change');
           }, 100);
         }

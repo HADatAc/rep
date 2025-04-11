@@ -1,42 +1,80 @@
-(function ($, Drupal) {
+(function ($, Drupal, drupalSettings) {
+  // Global flag to ensure the infinite scroll behavior is attached only once.
+  if (typeof window.repInfiniteScrollInitialized === 'undefined') {
+    window.repInfiniteScrollInitialized = false;
+  }
+
   Drupal.behaviors.repInfiniteScroll = {
     attach: function (context, settings) {
-      if (window.infiniteScrollInitialized) {
+      // Check if the behavior is already initialized.
+      if (window.repInfiniteScrollInitialized) {
         return;
       }
-      window.infiniteScrollInitialized = true;
+      window.repInfiniteScrollInitialized = true;
 
-      let isLoading = false;
-      const pageSizeIncrement = 9;
+      // Global object to control scroll flags.
+      window.myInfiniteScroll = window.myInfiniteScroll || {
+        disableScrollDetection: false,
+        isLoading: false
+      };
 
+      // Debounce function to limit the frequency of the scroll event.
       function debounce(func, wait) {
-        let timeout;
+        var timeout;
         return function () {
           clearTimeout(timeout);
           timeout = setTimeout(() => func.apply(this, arguments), wait);
         };
       }
 
+      // onScroll function: Triggers AJAX load when near the bottom.
       function onScroll() {
-        const scrollThreshold = 20;
-        const loadState = $("#list_state").val();
-
-        // Se há mais itens para carregar e estamos perto do final da página
-        if (loadState == 1 && $(window).scrollTop() + $(window).height() >= $(document).height() - scrollThreshold && !isLoading) {
-          isLoading = true;
+        // Skip processing if scroll detection is disabled.
+        if (window.myInfiniteScroll.disableScrollDetection) return;
+        var scrollThreshold = 0;
+        var loadState = $("#list_state").val();
+        if (
+          loadState == 1 &&
+          $(window).scrollTop() + $(window).height() >= $(document).height() - scrollThreshold &&
+          !window.myInfiniteScroll.isLoading
+        ) {
+          window.myInfiniteScroll.isLoading = true;
           $('#loading-overlay').show();
-          $('#load-more-button').trigger('click'); // Dispara o clique no botão "Load More"
+          $('#load-more-button').trigger('click');
         }
       }
 
-      // Quando o carregamento é concluído, esconder o indicador e liberar para próximo carregamento
+      // Bind the debounced scroll event on window (using a custom event namespace).
+      $(window).on('scroll.repInfiniteScroll', debounce(onScroll, 1000));
+
+      // After each AJAX request completes, hide the loading overlay and reset isLoading flag.
       $(document).ajaxComplete(function () {
         $('#loading-overlay').hide();
-        isLoading = false;
+        window.myInfiniteScroll.isLoading = false;
+        console.log("finito");
       });
-
-      // Bind debounce to scroll
-      $(window).on('scroll', debounce(onScroll, 50));
     }
   };
-})(jQuery, Drupal);
+
+  // Behavior to scroll after AJAX completes.
+  // This behavior temporarily disables the infinite scroll detection
+  // to avoid triggering another AJAX load during the programmatic scroll.
+  Drupal.behaviors.scrollAfterAjax = {
+    attach: function (context, settings) {
+      if (drupalSettings.meugrafo && drupalSettings.meugrafo.scrollAfterAjax) {
+        // Disable infinite scroll detection temporarily.
+        window.myInfiniteScroll.disableScrollDetection = true;
+        // Delay to ensure the DOM is fully updated.
+        setTimeout(function () {
+          // Scroll to near the bottom of the document (adjust offset as needed).
+          document.documentElement.scrollTop = document.body.scrollHeight - 1500;
+          // After the scroll, re-enable scroll detection.
+          setTimeout(function () {
+            window.myInfiniteScroll.disableScrollDetection = false;
+            drupalSettings.meugrafo.scrollAfterAjax = false;
+          }, 500);
+        }, 100);
+      }
+    }
+  };
+})(jQuery, Drupal, drupalSettings);

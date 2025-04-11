@@ -1090,4 +1090,44 @@ class Utils {
       return $placeholder_image;
     }
   }
+
+  public static function getAPIDocument($uri, $apiDocument) {
+    if (empty($apiDocument)) {
+      return '';
+    }
+
+    // Se o valor já for uma URL completa, retorna diretamente.
+    if (strpos($apiDocument, 'http') === 0) {
+      return $apiDocument;
+    }
+
+    $api = \Drupal::service('rep.api_connector');
+    $response = $api->downloadFile($uri, $apiDocument);
+
+    if ($response) {
+      $file_content = $response->getContent();
+      $original_content_type = $response->headers->get('Content-Type');
+
+      // Verifica a extensão do arquivo com base no nome.
+      $extension = strtolower(pathinfo($apiDocument, PATHINFO_EXTENSION));
+
+      if ($extension === 'pdf') {
+        // Se for PDF, force o Content-Type para application/pdf.
+        $content_type = 'application/pdf';
+        $response->headers->set('Content-Type', $content_type);
+        $response->headers->set('Content-Disposition', 'inline; filename="' . $apiDocument . '"');
+      }
+      else {
+        // Para outros tipos de arquivo, usa o Content-Type original.
+        $content_type = $original_content_type;
+      }
+
+      $base64_document = base64_encode($file_content);
+      return "data:" . $content_type . ";base64," . $base64_document;
+    }
+    else {
+      return '';
+    }
+  }
+
 }

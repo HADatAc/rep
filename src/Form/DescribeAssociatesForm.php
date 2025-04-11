@@ -24,15 +24,15 @@
  class DescribeAssociatesForm extends FormBase {
 
   protected $element;
-  
+
     public function getElement() {
       return $this->element;
     }
-  
+
     public function setElement($object) {
-      return $this->element = $object; 
+      return $this->element = $object;
     }
-  
+
     /**
      * {@inheritdoc}
      */
@@ -60,7 +60,7 @@
           $this->setElement($api->parseObjectResponse($finalUri,'getUri'));
           if ($this->getElement() != NULL) {
             $objectProperties = GenericObject::inspectObject($this->getElement());
-            //dpm($objectProperties);
+            // dpm($objectProperties);
             //dpm($this->getElement());
           }
         }
@@ -71,9 +71,8 @@
         ];
 
         foreach ($objectProperties['objects'] as $propertyName => $propertyValue) {
-
           // PROCESS EMBEDDED OBJECTS
-          if ($propertyName === 'hasAddress') {  
+          if ($propertyName === 'hasAddress') {
 
             $this->processPropertyAddress($propertyValue, $form, $form_state);
 
@@ -140,7 +139,7 @@
           $this->processClass($form, $form_state);
         }
 
-        return $form;        
+        return $form;
     }
 
     public function processPropertyAddress($addressObject, array &$form, FormStateInterface $form_state) {
@@ -176,18 +175,18 @@
         $hascoTypeRaw = $api->getHascoType($this->getElement()->uri);
         if ($hascoTypeRaw != NULL) {
           $hascoTypeJSON = $api->parseObjectResponse($hascoTypeRaw,'hascoTypeRaw');
-          $response = json_decode($hascoTypeJSON, true);  
-          $hascoType = $response['hascoType'] ?? null;      
+          $response = json_decode($hascoTypeJSON, true);
+          $hascoType = $response['hascoType'] ?? null;
           if ($hascoType != NULL && $hascoType == VSTOI::PLATFORM) {
             AssocPlatform::process($this->getElement(), $form, $form_state);
           }
         }
       }
     }
-     
+
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
-     
+
     /**
      * {@inheritdoc}
      */

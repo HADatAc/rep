@@ -17,6 +17,7 @@
  use Drupal\rep\Entity\GenericObject;
  use Drupal\rep\Vocabulary\REPGUI;
  use Drupal\rep\Vocabulary\VSTOI;
+ use Drupal\Core\Render\Markup;
 
  class DescribeForm extends FormBase {
 
@@ -47,16 +48,26 @@
 
   public function buildForm(array $form, FormStateInterface $form_state, $elementuri=NULL){
 
+    // MODAL
+    $form['#attached']['library'][] = 'rep/webdoc_modal';
+    $form['#attached']['library'][] = 'core/drupal.dialog';
+    $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    $form['#attached']['drupalSettings']['webdoc_modal'] = [
+      'baseUrl' => $base_url,
+    ];
+    $form['#attached']['library'][] = 'rep/pdfjs';
+
     // RETRIEVE REQUESTED ELEMENT
     $uri_decode=base64_decode($elementuri);
     $full_uri = Utils::plainUri($uri_decode);
     $api = \Drupal::service('rep.api_connector');
     $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
 
-    //dpm($this->getElement());
+    // dpm($this->getElement());
 
     $objectProperties = GenericObject::inspectObject($this->getElement());
 
+    // dpm($objectProperties);
     //($objectProperties);
 
     //if ($objectProperties !== null) {
@@ -82,8 +93,6 @@
       $message = "<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>";
     }
 
-    //dpm($this->getElement());
-
     // Instantiate tables
     $tables = new Tables;
 
@@ -93,13 +102,81 @@
     ];
 
     foreach ($objectProperties['literals'] as $propertyName => $propertyValue) {
+
       // Add a textfield element for each property
       if ($propertyValue !== NULL && $propertyValue !== "") {
+
         $prettyName = DescribeForm::prettyProperty($propertyName);
-        $form[$propertyName] = [
-          '#type' => 'markup',
-          '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
-        ];
+
+        if ($propertyName !== 'hasImageUri' && $propertyName !== 'hasWebDocument' && $propertyName !== 'hasStatus') {
+
+          $form[$propertyName] = [
+            '#type' => 'markup',
+            '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
+          ];
+        } else if ($propertyName === 'hasStatus') {
+          $form[$propertyName] = [
+            '#type' => 'markup',
+            '#markup' => $this->t("<b>" . $prettyName . "</b>: " . Utils::plainStatus($propertyValue). "<br><br>"),
+          ];
+        } else if ($propertyName === 'hasWebDocument') {
+          // Retrieve the element’s URI.
+          $uri = $this->getElement()->uri;
+
+          // If the URI contains "#/", extract the part after it; otherwise, use the full URI.
+          if (strpos($uri, '#/') !== false) {
+            $parts = explode('#/', $uri);
+            $uriPart = $parts[1];
+          } else {
+            $uriPart = $uri;
+          }
+
+          // Get the hasWebDocument property.
+          $hasWebDocument = $this->getElement()->hasWebDocument;
+
+          // Check if hasWebDocument starts with "http".
+          if (strpos($hasWebDocument, 'http') === 0 || strpos($hasWebDocument, 'https') === 0) {
+            // Display only a link for the user to click.
+            $form['document_link'] = [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['document-link-container']],
+            ];
+            $form['document_link']['link'] = [
+              '#type' => 'link',
+              '#title' => $this->t('View associated WebDocument'),
+              '#url' => \Drupal\Core\Url::fromUri($hasWebDocument),
+              '#attributes' => [
+                'class' => ['view-media-link', 'btn', 'btn-primary', 'mb-3'],
+                'target' => '_blank',
+                'rel' => 'noopener noreferrer',
+              ],
+            ];
+          }
+          else {
+            // Generate the documentDataURI as before.
+            $documentDataURI = Utils::getAPIDocument($uri, $hasWebDocument);
+            if (!$documentDataURI) {
+              $documentDataURI = '#';
+            }
+
+            $form['document_link'] = [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['document-link-container']],
+            ];
+
+            // Create a button using the html_tag element.
+            $form['document_link']['button'] = [
+              '#type' => 'html_tag',
+              '#tag' => 'button',
+              '#value' => $this->t('View associated WebDocument'),
+              '#attributes' => [
+                'class' => ['view-media-button', 'btn', 'btn-primary', 'mb-3'],
+                'data-view-url' => $documentDataURI,
+                'type' => 'button',
+              ],
+            ];
+          }
+        }
       }
     }
 
@@ -125,6 +202,21 @@
       '#type' => 'markup',
       '#markup' => $this->t("<br><br>"),
     ];
+
+    $form['modal'] = [
+      '#type' => 'markup',
+      '#markup' => Markup::create('
+        <div id="modal-container" class="modal-media hidden">
+          <div class="modal-content">
+            <button class="close-btn" type="button">&times;</button>
+            <div id="pdf-scroll-container"></div>
+            <div id="modal-content"></div>
+          </div>
+          <div class="modal-backdrop"></div>
+        </div>
+      '),
+    ];
+
 
     return $form;
 
