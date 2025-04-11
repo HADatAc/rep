@@ -102,7 +102,7 @@ class GenericObject {
       $propertyMap['provenance'][$propertyName] = $propertyValue;
     } elseif ($propertyName === 'uri' || $propertyName === 'typeUri' || $propertyName === 'hascoTypeUri' || $propertyName === 'namedGraph') {
       $propertyMap['hascoUris'][$propertyName] = $propertyValue;
-    } elseif (is_string($propertyValue) && GenericObject::isUri($propertyValue) && $propertyName !== 'hasIdentifier') {
+    } elseif (is_string($propertyValue) && GenericObject::isUri($propertyValue) && $propertyName !== 'hasIdentifier' && $propertyName !== 'hasWebDocument' && $propertyName !== 'hasStatus') {
       $propertyMap['uris'][$propertyName] = $propertyValue;
     } else {
       $propertyMap['literals'][$propertyName] = $propertyValue;
@@ -132,7 +132,7 @@ class GenericObject {
       // Construct the potential corresponding object key with "Uri" suffix
       $objectKey = GenericObject::removeTrailingUri($uriKey);
 
-      if ($objectKey === 'hasStatus' || $objectKey === 'hasUrl' || $objectKey === 'hasInformant') {
+      if ($objectKey === 'hasStatus' || $objectKey === 'hasUrl' || $objectKey === 'hasInformant' || $objectKey === 'hasWebDocument') {
         $urisWithoutObject[$objectKey] = $uriValue;
       } else {
         // Check if the constructed object key exists in the objects array

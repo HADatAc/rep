@@ -93,8 +93,6 @@
       $message = "<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>";
     }
 
-    //dpm($this->getElement());
-
     // Instantiate tables
     $tables = new Tables;
 
@@ -104,54 +102,80 @@
     ];
 
     foreach ($objectProperties['literals'] as $propertyName => $propertyValue) {
+
       // Add a textfield element for each property
       if ($propertyValue !== NULL && $propertyValue !== "") {
-        if ($propertyName !== 'hasImageUri' && $propertyName !== 'hasWebDocument') {
-          $prettyName = DescribeForm::prettyProperty($propertyName);
+
+        $prettyName = DescribeForm::prettyProperty($propertyName);
+
+        if ($propertyName !== 'hasImageUri' && $propertyName !== 'hasWebDocument' && $propertyName !== 'hasStatus') {
+
           $form[$propertyName] = [
             '#type' => 'markup',
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
           ];
+        } else if ($propertyName === 'hasStatus') {
+          $form[$propertyName] = [
+            '#type' => 'markup',
+            '#markup' => $this->t("<b>" . $prettyName . "</b>: " . Utils::plainStatus($propertyValue). "<br><br>"),
+          ];
         } else if ($propertyName === 'hasWebDocument') {
-          // Recupera o URI do elemento.
+          // Retrieve the element’s URI.
           $uri = $this->getElement()->uri;
 
-          // Se o URI contiver "#/", extrai a parte após "#/", caso contrário, utiliza o URI completo.
+          // If the URI contains "#/", extract the part after it; otherwise, use the full URI.
           if (strpos($uri, '#/') !== false) {
             $parts = explode('#/', $uri);
             $uriPart = $parts[1];
-          }
-          else {
+          } else {
             $uriPart = $uri;
           }
 
-          // Chama o método para obter o documento via API.
-          // Supondo que o método getAPIDocument esteja na mesma classe, use self::getAPIDocument() ou o namespace apropriado.
-          $documentDataURI = Utils::getAPIDocument($uri, $this->getElement()->hasWebDocument);
+          // Get the hasWebDocument property.
+          $hasWebDocument = $this->getElement()->hasWebDocument;
 
-          // Se o método não conseguiu retornar um Data URI, você pode exibir uma mensagem de erro ou fallback.
-          if (!$documentDataURI) {
-            $documentDataURI = '#';
+          // Check if hasWebDocument starts with "http".
+          if (strpos($hasWebDocument, 'http') === 0 || strpos($hasWebDocument, 'https') === 0) {
+            // Display only a link for the user to click.
+            $form['document_link'] = [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['document-link-container']],
+            ];
+            $form['document_link']['link'] = [
+              '#type' => 'link',
+              '#title' => $this->t('View associated WebDocument'),
+              '#url' => \Drupal\Core\Url::fromUri($hasWebDocument),
+              '#attributes' => [
+                'class' => ['view-media-link', 'btn', 'btn-primary', 'mb-3'],
+                'target' => '_blank',
+                'rel' => 'noopener noreferrer',
+              ],
+            ];
           }
+          else {
+            // Generate the documentDataURI as before.
+            $documentDataURI = Utils::getAPIDocument($uri, $hasWebDocument);
+            if (!$documentDataURI) {
+              $documentDataURI = '#';
+            }
 
-          // Monta o elemento markup para exibir o botão com o atributo que contém o Data URI.
-          // Aqui, o JavaScript do modal deverá capturar o atributo "data-view-url" e carregar o conteúdo, por exemplo, num iframe dentro do modal.
-          $form['document_link'] = [
-            '#type' => 'container',
-            '#attributes' => ['class' => ['document-link-container']],
-          ];
+            $form['document_link'] = [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['document-link-container']],
+            ];
 
-          // Cria o botão com o elemento "html_tag".
-          $form['document_link']['button'] = [
-            '#type' => 'html_tag',
-            '#tag' => 'button',
-            '#value' => $this->t('View associated WebDocument'),
-            '#attributes' => [
-              'class' => ['view-media-button', 'btn', 'btn-primary', 'mb-3'],
-              'data-view-url' => $documentDataURI,
-              'type' => 'button',
-            ],
-          ];
+            // Create a button using the html_tag element.
+            $form['document_link']['button'] = [
+              '#type' => 'html_tag',
+              '#tag' => 'button',
+              '#value' => $this->t('View associated WebDocument'),
+              '#attributes' => [
+                'class' => ['view-media-button', 'btn', 'btn-primary', 'mb-3'],
+                'data-view-url' => $documentDataURI,
+                'type' => 'button',
+              ],
+            ];
+          }
         }
       }
     }

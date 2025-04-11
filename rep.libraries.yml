@@ -50,12 +50,3 @@ pdfjs:
     js/pdf.min.js: {}
   dependencies:
     - core/jquery
-
-selectForms_scroll:
-  version: 1.x
-  js:
-    js/selectForms_scroll.js: {}
-  dependencies:
-    - core/jquery
-    - core/drupal
-    - core/drupal.ajax

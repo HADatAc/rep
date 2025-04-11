@@ -71,7 +71,6 @@
         ];
 
         foreach ($objectProperties['objects'] as $propertyName => $propertyValue) {
-
           // PROCESS EMBEDDED OBJECTS
           if ($propertyName === 'hasAddress') {
 
