@@ -96,9 +96,11 @@
             '#markup' => $this->t("<b>URI</b>: " . $this->getElement()->uri . "<br><br>"),
           ];
 
+          $typeUri = $this->getElement()->typeUri;
+
           $form['element_type'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<b>Type URI</b>: " . $this->getElement()->typeUri . "<br><br>"),
+            '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . "<br><br>"),
           ];
 
           if (isset($this->getElement()->title)) {
