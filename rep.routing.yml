@@ -153,6 +153,14 @@ rep.tree_form:
   requirements:
     _permission: 'access content'
 
+rep.webdocdownload:
+  path: '/rep/webdocdownload/{instrumenturi}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::downloadFile'
+    _title: 'Download File'
+  requirements:
+    _permission: 'access content'
+
 # MT CRUD options
 
 rep.add_mt:
@@ -329,3 +337,13 @@ rep.oauth_token:
     _title: 'OAuth Token'
   requirements:
     _permission: 'administer site configuration'
+    
+# LOADMEDIA FORM
+rep.load_media_api:
+  path: '/rep/loadmediaapi'
+  defaults:
+    _form: '\Drupal\rep\Form\LoadMedia\LoadMediaApiForm'
+    _title: 'Upload Media'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'

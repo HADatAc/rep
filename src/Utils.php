@@ -766,250 +766,368 @@ class Utils {
   //   }
   // }
 
-/*****************************************************
- * Build and render slot elements in either a table
- * or a tree format, **recursively** starting from
- * the instrument/container URI.
- *****************************************************/
-public static function buildSlotElements($containerUri, $api, $renderMode = 'table') {
-  // ------------------------------------------
-  // 1) Internal recursive function:
-  //    Build a "tree" data structure by exploring
-  //    subcontainers, container slots, detectors, etc.
-  // ------------------------------------------
-  $buildTree = function($uri) use (&$buildTree, $api) {
+  /*****************************************************
+   * Build and render slot elements in either a table
+   * or a tree format, **recursively** starting from
+   * the instrument/container URI.
+   *****************************************************/
+  public static function buildSlotElements($containerUri, $api, $renderMode = 'table') {
+    // ------------------------------------------
+    // 1) Internal recursive function:
+    //    Build a "tree" data structure by exploring
+    //    subcontainers, container slots, detectors, etc.
+    // ------------------------------------------
+    $buildTree = function($uri) use (&$buildTree, $api) {
 
-    $root_url = \Drupal::request()->getBaseUrl();
-    // 1. Fetch slotElements for the current URI (instrument/container/subcontainer)
-    $slotElements = $api->parseObjectResponse($api->slotElements($uri), 'slotElements');
-    if (empty($slotElements)) {
-      return [];
-    }
-
-    $tree = [];
-
-    // 2. Loop over each slotElement
-    foreach ($slotElements as $slotElement) {
-      // Basic fields
-      $typeUri  = $slotElement->hascoTypeUri ?? '';
-      $type     = Utils::namespaceUri($typeUri);
-      $label    = $slotElement->label        ?? '';
-      $priority = $slotElement->hasPriority  ?? '';
-      $elemUri  = $slotElement->uri          ?? '';
-
-      // Prepare a structure for the tree node
-      $item = [
-        'uri'      => $elemUri,
-        'type'     => $type,
-        'label'    => $label,
-        'priority' => $priority,
-        'element'  => '',   // Will hold your custom "content" or description
-        'children' => [],   // Potential recursion for subcontainers or nested components
-      ];
-
-      /****************************************************
-       * Logic to determine if it's a subcontainer,
-       * a container slot referencing another container,
-       * or a leaf (detector, actuator, etc.).
-       ****************************************************/
-      if ($typeUri === VSTOI::SUBCONTAINER) {
-        // Mark as subcontainer
-        $item['element'] = 'Subcontainer: ' . ($label ?: '[no label]');
-        // Recursively explore all slotElements inside this subcontainer
-        if (!empty($elemUri)) {
-          $item['children'] = $buildTree($elemUri);
-        }
+      $root_url = \Drupal::request()->getBaseUrl();
+      // 1. Fetch slotElements for the current URI (instrument/container/subcontainer)
+      $slotElements = $api->parseObjectResponse($api->slotElements($uri), 'slotElements');
+      if (empty($slotElements)) {
+        return [];
       }
-      elseif ($typeUri === VSTOI::CONTAINER_SLOT) {
-        // Possibly a container slot with a component
-        // (detector, actuator, or even another subcontainer)
-        $item['element'] = 'No element was added to slot.'; // Adjust as needed
 
-        if (!empty($slotElement->hasComponent)) {
-          // 1. Get the "component" data
-          $componentUri = $slotElement->hasComponent;
-          $componentObj = $api->parseObjectResponse($api->getUri($componentUri), 'getUri');
+      $tree = [];
 
-          if (!empty($componentObj) && !empty($componentObj->hascoTypeUri)) {
-            $componentType = $componentObj->hascoTypeUri;
+      // 2. Loop over each slotElement
+      foreach ($slotElements as $slotElement) {
+        // Basic fields
+        $typeUri  = $slotElement->hascoTypeUri ?? '';
+        $type     = Utils::namespaceUri($typeUri);
+        $label    = $slotElement->label        ?? '';
+        $priority = $slotElement->hasPriority  ?? '';
+        $elemUri  = $slotElement->uri          ?? '';
 
-            // Example: if the component is actually a container or subcontainer,
-            // we can recursively call buildTree on *that* URI.
-            // (You may need to adapt this to your actual model.)
-            if ($componentType === VSTOI::SUBCONTAINER || $componentType === VSTOI::CONTAINER) {
-              // Let's say we do recursion on the component's URI
-              $item['element'] = 'ContainerSlot referencing a container: ' . ($componentObj->label ?? '[no label]');
-              $item['children'] = $buildTree($componentObj->uri);
-            }
-            // If the component is a DETECTOR, ACTUATOR, or other "leaf" type
-            else if ($componentType === VSTOI::DETECTOR || $componentType === VSTOI::ACTUATOR) {
-              $type = self::namespaceUri($componentObj->hascoTypeUri);
-              if (isset($componentObj->uri)) {
-                // $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
-                $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a> ('.Utils::plainStatus($componentObj->hasStatus).')]');
+        // Prepare a structure for the tree node
+        $item = [
+          'uri'      => $elemUri,
+          'type'     => $type,
+          'label'    => $label,
+          'priority' => $priority,
+          'element'  => '',   // Will hold your custom "content" or description
+          'children' => [],   // Potential recursion for subcontainers or nested components
+        ];
+
+        /****************************************************
+         * Logic to determine if it's a subcontainer,
+         * a container slot referencing another container,
+         * or a leaf (detector, actuator, etc.).
+         ****************************************************/
+        if ($typeUri === VSTOI::SUBCONTAINER) {
+          // Mark as subcontainer
+          $item['element'] = 'Subcontainer: ' . ($label ?: '[no label]');
+          // Recursively explore all slotElements inside this subcontainer
+          if (!empty($elemUri)) {
+            $item['children'] = $buildTree($elemUri);
+          }
+        }
+        elseif ($typeUri === VSTOI::CONTAINER_SLOT) {
+          // Possibly a container slot with a component
+          // (detector, actuator, or even another subcontainer)
+          $item['element'] = 'No element was added to slot.'; // Adjust as needed
+
+          if (!empty($slotElement->hasComponent)) {
+            // 1. Get the "component" data
+            $componentUri = $slotElement->hasComponent;
+            $componentObj = $api->parseObjectResponse($api->getUri($componentUri), 'getUri');
+
+            if (!empty($componentObj) && !empty($componentObj->hascoTypeUri)) {
+              $componentType = $componentObj->hascoTypeUri;
+
+              // Example: if the component is actually a container or subcontainer,
+              // we can recursively call buildTree on *that* URI.
+              // (You may need to adapt this to your actual model.)
+              if ($componentType === VSTOI::SUBCONTAINER || $componentType === VSTOI::CONTAINER) {
+                // Let's say we do recursion on the component's URI
+                $item['element'] = 'ContainerSlot referencing a container: ' . ($componentObj->label ?? '[no label]');
+                $item['children'] = $buildTree($componentObj->uri);
               }
-              if (isset($componentObj->isAttributeOf)) {
-                // $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(self::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. self::namespaceUri($componentObj->isAttributeOf) . "</a>]";
-                $attributOfStatus = $api->parseObjectResponse($api->getUri($componentObj->isAttributeOf),'getUri');
-                $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(Utils::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. Utils::namespaceUri($componentObj->isAttributeOf) . "</a> (".(Utils::plainStatus($attributOfStatus->hasStatus)??"Current").")]";
-              } else {
-                $content = '<b>Attribute Of</b>: [EMPTY]';
+              // If the component is a DETECTOR, ACTUATOR, or other "leaf" type
+              else if ($componentType === VSTOI::DETECTOR || $componentType === VSTOI::ACTUATOR) {
+                $type = self::namespaceUri($componentObj->hascoTypeUri);
+                if (isset($componentObj->uri)) {
+                  // $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
+                  $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a> ('.Utils::plainStatus($componentObj->hasStatus).')]');
+                }
+                if (isset($componentObj->isAttributeOf)) {
+                  // $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(self::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. self::namespaceUri($componentObj->isAttributeOf) . "</a>]";
+                  $attributOfStatus = $api->parseObjectResponse($api->getUri($componentObj->isAttributeOf),'getUri');
+                  $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(Utils::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. Utils::namespaceUri($componentObj->isAttributeOf) . "</a> (".(Utils::plainStatus($attributOfStatus->hasStatus)??"Current").")]";
+                } else {
+                  $content = '<b>Attribute Of</b>: [EMPTY]';
+                }
+                if (isset($componentObj->codebook->label)) {
+                  // $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a>]";
+                  $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a> (".Utils::plainStatus($componentObj->codebook->hasStatus).")]";
+                } else {
+                  $codebook = '<b>CB</b>: [EMPTY]';
+                }
+                $item['element'] = $componentUri . " " . $content . " " . $codebook;
+                // $item['element'] = 'Detector: ' . ($componentObj->label ?? '[no label]');
+                // No recursion, as a detector is typically a leaf
               }
-              if (isset($componentObj->codebook->label)) {
-                // $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a>]";
-                $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a> (".Utils::plainStatus($componentObj->codebook->hasStatus).")]";
-              } else {
-                $codebook = '<b>CB</b>: [EMPTY]';
+              else {
+                // Unknown or other type
+                $item['element'] = 'ContainerSlot referencing: ' . Utils::namespaceUri($componentType);
               }
-              $item['element'] = $componentUri . " " . $content . " " . $codebook;
-              // $item['element'] = 'Detector: ' . ($componentObj->label ?? '[no label]');
-              // No recursion, as a detector is typically a leaf
-            }
-            else {
-              // Unknown or other type
-              $item['element'] = 'ContainerSlot referencing: ' . Utils::namespaceUri($componentType);
             }
           }
         }
-      }
-      else {
-        // Unknown or other type
-        $item['element'] = '(Unknown type: ' . $type . ')';
-      }
+        else {
+          // Unknown or other type
+          $item['element'] = '(Unknown type: ' . $type . ')';
+        }
 
-      // Add this item to the $tree array
-      $tree[] = $item;
-    }
-
-    return $tree;
-  };
-
-  // ------------------------------------------
-  // 2) Render the tree data as a nested <ul>
-  // ------------------------------------------
-  $renderAsTree = function(array $tree) use (&$renderAsTree) {
-    if (empty($tree)) {
-      return '';
-    }
-
-    $html = '<ul>';
-    foreach ($tree as $item) {
-      // For display, e.g. "[Type] Label (priority)"
-      $title = '[' . $item['type'] . '] ' . $item['label']
-             . ' (priority: ' . $item['priority'] . ')';
-
-      $html .= '<li>';
-      $html .= '<div>' . $title . '</div>';
-      $html .= '<div>' . $item['element'] . '</div>';
-
-      // Recursively render children
-      if (!empty($item['children'])) {
-        $html .= $renderAsTree($item['children']);
+        // Add this item to the $tree array
+        $tree[] = $item;
       }
 
-      $html .= '</li>';
-    }
-    $html .= '</ul>';
+      return $tree;
+    };
 
-    return $html;
-  };
-
-  // ------------------------------------------
-  // 3) Render the tree data as nested tables
-  // ------------------------------------------
-  $renderAsTable = function(array $tree) use (&$renderAsTable) {
-    // Define the table header
-    $header = [
-      t('Type'),
-      t('Label'),
-      t('Priority'),
-      t('Element'),
-    ];
-
-    $rows = [];
-    foreach ($tree as $item) {
-      // Check if the current item is a subcontainer
-      if ($item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
-        // Insert a row that says "Sub-container: X"
-        $rows[] = [
-          [
-            'data' => t('Sub-container: <strong>@label</strong>', ['@label' => $item['label']]),
-            'colspan' => 4,  // Spans all columns
-            'class' => ['subcontainer-title'], // Optional CSS class
-          ],
-        ];
-        // Optionally, you could also insert another row
-        // for Priority/Element if you want:
-        /*
-        $rows[] = [
-          t('Type') . ': ' . $item['type'],
-          t('Priority') . ': ' . $item['priority'],
-          '',
-          $item['element'],
-        ];
-        */
-      }
-      else {
-        // Normal item (container slot, detector, etc.)
-        $rows[] = [
-          $item['type'],
-          $item['label'],
-          $item['priority'],
-          // If you need HTML markup in 'element', do: ['data' => $item['element'], 'escape' => FALSE],
-          // $item['element'],
-          ['data' => t($item['element'])],
-        ];
+    // ------------------------------------------
+    // 2) Render the tree data as a nested <ul>
+    // ------------------------------------------
+    $renderAsTree = function(array $tree) use (&$renderAsTree) {
+      if (empty($tree)) {
+        return '';
       }
 
-      // If there are children, render them as a sub-table
-      if (!empty($item['children'])) {
-        $subTable = $renderAsTable($item['children']);
-        $rows[] = [
-          [
-            'data' => $subTable,
-            'colspan' => 4,
-          ],
-        ];
-      } else {
-        // If there are no child elements, insert a row with a message.
-        if (empty($item['children']) && $item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
+      $html = '<ul>';
+      foreach ($tree as $item) {
+        // For display, e.g. "[Type] Label (priority)"
+        $title = '[' . $item['type'] . '] ' . $item['label']
+              . ' (priority: ' . $item['priority'] . ')';
+
+        $html .= '<li>';
+        $html .= '<div>' . $title . '</div>';
+        $html .= '<div>' . $item['element'] . '</div>';
+
+        // Recursively render children
+        if (!empty($item['children'])) {
+          $html .= $renderAsTree($item['children']);
+        }
+
+        $html .= '</li>';
+      }
+      $html .= '</ul>';
+
+      return $html;
+    };
+
+    // ------------------------------------------
+    // 3) Render the tree data as nested tables
+    // ------------------------------------------
+    $renderAsTable = function(array $tree) use (&$renderAsTable) {
+      // Define the table header
+      $header = [
+        t('Type'),
+        t('Label'),
+        t('Priority'),
+        t('Element'),
+      ];
+
+      $rows = [];
+      foreach ($tree as $item) {
+        // Check if the current item is a subcontainer
+        if ($item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
+          // Insert a row that says "Sub-container: X"
           $rows[] = [
             [
-              'data' => t('<span style="padding-left:50px;"><em>Sub-container has no elements!</em></span>'),
+              'data' => t('Sub-container: <strong>@label</strong>', ['@label' => $item['label']]),
+              'colspan' => 4,  // Spans all columns
+              'class' => ['subcontainer-title'], // Optional CSS class
+            ],
+          ];
+          // Optionally, you could also insert another row
+          // for Priority/Element if you want:
+          /*
+          $rows[] = [
+            t('Type') . ': ' . $item['type'],
+            t('Priority') . ': ' . $item['priority'],
+            '',
+            $item['element'],
+          ];
+          */
+        }
+        else {
+          // Normal item (container slot, detector, etc.)
+          $rows[] = [
+            $item['type'],
+            $item['label'],
+            $item['priority'],
+            // If you need HTML markup in 'element', do: ['data' => $item['element'], 'escape' => FALSE],
+            // $item['element'],
+            ['data' => t($item['element'])],
+          ];
+        }
+
+        // If there are children, render them as a sub-table
+        if (!empty($item['children'])) {
+          $subTable = $renderAsTable($item['children']);
+          $rows[] = [
+            [
+              'data' => $subTable,
               'colspan' => 4,
             ],
           ];
+        } else {
+          // If there are no child elements, insert a row with a message.
+          if (empty($item['children']) && $item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
+            $rows[] = [
+              [
+                'data' => t('<span style="padding-left:50px;"><em>Sub-container has no elements!</em></span>'),
+                'colspan' => 4,
+              ],
+            ];
+          }
         }
       }
+
+      // Return a Drupal render array for the table
+      return [
+        '#type'   => 'table',
+        '#header' => $header,
+        '#rows'   => $rows,
+        '#empty'  => t('No response options found'),
+      ];
+    };
+
+    // ------------------------------------------
+    // 4) Build the tree data from the top-level
+    //    container/instrument URI, then render.
+    // ------------------------------------------
+    $tree = $buildTree($containerUri);
+
+    if ($renderMode === 'tree') {
+      // Return a markup render array with <ul> HTML
+      return [
+        '#type'   => 'markup',
+        '#markup' => $renderAsTree($tree),
+      ];
+    }
+    else {
+      // Return a nested table render array
+      return $renderAsTable($tree);
+    }
+  }
+
+  /**
+   * Returns the accessible URL for an image.
+   *
+   * This function builds the file path as:
+   *   private://resources/<uri>/image/<image_filename>
+   * If the provided API image value starts with "http", it returns it directly.
+   * Otherwise, it generates an absolute URL for the file using the file_url_generator service.
+   *
+   * @param string $uri
+   *   The URI segment used in the file path.
+   * @param string $api_image
+   *   The image filename or API image value.
+   * @param string $placeholder_image
+   *   The fallback image value if $api_image is empty.
+   *
+   * @return string
+   *   The accessible image URL.
+   */
+  public static function getAccessibleImageUrl($uri, $api_image, $placeholder_image) {
+
+    // Format URI
+    $uri = explode(":/", utils::namespaceUri($uri))[1];
+
+    // Use the API image value if available; otherwise, fallback to the placeholder.
+    if (empty($api_image)) {
+      return $placeholder_image;
+    }
+    // If the image value starts with "http", assume it is a complete URL and return it.
+    if (strpos($api_image, 'http') === 0) {
+      return $api_image;
+    }
+    // Otherwise, build the file URI according to the given structure.
+    $file_uri = 'private://resources/' . $uri . '/image/' . $api_image;
+    // Generate the accessible URL using the file_url_generator service.
+    return \Drupal::service('file_url_generator')->generateAbsoluteString($file_uri);
+  }
+
+  public static function getAccessibleDocumentUrl($uri, $api_document) {
+
+    // Format URI
+    $uri = explode(":/", utils::namespaceUri($uri))[1];
+
+    // Use the API image value if available; otherwise, fallback to the placeholder.
+    if (empty($api_document)) {
+      return '';
+    }
+    // If the document value starts with "http", assume it is a complete URL and return it.
+    if (strpos($api_document, 'http') === 0) {
+      return $api_document;
+    }
+    // Otherwise, build the file URI according to the given structure.
+    $file_uri = 'private://resources/' . $uri . '/webdocument/' . $api_document;
+    // Generate the accessible URL using the file_url_generator service.
+    return \Drupal::service('file_url_generator')->generateAbsoluteString($file_uri);
+  }
+
+  public static function getAPIImage($uri, $apiImage, $placeholder_image) {
+
+    // Empty Value return Placeholder
+    if ($apiImage === '')
+      return $placeholder_image;
+
+    // Image starts with http so return the link
+    if (strpos($apiImage, 'http') === 0)
+      return $apiImage;
+
+    // Return API image
+    $api = \Drupal::service('rep.api_connector');
+    $response = $api->downloadFile($uri, $apiImage);
+
+    if ($response) {
+        $file_content = $response->getContent();
+        $content_type = $response->headers->get('Content-Type');
+        $base64_image = base64_encode($file_content);
+        return "data:" . $content_type . ";base64," . $base64_image;
+    } else {
+      return $placeholder_image;
+    }
+  }
+
+  public static function getAPIDocument($uri, $apiDocument) {
+    if (empty($apiDocument)) {
+      return '';
     }
 
-    // Return a Drupal render array for the table
-    return [
-      '#type'   => 'table',
-      '#header' => $header,
-      '#rows'   => $rows,
-      '#empty'  => t('No response options found'),
-    ];
-  };
+    // Se o valor já for uma URL completa, retorna diretamente.
+    if (strpos($apiDocument, 'http') === 0) {
+      return $apiDocument;
+    }
 
-  // ------------------------------------------
-  // 4) Build the tree data from the top-level
-  //    container/instrument URI, then render.
-  // ------------------------------------------
-  $tree = $buildTree($containerUri);
+    $api = \Drupal::service('rep.api_connector');
+    $response = $api->downloadFile($uri, $apiDocument);
 
-  if ($renderMode === 'tree') {
-    // Return a markup render array with <ul> HTML
-    return [
-      '#type'   => 'markup',
-      '#markup' => $renderAsTree($tree),
-    ];
+    if ($response) {
+      $file_content = $response->getContent();
+      $original_content_type = $response->headers->get('Content-Type');
+
+      // Verifica a extensão do arquivo com base no nome.
+      $extension = strtolower(pathinfo($apiDocument, PATHINFO_EXTENSION));
+
+      if ($extension === 'pdf') {
+        // Se for PDF, force o Content-Type para application/pdf.
+        $content_type = 'application/pdf';
+        $response->headers->set('Content-Type', $content_type);
+        $response->headers->set('Content-Disposition', 'inline; filename="' . $apiDocument . '"');
+      }
+      else {
+        // Para outros tipos de arquivo, usa o Content-Type original.
+        $content_type = $original_content_type;
+      }
+
+      $base64_document = base64_encode($file_content);
+      return "data:" . $content_type . ";base64," . $base64_document;
+    }
+    else {
+      return '';
+    }
   }
-  else {
-    // Return a nested table render array
-    return $renderAsTable($tree);
-  }
-}
-
 
 }

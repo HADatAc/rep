@@ -59,18 +59,6 @@ function rep_form_alter(&$form, &$form_state, $form_id) {
 }
 
 /**
- * Implements hook_menu_alter().
- */
-/*
-function rep_menu_alter(&$items) {
-  // Change the title of the menu item with path 'node/1/edit'.
-  if (isset($items['node/1/edit'])) {
-    $items['node/1/edit']['title'] = 'Edit Article';
-  }
-}
-*/
-
-/**
  * Implements hook_theme
  */
 function rep_theme($existing, $type, $theme, $path)
@@ -121,7 +109,27 @@ function rep_update_8001() {
 }
 
 /**
- * Implementa hook_menu_links_discovered_alter().
+ * Ensure the sidebar first width setting is set to 3 cols.
+ */
+function rep_update_8002() {
+  // Retrieve the editable configuration for the Bootstrap Barrio theme.
+  $config = \Drupal::configFactory()->getEditable('bootstrap_barrio.settings');
+
+  // Get the current value of the sidebar first width setting.
+  $current_value = $config->get('bootstrap_barrio_sidebar_first_width');
+
+  // Check if the current value is not equal to 3.
+  if ($current_value != 3) {
+    // Update the setting to 3.
+    $config->set('bootstrap_barrio_sidebar_first_width', 3)->save();
+
+    // Optionally, add a message to inform the administrator about the change.
+    \Drupal::messenger()->addMessage(t('The Sidebar First Width has been updated to 3 cols.'));
+  }
+}
+
+/**
+ * Implements hook_menu_links_discovered_alter().
  */
 function rep_menu_links_discovered_alter(&$links) {
   $target_links = [
@@ -163,10 +171,8 @@ function rep_menu_links_discovered_alter(&$links) {
  * Função de callback de acesso personalizada.
  *
  * @param \Drupal\Core\Session\AccountInterface $account
- *   A conta do usuário.
  *
  * @return \Drupal\Core\Access\AccessResultInterface
- *   O resultado do acesso.
  */
 function rep_custom_access_callback(AccountInterface $account) {
   // Verifica se o utilizador possui o papel 'content_editor'.
@@ -288,4 +294,41 @@ function rep_user_delete($account) {
   } catch (RequestException $e) {
     \Drupal::logger('rep')->error("Erro ao remover conta {$account->id()} do sguser: " . $e->getMessage());
   }
+}
+
+/* Implements hook_file_download().
+ *
+ * Allow authenticated users to download images from private://resources/.
+ *
+ * @param string $uri
+ *   The file URI being requested.
+ *
+ * @return array|int
+ *   An empty array to allow access or -1 to deny.
+ */
+function rep_file_download($uri) {
+  if (strpos($uri, 'private://resources/') === 0) {
+    if (\Drupal::currentUser()->isAuthenticated()) {
+      $extension = pathinfo($uri, PATHINFO_EXTENSION);
+
+      if (strtolower($extension) === 'pdf') {
+        return [
+          'Content-Type' => 'application/pdf',
+        ];
+      }
+      else {
+        return [
+          'Content-Type' => 'image/jpeg',
+        ];
+      }
+    }
+    else {
+      return -1;
+    }
+  }
+  return -1;
+}
+
+function rep_page_attachments(array &$attachments) {
+  $attachments['#attached']['library'][] = 'rep/rep_js_css';
 }

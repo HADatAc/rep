@@ -346,7 +346,11 @@
         //  ->save();
 
         $messenger = \Drupal::service('messenger');
-        $messenger->addMessage($this->t('Your new rep configuration has been saved [' . $resp . ']'));
+        if ($resp !== '') {
+          $messenger->addMessage($this->t('Your new rep configuration has been saved'));
+        } else {
+          $messenger->addError($this->t('Failed to set rep configuration. Message: [@resp]', ['@resp' => $resp]));
+        }
 
         $url = Url::fromRoute('rep.repo_info');
         $form_state->setRedirectUrl($url);

@@ -9,15 +9,15 @@
  class DescribeHeaderForm extends FormBase {
 
     protected $element;
-  
+
     public function getElement() {
       return $this->element;
     }
-  
+
     public function setElement($obj) {
-      return $this->element = $obj; 
+      return $this->element = $obj;
     }
-  
+
     /**
      * {@inheritdoc}
      */
@@ -64,10 +64,10 @@
             '#type' => 'markup',
             '#markup' => $this->t("<b>Type</b>: NONE<br><br>"),
           ];
-        
+
         } else {
 
-          if (($this->getElement()->typeLabel === NULL || $this->getElement()->typeLabel === "") && 
+          if (($this->getElement()->typeLabel === NULL || $this->getElement()->typeLabel === "") &&
               ($this->getElement()->hascoTypeLabel === NULL || $this->getElement()->hascoTypeLabel === "")) {
             $parts = explode('/', $this->getElement()->typeUri);
             $type = end($parts);
@@ -79,6 +79,33 @@
             $type = $this->getElement()->typeLabel;
           } else {
             $type = $this->getElement()->typeLabel . " (" . $this->getElement()->hascoTypeLabel . ")";
+          }
+
+          if ( isset($this->getElement()->hasImageUri) ) {
+            // hascoTypeLabel
+            $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/'.strtolower($type).'_placeholder.png';
+            $hasImageUri = (isset($this->getElement()->hasImageUri) && !empty($this->getElement()->hasImageUri))
+                            ? Utils::getAPIImage($this->getElement()->uri, $this->getElement()->hasImageUri, $placeholder_image)
+                            : $placeholder_image;
+
+            $form['image_wrapper'] = [
+              '#type' => 'container',
+              '#attributes' => [
+                'class' => ['d-flex', 'justify-content-center'],
+                'style' => ['margin-bottom: 10px!important;'],
+              ],
+            ];
+
+            $form['image_wrapper']['image'] = [
+              'image' => [
+                '#theme' => 'image',
+                '#uri' => $hasImageUri,
+                '#attributes' => [
+                  'class' => ['img-fluid', 'mb-0', 'border', 'border-2', 'rounded', 'rounded-3'],
+                  'style' => ['max-width: 180px; height: auto;'],
+                ],
+              ],
+            ];
           }
 
           $form['name'] = [
@@ -96,9 +123,11 @@
             '#markup' => $this->t("<b>URI</b>: " . $this->getElement()->uri . "<br><br>"),
           ];
 
+          $typeUri = $this->getElement()->typeUri;
+
           $form['element_type'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<b>Type URI</b>: " . $this->getElement()->typeUri . "<br><br>"),
+            '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . "<br><br>"),
           ];
 
           if (isset($this->getElement()->title)) {
@@ -109,14 +138,14 @@
           }
 
         }
-    
-        return $form;        
+
+        return $form;
 
     }
 
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
-     
+
     /**
      * {@inheritdoc}
      */

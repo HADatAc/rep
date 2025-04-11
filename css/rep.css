@@ -428,6 +428,21 @@ button.table-view-button {
   transform: translateY(-50%);
 }
 
+button.map-view-button {
+  position: relative;
+  padding-left: 1.5rem!important; /* Ajuste conforme necessário para dar espaço ao ícone */
+}
+
+.map-view-button::before {
+  content: "\f279"; /* Código Unicode do ícone de "plus" do FontAwesome */
+  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
+  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  position: absolute;
+  left: 0.55rem; /* Ajuste conforme necessário */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 button.load-more-button {
   position: relative;
   padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
@@ -553,7 +568,7 @@ button.generate-ins-element-button::before {
 }
 
 .form-control.nav-link.active {
-  color: white !important; /* Define a cor do texto como preto */
+  color: white !important;
   background-color: #055a8e !important;
   font-weight: 500;
 }
@@ -561,21 +576,34 @@ button.generate-ins-element-button::before {
 /* Infinite Scroll */
 #loading-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.8); /* Fundo semitransparente */
+  bottom: 50px;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: rgba(77, 76, 76, 0);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999; /* Certifique-se que está sobre todos os elementos */
+  z-index: 9999;
 }
 
 .spinner-border {
   width: 3rem;
   height: 3rem;
 }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 
 
 /*others*/
@@ -635,9 +663,9 @@ div#media-table-pager span.current-page {
 
 .drop-area.drag-over {
   border-color: #007bff;
-  background-color: rgba(0, 123, 255, 0.1); /* Fundo azul claro */
-  box-shadow: 0 0 10px 5px rgba(0, 123, 255, 0.5); /* Efeito de brilho */
-  transform: scale(1.0); /* Leve zoom */
+  background-color: rgba(0, 123, 255, 0.1);
+  box-shadow: 0 0 10px 5px rgba(0, 123, 255, 0.5);
+  transform: scale(1.0);
 }
 
 /* MODAL DESCRIPTION*/
@@ -663,16 +691,16 @@ div.toast {
 /* TREE */
 #block-hasco-barrio-content form.tree-form{
   padding-left:5px;
-  max-width: 1360px !important; Garantir a largura máxima
-  overflow-x: auto; /* Adicionar barra de rolagem horizontal se necessário */
-  white-space: nowrap; /* Impedir quebra de linha dos itens */
+  max-width: 1360px !important;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 #tree-root {
-  overflow-x: auto; /* Adicionar barra de rolagem horizontal para o jstree */
-  white-space: nowrap; /* Impedir quebra de texto dentro dos nós */
-  max-height: 55vh!important; /* Define a altura máxima como 80% da altura da janela */
-  overflow-y: auto; /* Adiciona scroll vertical */
+  overflow-x: auto;
+  white-space: nowrap;
+  max-height: 55vh!important;
+  overflow-y: auto;
   margin-bottom: 10px;
 }
 
@@ -693,9 +721,9 @@ div.toast {
   color: #fff;
   padding: 5px;
   border-radius: 4px;
-  white-space: normal; /* Permite quebra de linha no tooltip */
+  white-space: normal;
   z-index: 1000;
-  top: 110%; /* Ajuste a posição do tooltip */
+  top: 110%;
   left: 0;
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -705,10 +733,10 @@ div.toast {
 }
 
 #tree-search {
-  max-width: 350px; /* Limitar a largura do campo de pesquisa */
+  max-width: 350px;
   display: inline-block;
   position: relative;
-  padding-right: 30px; /* Espaço para o botão de limpar */
+  padding-right: 30px;
 }
 
 #tree-search-wrapper {
@@ -726,12 +754,12 @@ div.toast {
   font-size: 16px;
   color: #888;
   cursor: pointer;
-  display: none; /* Ocultar por padrão */
+  display: none;
 
 }
 
 #clear-search:hover {
-  color: #000; /* Cor ao passar o mouse */
+  color: #000;
 }
 
 #tree-root .jstree-anchor {
@@ -745,7 +773,6 @@ div.toast {
 
 
 /* MODAL Open-Dialog */
-/* Ajustar altura máxima e rolagem do modal */
 /* .ui-dialog {
   position: fixed;
   top: 10% !important;
@@ -756,12 +783,12 @@ div.toast {
 } */
 
 .ui-dialog {
-  width: calc(100% - 30%) !important; /* 15% de margem em ambos os lados */
+  width: calc(100% - 30%) !important;
   left: 25% !important;
   right: 25% !important;
-  top: 10% !important; /* Para dar algum espaço no topo */
-  transform: none !important; /* Remove qualquer transformação de centralização automática */
-  max-width: 1000px; /* Limita a largura máxima, se necessário */
+  top: 10% !important;
+  transform: none !important;
+  max-width: 1000px;
 }
 
 #node-comment-display {
@@ -779,8 +806,8 @@ div.toast {
 }
 
 .ui-dialog-content {
-  max-height: calc(90vh - 100px); /* Limita a altura interna do conteúdo */
-  overflow-y: auto; /* Adiciona rolagem interna para conteúdo excedente */
+  max-height: calc(90vh - 100px);
+  overflow-y: auto;
 }
 
 
@@ -857,4 +884,81 @@ form#tree-form {
 #edit-labels,
 #edit-filters div {
   margin-bottom: 0!important;
+}
+
+.form-managed-file .file a {
+  pointer-events: none;
+  cursor: default;
+  text-decoration: none;
+  color: inherit;
+}
+
+.js-form-wrapper.form-wrapper {
+  margin-bottom: 0!important;
+}
+
+.row.js-form-wrapper.form-wrapper,
+#cards-wrapper .col-md-4.js-form-wrapper.form-wrapper {
+  margin-top: 1rem!important;
+}
+
+#tree-wrapper {
+  margin-top: 1rem!important;
+}
+
+button.view-active {
+  background-color: var(--bs-btn-active-bg)!important;
+  color:var(--bs-gray-200)!important;
+}
+
+#page-wrapper {
+  overflow-x: hidden;
+}
+
+#edit-submit[name='back'] {
+  margin-top: 1rem;
+}
+
+
+/* CARDS */
+.card {
+  height: 100% !important;
+  min-height: 280px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  /* padding: 1rem !important; */
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #ddd !important;
+  border-radius: 8px !important;
+}
+
+/* Garante que o corpo e o rodapé do card ocupem espaço adequadamente */
+.card-body {
+  flex-grow: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+/* Controla a imagem */
+.card-body img {
+  max-height: 160px !important;
+  object-fit: contain !important;
+}
+
+/* Corrige o rodapé para alinhar botões na base do card */
+.card-footer {
+  margin-top: auto !important;
+}
+
+.row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+}
+.col-md-4 {
+  display: flex !important;
+}
+.card {
+  width: 100% !important;
 }

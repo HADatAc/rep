@@ -51,17 +51,18 @@ class GenericObject {
       $dynamicProperties = get_object_vars($variable);
       foreach ($dynamicProperties as $propertyName => $propertyValue) {
           // Only add dynamic properties not already in the map
-          if (!isset($propertyMap['types'][$propertyName]) && 
-              !isset($propertyMap['literals'][$propertyName]) && 
-              !isset($propertyMap['hascoUris'][$propertyName]) && 
-              !isset($propertyMap['uris'][$propertyName]) && 
+          if (!isset($propertyMap['types'][$propertyName]) &&
+              !isset($propertyMap['literals'][$propertyName]) &&
+              !isset($propertyMap['hascoUris'][$propertyName]) &&
+              !isset($propertyMap['uris'][$propertyName]) &&
               !isset($propertyMap['objects'][$propertyName])) {
               GenericObject::categorizeProperty($propertyName, $propertyValue, $propertyMap);
           }
       }
 
       $urisWithoutObject = GenericObject::uriWithoutObject($propertyMap);
-      //dpm($urisWithoutObject);
+      // dpm($urisWithoutObject);
+      // dpm($propertyMap);
       foreach ($urisWithoutObject as $propertyName => $propertyValue) {
         // Only add properties not already in the map
         if (!isset($propertyMap['objects'][$propertyName])) {
@@ -74,8 +75,8 @@ class GenericObject {
         //dpm('Reflection error: @message', ['@message' => $e->getMessage()]);
         //\Drupal::logger('rep')->error('Reflection error: @message', ['@message' => $e->getMessage()]);
         return null;
-    } 
-  }   
+    }
+  }
 
   /**
    * Categorize a property value and add it to the appropriate category in the property map.
@@ -101,7 +102,7 @@ class GenericObject {
       $propertyMap['provenance'][$propertyName] = $propertyValue;
     } elseif ($propertyName === 'uri' || $propertyName === 'typeUri' || $propertyName === 'hascoTypeUri' || $propertyName === 'namedGraph') {
       $propertyMap['hascoUris'][$propertyName] = $propertyValue;
-    } elseif (is_string($propertyValue) && GenericObject::isUri($propertyValue) && $propertyName !== 'hasIdentifier') {
+    } elseif (is_string($propertyValue) && GenericObject::isUri($propertyValue) && $propertyName !== 'hasIdentifier' && $propertyName !== 'hasWebDocument' && $propertyName !== 'hasStatus') {
       $propertyMap['uris'][$propertyName] = $propertyValue;
     } else {
       $propertyMap['literals'][$propertyName] = $propertyValue;
@@ -129,22 +130,26 @@ class GenericObject {
 
     foreach ($propertyMap['uris'] as $uriKey => $uriValue) {
       // Construct the potential corresponding object key with "Uri" suffix
-        $objectKey = GenericObject::removeTrailingUri($uriKey);
+      $objectKey = GenericObject::removeTrailingUri($uriKey);
 
+      if ($objectKey === 'hasStatus' || $objectKey === 'hasUrl' || $objectKey === 'hasInformant' || $objectKey === 'hasWebDocument') {
+        $urisWithoutObject[$objectKey] = $uriValue;
+      } else {
         // Check if the constructed object key exists in the objects array
-        if ((is_array($propertyMap['objects']) && (count($propertyMap['objects']) === 0)) || 
-             !array_key_exists($objectKey, $propertyMap['objects'])) {
-            // If not, add the uri value to the list
-            $urisWithoutObject[$objectKey] = $uriValue;
-            $api = \Drupal::service('rep.api_connector');
-            $newObject = $api->parseObjectResponse($api->getUri($uriValue),'getUri');
-            if ($newObject != NULL) {
-              $urisWithoutObject[$objectKey] = $newObject;
-            }
+        if ((is_array($propertyMap['objects']) && (count($propertyMap['objects']) === 0)) ||
+            !array_key_exists($objectKey, $propertyMap['objects'])) {
+          // If not, add the uri value to the list
+          $urisWithoutObject[$objectKey] = $uriValue;
+          $api = \Drupal::service('rep.api_connector');
+          $newObject = $api->parseObjectResponse($api->getUri($uriValue),'getUri');
+          if ($newObject != NULL) {
+            $urisWithoutObject[$objectKey] = $newObject;
+          }
         }
+      }
     }
 
-    //dpm($urisWithoutObject);
+    // dpm($urisWithoutObject);
     return $urisWithoutObject;
 
   }
