@@ -85,7 +85,9 @@ class AssocOrganization {
     /*
      *    ORGANIZATION's POSTAL ADDRESSES
      */
-    $rawContainsPostalAddress = $api->getContainsPostalAddress($element->hasAddress->hasAddressLocalityUri,Constant::TOT_PER_PAGE,0);
+
+    /*
+     $rawContainsPostalAddress = $api->getContainsPostalAddress($element->hasAddress->hasAddressLocalityUri,Constant::TOT_PER_PAGE,0);
     if ($rawContainsPostalAddress != NULL) {
       $containsPostalAddress = $api->parseObjectResponse($rawContainsPostalAddress,'getContainsPostalAddress');
       if ($containsPostalAddress != NULL) {
@@ -115,6 +117,7 @@ class AssocOrganization {
         ];
       }
     }
+    */
     return $form;
   }
 
