@@ -210,7 +210,7 @@ function rep_user_insert($account) {
   ]);
 
   try {
-    $response = \Drupal::httpClient()->post('http://192.168.1.73/sguser/account/add', [
+    $response = \Drupal::httpClient()->post('https://sagres.graxiom.com/sguser/account/add', [
       'headers' => [
         'Content-Type' => 'application/json',
         'Authorization' => "Bearer {$sagres_token}",
@@ -248,7 +248,7 @@ function rep_user_update($account) {
   ]);
 
   try {
-    $response = \Drupal::httpClient()->post('http://192.168.1.73/sguser/account/update', [
+    $response = \Drupal::httpClient()->post('https://sagres.graxiom.com/sguser/account/update', [
       'headers' => [
         'Content-Type' => 'application/json',
         'Authorization' => "Bearer {$sagres_token}", // Adicionando o token aqui
@@ -279,7 +279,7 @@ function rep_user_delete($account) {
 
   $acc_repo_instance = \Drupal::request()->getHost();
 
-  $url = 'http://192.168.1.73/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
+  $url = 'https://sagres.graxiom.com/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
 
   try {
     $response = \Drupal::httpClient()->delete($url, [
