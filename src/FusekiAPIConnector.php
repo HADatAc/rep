@@ -262,6 +262,38 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // /hascoapi/api/$elementType<[^/]+>/keywordtype/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>/$pageSize<[^/]+>/$offset<[^/]+>
+  public function listByKeywordType($elementType, $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/keywordtype/".
+      rawurlencode($keyword)."/".
+      rawurlencode($type)."/".
+      rawurlencode($manageremail)."/".
+      rawurlencode($status)."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+  // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
+  public function listSizeByKeywordType($elementType, $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/keywordtype/total/".
+      rawurlencode($keyword)."/".
+      rawurlencode($type)."/".
+      rawurlencode($manageremail)."/".
+      rawurlencode($status);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   public function uningestMT($metadataTemplateUri) {
     $endpoint = "/hascoapi/api/uningest/mt/" . rawurlencode($metadataTemplateUri);
     $method = 'GET';
