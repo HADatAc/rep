@@ -108,9 +108,15 @@
             ];
           }
 
+          $form['label'] = [
+            '#type' => 'markup',
+            '#markup' => $this->t("<br /><h1>" . $this->getElement()->label . "</h1>"),
+          ];
+
+        if ($this->getElement()->hascoTypeLabel === 'Organization')
           $form['name'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<h1>" . $this->getElement()->label . "</h1><br>"),
+            '#markup' => $this->t("<h5>" . $this->getElement()->name . "</h5><br>"),
           ];
 
           $form['type'] = [
