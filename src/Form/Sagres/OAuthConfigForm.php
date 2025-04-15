@@ -51,11 +51,6 @@
             $client_id = $config->get("client_id");
         }
 
-        $client_secret = "";
-        if ($config->get("client_secret")!= NULL) {
-            $client_secret = $config->get("client_secret");
-        }
-
         $form['oauth_url'] = [
             '#type' => 'textfield',
             '#title' => 'OAuth Authorization Server URL',
@@ -69,9 +64,9 @@
         ];
 
         $form['client_secret'] = [
-            '#type' => 'textfield',
-            '#title' => 'Client Secret',
-            '#default_value' => $client_secret,
+            '#type' => 'password',
+            '#title' => $this->t('Client Secret'),
+            '#description' => $this->t("This value is confidential and will not be displayed again. Leave it blank if you do not wish to change it."),
         ];
 
 
@@ -92,7 +87,11 @@
         if(strlen($form_state->getValue('client_id')) < 1) {
             $form_state->setErrorByName('client_id', $this->t("Please inform client's ID."));
         }
-        if(strlen($form_state->getValue('client_secret')) < 1) {
+        $config = $this->config(Constant::CONFIG_SAGRES);
+        $client_secret_input = trim($form_state->getValue('client_secret'));
+        $current_secret = $config->get('client_secret');
+
+        if (empty($client_secret_input) && empty($current_secret)) {
             $form_state->setErrorByName('client_secret', $this->t("Please inform client's secret."));
         }
    }
@@ -114,7 +113,10 @@
         //save confs
         $config->set("oauth_url", $form_state->getValue('oauth_url'));
         $config->set("client_id", $form_state->getValue('client_id'));
-        $config->set("client_secret", trim($form_state->getValue('client_secret')));
+        $client_secret_input = trim($form_state->getValue('client_secret'));
+        if (!empty($client_secret_input)) {
+            $config->set("client_secret", $client_secret_input);
+        }
         $config->save();
 
         $messenger = \Drupal::service('messenger');

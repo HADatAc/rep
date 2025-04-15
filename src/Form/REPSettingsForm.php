@@ -183,13 +183,6 @@
             '#default_value' => $config->get("sagres_base_url") ?? 'https://52.214.194.214',
             '#description' => 'Sagres Base URL for Users Synchronization.',
         ];
-
-        $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
-        $form['sagres_access_token'] = [
-            '#type' => 'item',
-            '#title' => $this->t('Sagres Access Token'),
-            '#markup' => $sagres_token ? $sagres_token : $this->t('No token found'),
-        ];
         
         $form['api_url'] = [
             '#type' => 'textfield',
