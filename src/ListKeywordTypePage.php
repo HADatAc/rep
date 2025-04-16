@@ -22,7 +22,7 @@ class ListKeywordTypePage {
     if ($keyword == NULL) {
       $keyword = "_";
     }
-    dpm("E=".$elementtype.", PR=".$project.", K=".$keyword.", T=".$type.", M=".$manageremail.", S=".$status.", P=".$page.", O=".$pagesize);
+    // dpm("E=".$elementtype.", PR=".$project.", K=".$keyword.", T=".$type.", M=".$manageremail.", S=".$status.", P=".$page.", O=".$pagesize);
     $api = \Drupal::service('rep.api_connector');
     $elements = $api->parseObjectResponse($api->listByKeywordType($elementtype,$keyword,$type,$manageremail,$status,$pagesize,$offset),'listByKeywordType');
 
