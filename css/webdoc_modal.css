@@ -1,10 +1,10 @@
-#drupal-modal {
+/* #drupal-modal {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 10000; /* Garante que fique acima de outros elementos */
-}
+} */
 
 .modal-backdrop {
   position: fixed;
@@ -53,19 +53,20 @@
   max-height: 100vh !important;
 }
 
+.modal-content {
+  display: block !important;
+  position: absolute !important;
+  top: 0 !important;
+}
+
 #drupal-modal.ui-front {
-  display: block !important;   /* In case something sets display: none */
-  position: absolute !important;  /* Keep it above the page content */
-  top: calc(50% - 10px) !important;
-  left: 50% !important;
-  /* transform: translate(-50%, -50%) !important; */
   background: #fff !important;
-  width: 0% !important;
+  /* width: 0% !important; */
   min-width: 50% !important;
   max-width: 100% !important;
   max-height: 100vh !important;
   overflow-y: visible !important;
-  z-index: 10000 !important; /* So it’s above other elements */
+  z-index: 10000 !important; */
 }
 
 .pdf-pages-container canvas {margin-top:40px !important;margin-bottom:40px !important;}

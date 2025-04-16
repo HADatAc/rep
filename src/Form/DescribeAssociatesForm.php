@@ -144,29 +144,48 @@
 
     public function processPropertyAddress($addressObject, array &$form, FormStateInterface $form_state) {
       $addressProperties = GenericObject::inspectObject($addressObject);
-      $form['beginAddress'] = [
+      $form['labelAddress'] = [
         '#type' => 'markup',
-        '#markup' => $this->t("<b>Postal Address</b>:<br><ul>"),
+        '#markup' => $this->t("<b>Postal Address</b>:<br>"),
       ];
-      $excludedLiterals = ['label','typeLabel','hascoTypeLabel'];
-      foreach ($addressProperties['literals'] as $propertyNameAddress => $propertyValueAddress) {
-        if (!in_array($propertyNameAddress,$excludedLiterals)) {
-          $form[$propertyNameAddress] = [
-            '#type' => 'markup',
-            '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . $propertyValueAddress. "<br>"),
-          ];
-        }
-      }
-      foreach ($addressProperties['objects'] as $propertyNameAddress => $propertyValueAddress) {
-        $form[$propertyNameAddress] = [
-          '#type' => 'markup',
-          '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . Utils::link($propertyValueAddress->label,$propertyValueAddress->uri) . "<br>"),
-        ];
-      }
-      $form['endAddress'] = [
+
+      // dpm($addressProperties);
+      // LETS BUILD NAD ADDRESS
+      $form['fullAddress'] = [
         '#type' => 'markup',
-        '#markup' => $this->t("</ul>"),
+        '#markup' => $this->t('<ul><b>'
+          . $addressProperties['literals']['hasStreetAddress'] . '<br />'
+          . $addressProperties['literals']['hasPostalCode'] . ' '
+          . Utils::link($addressProperties['objects']['hasAddressLocality']->label, $addressProperties['objects']['hasAddressLocality']->uri) . ', '
+          . Utils::link($addressProperties['objects']['hasAddressRegion']->label, $addressProperties['objects']['hasAddressRegion']->uri) . ' - '
+          . Utils::link($addressProperties['objects']['hasAddressCountry']->label, $addressProperties['objects']['hasAddressCountry']->uri)
+          .'</b></ul><br />'
+        ),
       ];
+
+      // $form['endAddress'] = [
+      //   '#type' => 'markup',
+      //   '#markup' => $this->t("<ul>"),
+      // ];
+      // $excludedLiterals = ['label','typeLabel','hascoTypeLabel', 'hasStatus'];
+      // foreach ($addressProperties['literals'] as $propertyNameAddress => $propertyValueAddress) {
+      //   if (!in_array($propertyNameAddress,$excludedLiterals) && $propertyNameAddress !== 'hasStatus') {
+      //     $form[$propertyNameAddress] = [
+      //       '#type' => 'markup',
+      //       '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . $propertyValueAddress. "<br>"),
+      //     ];
+      //   }
+      // }
+      // foreach ($addressProperties['objects'] as $propertyNameAddress => $propertyValueAddress) {
+      //   $form[$propertyNameAddress] = [
+      //     '#type' => 'markup',
+      //     '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . Utils::link($propertyValueAddress->label,$propertyValueAddress->uri) . "<br>"),
+      //   ];
+      // }
+      // $form['endAddress'] = [
+      //   '#type' => 'markup',
+      //   '#markup' => $this->t("</ul>"),
+      // ];
     }
 
     public function processClass(array &$form, FormStateInterface $form_state) {
