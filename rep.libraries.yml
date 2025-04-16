@@ -50,3 +50,15 @@ pdfjs:
     js/pdf.min.js: {}
   dependencies:
     - core/jquery
+
+maplibre_cluster:
+  version: 1.x
+  css:
+    theme:
+      css/map_view.css: {}
+      https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.css: { type: external }
+  js:
+    js/map_view.js: {}
+    https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.js: { type: external, minified: true }
+  dependencies:
+    - core/jquery
