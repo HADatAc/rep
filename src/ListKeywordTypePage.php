@@ -6,7 +6,7 @@ use Drupal\rep\Vocabulary\REPGUI;
 
 class ListKeywordTypePage {
 
-  public static function exec($elementtype, $project = 'all', $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $page, $pagesize) {
+  public static function exec($elementtype, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $page, $pagesize) {
     if ($elementtype == NULL || $page == NULL || $pagesize == NULL) {
         $resp = array();
         return $resp;
@@ -19,12 +19,16 @@ class ListKeywordTypePage {
       $offset = ($page - 1) * $pagesize;
     }
 
+    if ($project == NULL) {
+      $project = "_";
+    }
     if ($keyword == NULL) {
       $keyword = "_";
     }
-    dpm("E=".$elementtype.", PR=".$project.", K=".$keyword.", T=".$type.", M=".$manageremail.", S=".$status.", P=".$page.", O=".$pagesize);
+    //dpm("E=".$elementtype.", PR=".$project.", K=".$keyword.", T=".$type.", M=".$manageremail.", S=".$status.", P=".$page.", O=".$pagesize);
+
     $api = \Drupal::service('rep.api_connector');
-    $elements = $api->parseObjectResponse($api->listByKeywordType($elementtype,$keyword,$type,$manageremail,$status,$pagesize,$offset),'listByKeywordType');
+    $elements = $api->parseObjectResponse($api->listByKeywordType($elementtype,$project,$keyword,$type,$manageremail,$status,$pagesize,$offset),'listByKeywordType');
 
     return $elements;
 
@@ -62,7 +66,7 @@ class ListKeywordTypePage {
 
     $api = \Drupal::service('rep.api_connector');
 
-    $response = $api->listSizeByKeywordType($elementtype,$keyword,$type,$manageremail,$status);
+    $response = $api->listSizeByKeywordType($elementtype,$project,$keyword,$type,$manageremail,$status);
     $listSize = -1;
     if ($response != null) {
       $obj = json_decode($response);
@@ -86,6 +90,7 @@ class ListKeywordTypePage {
       }
       return $root_url . '/' . $module . REPGUI::LIST_PAGE .
           $elementtype . '/' .
+          $project . '/' .
           $keyword . '/' .
           $type . '/' .
           $manageremail . '/' .
