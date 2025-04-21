@@ -193,6 +193,12 @@ class Utils {
       case "virtualcolumn":
         $short = Constant::PREFIX_VIRTUAL_COLUMN;
         break;
+      case "task":
+        $short = Constant::PREFIX_TASK;
+        break;
+      case "taskstem":
+        $short = Constant::PREFIX_TASK_STEM;
+        break;
     }
     return $short;
   }
