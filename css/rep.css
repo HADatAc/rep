@@ -964,3 +964,13 @@ button.view-active {
 .card {
   width: 100% !important;
 }
+
+/* constrains every Drupal autocomplete dropdown to max 200px high */
+.ui-autocomplete {
+  max-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* prevent the menu from growing horizontally */
+  white-space: nowrap;
+  z-index: 10000; /* make sure it floats above other elements */
+}

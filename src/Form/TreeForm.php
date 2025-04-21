@@ -445,18 +445,34 @@ class TreeForm extends FormBase {
       ];
     }
 
-    if ($mode == 'modal')
-    {
+    if ($mode === 'modal') {
+      // Determine who opened this modal.
+      $caller = \Drupal::request()->query->get('caller');
+
+      // Base button classes.
+      $button_classes = ['btn', 'btn-primary', 'mt-3', 'mb-3'];
+
+      // Only add the automatic data-dialog-close if NOT called from the AddTaskForm.
+      $auto_close = ($caller !== 'add_task_form');
+
       $form['select_node'] = [
-        '#type' => 'inline_template',
-        '#attributes' => [
-          'id' => 'select-tree-node',
-          'class' => ['btn', 'btn-primary', 'mt-3', 'mb-3', 'disabled'],
-        ],
+        '#type'     => 'inline_template',
         '#template' => '
           <div style="margin-bottom: 10px;">
-            <button type="button" id="select-tree-node" class="btn btn-primary btn-sm" data-field-id="' . (\Drupal::request()->query->get('field_id') ?? '').'">'.t('Select Node').'</button>
-          </div>'
+            <button type="button"
+                    id="select-tree-node"
+                    class="{{ classes|join(" ") }}"
+                    data-field-id="{{ field_id }}"
+                    {% if auto_close %}data-dialog-close="true"{% endif %}>
+              {{ label }}
+            </button>
+          </div>',
+        '#context'  => [
+          'classes'    => $button_classes,
+          'field_id'   => \Drupal::request()->query->get('field_id'),
+          'auto_close' => $auto_close,
+          'label'      => $this->t('Select Node'),
+        ],
       ];
     }
 

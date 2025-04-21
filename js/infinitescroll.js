@@ -51,7 +51,7 @@
       $(document).ajaxComplete(function () {
         $('#loading-overlay').hide();
         window.myInfiniteScroll.isLoading = false;
-        console.log("finito");
+        // console.log("finito");
       });
     }
   };

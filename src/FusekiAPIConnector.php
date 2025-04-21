@@ -263,10 +263,11 @@ class FusekiAPIConnector {
   }
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>/$pageSize<[^/]+>/$offset<[^/]+>
-  public function listByKeywordType($elementType, $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $pageSize, $offset) {
+  public function listByKeywordType($elementType, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordtype/".
+      rawurlencode($project)."/".
       rawurlencode($keyword)."/".
       rawurlencode($type)."/".
       rawurlencode($manageremail)."/".
@@ -280,10 +281,11 @@ class FusekiAPIConnector {
   }
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
-  public function listSizeByKeywordType($elementType, $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
+  public function listSizeByKeywordType($elementType, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordtype/total/".
+      rawurlencode($project)."/".
       rawurlencode($keyword)."/".
       rawurlencode($type)."/".
       rawurlencode($manageremail)."/".
