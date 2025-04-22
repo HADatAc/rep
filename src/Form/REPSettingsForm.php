@@ -88,6 +88,12 @@
             '#default_value' => $config->get("sagres_conf"),
         ];
 
+        $form['social_conf'] = [
+            '#type' => 'checkbox',
+            '#title' => 'Do you want to connect this repository to a Social Knowledge Graph?',
+            '#default_value' => $config->get("social_conf"),
+        ];
+
         $shortName = "";
         if ($config->get("site_label")!= NULL) {
             $shortName = $config->get("site_label");
@@ -283,6 +289,7 @@
         //save confs
         $config->set("rep_home", $form_state->getValue('rep_home'));
         $config->set('sagres_conf', $form_state->getValue('sagres_conf'));
+        $config->set('social_conf', $form_state->getValue('social_conf'));
         $config->set("site_label", trim($form_state->getValue('site_label')));
         $config->set("site_name", trim($form_state->getValue('site_name')));
         $config->set("repository_domain_url", trim($form_state->getValue('repository_domain_url')));

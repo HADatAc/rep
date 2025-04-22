@@ -147,7 +147,7 @@ function rep_menu_links_discovered_alter(&$links) {
   $config = \Drupal::config('rep.settings');
   $sagres_enabled = $config->get('sagres_conf');
   \Drupal::logger('rep')->notice('sagres_conf: ' . $sagres_enabled);
-
+  $social_enabled = $config->get('social_conf');
 
   if ($sagres_enabled == 0) {
     $to_hide = [
@@ -164,6 +164,23 @@ function rep_menu_links_discovered_alter(&$links) {
           unset($links[$key]);
       }
     }
+  }
+
+  if ($social_enabled == 0) {
+    $to_hide_social = [
+      'social.socialkg',
+      'social.social_config',
+      'social.social_status',
+    ];
+
+    foreach ($links as $key => $link) {
+      if ((isset($link['route_name']) && in_array($link['route_name'], [
+              'social.config_form',
+              'social.status_form'
+          ])) || in_array($key, $to_hide_social)) {
+          unset($links[$key]);
+      }
+    }  
   }
 }
 
