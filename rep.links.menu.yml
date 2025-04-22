@@ -159,7 +159,7 @@ rep.socialkg:
   title: Social KG
   description: Social KG
   parent: rep.top_level
-  route_name: social.status_form
+  route_name: '<nolink>'
   menu_name: main
   weight: 7
   requirements:
