@@ -1638,6 +1638,16 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // GET     /hascoapi/api/mt/gen/perfundingscheme/:elementtype/:fundingschemeuri/:filename
+  // Per Funding Scheme
+  public function generateMTPerFundingScheme($elementtype, $fundingSchemeUri, $filename) {
+    $endpoint = "/hascoapi/api/mt/gen/perfundingscheme/".rawurlencode($elementtype)."/".rawurlencode($fundingSchemeUri)."/".rawurlencode($filename);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   // GET     /hascoapi/api/mt/gen/perproject/:elementtype/:projecturi/:filename
   // Per Project
   public function generateMTPerProject($elementtype, $projectUri, $filename) {
