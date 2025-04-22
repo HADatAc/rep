@@ -168,9 +168,9 @@ function rep_menu_links_discovered_alter(&$links) {
 
   if ($social_enabled == 0) {
     $to_hide_social = [
-      'social.socialkg',
-      'social.social_config',
-      'social.social_status',
+      'rep.socialkg',
+      'rep.social_config',
+      'rep.social_status',
     ];
 
     foreach ($links as $key => $link) {

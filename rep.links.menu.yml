@@ -154,6 +154,39 @@ rep.sagres_status:
   requirements:
     _permission: 'access content'
     _role: 'authenticated'
+
+rep.socialkg:
+  title: Social KG
+  description: Social KG
+  parent: rep.top_level
+  route_name: '<nolink>'
+  menu_name: main
+  weight: 7
+  requirements:
+    _permission: 'access content'
+
+rep.social_config:
+  title: Social KG Conection Config
+  description: Social KG Connection Settings
+  menu_name: main
+  route_name: social.config_form
+  parent: rep.socialkg
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.social_status:
+  title: Social KG Conection Status
+  description: Social KG Connection Status
+  menu_name: main
+  route_name: social.status_form
+  parent: rep.socialkg
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
 #
 # REVIEWER
 #
