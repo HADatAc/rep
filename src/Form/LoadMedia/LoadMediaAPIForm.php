@@ -13,7 +13,7 @@ use Drupal\file\Entity\File;
 /**
  * Provides a form for generating INS (GRAXIOM project).
  */
-class LoadMediaApiForm extends FormBase {
+class LoadMediaAPIForm extends FormBase {
 
   /**
    * {@inheritdoc}

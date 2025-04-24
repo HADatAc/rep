@@ -337,12 +337,12 @@ rep.oauth_token:
     _title: 'OAuth Token'
   requirements:
     _permission: 'administer site configuration'
-    
+
 # LOADMEDIA FORM
 rep.load_media_api:
   path: '/rep/loadmediaapi'
   defaults:
-    _form: '\Drupal\rep\Form\LoadMedia\LoadMediaApiForm'
+    _form: '\Drupal\rep\Form\LoadMedia\LoadMediaAPIForm'
     _title: 'Upload Media'
   requirements:
     _permission: 'access content'

@@ -1620,8 +1620,8 @@ class FusekiAPIConnector {
   // GENERATE MT METHODS
   // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:status/:filename
   // Per status
-  public function generateMTPerStatus($elementtype, $status, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename);
+  public function generateMTPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1630,18 +1630,18 @@ class FusekiAPIConnector {
 
   // GET     /hascoapi/api/mt/gen/perinstrument/:elementtype/:instrumenturi/:filename
   // Per Instrument
-  public function generateMTPerInstrument($elementtype, $instrumentUri, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/perinstrument/".rawurlencode($elementtype)."/".rawurlencode($instrumentUri)."/".rawurlencode($filename);
+  public function generateMTPerInstrument($elementtype, $instrumentUri, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perinstrument/".rawurlencode($elementtype)."/".rawurlencode($instrumentUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // GET     /hascoapi/api/mt/gen/perfundingscheme/:elementtype/:projecturi/:filename
-  // Per Project
-  public function generateMTPerFundingScheme($elementtype, $fundingSchemeUri, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/perfundingscheme/".rawurlencode($elementtype)."/".rawurlencode($fundingSchemeUri)."/".rawurlencode($filename);
+  // GET     /hascoapi/api/mt/gen/perfundingscheme/:elementtype/:fundingschemeuri/:filename
+  // Per Funding Scheme
+  public function generateMTPerFundingScheme($elementtype, $fundingSchemeUri, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perfundingscheme/".rawurlencode($elementtype)."/".rawurlencode($fundingSchemeUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1650,8 +1650,8 @@ class FusekiAPIConnector {
 
   // GET     /hascoapi/api/mt/gen/perproject/:elementtype/:projecturi/:filename
   // Per Project
-  public function generateMTPerProject($elementtype, $projectUri, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/perproject/".rawurlencode($elementtype)."/".rawurlencode($projectUri)."/".rawurlencode($filename);
+  public function generateMTPerProject($elementtype, $projectUri, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perproject/".rawurlencode($elementtype)."/".rawurlencode($projectUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1670,8 +1670,8 @@ class FusekiAPIConnector {
 
   // GET     /hascoapi/api/mt/gen/peruser/:elementtype/:useremail/:status/:filename
   // Per User and Status
-  public function generateMTPerUserStatus($elementtype,$userEmail, $status, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/peruser/".rawurlencode($elementtype)."/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename);
+  public function generateMTPerUserStatus($elementtype,$userEmail, $status, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/peruser/".rawurlencode($elementtype)."/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
