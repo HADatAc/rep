@@ -410,11 +410,11 @@ class Utils {
   public static function elementModule($element) {
     //dpm($element);
     $std = [HASCO::STD,HASCO::STUDY,HASCO::STUDY_ROLE,HASCO::STUDY_OBJECT_COLLECTION,HASCO::STUDY_OBJECT, HASCO::VIRTUAL_COLUMN];
-    $socialm = [SCHEMA::PERSON, SCHEMA::ORGANIZATION, SCHEMA::PLACE, SCHEMA::POSTAL_ADDRESS];
+    $social = [SCHEMA::PERSON, SCHEMA::ORGANIZATION, SCHEMA::PLACE, SCHEMA::POSTAL_ADDRESS];
     if (in_array($element->hascoTypeUri,$std)) {
       return 'std';
-    } else if (in_array($element->hascoTypeUri,$socialm)) {
-      return 'socialm';
+    } else if (in_array($element->hascoTypeUri,$social)) {
+      return 'social';
     }
     return NULL;
   }
