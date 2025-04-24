@@ -1658,6 +1658,16 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // GET     /hascoapi/api/mt/gen/perorganization/:elementtype/:organizationuri/:filename
+  // Per Organization
+  public function generateMTPerOrganization($elementtype, $organizationUri, $filename) {
+    $endpoint = "/hascoapi/api/mt/gen/perorganization/".rawurlencode($elementtype)."/".rawurlencode($organizationUri)."/".rawurlencode($filename);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   // GET     /hascoapi/api/mt/gen/peruser/:elementtype/:useremail/:status/:filename
   // Per User and Status
   public function generateMTPerUserStatus($elementtype,$userEmail, $status, $filename) {
