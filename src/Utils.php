@@ -300,9 +300,9 @@ class Utils {
       if (\Drupal::moduleHandler()->moduleExists('std')) {
         $rt = 'std.search';
       }
-    } else if ($module == 'meugrafo') {
-      if (\Drupal::moduleHandler()->moduleExists('meugrafo')) {
-        $rt = 'meugrafo.search';
+    } else if ($module == 'social') {
+      if (\Drupal::moduleHandler()->moduleExists('social')) {
+        $rt = 'social.search';
       }
     }
 
@@ -390,7 +390,7 @@ class Utils {
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];
     $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance', 'actuatorinstance', 'deployment'];
-    $meugrafo = ['kgr','place','organization','person','postaladdress'];
+    $socialm = ['kgr','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {
@@ -401,8 +401,8 @@ class Utils {
       return 'std';
     } else if (in_array($elementtype,$dpl)) {
       return 'dpl';
-    } else if (in_array($elementtype,$meugrafo)) {
-      return 'meugrafo';
+    } else if (in_array($elementtype,$socialm)) {
+      return 'socialm';
     }
     return NULL;
   }
@@ -410,11 +410,11 @@ class Utils {
   public static function elementModule($element) {
     //dpm($element);
     $std = [HASCO::STD,HASCO::STUDY,HASCO::STUDY_ROLE,HASCO::STUDY_OBJECT_COLLECTION,HASCO::STUDY_OBJECT, HASCO::VIRTUAL_COLUMN];
-    $meugrafo = [SCHEMA::PERSON, SCHEMA::ORGANIZATION, SCHEMA::PLACE, SCHEMA::POSTAL_ADDRESS];
+    $socialm = [SCHEMA::PERSON, SCHEMA::ORGANIZATION, SCHEMA::PLACE, SCHEMA::POSTAL_ADDRESS];
     if (in_array($element->hascoTypeUri,$std)) {
       return 'std';
-    } else if (in_array($element->hascoTypeUri,$meugrafo)) {
-      return 'meugrafo';
+    } else if (in_array($element->hascoTypeUri,$socialm)) {
+      return 'socialm';
     }
     return NULL;
   }

@@ -61,7 +61,7 @@
   // to avoid triggering another AJAX load during the programmatic scroll.
   Drupal.behaviors.scrollAfterAjax = {
     attach: function (context, settings) {
-      if (drupalSettings.meugrafo && drupalSettings.meugrafo.scrollAfterAjax) {
+      if (drupalSettings.Social && drupalSettings.Social.scrollAfterAjax) {
         // Disable infinite scroll detection temporarily.
         window.myInfiniteScroll.disableScrollDetection = true;
         // Delay to ensure the DOM is fully updated.
@@ -71,7 +71,7 @@
           // After the scroll, re-enable scroll detection.
           setTimeout(function () {
             window.myInfiniteScroll.disableScrollDetection = false;
-            drupalSettings.meugrafo.scrollAfterAjax = false;
+            drupalSettings.Social.scrollAfterAjax = false;
           }, 500);
         }, 100);
       }
