@@ -187,6 +187,17 @@ rep.social_status:
     _permission: 'access content'
     _role: 'authenticated'
 
+rep.socialm_manageConsumer:
+  title: Social KG Manage Consumer Organization
+  description: Social KG Manage Consumer Organization
+  menu_name: main
+  route_name: socialm.consumerOrganization
+  parent: rep.socialkg
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
 #
 # REVIEWER
 #
