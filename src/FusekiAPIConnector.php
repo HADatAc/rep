@@ -263,21 +263,90 @@ class FusekiAPIConnector {
   }
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>/$pageSize<[^/]+>/$offset<[^/]+>
+  // public function listByKeywordType($elementType, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $pageSize, $offset) {
+  //   $endpoint = "/hascoapi/api/".
+  //     $elementType.
+  //     "/keywordtype/".
+  //     rawurlencode($project)."/".
+  //     rawurlencode($keyword)."/".
+  //     rawurlencode($type)."/".
+  //     rawurlencode($manageremail)."/".
+  //     rawurlencode($status)."/".
+  //     $pageSize."/".
+  //     $offset;
+  //   $method = 'GET';
+  //   $api_url = $this->getApiUrl();
+  //   $data = $this->getHeader();
+  //   return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  // }
+
+  /**
+   * Lists items by keyword and type, or via social endpoint if enabled.
+   *
+   * @param string $elementType
+   * @param string $project
+   * @param string $keyword
+   * @param string $type
+   * @param string $manageremail
+   * @param string $status
+   * @param int    $pageSize
+   * @param int    $offset
+   *
+   * @return mixed
+   * @throws \Exception if OAuth token is missing or invalid
+   */
   public function listByKeywordType($elementType, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/".
-      $elementType.
-      "/keywordtype/".
-      rawurlencode($project)."/".
-      rawurlencode($keyword)."/".
-      rawurlencode($type)."/".
-      rawurlencode($manageremail)."/".
-      rawurlencode($status)."/".
-      $pageSize."/".
-      $offset;
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+      // Check if social integration is enabled in rep settings
+      $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
+      if ($socialEnabled) {
+          // Retrieve OAuth token from session via Drupal request
+          $session = \Drupal::request()->getSession();
+          $token   = $session->get('oauth_access_token');
+          // Validate token
+          if (empty($token)) {
+              throw new \Exception('OAuth token is missing or invalid. Please authenticate.');
+          }
+
+          // Retrieve OAuth consumer ID from social.oauth.settings
+          $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
+
+          // Prepare social API endpoint and request method
+          $url    = 'https://cienciapt.org/api/socialm/list';
+          $method = 'POST';
+
+          // Prepare POST payload for social endpoint
+          $postData = [
+              'token'       => $token,
+              'consumer_id' => $consumerId,
+              'elementType' => $elementType,
+          ];
+
+          // Include headers and JSON payload
+          $options = [
+              'headers' => $this->getHeader(),
+              'json'    => $postData,
+          ];
+
+          // Perform POST request to social API and return response
+          return $this->perform_http_request($method, $url, $options);
+      }
+
+      // Default API endpoint when social integration is not enabled
+      $endpoint = "/hascoapi/api/{$elementType}/keywordtype/" .
+          rawurlencode($project) . "/" .
+          rawurlencode($keyword) . "/" .
+          rawurlencode($type) . "/" .
+          rawurlencode($manageremail) . "/" .
+          rawurlencode($status) . "/" .
+          $pageSize . "/" .
+          $offset;
+
+      $url     = $this->getApiUrl() . $endpoint;
+      $method  = 'GET';
+      $headers = $this->getHeader();
+
+      // Perform GET request to default API and return response
+      return $this->perform_http_request($method, $url, $headers);
   }
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
