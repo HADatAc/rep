@@ -363,6 +363,7 @@ class FusekiAPIConnector {
   ) {
     // Check if social integration is enabled in rep settings
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
+    dpm($socialEnabled, 'socialEnabled');
 
     if ($socialEnabled) {
         // Retrieve OAuth token from the current session
@@ -384,7 +385,8 @@ class FusekiAPIConnector {
         $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
 
         // Prepare social API endpoint and request options
-        $url     = 'https://cienciapt.org/api/socialm/list';
+        $url     = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
+        \Drupal::logger('rep')->notice('URL: @url', ['@url' => $url]);
         $options = [
             'headers' => $this->getHeader(),
             'json'    => [
