@@ -363,12 +363,14 @@ class FusekiAPIConnector {
   ) {
     // Check if social integration is enabled in rep settings
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    dpm($socialEnabled, 'socialEnabled');
+    // dpm($socialEnabled, 'socialEnabled');
 
     if ($socialEnabled) {
         // Retrieve OAuth token from the current session
         $session = \Drupal::request()->getSession();
         $token   = $session->get('oauth_access_token');
+
+        dpm($session, 'session');
 
         // If token is missing or invalid, notify user and return empty list
         if (empty($token)) {
