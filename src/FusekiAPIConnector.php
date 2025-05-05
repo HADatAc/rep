@@ -9,11 +9,8 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ConnectException;
 use Exception;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Drupal\Core\Messenger\MessengerInterface;
-use Drupal\Core\Url;
-use Symfony\Component\HttpKernel\Exception\HttpException;
+use GuzzleHttp\Exception\RequestException;
 
 class FusekiAPIConnector {
   private $client;
@@ -351,85 +348,84 @@ class FusekiAPIConnector {
   //     // Perform GET request to default API and return response
   //     return $this->perform_http_request($method, $url, $headers);
   // }
+
   public function listByKeywordType(
-    $elementType,
-    $project = 'all',
-    $keyword = '_',
-    $type = '_',
-    $manageremail = '_',
-    $status = '_',
-    $pageSize,
-    $offset
+      $elementType,
+      $project = 'all',
+      $keyword = '_',
+      $type = '_',
+      $manageremail = '_',
+      $status = '_',
+      $pageSize,
+      $offset
   ) {
-    // Check if social integration is enabled in rep settings
-    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    // dpm($socialEnabled, 'socialEnabled');
+      // Check if social integration is enabled in configuration.
+      $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
 
-    if ($socialEnabled) {
-        // Retrieve OAuth token from the current session
-        $session = \Drupal::request()->getSession();
-        $token   = $session->get('oauth_access_token');
+      if ($socialEnabled) {
+          // Retrieve OAuth token from current session.
+          $session = \Drupal::request()->getSession();
+          $token   = $session->get('oauth_access_token');
 
-        dpm($token, 'token');
+          // If token is missing or invalid, return an error message.
+          if (empty($token)) {
+              return 'Unauthorized to get social content.';
+          }
 
-        // If token is missing or invalid, notify user and return empty list
-        if (empty($token)) {
-          // \Drupal::messenger()->addWarning(t(
-          //   'To access social content, please <a href=":login">log in</a> again.',
-          //   [':login' => Url::fromRoute('social.oauth_token')->toString()]
-          // ));
+          // Get OAuth client ID from configuration.
+          $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
 
-          // Return only the message you care about.
-          return 'Unauthorized to get Social content.';
-        }
+          // Prepare the social API endpoint.
+          $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
+          \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
 
-        // Get OAuth client ID from configuration
-        $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
+          // Prepare request options with proper Authorization header.
+          $options = [
+              'headers' => [
+                  'Authorization' => "Bearer {$token}",
+                  'Accept'        => 'application/json',
+              ],
+              'json' => [
+                  'token'        => $token,
+                  'consumer_id'  => $consumerId,
+                  'elementType'  => $elementType,
+              ],
+          ];
 
-        // Prepare social API endpoint and request options
-        $url     = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
-        \Drupal::logger('rep')->notice('URL: @url', ['@url' => $url]);
-        $options = [
-            'headers' => $this->getHeader(),
-            'json'    => [
-                'token'        => $token,
-                'consumer_id'  => $consumerId,
-                'elementType'  => $elementType,
-            ],
-        ];
+          try {
+              // Perform POST request and decode JSON response.
+              $body = $this->perform_http_request('POST', $url, $options);
+              $data = json_decode($body, TRUE);
+              return $data['items'] ?? [];
+          }
+          catch (\Exception $e) {
+              // Log error internally and return an empty array.
+              \Drupal::logger('rep')->error(
+                  'Social API request failed: @msg',
+                  ['@msg' => $e->getMessage()]
+              );
+              return [];
+          }
+      }
 
-        try {
-            // Perform POST request and decode JSON response
-            $body = $this->perform_http_request('POST', $url, $options);
-            $data = json_decode($body, TRUE);
-            return $data['items'] ?? [];
-        }
-        catch (\Exception $e) {
-            // Log error internally and show a generic message to the user
-            \Drupal::logger('rep')->error('Social API request failed: @msg', ['@msg' => $e->getMessage()]);
-            \Drupal::messenger()->addError(t(
-                'Unable to load social items at this time. Please try again later.'
-            ));
-            return [];
-        }
-    }
+      // Build default API endpoint when social integration is disabled.
+      $endpoint = "/hascoapi/api/{$elementType}/keywordtype/"
+          . rawurlencode($project) . '/'
+          . rawurlencode($keyword) . '/'
+          . rawurlencode($type) . '/'
+          . rawurlencode($manageremail) . '/'
+          . rawurlencode($status) . '/'
+          . $pageSize . '/'
+          . $offset;
 
-    // Default API endpoint when social integration is not enabled
-    $endpoint = "/hascoapi/api/{$elementType}/keywordtype/" .
-        rawurlencode($project) . "/" .
-        rawurlencode($keyword) . "/" .
-        rawurlencode($type) . "/" .
-        rawurlencode($manageremail) . "/" .
-        rawurlencode($status) . "/" .
-        $pageSize . "/" .
-        $offset;
+      $url     = $this->getApiUrl() . $endpoint;
+      $method  = 'GET';
+      $headers = [
+          'headers' => $this->getHeader(),
+      ];
 
-    $url     = $this->getApiUrl() . $endpoint;
-    $method  = 'GET';
-    $headers = $this->getHeader();
-
-    // Perform GET request to default API and return response
-    return $this->perform_http_request($method, $url, $headers);
+      // Perform GET request to default API and return its raw body (string or JSON).
+      return $this->perform_http_request($method, $url, $headers);
   }
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
