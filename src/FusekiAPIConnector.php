@@ -362,60 +362,50 @@ class FusekiAPIConnector {
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
 
     if ($socialEnabled) {
-      // Retrieve OAuth token from current session.
-      $session = \Drupal::request()->getSession();
-      $token   = $session->get('oauth_access_token');
+        // Retrieve OAuth token from current session.
+        $session = \Drupal::request()->getSession();
+        $token   = $session->get('oauth_access_token');
 
-      // If token is missing or invalid, return an error string.
-      if (empty($token)) {
-          return 'Unauthorized to get social content.';
-      }
-
-      // Get OAuth client ID from configuration.
-      $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
-
-      // Prepare the social API endpoint and headers.
-      $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
-      \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
-
-      $options = [
-          'headers' => [
-              'Authorization' => "Bearer {$token}",
-              'Accept'        => 'application/json',
-          ],
-          'json' => [
-              'token'        => $token,
-              'consumer_id'  => $consumerId,
-              'elementType'  => $elementType,
-          ],
-      ];
-
-      try {
-        // 1) Grab whatever perform_http_request gives you:
-        $raw = $this->perform_http_request('POST', $url, $options);
-
-        // 2) If it's already an array, use it directly.
-        if (is_array($raw)) {
-          $data = $raw;
-        }
-        else {
-          // Otherwise cast to string and decode JSON.
-          $body = (string) $raw;
-          $data = json_decode($body, TRUE);
-          if (JSON_ERROR_NONE !== json_last_error()) {
-            throw new \Exception('Invalid JSON: ' . json_last_error_msg());
-          }
+        // If token is missing or invalid, return an error string.
+        if (empty($token)) {
+            return 'Unauthorized to get social content.';
         }
 
-        // 3) $data is now always an array. Return it (or its subset).
-        return $data;
-      }
-      catch (\Exception $e) {
-        \Drupal::logger('rep')->error('Social API request failed: @msg', [
-          '@msg' => $e->getMessage(),
-        ]);
-        return [];
-      }
+        // Get OAuth client ID from configuration.
+        $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
+
+        // Prepare the social API endpoint and headers.
+        $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
+        \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
+
+        $options = [
+            'headers' => [
+                'Authorization' => "Bearer {$token}",
+                'Accept'        => 'application/json',
+            ],
+            'json' => [
+                'token'        => $token,
+                'consumer_id'  => $consumerId,
+                'elementType'  => $elementType,
+            ],
+        ];
+
+        try {
+            // Perform POST, decode JSON and return the array directly.
+            $body = $this->perform_http_request('POST', $url, $options);
+            $data = json_decode($body, TRUE);
+            if (!is_array($data)) {
+                throw new \Exception('Unexpected social API payload');
+            }
+            return $data;
+        }
+        catch (\Exception $e) {
+            \Drupal::logger('rep')->error(
+                'Social API request failed: @msg',
+                ['@msg' => $e->getMessage()]
+            );
+            return [];
+        }
     }
 
     // Build default API endpoint when social integration is disabled.
@@ -436,7 +426,7 @@ class FusekiAPIConnector {
 
     // Perform GET, decode JSON and return the array directly.
     $body = $this->perform_http_request($method, $url, $options);
-    $data = json_decode((string)$body, TRUE);
+    $data = json_decode($body, TRUE);
     return is_array($data) ? $data : [];
   }
 
