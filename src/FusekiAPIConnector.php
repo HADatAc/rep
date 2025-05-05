@@ -1714,6 +1714,17 @@ class FusekiAPIConnector {
         \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
         return NULL;
     }
+
+    // Se já veio um array (já decodificado), devolve-o logo
+    if (is_array($response)) {
+      return $response;
+    }
+
+    // Caso venha um Stream ou outro objecto com __toString(), força string
+    if (!is_string($response) && method_exists($response, '__toString')) {
+      $response = (string) $response;
+    }
+
     $obj = json_decode($response);
     if ($obj == NULL) {
       \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
