@@ -370,7 +370,7 @@ class FusekiAPIConnector {
         $session = \Drupal::request()->getSession();
         $token   = $session->get('oauth_access_token');
 
-        dpm($session, 'session');
+        dpm($token, 'token');
 
         // If token is missing or invalid, notify user and return empty list
         if (empty($token)) {
