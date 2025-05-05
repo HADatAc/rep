@@ -358,20 +358,24 @@ class FusekiAPIConnector {
     $pageSize,
     $offset
   ) {
-    // 1) Check if social integration is enabled.
+    // Check if social integration is enabled in configuration.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
 
     if ($socialEnabled) {
-      // 2) Prepare and perform the POST to your social endpoint.
-      $session    = \Drupal::request()->getSession();
-      $token      = $session->get('oauth_access_token');
+      // Retrieve OAuth token from current session.
+      $session = \Drupal::request()->getSession();
+      $token   = $session->get('oauth_access_token');
+
+      // If token is missing or invalid, return an error string.
       if (empty($token)) {
-          // No token → user can’t get social content.
           return 'Unauthorized to get social content.';
       }
 
+      // Get OAuth client ID from configuration.
       $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
-      $url        = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
+
+      // Prepare the social API endpoint and headers.
+      $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
       \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
 
       $options = [
@@ -387,53 +391,53 @@ class FusekiAPIConnector {
       ];
 
       try {
-          $raw = $this->perform_http_request('POST', $url, $options);
+        // 1) Grab whatever perform_http_request gives you:
+        $raw = $this->perform_http_request('POST', $url, $options);
+
+        // 2) If it's already an array, use it directly.
+        if (is_array($raw)) {
+          $data = $raw;
+        }
+        else {
+          // Otherwise cast to string and decode JSON.
+          $body = (string) $raw;
+          $data = json_decode($body, TRUE);
+          if (JSON_ERROR_NONE !== json_last_error()) {
+            throw new \Exception('Invalid JSON: ' . json_last_error_msg());
+          }
+        }
+
+        // 3) $data is now always an array. Return it (or its subset).
+        return $data;
       }
       catch (\Exception $e) {
-          \Drupal::logger('rep')->error('Social API request failed: @msg', ['@msg' => $e->getMessage()]);
-          return [];
+        \Drupal::logger('rep')->error('Social API request failed: @msg', [
+          '@msg' => $e->getMessage(),
+        ]);
+        return [];
       }
-      // 4) Normalize: if it’s already an array, use it directly.
-      if (is_array($raw)) {
-        return $raw;
-      }
-
-      // 5) Otherwise cast to string and decode JSON.
-      $json = (string) $raw;
-      $data = json_decode($json, TRUE);
-      \Drupal::logger('rep')->notice('Social API response: @json', ['@json' => $json]);
-
-      if (JSON_ERROR_NONE !== json_last_error()) {
-          \Drupal::logger('rep')->error(
-              'JSON decode error: @msg — raw response: @raw',
-              [
-                '@msg' => json_last_error_msg(),
-                '@raw' => substr($json, 0, 200) . '…',
-              ]
-          );
-          return [];
-      }
-
-      return $data;
     }
 
-    // Default API endpoint when social integration is not enabled
-    $endpoint = "/hascoapi/api/{$elementType}/keywordtype/" .
-        rawurlencode($project) . "/" .
-        rawurlencode($keyword) . "/" .
-        rawurlencode($type) . "/" .
-        rawurlencode($manageremail) . "/" .
-        rawurlencode($status) . "/" .
-        $pageSize . "/" .
-        $offset;
+    // Build default API endpoint when social integration is disabled.
+    $endpoint = "/hascoapi/api/{$elementType}/keywordtype/"
+        . rawurlencode($project) . '/'
+        . rawurlencode($keyword) . '/'
+        . rawurlencode($type) . '/'
+        . rawurlencode($manageremail) . '/'
+        . rawurlencode($status) . '/'
+        . $pageSize . '/'
+        . $offset;
 
     $url     = $this->getApiUrl() . $endpoint;
     $method  = 'GET';
-    $headers = $this->getHeader();
+    $options = [
+        'headers' => $this->getHeader(),
+    ];
 
-    // Perform GET request to default API and return response
-    return $this->perform_http_request($method, $url, $headers);
-
+    // Perform GET, decode JSON and return the array directly.
+    $body = $this->perform_http_request($method, $url, $options);
+    $data = json_decode((string)$body, TRUE);
+    return is_array($data) ? $data : [];
   }
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
