@@ -1694,7 +1694,7 @@ class FusekiAPIConnector {
         return(NULL);
       }
     }
-    return($res->getBody());
+    return (string) ($res->getBody());
   }
 
   /**
