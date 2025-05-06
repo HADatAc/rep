@@ -255,7 +255,7 @@ function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
   $repo_instance = \Drupal::config('system.site')->get('name');
 
   // Definir o ID do projeto (deve coincidir com o que está no Sagres).
-  $project_id = 'pmsr_v0.1'; // ← Usa o valor correto conforme o teu projeto
+  $project_id = 'hascorepo';
 
   $client = \Drupal::httpClient();
   try {

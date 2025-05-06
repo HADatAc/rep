@@ -19,7 +19,7 @@ class TermsForm extends FormBase {
 
     try {
       $client = \Drupal::httpClient();
-      $project_id = 'pmsr_v0.1';
+      $project_id = 'hascorepo';
 
       $response = $client->get('http://192.168.1.169/sguser/terms/latest', [
         'query' => [
@@ -60,7 +60,7 @@ class TermsForm extends FormBase {
     $current_user = \Drupal::currentUser();
     $username = $current_user->getAccountName();
     $repo_instance = \Drupal::config('system.site')->get('name');
-    $project_id = 'pmsr_v0.1';
+    $project_id = 'hascorepo';
 
     try {
       $client = \Drupal::httpClient();
