@@ -397,7 +397,11 @@ class FusekiAPIConnector {
           if (!is_array($data)) {
               throw new \Exception('Unexpected social API payload');
           }
-          return $data;
+          \Drupal::logger('rep')->notice('Social API response: @response', [
+            '@response' => print_r($data, TRUE),
+          ]);
+
+          return is_array($data) ? $data : [];
       }
       catch (\Exception $e) {
           \Drupal::logger('rep')->error(
