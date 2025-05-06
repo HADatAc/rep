@@ -379,6 +379,9 @@ class FusekiAPIConnector {
       // $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
       $baseUrl  = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
       $url  = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
+      \Drupal::logger('rep')->notice('Social API URL: @url', [
+          '@url' => $url,
+      ]);
 
       $options = [
           'headers' => [
