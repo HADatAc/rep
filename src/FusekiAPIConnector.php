@@ -393,7 +393,7 @@ class FusekiAPIConnector {
       try {
           // Perform POST, decode JSON and return the array directly.
           $body = $this->perform_http_request('POST', $url, $options);
-          $data = json_decode($body, TRUE);
+          $data = json_decode($body);
           if (!is_array($data)) {
               throw new \Exception('Unexpected social API payload');
           }
@@ -410,15 +410,6 @@ class FusekiAPIConnector {
           );
           return [];
       }
-
-      // Perform GET, decode JSON and return the array directly.
-      $body = $this->perform_http_request($method, $url, $options);
-      $data = json_decode($body, TRUE);
-
-      \Drupal::logger('rep')->notice('Social API response: @response', [
-          '@response' => print_r($data, TRUE),
-      ]);
-      return is_array($data) ? $data : [];
     }
 
     // Build default API endpoint when social integration is disabled.
