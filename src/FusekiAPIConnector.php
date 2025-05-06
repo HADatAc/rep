@@ -352,181 +352,93 @@ class FusekiAPIConnector {
   // }
 
   // WORKING VERSION
-  // public function listByKeywordType(
-  //   $elementType,
-  //   $project = 'all',
-  //   $keyword = '_',
-  //   $type = '_',
-  //   $manageremail = '_',
-  //   $status = '_',
-  //   $pageSize,
-  //   $offset
-  // ) {
-  //   // Check if social integration is enabled in configuration.
-  //   $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-
-  //   if ($socialEnabled) {
-  //     // Retrieve OAuth token from current session.
-  //     $session = \Drupal::request()->getSession();
-  //     $token   = $session->get('oauth_access_token');
-
-  //     // If token is missing or invalid, return an error string.
-  //     if (empty($token)) {
-  //         return 'Unauthorized to get social content.';
-  //     }
-
-  //     // Get OAuth client ID from configuration.
-  //     $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
-
-  //     // Prepare the social API endpoint and headers.
-  //     // $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
-  //     $baseUrl  = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
-  //     $url  = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
-  //     \Drupal::logger('rep')->notice('Social API URL: @url', [
-  //         '@url' => $url,
-  //     ]);
-
-  //     $options = [
-  //         'headers' => [
-  //             'Authorization' => "Bearer {$token}",
-  //             'Accept'        => 'application/json',
-  //         ],
-  //         'json' => [
-  //             'token'        => $token,
-  //             'consumer_id'  => $consumerId,
-  //             'elementType'  => $elementType,
-  //         ],
-  //     ];
-
-  //     try {
-  //         // Perform POST, decode JSON and return the array directly.
-  //         $body = $this->perform_http_request('POST', $url, $options);
-  //         $data = json_decode($body);
-  //         if (!is_array($data)) {
-  //             throw new \Exception('Unexpected social API payload');
-  //         }
-  //         \Drupal::logger('rep')->notice('Social API response: @response', [
-  //           '@response' => print_r($data, TRUE),
-  //         ]);
-
-  //         return is_array($data) ? $data : [];
-  //     }
-  //     catch (\Exception $e) {
-  //         \Drupal::logger('rep')->error(
-  //             'Social API request failed: @msg',
-  //             ['@msg' => $e->getMessage()]
-  //         );
-  //         return [];
-  //     }
-  //   }
-
-  //   // Build default API endpoint when social integration is disabled.
-  //   $endpoint = "/hascoapi/api/{$elementType}/keywordtype/"
-  //       . rawurlencode($project) . '/'
-  //       . rawurlencode($keyword) . '/'
-  //       . rawurlencode($type) . '/'
-  //       . rawurlencode($manageremail) . '/'
-  //       . rawurlencode($status) . '/'
-  //       . $pageSize . '/'
-  //       . $offset;
-
-  //   $url     = $this->getApiUrl() . $endpoint;
-  //   $method  = 'GET';
-  //   $options = [
-  //       'headers' => $this->getHeader(),
-  //   ];
-
-  //   // Perform GET, decode JSON and return the array directly.
-  //   return $this->perform_http_request($method, $url, $options);
-
-  // }
-
   public function listByKeywordType(
     $elementType,
-    $project      = 'all',
-    $keyword      = '_',
-    $type         = '_',
+    $project = 'all',
+    $keyword = '_',
+    $type = '_',
     $manageremail = '_',
-    $status       = '_',
+    $status = '_',
     $pageSize,
     $offset
   ) {
-    // 1) Verifica se o módulo social está ativo.
+    // Check if social integration is enabled in configuration.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
 
     if ($socialEnabled) {
-      // 2) Garante um access_token válido (faz refresh se necessário).
-      try {
-        /** @var \Drupal\socialm\TokenValidator $tokenValidator */
-        $tokenValidator = \Drupal::service('socialm.token_validator');
-        $token     = $tokenValidator->getValidAccessToken();
-      }
-      catch (\Exception $e) {
-        \Drupal::logger('rep')->error('Falha ao validar/refresh do token: @msg', [
-          '@msg' => $e->getMessage(),
-        ]);
-        return [];
+      // Retrieve OAuth token from current session.
+      $session = \Drupal::request()->getSession();
+      $token   = $session->get('oauth_access_token');
+
+      // If token is missing or invalid, return an error string.
+      if (empty($token)) {
+          return 'Unauthorized to get social content.';
       }
 
-      // 3) Monta a URL de listagem a partir do oauth_url configurado:
-      $cfg     = \Drupal::config('social.oauth.settings');
-      $baseUrl = rtrim($cfg->get('oauth_url'), '/');
-      $url     = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
-      \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
+      // Get OAuth client ID from configuration.
+      $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
 
-      // 4) Prepara o payload e headers.
-      $consumerId = $cfg->get('client_id');
-      $options    = [
-        'headers' => [
-          'Authorization' => "Bearer {$token}",
-          'Accept'        => 'application/json',
-        ],
-        'json' => [
-          'consumer_id'  => $consumerId,
-          'elementType'  => $elementType,
-          'project'      => $project,
-          'keyword'      => $keyword,
-          'type'         => $type,
-          'manageremail' => $manageremail,
-          'status'       => $status,
-          'pageSize'     => $pageSize,
-          'offset'       => $offset,
-        ],
+      // Prepare the social API endpoint and headers.
+      // $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
+      $baseUrl  = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
+      $url  = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
+      \Drupal::logger('rep')->notice('Social API URL: @url', [
+          '@url' => $url,
+      ]);
+
+      $options = [
+          'headers' => [
+              'Authorization' => "Bearer {$token}",
+              'Accept'        => 'application/json',
+          ],
+          'json' => [
+              'token'        => $token,
+              'consumer_id'  => $consumerId,
+              'elementType'  => $elementType,
+          ],
       ];
 
-      // 5) Chama a API e retorna o array.
       try {
-        $body = $this->perform_http_request('POST', $url, $options);
-        $data = json_decode($body, TRUE);
-        if (!is_array($data)) {
-          throw new \Exception('Payload inesperado da Social API');
-        }
-        \Drupal::logger('rep')->notice('Social API response: @resp', [
-          '@resp' => print_r($data, TRUE),
-        ]);
-        return $data;
+          // Perform POST, decode JSON and return the array directly.
+          $body = $this->perform_http_request('POST', $url, $options);
+          $data = json_decode($body);
+          if (!is_array($data)) {
+              throw new \Exception('Unexpected social API payload');
+          }
+          \Drupal::logger('rep')->notice('Social API response: @response', [
+            '@response' => print_r($data, TRUE),
+          ]);
+
+          return is_array($data) ? $data : [];
       }
       catch (\Exception $e) {
-        \Drupal::logger('rep')->error('Social API request failed: @msg', [
-          '@msg' => $e->getMessage(),
-        ]);
-        return [];
+          \Drupal::logger('rep')->error(
+              'Social API request failed: @msg',
+              ['@msg' => $e->getMessage()]
+          );
+          return [];
       }
     }
 
-    // Se integração social DESLIGADA, chama API interna normalmente...
+    // Build default API endpoint when social integration is disabled.
     $endpoint = "/hascoapi/api/{$elementType}/keywordtype/"
-      . rawurlencode($project) . '/'
-      . rawurlencode($keyword) . '/'
-      . rawurlencode($type) . '/'
-      . rawurlencode($manageremail) . '/'
-      . rawurlencode($status) . '/'
-      . $pageSize . '/'
-      . $offset;
+        . rawurlencode($project) . '/'
+        . rawurlencode($keyword) . '/'
+        . rawurlencode($type) . '/'
+        . rawurlencode($manageremail) . '/'
+        . rawurlencode($status) . '/'
+        . $pageSize . '/'
+        . $offset;
 
     $url     = $this->getApiUrl() . $endpoint;
-    $options = ['headers' => $this->getHeader()];
-    return $this->perform_http_request('GET', $url, $options);
+    $method  = 'GET';
+    $options = [
+        'headers' => $this->getHeader(),
+    ];
+
+    // Perform GET, decode JSON and return the array directly.
+    return $this->perform_http_request($method, $url, $options);
+
   }
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
