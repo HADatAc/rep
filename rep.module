@@ -243,7 +243,8 @@ function rep_page_attachments(array &$attachments) {
   $attachments['#attached']['library'][] = 'rep/rep_js_css';
 }
 
-function rep_user_login(&$edit, \Drupal\Core\Session\AccountInterface $account) {
+function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
+
   // Carregar a entidade de utilizador completa.
   $user = \Drupal\user\Entity\User::load($account->id());
 
