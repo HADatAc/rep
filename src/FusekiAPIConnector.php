@@ -376,7 +376,7 @@ class FusekiAPIConnector {
 
       // Prepare the social API endpoint and headers.
       $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
-      \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
+      // \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
 
       $options = [
           'headers' => [
@@ -410,6 +410,10 @@ class FusekiAPIConnector {
       // Perform GET, decode JSON and return the array directly.
       $body = $this->perform_http_request($method, $url, $options);
       $data = json_decode($body, TRUE);
+
+      \Drupal::logger('rep')->notice('Social API response: @response', [
+          '@response' => print_r($data, TRUE),
+      ]);
       return is_array($data) ? $data : [];
     }
 
