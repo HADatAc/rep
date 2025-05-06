@@ -347,3 +347,11 @@ rep.load_media_api:
   requirements:
     _permission: 'access content'
     _custom_access_check: 'TRUE'
+
+rep.terms_form:
+  path: '/terms-aceptance'
+  defaults:
+    _form: '\Drupal\rep\Form\TermsForm'
+    _title: 'Terms of Use Acceptance'
+  requirements:
+    _permission: 'access content'
