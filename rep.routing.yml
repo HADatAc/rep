@@ -361,3 +361,10 @@ rep.social_autocomplete:
   options:
     _format: 'json'
     # _auth: ['oauth2']
+rep.terms_form:
+  path: '/terms-aceptance'
+  defaults:
+    _form: '\Drupal\rep\Form\TermsForm'
+    _title: 'Terms of Use Acceptance'
+  requirements:
+    _permission: 'access content'
