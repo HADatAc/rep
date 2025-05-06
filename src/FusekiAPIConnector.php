@@ -12,6 +12,7 @@ use Exception;
 use Symfony\Component\HttpFoundation\Response;
 use GuzzleHttp\Exception\RequestException;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\socialm\TokenValidator;
 
 class FusekiAPIConnector {
   private $client;
@@ -456,9 +457,9 @@ class FusekiAPIConnector {
     if ($socialEnabled) {
       // 2) Garante um access_token válido (faz refresh se necessário).
       try {
-        /** @var \Drupal\socialm\TokenValidator $validator */
-        $validator = \Drupal::service('socialm.token_validator');
-        $token     = $validator->getValidAccessToken();
+        /** @var \Drupal\socialm\TokenValidator $tokenValidator */
+        $tokenValidator = \Drupal::service('socialm.token_validator');
+        $token     = $tokenValidator->getValidAccessToken();
       }
       catch (\Exception $e) {
         \Drupal::logger('rep')->error('Falha ao validar/refresh do token: @msg', [
