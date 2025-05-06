@@ -11,6 +11,7 @@ use GuzzleHttp\Exception\ConnectException;
 use Exception;
 use Symfony\Component\HttpFoundation\Response;
 use GuzzleHttp\Exception\RequestException;
+use Drupal\Core\Config\ConfigFactoryInterface;
 
 class FusekiAPIConnector {
   private $client;
@@ -375,8 +376,9 @@ class FusekiAPIConnector {
       $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
 
       // Prepare the social API endpoint and headers.
-      $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
-      // \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
+      // $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
+      $baseUrl  = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
+      $url  = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
 
       $options = [
           'headers' => [
