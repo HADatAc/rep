@@ -32,13 +32,143 @@ class FusekiAPIConnector {
    *   GENERIC
    */
 
+  // public function getUri($uri) {
+  //   $endpoint = "/hascoapi/api/uri/".rawurlencode($uri);
+  //   $method = "GET";
+  //   $api_url = $this->getApiUrl();
+  //   $data = $this->getHeader();
+  //   return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  // }
   public function getUri($uri) {
-    $endpoint = "/hascoapi/api/uri/".rawurlencode($uri);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
+    // 1) Build the legacy (local) endpoint and always try it first.
+    $endpoint   = '/hascoapi/api/uri/' . rawurlencode($uri);
+    $localUrl   = $this->getApiUrl() . $endpoint;
+    // Use the same header helper—if you have no token yet, it’ll be empty.
+    $localOpts  = $this->getHeader() ?? [];
+    $localResponse = $this->perform_http_request('GET', $localUrl, $localOpts);
+
+    // 2) If the legacy call returned something non‐empty, just return it.
+    if (!empty($localResponse)) {
+        return $localResponse;
+    }
+
+    // 3) Otherwise, check if Social API is enabled in site config.
+    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
+    if (!$socialEnabled) {
+        // If Social is disabled, fall back to the (empty) legacy response.
+        return $localResponse;
+    }
+
+    // 4) Prepare to fetch or refresh the OAuth token from session.
+    $session = \Drupal::request()->getSession();
+    $token   = $session->get('oauth_access_token');
+
+    // Closure to refresh the token via Social’s OAuthController.
+    $refreshToken = function() use ($session) {
+        $controller = \Drupal::service('controller_resolver')
+            ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
+        $response = call_user_func($controller);
+        if ($response instanceof JsonResponse) {
+            $payload = json_decode($response->getContent(), TRUE);
+            if (!empty($payload['body']['access_token'])) {
+                $session->set('oauth_access_token', $payload['body']['access_token']);
+                return;
+            }
+        }
+        throw new \Exception('Failed to refresh OAuth token.', 401);
+    };
+
+    // If we don’t have a token yet, try refreshing it.
+    if (empty($token)) {
+        try {
+            $refreshToken();
+            $token = $session->get('oauth_access_token');
+        }
+        catch (\Exception $e) {
+            // If we can't get a token, give up and return the legacy response.
+            return $localResponse;
+        }
+    }
+
+    // 5) Build the Social API request to fetch a URI.
+    $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
+    $oauthUrl   = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
+    // Replace the token‐endpoint path with your Social “getUri” endpoint.
+    $socialUrl  = preg_replace('#/oauth/token$#', '/api/socialm/geturi', $oauthUrl);
+
+    $baseOptions = [
+        'http_errors' => FALSE,
+        'headers'     => [
+            'Authorization' => "Bearer {$token}",
+            'Accept'        => 'application/json',
+        ],
+        'json'        => [
+            'token'       => $token,
+            'consumer_id' => $consumerId,
+            'uri'         => $uri,
+        ],
+    ];
+
+    // 6) Define a reusable request function that throws on 401.
+    $doRequest = function() use ($socialUrl, &$baseOptions) {
+        $client   = \Drupal::httpClient();
+        $response = $client->request('POST', $socialUrl, $baseOptions);
+        $status   = $response->getStatusCode();
+        $raw      = $response->getBody()->getContents();
+
+        // If unauthorized or “denied”, bubble up for a token refresh.
+        if ($status === 401
+            || (json_decode($raw) === NULL && stripos($raw, 'denied') !== FALSE)
+        ) {
+            throw new \Exception('Unauthorized or token revoked', 401);
+        }
+
+        // On other HTTP errors, log and return null.
+        if ($status >= 400) {
+            \Drupal::logger('rep')->error(
+                'Social API getUri HTTP @code error: @msg',
+                ['@code' => $status, '@msg' => substr($raw, 0, 200)]
+            );
+            return NULL;
+        }
+
+        // Decode JSON strictly.
+        $data = json_decode($raw, FALSE);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception('Invalid JSON payload from Social getUri', 400);
+        }
+        return $data;
+    };
+
+    // 7) Execute the Social call, retrying once on 401.
+    try {
+        $socialResponse = $doRequest();
+    }
+    catch (\Exception $e) {
+        if ((int) $e->getCode() === 401) {
+            // Token expired or revoked → refresh and retry once.
+            try {
+                $refreshToken();
+                $newToken = $session->get('oauth_access_token');
+                $baseOptions['headers']['Authorization'] = "Bearer {$newToken}";
+                $baseOptions['json']['token']            = $newToken;
+                $socialResponse = $doRequest();
+            }
+            catch (\Exception $e2) {
+                // Still failing → give up
+                $socialResponse = NULL;
+            }
+        }
+        else {
+            // Non‐auth exception → give up
+            $socialResponse = NULL;
+        }
+    }
+
+    // 8) Return whatever we got from Social (or NULL if it failed).
+    return $socialResponse;
+}
+
 
   public function getUsage($uri) {
     $endpoint = "/hascoapi/api/usage/".rawurlencode($uri);
@@ -264,129 +394,6 @@ class FusekiAPIConnector {
   }
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>/$pageSize<[^/]+>/$offset<[^/]+>
-  // public function listByKeywordType($elementType, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $pageSize, $offset) {
-  //   $endpoint = "/hascoapi/api/".
-  //     $elementType.
-  //     "/keywordtype/".
-  //     rawurlencode($project)."/".
-  //     rawurlencode($keyword)."/".
-  //     rawurlencode($type)."/".
-  //     rawurlencode($manageremail)."/".
-  //     rawurlencode($status)."/".
-  //     $pageSize."/".
-  //     $offset;
-  //   $method = 'GET';
-  //   $api_url = $this->getApiUrl();
-  //   $data = $this->getHeader();
-  //   return $this->perform_http_request($method, $api_url.$endpoint, $data);
-  // }
-
-  /**
-   * Lists items by keyword and type, or via social endpoint if enabled.
-   *
-   * @param string $elementType
-   * @param string $project
-   * @param string $keyword
-   * @param string $type
-   * @param string $manageremail
-   * @param string $status
-   * @param int    $pageSize
-   * @param int    $offset
-   *
-   * @return mixed
-   * @throws \Exception if OAuth token is missing or invalid
-   */
-
-  // WORKING VERSION
-  // public function listByKeywordType(
-  //   $elementType,
-  //   $project = 'all',
-  //   $keyword = '_',
-  //   $type = '_',
-  //   $manageremail = '_',
-  //   $status = '_',
-  //   $pageSize,
-  //   $offset
-  // ) {
-  //   // Check if social integration is enabled in configuration.
-  //   $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-
-  //   if ($socialEnabled) {
-  //     // Retrieve OAuth token from current session.
-  //     $session = \Drupal::request()->getSession();
-  //     $token   = $session->get('oauth_access_token');
-
-  //     // If token is missing or invalid, return an error string.
-  //     if (empty($token)) {
-  //         return 'Unauthorized to get social content.';
-  //     }
-
-  //     // Get OAuth client ID from configuration.
-  //     $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
-
-  //     // Prepare the social API endpoint and headers.
-  //     // $url = 'http://192.168.1.58:8081/drupal/web/api/socialm/list';
-  //     $baseUrl  = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
-  //     $url  = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
-  //     \Drupal::logger('rep')->notice('Social API URL: @url', [
-  //         '@url' => $url,
-  //     ]);
-
-  //     $options = [
-  //         'headers' => [
-  //             'Authorization' => "Bearer {$token}",
-  //             'Accept'        => 'application/json',
-  //         ],
-  //         'json' => [
-  //             'token'        => $token,
-  //             'consumer_id'  => $consumerId,
-  //             'elementType'  => $elementType,
-  //         ],
-  //     ];
-
-  //     try {
-  //         // Perform POST, decode JSON and return the array directly.
-  //         $body = $this->perform_http_request('POST', $url, $options);
-  //         $data = json_decode($body);
-  //         if (!is_array($data)) {
-  //             throw new \Exception('Unexpected social API payload');
-  //         }
-  //         \Drupal::logger('rep')->notice('Social API response: @response', [
-  //           '@response' => print_r($data, TRUE),
-  //         ]);
-
-  //         return is_array($data) ? $data : [];
-  //     }
-  //     catch (\Exception $e) {
-  //         \Drupal::logger('rep')->error(
-  //             'Social API request failed: @msg',
-  //             ['@msg' => $e->getMessage()]
-  //         );
-  //         return [];
-  //     }
-  //   }
-
-  //   // Build default API endpoint when social integration is disabled.
-  //   $endpoint = "/hascoapi/api/{$elementType}/keywordtype/"
-  //       . rawurlencode($project) . '/'
-  //       . rawurlencode($keyword) . '/'
-  //       . rawurlencode($type) . '/'
-  //       . rawurlencode($manageremail) . '/'
-  //       . rawurlencode($status) . '/'
-  //       . $pageSize . '/'
-  //       . $offset;
-
-  //   $url     = $this->getApiUrl() . $endpoint;
-  //   $method  = 'GET';
-  //   $options = [
-  //       'headers' => $this->getHeader(),
-  //   ];
-
-  //   // Perform GET, decode JSON and return the array directly.
-  //   return $this->perform_http_request($method, $url, $options);
-
-  // }
-
   public function listByKeywordType(
       $elementType,
       $pageSize,
@@ -547,35 +554,7 @@ class FusekiAPIConnector {
     }
   }
 
-
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
-  // public function listSizeByKeywordType($elementType, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
-  //   $endpoint = "/hascoapi/api/".
-  //     $elementType.
-  //     "/keywordtype/total/".
-  //     rawurlencode($project)."/".
-  //     rawurlencode($keyword)."/".
-  //     rawurlencode($type)."/".
-  //     rawurlencode($manageremail)."/".
-  //     rawurlencode($status);
-  //   $method = 'GET';
-  //   $api_url = $this->getApiUrl();
-  //   $data = $this->getHeader();
-  //   return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  // }
-
-  /**
-   * Get the total count of items by keyword and type, using social API when enabled.
-   *
-   * @param string $elementType
-   * @param string $project
-   * @param string $keyword
-   * @param string $type
-   * @param string $manageremail
-   * @param string $status
-   *
-   * @return mixed  stdClass on social path, raw response on fallback, or error string.
-   */
   public function listSizeByKeywordType(
     $elementType,
     $project      = '_',
@@ -583,7 +562,7 @@ class FusekiAPIConnector {
     $type         = '_',
     $manageremail = '_',
     $status       = '_'
-) {
+  ) {
     // 1. Fallback to legacy API if social is disabled
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
     if (! $socialEnabled) {
@@ -725,7 +704,6 @@ class FusekiAPIConnector {
 
     return json_encode($payload);
   }
-
 
   public function uningestMT($metadataTemplateUri) {
     $endpoint = "/hascoapi/api/uningest/mt/" . rawurlencode($metadataTemplateUri);
