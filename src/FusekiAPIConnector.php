@@ -387,16 +387,19 @@ class FusekiAPIConnector {
 
   // }
 
-  public function listByKeywordType(
-      $elementType,
-      $project      = 'all',
-      $keyword      = '_',
-      $type         = '_',
-      $manageremail = '_',
-      $status       = '_',
-      $pageSize,
-      $offset
-  ) {
+  use GuzzleHttp\Exception\RequestException;
+use Symfony\Component\HttpFoundation\JsonResponse;
+
+public function listByKeywordType(
+    $elementType,
+    $project      = 'all',
+    $keyword      = '_',
+    $type         = '_',
+    $manageremail = '_',
+    $status       = '_',
+    $pageSize,
+    $offset
+) {
     // 1. If “social” integration is disabled, fall back to the default API.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
     if (! $socialEnabled) {
@@ -410,7 +413,7 @@ class FusekiAPIConnector {
             . $offset;
         $url     = $this->getApiUrl() . $endpoint;
         $method  = 'GET';
-        $options = ['headers' => $this->getHeader()];
+        $options = ['headers' => $this->getHeader() ?? []];
         return $this->perform_http_request($method, $url, $options);
     }
 
@@ -458,45 +461,47 @@ class FusekiAPIConnector {
 
     // 5. Closure to perform the HTTP request and decode JSON into stdClass.
     $doRequest = function() use ($url, &$options) {
-        // 5.a Debug-log the type and contents of $options
+        // 5.a Ensure $options is always an array
+        $opts = $options ?? [];
+
+        // 5.b Log the full $opts for debugging
         \Drupal::logger('rep')->debug(
-            'Request options type: @type, value: <pre>@dump</pre>',
-            [
-                '@type' => gettype($options),
-                '@dump' => var_export($options, TRUE),
-            ]
+            'Guzzle request options: <pre>@dump</pre>',
+            ['@dump' => var_export($opts, TRUE)]
         );
 
-        // 5.b Perform the HTTP POST request (ensure $options is never null)
-        $raw = $this->perform_http_request('POST', $url, $options ?? []);
+        // 5.c Perform the HTTP POST request
+        $raw = $this->perform_http_request('POST', $url, $opts);
 
-        // 5.c Log the raw response for debugging
-        \Drupal::logger('rep')->debug('Raw Social API response: <pre>@raw</pre>', [
-            '@raw' => var_export($raw, TRUE),
-        ]);
+        // 5.d Log the raw response for debugging
+        \Drupal::logger('rep')->debug(
+            'Raw Social API response (first 500 chars): <pre>@raw</pre>',
+            ['@raw' => substr($raw, 0, 500)]
+        );
 
-        // 5.d Decode JSON into stdClass
+        // 5.e Decode JSON into stdClass
         $data = json_decode($raw);
 
-        // 5.e Check JSON syntax errors
+        // 5.f Check JSON syntax errors
         if (json_last_error() !== JSON_ERROR_NONE) {
+            $snippet = substr($raw, 0, 200);
             \Drupal::logger('rep')->error(
-                'Social API returned invalid JSON (error code @err): @raw',
+                'Invalid JSON from social API (error code @err). Snippet: @snippet',
                 [
-                    '@err' => json_last_error(),
-                    '@raw' => $raw,
+                    '@err'     => json_last_error(),
+                    '@snippet' => $snippet,
                 ]
             );
-            throw new \Exception('Invalid JSON payload from social API.');
+            throw new \Exception("Invalid JSON payload from social API. Snippet: {$snippet}");
         }
 
-        // 5.f If decoding yields null, return an empty stdClass
+        // 5.g If decoding yields null, return an empty stdClass
         if ($data === null) {
             \Drupal::logger('rep')->warning('Social API decoded to null; returning empty object.');
             return new \stdClass();
         }
 
-        // 5.g Ensure the decoded result is stdClass
+        // 5.h Finally ensure the decoded result is stdClass
         if (! ($data instanceof \stdClass)) {
             throw new \Exception('Unexpected data structure from social API; expected stdClass.');
         }
@@ -542,6 +547,7 @@ class FusekiAPIConnector {
         return new \stdClass();
     }
   }
+
 
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
