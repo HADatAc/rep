@@ -675,7 +675,7 @@ class FusekiAPIConnector {
                 'Social API HTTP @s error when fetching size: @r',
                 ['@s' => $status, '@r' => substr($raw, 0, 200)]
             );
-            return new \stdClass();
+            return [];
         }
 
         // 6.c Decode the JSON response into a stdClass.
@@ -688,7 +688,7 @@ class FusekiAPIConnector {
             throw new \Exception('Invalid JSON payload', 400);
         }
 
-        return $data ?? new \stdClass();
+        return $data ?? [];
     };
 
     // 7. Execute the request, retrying once if we catch a 401 exception.
@@ -714,13 +714,13 @@ class FusekiAPIConnector {
                     'Second size request attempt failed after refresh: @m',
                     ['@m' => $e2->getMessage()]
                 );
-                return new \stdClass();
+                return [];
             }
         }
 
         // 7.c Any other exception: log and return an empty object.
         \Drupal::logger('rep')->error('Social API size request failed: @m', ['@m' => $e->getMessage()]);
-        return new \stdClass();
+        return [];
     }
   }
 
