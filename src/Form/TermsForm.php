@@ -59,7 +59,7 @@ class TermsForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $current_user = \Drupal::currentUser();
     $username = $current_user->getAccountName();
-    $repo_instance = \Drupal::config('system.site')->get('name');
+    $repo_instance = \Drupal::request()->getHost();
     $project_id = 'hascorepo';
 
     try {
