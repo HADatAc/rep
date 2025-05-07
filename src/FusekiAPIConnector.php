@@ -445,6 +445,10 @@ public function listByKeywordType(
     $baseUrl    = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
     $url        = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
 
+    \Drupal::logger('rep')->notice('Social API URL: @url', [
+        '@url' => $url,
+    ]);
+
     $options = [
         'headers' => [
             'Authorization' => "Bearer {$token}",
@@ -463,7 +467,7 @@ public function listByKeywordType(
         $raw = $this->perform_http_request('POST', $url, $options);
 
         // decode with assoc=true
-        $data = json_decode($raw, TRUE);
+        $data = json_decode($raw);
 
         // if JSON syntax was invalid, log the raw response and throw
         if (json_last_error() !== JSON_ERROR_NONE) {
