@@ -417,17 +417,7 @@ class FusekiAPIConnector {
     $session = \Drupal::request()->getSession();
     $token   = $session->get('oauth_access_token');
 
-    // 3. If there is no token yet, attempt to refresh it immediately.
-    if (empty($token)) {
-        $this->refreshToken();
-        $token = $session->get('oauth_access_token');
-        if (empty($token)) {
-            // If refresh failed, we cannot proceed.
-            return 'Unauthorized to get social content.';
-        }
-    }
-
-    // 4. Define a local closure to refresh the token on demand.
+    // 3. Define a local closure to refresh the token on demand.
     $refreshToken = function() use ($session) {
         // Resolve and call the OAuthController::getAccessToken() method.
         $controller = \Drupal::service('controller_resolver')
@@ -446,6 +436,16 @@ class FusekiAPIConnector {
         // If anything went wrong, throw to trigger the retry logic.
         throw new \Exception('Failed to refresh OAuth token.', 401);
     };
+
+    // 4. If there is no token yet, attempt to refresh it immediately.
+    if (empty($token)) {
+      $refreshToken();
+      $token = $session->get('oauth_access_token');
+      if (empty($token)) {
+          // If refresh failed, we cannot proceed.
+          return 'Unauthorized to get social content.';
+      }
+    }
 
     // 5. Build the Social API endpoint URL and base request options.
     $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
@@ -549,19 +549,179 @@ class FusekiAPIConnector {
 
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
-  public function listSizeByKeywordType($elementType, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
-    $endpoint = "/hascoapi/api/".
-      $elementType.
-      "/keywordtype/total/".
-      rawurlencode($project)."/".
-      rawurlencode($keyword)."/".
-      rawurlencode($type)."/".
-      rawurlencode($manageremail)."/".
-      rawurlencode($status);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  // public function listSizeByKeywordType($elementType, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
+  //   $endpoint = "/hascoapi/api/".
+  //     $elementType.
+  //     "/keywordtype/total/".
+  //     rawurlencode($project)."/".
+  //     rawurlencode($keyword)."/".
+  //     rawurlencode($type)."/".
+  //     rawurlencode($manageremail)."/".
+  //     rawurlencode($status);
+  //   $method = 'GET';
+  //   $api_url = $this->getApiUrl();
+  //   $data = $this->getHeader();
+  //   return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  // }
+
+  /**
+   * Get the total count of items by keyword and type, using social API when enabled.
+   *
+   * @param string $elementType
+   * @param string $project
+   * @param string $keyword
+   * @param string $type
+   * @param string $manageremail
+   * @param string $status
+   *
+   * @return mixed  stdClass on social path, raw response on fallback, or error string.
+   */
+  public function listSizeByKeywordType(
+    $elementType,
+    $project      = '_',
+    $keyword      = '_',
+    $type         = '_',
+    $manageremail = '_',
+    $status       = '_'
+  ) {
+    // 1. Check if social integration is disabled – if so, fall back to the legacy API.
+    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
+    if (! $socialEnabled) {
+        $endpoint = "/hascoapi/api/{$elementType}/keywordtype/total/"
+            . rawurlencode($project)      . '/'
+            . rawurlencode($keyword)      . '/'
+            . rawurlencode($type)         . '/'
+            . rawurlencode($manageremail) . '/'
+            . rawurlencode($status);
+        $url  = $this->getApiUrl() . $endpoint;
+        $opts = ['headers' => $this->getHeader() ?? []];
+        return $this->perform_http_request('GET', $url, $opts);
+    }
+
+    // 2. Retrieve the current OAuth token from the session.
+    $session = \Drupal::request()->getSession();
+    $token   = $session->get('oauth_access_token');
+
+    // 3. Define a local closure to refresh the token on demand.
+    $refreshToken = function() use ($session) {
+        $controller = \Drupal::service('controller_resolver')
+            ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
+        $response = call_user_func($controller);
+
+        if ($response instanceof JsonResponse) {
+            $payload = json_decode($response->getContent(), TRUE);
+            if (!empty($payload['body']['access_token'])) {
+                $session->set('oauth_access_token', $payload['body']['access_token']);
+                return;
+            }
+        }
+
+        throw new \Exception('Failed to refresh OAuth token.', 401);
+    };
+
+    // 4. If there is no token yet, attempt to refresh it immediately.
+    if (empty($token)) {
+      $refreshToken();
+      $token = $session->get('oauth_access_token');
+      if (empty($token)) {
+          // If refresh failed, we cannot proceed.
+          return 'Unauthorized to get social content.';
+      }
+    }
+
+    // 5. Build the Social API endpoint URL and base request options.
+    $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
+    $baseUrl    = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
+    // Use the same list endpoint but instruct it to return total count
+    $url        = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
+
+    $baseOptions = [
+        'http_errors' => FALSE,  // so we can handle status manually
+        'headers'     => [
+            'Authorization' => "Bearer {$token}",
+            'Accept'        => 'application/json',
+        ],
+        'json'        => [
+            'token'        => $token,
+            'consumer_id'  => $consumerId,
+            'elementType'  => $elementType,
+            'project'      => $project,
+            'keyword'      => $keyword,
+            'type'         => $type,
+            'manageremail' => $manageremail,
+            'status'       => $status,
+            'total'        => TRUE,      // flag to request count-only
+        ],
+    ];
+
+    // 6. Define a closure to perform the HTTP request, check status, and decode JSON.
+    $doRequest = function() use ($url, &$baseOptions) {
+        $client   = \Drupal::httpClient();
+        $response = $client->request('POST', $url, $baseOptions);
+        $status   = $response->getStatusCode();
+        $raw      = $response->getBody()->getContents();
+
+        // 6.a Treat 401 or “denied” as an expired/revoked token.
+        if (
+            $status === 401
+            || (json_decode($raw) === null && stripos($raw, 'denied') !== FALSE)
+        ) {
+            throw new \Exception('Unauthorized or token revoked', 401);
+        }
+
+        // 6.b For other HTTP errors, log and return empty object.
+        if ($status >= 400) {
+            \Drupal::logger('rep')->error(
+                'Social API HTTP @s error when fetching size: @r',
+                ['@s' => $status, '@r' => substr($raw, 0, 200)]
+            );
+            return new \stdClass();
+        }
+
+        // 6.c Decode the JSON response into a stdClass.
+        $data = json_decode($raw);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            \Drupal::logger('rep')->error(
+                'Social API invalid JSON (error code @e): @r',
+                ['@e' => json_last_error(), '@r' => substr($raw, 0, 200)]
+            );
+            throw new \Exception('Invalid JSON payload', 400);
+        }
+
+        return $data ?? new \stdClass();
+    };
+
+    // 7. Execute the request, retrying once if we catch a 401 exception.
+    try {
+        return $doRequest();
+    }
+    catch (\Exception $e) {
+        if ((int) $e->getCode() === 401) {
+            \Drupal::logger('rep')->warning('Token invalid, refreshing & retrying size request.');
+
+            // 7.a Refresh the token and update request options.
+            $refreshToken();
+            $newToken = $session->get('oauth_access_token');
+            $baseOptions['headers']['Authorization'] = "Bearer {$newToken}";
+            $baseOptions['json']['token']            = $newToken;
+
+            // 7.b Retry the request one more time.
+            try {
+                return $doRequest();
+            }
+            catch (\Exception $e2) {
+                \Drupal::logger('rep')->error(
+                    'Second size request attempt failed after refresh: @m',
+                    ['@m' => $e2->getMessage()]
+                );
+                return new \stdClass();
+            }
+        }
+
+        // 7.c Any other exception: log and return an empty object.
+        \Drupal::logger('rep')->error('Social API size request failed: @m', ['@m' => $e->getMessage()]);
+        return new \stdClass();
+    }
   }
 
   public function uningestMT($metadataTemplateUri) {
