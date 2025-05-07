@@ -477,6 +477,10 @@ public function listByKeywordType(
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \Exception('Invalid JSON payload from social API.');
         }
+
+        \Drupal::logger('rep')->notice('Social API response: @response', [
+            '@response' => print_r($data, TRUE),
+        ]);
         return $data;
     };
 
