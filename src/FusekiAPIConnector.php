@@ -387,10 +387,6 @@ class FusekiAPIConnector {
 
   // }
 
-
-  use GuzzleHttp\Exception\RequestException;
-use Symfony\Component\HttpFoundation\JsonResponse;
-
 public function listByKeywordType(
     $elementType,
     $project      = 'all',
