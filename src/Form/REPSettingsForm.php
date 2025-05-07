@@ -408,13 +408,16 @@
 
             \Drupal::logger('rep')->notice("Processando utilizador: " . $user->getEmail());
 
+            
             $user_data = [
                 'acc_id' => $user->id(),
                 'acc_repo_instance' => $repo_instance,
                 'acc_name' => $user->getDisplayName(),
                 'acc_email' => $user->getEmail(),
                 'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $user->id(),
-                'acc_cellphone' => $user->get('field_cellphone')->value,
+                'acc_cellphone' => $user->hasField('field_cellphone') && !$user->get('field_cellphone')->isEmpty()
+                    ? (int) $user->get('field_cellphone')->value
+                    : null,
             ];
 
             $user_key = $repo_instance . ':' . $user->id();
