@@ -11,8 +11,6 @@ use GuzzleHttp\Exception\ConnectException;
 use Exception;
 use Symfony\Component\HttpFoundation\Response;
 use GuzzleHttp\Exception\RequestException;
-use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\socialm\TokenValidator;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 class FusekiAPIConnector {
