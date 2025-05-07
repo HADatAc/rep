@@ -387,7 +387,6 @@ class FusekiAPIConnector {
 
   // }
 
-
 public function listByKeywordType(
     $elementType,
     $project      = 'all',
@@ -398,9 +397,10 @@ public function listByKeywordType(
     $pageSize,
     $offset
 ) {
-    // 1. If “social” integration is disabled, fall back to the default API.
+    // 1. Check if “social” integration is enabled in site configuration.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
     if (! $socialEnabled) {
+        // 1.a. If disabled, call the fallback API and return immediately.
         $endpoint = "/hascoapi/api/{$elementType}/keywordtype/"
             . rawurlencode($project)      . '/'
             . rawurlencode($keyword)      . '/'
@@ -410,151 +410,107 @@ public function listByKeywordType(
             . $pageSize                   . '/'
             . $offset;
         $url     = $this->getApiUrl() . $endpoint;
-        $method  = 'GET';
         $options = ['headers' => $this->getHeader() ?? []];
-        return $this->perform_http_request($method, $url, $options);
+        return $this->perform_http_request('GET', $url, $options);
     }
 
-    // 2. Retrieve OAuth token from session; if missing, unauthorized.
+    // 2. Retrieve the OAuth access token from the current session.
     $session = \Drupal::request()->getSession();
     $token   = $session->get('oauth_access_token');
+
+    // 3. If there's no token at all, immediately try to refresh it.
     if (empty($token)) {
-        return 'Unauthorized to get social content.';
+        $this->refreshToken();
+        $token = $session->get('oauth_access_token');
+        if (empty($token)) {
+            // Still no token → we cannot proceed.
+            return 'Unauthorized to get social content.';
+        }
     }
 
-    // 3. Closure to refresh the OAuth token via your OAuthController.
+    // 4. Prepare to refresh the token on demand.
     $refreshToken = function() use ($session) {
+        // Call your OAuthController::getAccessToken() to obtain a new token
         $callable = \Drupal::service('controller_resolver')
             ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
         $response = call_user_func($callable);
         if ($response instanceof JsonResponse) {
-            $payload = json_decode($response->getContent(), TRUE);
-            if (!empty($payload['body']['access_token'])) {
-                $session->set('oauth_access_token', $payload['body']['access_token']);
+            $data = json_decode($response->getContent(), TRUE);
+            if (!empty($data['body']['access_token'])) {
+                // Store the fresh token in session
+                $session->set('oauth_access_token', $data['body']['access_token']);
                 return;
             }
         }
-        throw new \Exception('Failed to refresh OAuth token.', 0);
+        throw new \Exception('Failed to refresh OAuth token.');
     };
 
-    // 4. Build the Social API URL and base Guzzle options.
+    // 5. Build the Social API URL and the Guzzle request options.
     $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
     $baseUrl    = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
     $url        = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
-
     \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
 
-    // Always include http_errors = false so we control status handling ourselves
-    $baseOptions = [
-        'headers'     => [
+    $options = [
+        'headers' => [
             'Authorization' => "Bearer {$token}",
             'Accept'        => 'application/json',
         ],
-        'json'        => [
+        'json'    => [
             'token'       => $token,
             'consumer_id' => $consumerId,
             'elementType' => $elementType,
-            // …other payload fields…
+            // …add any other fields your API expects…
         ],
-        'http_errors' => FALSE,
     ];
 
-    // 5. Closure to perform the HTTP request, check status, and decode JSON.
-    $doRequest = function() use ($url, &$baseOptions) {
-        // 5.a Ensure options is always an array
-        $opts = $baseOptions ?? [];
+    // 6. Helper closure: perform the POST and decode into stdClass.
+    $doSocialRequest = function() use ($url, &$options) {
+        // 6.a. Always pass an array to Guzzle
+        $opts = $options ?? [];
 
-        // 5.b Issue the request (no exceptions on 4xx/5xx)
-        $client   = \Drupal::httpClient();
-        $response = $client->request('POST', $url, $opts);
+        // 6.b. Perform the HTTP call (this may throw RequestException on network errors)
+        $raw = $this->perform_http_request('POST', $url, $opts);
 
-        $status = $response->getStatusCode();
-        $raw    = $response->getBody()->getContents();
-
-        // 5.c Log the raw body for debugging (first 500 chars)
-        \Drupal::logger('rep')->debug(
-            'Raw Social API response (status @code): <pre>@raw</pre>',
-            [
-              '@code' => $status,
-              '@raw'  => substr($raw, 0, 500),
-            ]
-        );
-
-        // 5.d Handle 401 → throw to trigger retry
-        if ($status === 401) {
-            throw new \Exception('Unauthorized (401) from social API', 401);
-        }
-
-        // 5.e Handle other HTTP errors (4xx/5xx)
-        if ($status >= 400) {
-            // Optionally decode error JSON to stdClass
-            $errorObj = @json_decode($raw) ?: new \stdClass();
-            \Drupal::logger('rep')->error(
-                'Social API HTTP @code error: @msg',
-                [
-                  '@code' => $status,
-                  '@msg'  => is_string($raw) ? substr($raw, 0, 200) : VarExporter::export($raw),
-                ]
-            );
-            // You can choose to return an empty object, or bubble up:
-            return new \stdClass();
-        }
-
-        // 5.f Decode success payload into stdClass
+        // 6.c. Decode JSON into stdClass
         $data = json_decode($raw);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $snippet = substr($raw, 0, 200);
-            \Drupal::logger('rep')->error(
-                'Invalid JSON (error code @err). Snippet: @snippet',
-                [
-                  '@err'     => json_last_error(),
-                  '@snippet' => $snippet,
-                ]
-            );
-            throw new \Exception("Invalid JSON payload from social API. Snippet: {$snippet}");
+            throw new \Exception('Invalid JSON payload from social API.');
         }
-
-        // 5.g If decode yields null, return empty object
-        if ($data === null) {
-            return new \stdClass();
-        }
-
-        // 5.h Ensure it’s stdClass
-        if (! ($data instanceof \stdClass)) {
-            throw new \Exception('Unexpected data type; expected stdClass.');
-        }
-
         return $data;
     };
 
-    // 6. Execute with one retry on 401
+    // 7. Attempt the call, and if we catch a 401, refresh & retry once.
     try {
-        return $doRequest();
+        return $doSocialRequest();
     }
-    catch (\Exception $e) {
-        // Only retry on our 401-coded exception
-        if ($e->getCode() === 401) {
-            \Drupal::logger('rep')->warning('Token expired; refreshing and retrying.');
+    catch (RequestException $e) {
+        // 7.a. If the error was HTTP 401 Unauthorized, the token is expired.
+        if ($e->hasResponse() && $e->getResponse()->getStatusCode() === 401) {
+            \Drupal::logger('rep')->warning('Access token expired; refreshing and retrying.');
 
+            // 7.b. Refresh the token
+            $refreshToken();
+            $newToken = $session->get('oauth_access_token');
+
+            // 7.c. Update the Authorization header & JSON payload
+            $options['headers']['Authorization'] = "Bearer {$newToken}";
+            $options['json']['token']            = $newToken;
+
+            // 7.d. Retry the social API call one more time
             try {
-                $refreshToken();
-                // Update the token in the options
-                $newToken = $session->get('oauth_access_token');
-                $baseOptions['headers']['Authorization'] = "Bearer {$newToken}";
-                $baseOptions['json']['token']            = $newToken;
-
-                return $doRequest();
+                return $doSocialRequest();
             }
             catch (\Exception $retryEx) {
                 \Drupal::logger('rep')->error(
-                    'Retry after token refresh failed: @msg',
+                    'Second attempt after token refresh failed: @msg',
                     ['@msg' => $retryEx->getMessage()]
                 );
                 return new \stdClass();
             }
         }
 
-        // Other errors: log and return empty object
+        // 7.e. Any other exception: log and return an empty stdClass
         \Drupal::logger('rep')->error(
             'Social API request failed: @msg',
             ['@msg' => $e->getMessage()]
@@ -563,6 +519,24 @@ public function listByKeywordType(
     }
 }
 
+/**
+ * Helper method to invoke OAuthController and store a new token.
+ * You can leave this in the same class or move it to a trait/service.
+ */
+protected function refreshToken() {
+    $callable = \Drupal::service('controller_resolver')
+        ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
+    $response = call_user_func($callable);
+    if ($response instanceof JsonResponse) {
+        $data = json_decode($response->getContent(), TRUE);
+        if (!empty($data['body']['access_token'])) {
+            \Drupal::request()->getSession()->set('oauth_access_token', $data['body']['access_token']);
+            \Drupal::logger('rep')->notice('OAuth token refreshed successfully.');
+            return;
+        }
+    }
+    \Drupal::logger('rep')->error('Failed to refresh OAuth token in refreshToken().');
+}
 
 
 
