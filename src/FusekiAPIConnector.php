@@ -387,16 +387,16 @@ class FusekiAPIConnector {
 
   // }
 
-public function listByKeywordType(
-    $elementType,
-    $project      = 'all',
-    $keyword      = '_',
-    $type         = '_',
-    $manageremail = '_',
-    $status       = '_',
-    $pageSize,
-    $offset
-) {
+  public function listByKeywordType(
+      $elementType,
+      $project      = 'all',
+      $keyword      = '_',
+      $type         = '_',
+      $manageremail = '_',
+      $status       = '_',
+      $pageSize,
+      $offset
+  ) {
     // 1. If “social” integration is disabled, fall back to the default API.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
     if (! $socialEnabled) {
@@ -541,7 +541,7 @@ public function listByKeywordType(
         );
         return new \stdClass();
     }
-}
+  }
 
 
   // /hascoapi/api/$elementType<[^/]+>/keywordtype/total/$keyword<[^/]+>/$type<[^/]+>/$manageremail<[^/]+>/$status<[^/]+>
