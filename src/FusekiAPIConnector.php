@@ -1800,7 +1800,7 @@ protected function refreshToken() {
         return(NULL);
       }
     }
-    return $res->getBody();
+    return (string) ($res->getBody());
   }
 
   /**
