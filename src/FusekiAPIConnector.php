@@ -452,7 +452,7 @@ class FusekiAPIConnector {
     $baseUrl    = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
     $url        = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
 
-    \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
+    // \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
 
     $baseOptions = [
         // Prevent Guzzle from throwing exceptions on 4xx/5xx so we can handle status manually.
@@ -477,10 +477,10 @@ class FusekiAPIConnector {
         $raw      = $response->getBody()->getContents();
 
         // Log the raw response for debugging (truncate to 500 chars).
-        \Drupal::logger('rep')->debug(
-            'Social API raw (status @s): <pre>@r</pre>',
-            ['@s' => $status, '@r' => substr($raw, 0, 500)]
-        );
+        // \Drupal::logger('rep')->debug(
+        //     'Social API raw (status @s): <pre>@r</pre>',
+        //     ['@s' => $status, '@r' => substr($raw, 0, 500)]
+        // );
 
         // 6.a If we got a 401 or a “denied” message in a malformed payload, treat as expired/revoked.
         if (
