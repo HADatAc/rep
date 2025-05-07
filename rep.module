@@ -249,7 +249,7 @@ function rep_page_attachments(array &$attachments) {
 function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
   $user = \Drupal\user\Entity\User::load($account->id());
   $username = $user->getAccountName();
-  $repo_instance = \Drupal::config('system.site')->get('name');
+  $repo_instance = \Drupal::request()->getHost();
   $project_id = 'hascorepo';
 
   $client = \Drupal::httpClient();
