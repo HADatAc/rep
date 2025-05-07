@@ -387,19 +387,16 @@ class FusekiAPIConnector {
 
   // }
 
-  use GuzzleHttp\Exception\RequestException;
-use Symfony\Component\HttpFoundation\JsonResponse;
-
-public function listByKeywordType(
-    $elementType,
-    $project      = 'all',
-    $keyword      = '_',
-    $type         = '_',
-    $manageremail = '_',
-    $status       = '_',
-    $pageSize,
-    $offset
-) {
+  public function listByKeywordType(
+      $elementType,
+      $project      = 'all',
+      $keyword      = '_',
+      $type         = '_',
+      $manageremail = '_',
+      $status       = '_',
+      $pageSize,
+      $offset
+  ) {
     // 1. If “social” integration is disabled, fall back to the default API.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
     if (! $socialEnabled) {
