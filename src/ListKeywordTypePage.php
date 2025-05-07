@@ -6,7 +6,7 @@ use Drupal\rep\Vocabulary\REPGUI;
 
 class ListKeywordTypePage {
 
-  public static function exec($elementtype, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $page, $pagesize) {
+  public static function exec($elementtype, $page, $pagesize, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
     if ($elementtype == NULL || $page == NULL || $pagesize == NULL) {
         $resp = array();
         return $resp;
@@ -28,13 +28,13 @@ class ListKeywordTypePage {
     //dpm("E=".$elementtype.", PR=".$project.", K=".$keyword.", T=".$type.", M=".$manageremail.", S=".$status.", P=".$page.", O=".$pagesize);
 
     $api = \Drupal::service('rep.api_connector');
-    $elements = $api->parseObjectResponse($api->listByKeywordType($elementtype,$project,$keyword,$type,$manageremail,$status,$pagesize,$offset),'listByKeywordType');
+    $elements = $api->parseObjectResponse($api->listByKeywordType($elementtype,$pagesize,$offset,$project,$keyword,$type,$manageremail,$status),'listByKeywordType');
 
     return $elements;
 
   }
 
-  public static function execReview($elementtype, $manageremail, $page, $pagesize) {
+  public static function execReview($elementtype, $page, $pagesize, $manageremail) {
     if ($elementtype == NULL || $page == NULL || $pagesize == NULL) {
         $resp = array();
         return $resp;
@@ -80,7 +80,7 @@ class ListKeywordTypePage {
 
   }
 
-  public static function link($elementtype, $project = 'all', $keyword = '_', $type = '_', $manageremail = '_', $status = '_', $page, $pagesize) {
+  public static function link($elementtype, $page, $pagesize, $project = 'all', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
     $root_url = \Drupal::request()->getBaseUrl();
     $module = '';
     if ($elementtype != NULL && $page > 0 && $pagesize > 0) {

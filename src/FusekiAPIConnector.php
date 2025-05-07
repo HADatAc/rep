@@ -389,13 +389,13 @@ class FusekiAPIConnector {
 
   public function listByKeywordType(
       $elementType,
+      $pageSize,
+      $offset,
       $project      = 'all',
       $keyword      = '_',
       $type         = '_',
       $manageremail = '_',
-      $status       = '_',
-      $pageSize,
-      $offset
+      $status       = '_'
   ) {
     // 1. If social integration is disabled, call the fallback API and return immediately.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
