@@ -387,16 +387,17 @@ class FusekiAPIConnector {
 
   // }
 
-  public function listByKeywordType(
-      $elementType,
-      $project      = 'all',
-      $keyword      = '_',
-      $type         = '_',
-      $manageremail = '_',
-      $status       = '_',
-      $pageSize,
-      $offset
-  ) {
+
+public function listByKeywordType(
+    $elementType,
+    $project      = 'all',
+    $keyword      = '_',
+    $type         = '_',
+    $manageremail = '_',
+    $status       = '_',
+    $pageSize,
+    $offset
+) {
     // 1. If “social” integration is disabled, fall back to the default API.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
     if (! $socialEnabled) {
@@ -414,7 +415,7 @@ class FusekiAPIConnector {
         return $this->perform_http_request($method, $url, $options);
     }
 
-    // 2. Retrieve OAuth token from session; if missing, return unauthorized.
+    // 2. Retrieve OAuth token from session; if missing, unauthorized.
     $session = \Drupal::request()->getSession();
     $token   = $session->get('oauth_access_token');
     if (empty($token)) {
@@ -429,102 +430,119 @@ class FusekiAPIConnector {
         if ($response instanceof JsonResponse) {
             $payload = json_decode($response->getContent(), TRUE);
             if (!empty($payload['body']['access_token'])) {
-                // Store the new token in session
                 $session->set('oauth_access_token', $payload['body']['access_token']);
                 return;
             }
         }
-        throw new \Exception('Failed to refresh OAuth token.');
+        throw new \Exception('Failed to refresh OAuth token.', 0);
     };
 
     // 4. Build the Social API URL and base Guzzle options.
     $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
     $baseUrl    = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
     $url        = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
+
     \Drupal::logger('rep')->notice('Social API URL: @url', ['@url' => $url]);
 
-    $options = [
-        'headers' => [
+    // Always include http_errors = false so we control status handling ourselves
+    $baseOptions = [
+        'headers'     => [
             'Authorization' => "Bearer {$token}",
             'Accept'        => 'application/json',
         ],
-        'json' => [
+        'json'        => [
             'token'       => $token,
             'consumer_id' => $consumerId,
             'elementType' => $elementType,
-            // Add additional payload fields here as needed
+            // …other payload fields…
         ],
+        'http_errors' => FALSE,
     ];
 
-    // 5. Closure to perform the HTTP request and decode JSON into stdClass.
-    $doRequest = function() use ($url, &$options) {
-        // 5.a Ensure $options is always an array
-        $opts = $options ?? [];
+    // 5. Closure to perform the HTTP request, check status, and decode JSON.
+    $doRequest = function() use ($url, &$baseOptions) {
+        // 5.a Ensure options is always an array
+        $opts = $baseOptions ?? [];
 
-        // 5.b Log the full $opts for debugging
+        // 5.b Issue the request (no exceptions on 4xx/5xx)
+        $client   = \Drupal::httpClient();
+        $response = $client->request('POST', $url, $opts);
+
+        $status = $response->getStatusCode();
+        $raw    = $response->getBody()->getContents();
+
+        // 5.c Log the raw body for debugging (first 500 chars)
         \Drupal::logger('rep')->debug(
-            'Guzzle request options: <pre>@dump</pre>',
-            ['@dump' => var_export($opts, TRUE)]
+            'Raw Social API response (status @code): <pre>@raw</pre>',
+            [
+              '@code' => $status,
+              '@raw'  => substr($raw, 0, 500),
+            ]
         );
 
-        // 5.c Perform the HTTP POST request
-        $raw = $this->perform_http_request('POST', $url, $opts);
+        // 5.d Handle 401 → throw to trigger retry
+        if ($status === 401) {
+            throw new \Exception('Unauthorized (401) from social API', 401);
+        }
 
-        // 5.d Log the raw response for debugging
-        \Drupal::logger('rep')->debug(
-            'Raw Social API response (first 500 chars): <pre>@raw</pre>',
-            ['@raw' => substr($raw, 0, 500)]
-        );
+        // 5.e Handle other HTTP errors (4xx/5xx)
+        if ($status >= 400) {
+            // Optionally decode error JSON to stdClass
+            $errorObj = @json_decode($raw) ?: new \stdClass();
+            \Drupal::logger('rep')->error(
+                'Social API HTTP @code error: @msg',
+                [
+                  '@code' => $status,
+                  '@msg'  => is_string($raw) ? substr($raw, 0, 200) : VarExporter::export($raw),
+                ]
+            );
+            // You can choose to return an empty object, or bubble up:
+            return new \stdClass();
+        }
 
-        // 5.e Decode JSON into stdClass
+        // 5.f Decode success payload into stdClass
         $data = json_decode($raw);
-
-        // 5.f Check JSON syntax errors
         if (json_last_error() !== JSON_ERROR_NONE) {
             $snippet = substr($raw, 0, 200);
             \Drupal::logger('rep')->error(
-                'Invalid JSON from social API (error code @err). Snippet: @snippet',
+                'Invalid JSON (error code @err). Snippet: @snippet',
                 [
-                    '@err'     => json_last_error(),
-                    '@snippet' => $snippet,
+                  '@err'     => json_last_error(),
+                  '@snippet' => $snippet,
                 ]
             );
             throw new \Exception("Invalid JSON payload from social API. Snippet: {$snippet}");
         }
 
-        // 5.g If decoding yields null, return an empty stdClass
+        // 5.g If decode yields null, return empty object
         if ($data === null) {
-            \Drupal::logger('rep')->warning('Social API decoded to null; returning empty object.');
             return new \stdClass();
         }
 
-        // 5.h Finally ensure the decoded result is stdClass
+        // 5.h Ensure it’s stdClass
         if (! ($data instanceof \stdClass)) {
-            throw new \Exception('Unexpected data structure from social API; expected stdClass.');
+            throw new \Exception('Unexpected data type; expected stdClass.');
         }
 
         return $data;
     };
 
-    // 6. Execute with a single retry if we get a 401 Unauthorized.
+    // 6. Execute with one retry on 401
     try {
-        // First attempt
         return $doRequest();
     }
-    catch (RequestException $e) {
-        // Only retry on HTTP 401
-        if ($e->hasResponse() && $e->getResponse()->getStatusCode() === 401) {
-            \Drupal::logger('rep')->warning('Access token expired; refreshing and retrying.');
+    catch (\Exception $e) {
+        // Only retry on our 401-coded exception
+        if ($e->getCode() === 401) {
+            \Drupal::logger('rep')->warning('Token expired; refreshing and retrying.');
 
             try {
-                // Refresh token
                 $refreshToken();
-                // Update Authorization header and payload
+                // Update the token in the options
                 $newToken = $session->get('oauth_access_token');
-                $options['headers']['Authorization'] = "Bearer {$newToken}";
-                $options['json']['token']            = $newToken;
+                $baseOptions['headers']['Authorization'] = "Bearer {$newToken}";
+                $baseOptions['json']['token']            = $newToken;
 
-                // Retry the request
                 return $doRequest();
             }
             catch (\Exception $retryEx) {
@@ -536,14 +554,15 @@ class FusekiAPIConnector {
             }
         }
 
-        // Non-401 or no response → log and return empty object
+        // Other errors: log and return empty object
         \Drupal::logger('rep')->error(
             'Social API request failed: @msg',
             ['@msg' => $e->getMessage()]
         );
         return new \stdClass();
     }
-  }
+}
+
 
 
 
