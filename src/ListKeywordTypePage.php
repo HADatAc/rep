@@ -56,94 +56,31 @@ class ListKeywordTypePage {
 
   }
 
-  // public static function total($elementtype, $project = 'all', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
-  //   if ($elementtype == NULL) {
-  //     return -1;
-  //   }
-  //   if ($keyword == NULL) {
-  //     $keyword = "_";
-  //   }
-
-  //   $api = \Drupal::service('rep.api_connector');
-
-  //   $response = $api->listSizeByKeywordType($elementtype,$project,$keyword,$type,$manageremail,$status);
-  //   $listSize = -1;
-  //   \Drupal::logger('rep')->debug('ListKeywordTypePage::total() response: ' . print_r($response, TRUE));
-
-  //   if ($response != null) {
-  //     $obj = json_decode($response);
-  //     if ($obj->isSuccessful) {
-  //       $listSizeStr = $obj->body;
-  //       $obj2 = json_decode($listSizeStr);
-  //       $listSize = $obj2->total;
-  //     }
-  //   }
-  //   return $listSize;
-
-  // }
-  public static function total(
-    $elementtype,
-    $project      = 'all',
-    $keyword      = '_',
-    $type         = '_',
-    $manageremail = '_',
-    $status       = '_'
-) {
-    if ($elementtype === NULL) {
-        return -1;
+  public static function total($elementtype, $project = 'all', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
+    if ($elementtype == NULL) {
+      return -1;
     }
-    if ($keyword === NULL) {
-        $keyword = '_';
+    if ($keyword == NULL) {
+      $keyword = "_";
     }
 
-    $api      = \Drupal::service('rep.api_connector');
-    $response = $api->listSizeByKeywordType(
-        $elementtype,
-        $project,
-        $keyword,
-        $type,
-        $manageremail,
-        $status
-    );
+    $api = \Drupal::service('rep.api_connector');
 
-    \Drupal::logger('rep')->debug(
-        'ListKeywordTypePage::total() raw response: <pre>' . print_r($response, TRUE) . '</pre>'
-    );
+    $response = $api->listSizeByKeywordType($elementtype,$project,$keyword,$type,$manageremail,$status);
+    $listSize = -1;
+    \Drupal::logger('rep')->debug('ListKeywordTypePage::total() response: ' . print_r($response, TRUE));
 
-    // 1) Normalize whatever we got into an object
-    if (is_string($response)) {
-        $data = json_decode($response);
+    if ($response != null) {
+      $obj = json_decode($response);
+      if ($obj->isSuccessful) {
+        $listSizeStr = $obj->body;
+        $obj2 = json_decode($listSizeStr);
+        $listSize = $obj2->total;
+      }
     }
-    elseif (is_array($response)) {
-        // cast array → object
-        $data = (object) $response;
-    }
-    else {
-        // assume it’s already an object (stdClass)
-        $data = $response;
-    }
+    return $listSize;
 
-    // 2) Check success flag
-    if (! empty($data->isSuccessful)) {
-
-        // 3) Body might itself be a JSON‐string or already an object
-        if (is_string($data->body)) {
-            $bodyObj = json_decode($data->body);
-        }
-        else {
-            $bodyObj = $data->body;
-        }
-
-        // 4) Finally grab the total
-        if (isset($bodyObj->total)) {
-            return (int) $bodyObj->total;
-        }
-    }
-
-    // fallback
-    return -1;
   }
-
 
   public static function link($elementtype, $page, $pagesize, $project = 'all', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
     $root_url = \Drupal::request()->getBaseUrl();
