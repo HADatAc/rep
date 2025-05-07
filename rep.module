@@ -243,18 +243,13 @@ function rep_page_attachments(array &$attachments) {
   $attachments['#attached']['library'][] = 'rep/rep_js_css';
 }
 
-function rep_user_login(&$edit, \Drupal\Core\Session\AccountInterface $account) {
-
-  // Carregar a entidade de utilizador completa.
+/**
+ * Implements hook_user_login().
+ */
+function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
   $user = \Drupal\user\Entity\User::load($account->id());
-
-  // Obter o nome do utilizador.
   $username = $user->getAccountName();
-
-  // Obter a instância do repositório (nome do site).
   $repo_instance = \Drupal::config('system.site')->get('name');
-
-  // Definir o ID do projeto (deve coincidir com o que está no Sagres).
   $project_id = 'hascorepo';
 
   $client = \Drupal::httpClient();
@@ -269,7 +264,6 @@ function rep_user_login(&$edit, \Drupal\Core\Session\AccountInterface $account) 
 
     $data = json_decode($response->getBody(), TRUE);
 
-    // Verificar se o utilizador aceitou os termos.
     if (empty($data['accepted']) || !$data['accepted']) {
       \Drupal::messenger()->addWarning(t('Tem de aceitar os Termos de Uso para continuar.'));
       \Drupal::service('session')->set('terms_pending', TRUE);
@@ -279,23 +273,20 @@ function rep_user_login(&$edit, \Drupal\Core\Session\AccountInterface $account) 
   }
 }
 
-
 /**
- * Implementa hook_init().
+ * Redirects to terms acceptance page if terms are pending.
  */
-function rep_init() {
+function rep_page_top(&$page_top) {
   $current_user = \Drupal::currentUser();
 
   if ($current_user->isAuthenticated()) {
     $session = \Drupal::service('session');
     $current_path = \Drupal::service('path.current')->getPath();
 
-    if ($session->has('terms_pending') && $session->get('terms_pending') === TRUE) {
-      if ($current_path !== '/terms-aceptance') {
-        $response = new \Symfony\Component\HttpFoundation\RedirectResponse('/terms-aceptance');
-        $response->send();
-        exit;
-      }
+    if ($session->get('terms_pending') === TRUE && $current_path !== '/terms-aceptance') {
+      $response = new \Symfony\Component\HttpFoundation\RedirectResponse('/terms-aceptance');
+      $response->send();
+      exit;
     }
   }
 }
