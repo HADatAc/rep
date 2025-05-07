@@ -508,7 +508,7 @@ public function listByKeywordType(
                     'Second attempt after token refresh failed: @msg',
                     ['@msg' => $retryEx->getMessage()]
                 );
-                return new \stdClass();
+                return [];
             }
         }
 
@@ -517,7 +517,7 @@ public function listByKeywordType(
             'Social API request failed: @msg',
             ['@msg' => $e->getMessage()]
         );
-        return new \stdClass();
+        return [];
     }
 }
 
