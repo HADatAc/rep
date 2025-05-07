@@ -68,6 +68,8 @@ class ListKeywordTypePage {
 
     $response = $api->listSizeByKeywordType($elementtype,$project,$keyword,$type,$manageremail,$status);
     $listSize = -1;
+    \Drupal::logger('rep')->debug('ListKeywordTypePage::total() response: ' . $response);
+
     if ($response != null) {
       $obj = json_decode($response);
       if ($obj->isSuccessful) {
