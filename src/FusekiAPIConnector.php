@@ -47,6 +47,11 @@ class FusekiAPIConnector {
     $localOpts  = $this->getHeader() ?? [];
     $localResponse = $this->perform_http_request('GET', $localUrl, $localOpts);
 
+    \Drupal::logger('rep')->debug(
+        'Legacy API getUri response: @r',
+        ['@r' => print_r($localResponse, TRUE)]
+    );
+
     // 2) If the legacy call returned something non‐empty, just return it.
     if (!empty($localResponse)) {
         return $localResponse;
