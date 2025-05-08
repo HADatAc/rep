@@ -2338,50 +2338,132 @@ class FusekiAPIConnector {
    * @return \Psr\Http\Message\ResponseInterface|null
    *   The Guzzle response with binary content, or NULL on failure.
    */
+  /**
+ * Attempt to download a file (e.g. image) via the Social API.
+ *
+ * @param string $uri
+ *   The full resource URI in the KG.
+ * @param string $fileName
+ *   The image filename or path returned by the KG.
+ *
+ * @return \Psr\Http\Message\ResponseInterface|null
+ *   A PSR-7 response containing the binary data on success, or NULL on failure.
+ */
   public function downloadFileSocial(string $uri, string $fileName) {
-    // 1) Grab/refresh token exactly like in getUri()
+    // 1) Entry log
+    \Drupal::logger('rep')->debug('downloadFileSocial(): uri=@u, file=@f', [
+      '@u' => $uri,
+      '@f' => $fileName,
+    ]);
+
+    // 2) Ensure OAuth token in session (refresh if needed).
     $session = \Drupal::request()->getSession();
     $token   = $session->get('oauth_access_token');
-    // ... your existing refresh closure and logic to ensure $token ...
+    \Drupal::logger('rep')->debug('downloadFileSocial(): session token before refresh: @t', [
+      '@t' => $token ? substr($token, 0, 8) . '…' : '(none)',
+    ]);
 
-    // 2) Build the Social‐download URL (same preg_replace trick)
-    $oauthUrl = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
+    $refresh = function() use ($session) {
+      \Drupal::logger('rep')->debug('downloadFileSocial(): refreshing OAuth token...');
+      $controller = \Drupal::service('controller_resolver')
+        ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
+      $response = call_user_func($controller);
+      if ($response instanceof \Symfony\Component\HttpFoundation\JsonResponse) {
+        $payload = json_decode($response->getContent(), TRUE);
+        \Drupal::logger('rep')->debug('downloadFileSocial(): OAuthController payload: @p', [
+          '@p' => print_r($payload, TRUE),
+        ]);
+        if (!empty($payload['body']['access_token'])) {
+          $session->set('oauth_access_token', $payload['body']['access_token']);
+          \Drupal::logger('rep')->debug('downloadFileSocial(): new token saved.');
+          return;
+        }
+      }
+      throw new \Exception('Failed to refresh OAuth token.', 401);
+    };
+
+    if (empty($token)) {
+      try {
+        $refresh();
+        $token = $session->get('oauth_access_token');
+        \Drupal::logger('rep')->debug('downloadFileSocial(): token after refresh: @t', [
+          '@t' => substr($token, 0, 8) . '…',
+        ]);
+      }
+      catch (\Exception $e) {
+        \Drupal::logger('rep')->error('downloadFileSocial(): token refresh failed: @m', [
+          '@m' => $e->getMessage(),
+        ]);
+        return NULL;
+      }
+    }
+
+    // 3) Build the Social download URL using the same base as listByKeywordType/getUri.
+    $oauthUrl    = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
     $downloadUrl = preg_replace('#/oauth/token$#', '/api/socialm/downloadfile', $oauthUrl);
+    \Drupal::logger('rep')->debug('downloadFileSocial(): POST URL is @url', [
+      '@url' => $downloadUrl,
+    ]);
 
-    // 3) Prepare a POST with JSON payload
+    // 4) Prepare the POST options.
     $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
-    $options = [
+    $options    = [
       'http_errors' => FALSE,
-      'headers' => [
+      'headers'     => [
         'Authorization' => "Bearer {$token}",
         'Accept'        => 'application/octet-stream',
       ],
-      'json' => [
+      'json'        => [
         'token'       => $token,
         'consumer_id' => $consumerId,
         'uri'         => $uri,
         'file'        => $fileName,
       ],
     ];
+    \Drupal::logger('rep')->debug('downloadFileSocial(): POST body @b', [
+      '@b' => print_r($options['json'], TRUE),
+    ]);
 
-    // 4) Execute + retry on 401 exactly as in getUri()
+    // 5) Execute the POST request, retrying once on 401.
     $client = \Drupal::httpClient();
     try {
       $response = $client->request('POST', $downloadUrl, $options);
-      if ($response->getStatusCode() === 401) {
-        // refresh & retry…
-        // …call your refresh closure…
-        $options['headers']['Authorization'] = "Bearer " . $session->get('oauth_access_token');
-        $options['json']['token']            = $session->get('oauth_access_token');
+      $status   = $response->getStatusCode();
+      \Drupal::logger('rep')->debug('downloadFileSocial(): first attempt HTTP @s', [
+        '@s' => $status,
+      ]);
+
+      if ($status === 401) {
+        // Token expired or revoked: refresh and retry once.
+        \Drupal::logger('rep')->warning('downloadFileSocial(): 401 received, refreshing token & retrying...');
+        $refresh();
+        $newToken                 = $session->get('oauth_access_token');
+        $options['headers']['Authorization'] = "Bearer {$newToken}";
+        $options['json']['token']            = $newToken;
         $response = $client->request('POST', $downloadUrl, $options);
+        $status   = $response->getStatusCode();
+        \Drupal::logger('rep')->debug('downloadFileSocial(): retry attempt HTTP @s', [
+          '@s' => $status,
+        ]);
       }
     }
     catch (\Exception $e) {
-      \Drupal::logger('rep')->error('Social downloadFile error: @m', ['@m' => $e->getMessage()]);
+      \Drupal::logger('rep')->error('downloadFileSocial(): exception during request: @m', [
+        '@m' => $e->getMessage(),
+      ]);
       return NULL;
     }
 
-    // 5) Return the response if 200, else NULL.
-    return $response->getStatusCode() === 200 ? $response : NULL;
+    // 6) Return the response only if HTTP 200, else NULL.
+    if (isset($status) && $status === 200) {
+      \Drupal::logger('rep')->debug('downloadFileSocial(): successful download.');
+      return $response;
+    }
+
+    \Drupal::logger('rep')->error('downloadFileSocial(): download failed with HTTP @s', [
+      '@s' => $status ?? 'none',
+    ]);
+    return NULL;
   }
+
 }
