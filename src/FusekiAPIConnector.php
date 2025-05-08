@@ -77,8 +77,8 @@ class FusekiAPIConnector {
     else {
       $decodedLegacy = $rawLegacy;
     }
-    \Drupal::logger('rep')->debug('Decoded legacy payload: @d', ['@d' => print_r($decodedLegacy, TRUE)]);
-    dpm($decodedLegacy); // Added dpm() to debug the decoded legacy
+    // \Drupal::logger('rep')->debug('Decoded legacy payload: @d', ['@d' => print_r($decodedLegacy, TRUE)]);
+    // dpm($decodedLegacy); // Added dpm() to debug the decoded legacy
 
     // 3) If legacy succeeded, return JSON string
     if (isset($decodedLegacy->isSuccessful) && $decodedLegacy->isSuccessful === TRUE) {
@@ -199,6 +199,7 @@ class FusekiAPIConnector {
 
     // 11) Success: return the raw JSON string
     \Drupal::logger('rep')->debug('Social getUri returning JSON.');
+    dpm($body, 'Social getUri body');
     return $body;
   }
 
