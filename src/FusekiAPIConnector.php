@@ -131,33 +131,48 @@ class FusekiAPIConnector {
     ];
 
     // 8) Define a helper to execute the POST and throw on 401.
-    $doRequest = function() use ($socialUrl, &$baseOptions) {
-      $client   = \Drupal::httpClient();
-      $response = $client->request('POST', $socialUrl, $baseOptions);
+    // Before the closure, make sure $uri and $socialUrl are in scope:
+    $endpointUri = rawurlencode($uri);
+
+    // Reusable GET request helper that throws on 401.
+    $doRequest = function() use ($socialUrl, $endpointUri, &$baseOptions) {
+      $client = \Drupal::httpClient();
+      // Build a GET URL like https://…/api/socialm/geturi/{uri}
+      $getUrl = rtrim($socialUrl, '/') . '/' . $endpointUri;
+
+      // We only need headers for GET — no JSON body.
+      $options = [
+          'http_errors' => FALSE,
+          'headers'     => $baseOptions['headers'],
+      ];
+
+      // Execute the GET.
+      $response = $client->request('GET', $getUrl, $options);
       $status   = $response->getStatusCode();
       $raw      = $response->getBody()->getContents();
 
-      // Unauthorized or token revoked → trigger token refresh.
+      // 401 or “denied” → trigger token refresh.
       if ($status === 401
-        || (json_decode($raw) === NULL && stripos($raw, 'denied') !== FALSE)
+          || (json_decode($raw) === NULL && stripos($raw, 'denied') !== FALSE)
       ) {
-        throw new \Exception('Unauthorized or token revoked', 401);
+          throw new \Exception('Unauthorized or token revoked', 401);
       }
 
       // Other HTTP errors → log and return NULL.
       if ($status >= 400) {
-        \Drupal::logger('rep')->error(
-          'Social API getUri HTTP @code error: @msg',
-          ['@code' => $status, '@msg' => substr($raw, 0, 200)]
-        );
-        return NULL;
+          \Drupal::logger('rep')->error(
+              'Social API getUri HTTP @code error: @msg',
+              ['@code' => $status, '@msg' => substr($raw, 0, 200)]
+          );
+          return NULL;
       }
 
-      // Decode JSON payload strictly.
+      // Decode JSON strictly.
       $data = json_decode($raw);
       if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new \Exception('Invalid JSON from Social getUri', 400);
+          throw new \Exception('Invalid JSON from Social getUri', 400);
       }
+
       return $data;
     };
 
@@ -190,7 +205,6 @@ class FusekiAPIConnector {
     // 10) Return the Social payload (or NULL if it failed).
     return $socialResponse;
   }
-
 
   public function getUsage($uri) {
     $endpoint = "/hascoapi/api/usage/".rawurlencode($uri);
