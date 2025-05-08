@@ -207,6 +207,7 @@ class FusekiAPIConnector {
       );
       return NULL;
     }
+    dpm($data, 'Decoded Social getUri response');
     return $data;
   }
 
