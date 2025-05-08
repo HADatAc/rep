@@ -160,7 +160,7 @@ class FusekiAPIConnector {
     $code     = $response->getStatusCode();
     $body     = $response->getBody()->getContents();
     \Drupal::logger('rep')->debug('Social POST code: @c', ['@c'=>$code]);
-    \Drupal::logger('rep')->debug('Social POST body: @b', ['@b'=>substr($body,0,200)]);
+    \Drupal::logger('rep')->debug('Social POST body: @b', ['@b'=>print_r($body, TRUE)]);
 
     // 9) Retry once on 401
     if ($code === 401
