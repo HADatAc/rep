@@ -40,79 +40,76 @@ class FusekiAPIConnector {
   //   return $this->perform_http_request($method,$api_url.$endpoint,$data);
   // }
   public function getUri(string $uri) {
-    // 1) Call the local legacy API.
-    $endpoint      = '/hascoapi/api/uri/' . rawurlencode($uri);
-    $localUrl      = $this->getApiUrl() . $endpoint;
-    $localOpts     = ['headers' => $this->getHeader() ?? []];
-    $rawLocalResp  = $this->perform_http_request('GET', $localUrl, $localOpts);
+    // 1) Call the local legacy API first.
+    $legacyEndpoint = '/hascoapi/api/uri/' . rawurlencode($uri);
+    $legacyUrl      = $this->getApiUrl() . $legacyEndpoint;
+    $legacyOpts     = ['headers' => $this->getHeader() ?? []];
+    $rawLegacy      = $this->perform_http_request('GET', $legacyUrl, $legacyOpts);
 
     \Drupal::logger('rep')->debug('Legacy API getUri raw response: @r', [
-      '@r' => print_r($rawLocalResp, TRUE),
+      '@r' => print_r($rawLegacy, TRUE),
     ]);
 
-    // 2) Decode it into an object we can inspect.
-    if (is_string($rawLocalResp)) {
-      $decodedLegacy = json_decode($rawLocalResp);
-    }
-    elseif (is_array($rawLocalResp)) {
-      $decodedLegacy = json_decode(json_encode($rawLocalResp));
-    }
-    else {
-      $decodedLegacy = $rawLocalResp;
+    // 2) Decode it so we can inspect isSuccessful.
+    $decoded = is_string($rawLegacy)
+      ? json_decode($rawLegacy)
+      : (is_array($rawLegacy)
+          ? json_decode(json_encode($rawLegacy))
+          : $rawLegacy
+        );
+
+    // 3) If legacy succeeded, return it immediately.
+    if (isset($decoded->isSuccessful) && $decoded->isSuccessful === TRUE) {
+      return $decoded;
     }
 
-    // 3) If legacy reports success, return it immediately.
-    if (
-      isset($decodedLegacy->isSuccessful) &&
-      $decodedLegacy->isSuccessful === true
-    ) {
-      return $decodedLegacy;
-    }
-
-    // 4) If social fallback is disabled, return the legacy payload.
+    // 4) If Social fallback is off, return legacy even if it failed.
     if (!\Drupal::config('rep.settings')->get('social_conf')) {
-      return $decodedLegacy;
+      return $decoded;
     }
 
-    // 5) Prepare to fetch/refresh the OAuth token from session.
+    // 5) Ensure we have a valid access token in session.
     $session = \Drupal::request()->getSession();
     $token   = $session->get('oauth_access_token');
-
-    $refreshToken = function() use ($session) {
-      $controller = \Drupal::service('controller_resolver')
-        ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
-      $response = call_user_func($controller);
-      if ($response instanceof JsonResponse) {
-        $payload = json_decode($response->getContent(), TRUE);
-        if (!empty($payload['body']['access_token'])) {
-          $session->set('oauth_access_token', $payload['body']['access_token']);
+    $refresh = function() use ($session) {
+      $ctrl    = \Drupal::service('controller_resolver')
+                 ->getControllerFromDefinition(
+                   'Drupal\social\Controller\OAuthController::getAccessToken'
+                 );
+      $resp    = call_user_func($ctrl);
+      if ($resp instanceof JsonResponse) {
+        $pl = json_decode($resp->getContent(), TRUE);
+        if (!empty($pl['body']['access_token'])) {
+          $session->set('oauth_access_token', $pl['body']['access_token']);
           return;
         }
       }
       throw new \Exception('Failed to refresh OAuth token.', 401);
     };
 
-    // 6) Ensure we have a valid token.
     if (empty($token)) {
       try {
-        $refreshToken();
+        $refresh();
         $token = $session->get('oauth_access_token');
       }
       catch (\Exception $e) {
-        \Drupal::logger('rep')->error('Unable to obtain OAuth token: @msg', [
-          '@msg' => $e->getMessage(),
-        ]);
-        return $decodedLegacy;
+        \Drupal::logger('rep')->error('OAuth token error: @m', ['@m' => $e->getMessage()]);
+        return $decoded;
       }
     }
 
-    // 7) Build the remote Social GET URL, inserting the URI into the path.
-    $oauthUrl      = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
-    // Strip the “/oauth/token” suffix to get the API base.
-    $baseSocialApi = preg_replace('#/oauth/token$#', '', $oauthUrl);
-    $socialEndpoint = $baseSocialApi . '/api/socialm/geturi/' . rawurlencode($uri);
+    // 6) Build the **remote** Social GET URL by reusing the oauth_url host+base.
+    $oauthUrl   = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
+    $parts      = parse_url($oauthUrl);
+    $sitePath   = isset($parts['path'])
+                  ? preg_replace('#/oauth/token$#', '', $parts['path'])
+                  : '';
+    $hostPort   = $parts['scheme'] . '://' . $parts['host']
+                  . (isset($parts['port']) ? ':' . $parts['port'] : '');
+    $apiBase    = $hostPort . $sitePath;
+    $socialUrl  = $apiBase . '/api/socialm/geturi/' . rawurlencode($uri);
 
-    // Prepare headers for GET.
+    // 7) Prepare headers for GET.
     $options = [
       'http_errors' => FALSE,
       'headers'     => [
@@ -121,67 +118,58 @@ class FusekiAPIConnector {
       ],
     ];
 
-    // 8) Define a GET helper that throws on 401.
-    $doRequest = function() use ($socialEndpoint, $options) {
+    // 8) Helper for GET + throw on 401
+    $doGet = function() use ($socialUrl, $options) {
       $client   = \Drupal::httpClient();
-      $response = $client->request('GET', $socialEndpoint, $options);
-      $status   = $response->getStatusCode();
-      $raw      = $response->getBody()->getContents();
+      $response = $client->request('GET', $socialUrl, $options);
+      $code     = $response->getStatusCode();
+      $body     = $response->getBody()->getContents();
 
-      // 401 or “denied” → trigger a token refresh.
-      if ($status === 401
-        || (json_decode($raw) === NULL && stripos($raw, 'denied') !== FALSE)
+      if ($code === 401
+          || (json_decode($body) === NULL && stripos($body, 'denied') !== FALSE)
       ) {
         throw new \Exception('Unauthorized or token revoked', 401);
       }
-
-      // Other HTTP errors → log and return NULL.
-      if ($status >= 400) {
+      if ($code >= 400) {
         \Drupal::logger('rep')->error(
-          'Social API getUri HTTP @code error: @msg',
-          ['@code' => $status, '@msg' => substr($raw, 0, 200)]
+          'Social API getUri HTTP @c error: @m',
+          ['@c' => $code, '@m' => substr($body, 0, 200)]
         );
         return NULL;
       }
-
-      // Decode JSON strictly.
-      $data = json_decode($raw);
+      $data = json_decode($body);
       if (json_last_error() !== JSON_ERROR_NONE) {
         throw new \Exception('Invalid JSON from Social getUri', 400);
       }
       return $data;
     };
 
-    // 9) Execute the remote GET, retrying once on 401.
+    // 9) Execute + retry once on 401
     try {
-      $socialResponse = $doRequest();
+      $socialData = $doGet();
     }
     catch (\Exception $e) {
       if ((int) $e->getCode() === 401) {
-        // refresh and retry
+        // Refresh and retry
         try {
-          $refreshToken();
+          $refresh();
           $newToken = $session->get('oauth_access_token');
           $options['headers']['Authorization'] = "Bearer {$newToken}";
-          $socialResponse = $doRequest();
+          $socialData = $doGet();
         }
         catch (\Exception $e2) {
-          \Drupal::logger('rep')->error('Social getUri retry failed: @msg', [
-            '@msg' => $e2->getMessage(),
-          ]);
-          $socialResponse = NULL;
+          \Drupal::logger('rep')->error('Social retry failed: @m', ['@m' => $e2->getMessage()]);
+          $socialData = NULL;
         }
       }
       else {
-        \Drupal::logger('rep')->error('Social getUri error: @msg', [
-          '@msg' => $e->getMessage(),
-        ]);
-        $socialResponse = NULL;
+        \Drupal::logger('rep')->error('Social getUri error: @m', ['@m' => $e->getMessage()]);
+        $socialData = NULL;
       }
     }
 
-    // 10) Return the Social payload (or NULL).
-    return $socialResponse;
+    // 10) Return the remote payload (or NULL).
+    return $socialData;
   }
 
   public function getUsage($uri) {
