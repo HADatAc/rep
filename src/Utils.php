@@ -1097,40 +1097,62 @@ class Utils {
   //   }
   // }
   public static function getAPIImage($uri, $apiImage, $placeholder_image) {
-    // 1) If there’s no image path, show the placeholder.
+    // 1) No image path → placeholder.
     if (empty($apiImage)) {
       return $placeholder_image;
     }
 
-    // 2) If it’s already a full URL, just return it.
+    // 2) Full URL → return directly.
     if (strpos($apiImage, 'http') === 0) {
       return $apiImage;
     }
 
-    // 3) Ask your API‐connector to fetch the binary.
+    // 3) Try legacy download first...
     /** @var \Drupal\rep\ApiConnectorInterface $api */
     $api = \Drupal::service('rep.api_connector');
-
-    // Try the legacy download first.
     $response = $api->downloadFile($uri, $apiImage);
 
-    // If that failed or returned non‐200, and Social is enabled, try the Social endpoint.
-    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
+    // 4) If legacy failed and Social is enabled, try Social:
     if (
-      (! $response || $response->getStatusCode() !== 200) &&
-      $socialEnabled
+      (! $response || (method_exists($response, 'getStatusCode') && $response->getStatusCode() !== 200))
+      && \Drupal::config('rep.settings')->get('social_conf')
     ) {
       $response = $api->downloadFileSocial($uri, $apiImage);
     }
 
-    // 4) If we got a 200 back, base64‐inline it.
-    if ($response && $response->getStatusCode() === 200) {
-      $file_content = $response->getBody()->getContents();
-      $content_type = $response->getHeaderLine('Content-Type');
+    // 5) If we have a response, extract the bytes & content-type:
+    if ($response) {
+      // 5a) Get the raw bytes:
+      if (method_exists($response, 'getContent')) {
+        // Symfony ResponseInterface
+        $file_content = $response->getContent();
+      }
+      elseif (method_exists($response, 'getBody')) {
+        // PSR-7 ResponseInterface fallback
+        $file_content = $response->getBody()->getContents();
+      }
+      else {
+        return $placeholder_image;
+      }
+
+      // 5b) Get the content-type:
+      if (isset($response->headers)) {
+        // Symfony ResponseInterface
+        $content_type = $response->headers->get('Content-Type');
+      }
+      elseif (method_exists($response, 'getHeaderLine')) {
+        // PSR-7 fallback
+        $content_type = $response->getHeaderLine('Content-Type');
+      }
+      else {
+        $content_type = 'application/octet-stream';
+      }
+
+      // 5c) Return a base64 data-URI:
       return 'data:' . $content_type . ';base64,' . base64_encode($file_content);
     }
 
-    // 5) Otherwise fall back to the placeholder.
+    // 6) On any failure, placeholder.
     return $placeholder_image;
   }
 
