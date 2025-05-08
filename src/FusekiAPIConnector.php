@@ -197,10 +197,17 @@ class FusekiAPIConnector {
         : json_encode($decodedLegacy);
     }
 
-    // 11) Success: return the raw JSON string
-    \Drupal::logger('rep')->debug('Social getUri returning JSON.');
-    dpm($body, 'Social getUri body');
-    return $body;
+    // 11) SUCCESS → decode JSON to stdClass and return
+    \Drupal::logger('rep')->debug('Social getUri decoding JSON to object.');
+    $data = json_decode($body);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+      \Drupal::logger('rep')->error(
+        'Invalid JSON from Social POST getUri: @e',
+        ['@e' => json_last_error_msg()]
+      );
+      return NULL;
+    }
+    return $data;
   }
 
 
