@@ -330,18 +330,42 @@ class Utils {
     return $uri;
   }
 
-  public static function namespaceUri($uri) {
-    $tables = new Tables;
+  // public static function namespaceUri($uri) {
+  //   $tables = new Tables;
+  //   $namespaces = $tables->getNamespaces();
+
+  //   foreach ($namespaces as $abbrev => $ns) {
+  //     if ($abbrev != NULL && $abbrev != "" && $ns != NULL && $ns != "") {
+  //       if (str_starts_with($uri,$ns)) {
+  //         $replacement = $abbrev . ":";
+  //         return str_replace($ns, $replacement ,$uri);
+  //       }
+  //     }
+  //   }
+  //   return $uri;
+  // }
+  public static function namespaceUri(?string $uri): string {
+    // If no URI provided, just return empty string.
+    if ($uri === NULL || $uri === '') {
+      return '';
+    }
+
+    $tables     = new Tables();
     $namespaces = $tables->getNamespaces();
 
     foreach ($namespaces as $abbrev => $ns) {
-      if ($abbrev != NULL && $abbrev != "" && $ns != NULL && $ns != "") {
-        if (str_starts_with($uri,$ns)) {
-          $replacement = $abbrev . ":";
-          return str_replace($ns, $replacement ,$uri);
-        }
+      // Skip any empty entries.
+      if (empty($abbrev) || empty($ns)) {
+        continue;
+      }
+      // Only call str_starts_with() on a real string.
+      if (str_starts_with($uri, $ns)) {
+        $replacement = $abbrev . ':';
+        return str_replace($ns, $replacement, $uri);
       }
     }
+
+    // No prefix matched—return original.
     return $uri;
   }
 
