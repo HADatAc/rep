@@ -1096,63 +1096,141 @@ class Utils {
   //     return $placeholder_image;
   //   }
   // }
+  // WORKING VERSION
+  // public static function getAPIImage($uri, $apiImage, $placeholder_image) {
+  //   // 1) No image path → placeholder.
+  //   if (empty($apiImage)) {
+  //     return $placeholder_image;
+  //   }
+
+  //   // 2) Full URL → return directly.
+  //   if (strpos($apiImage, 'http') === 0) {
+  //     return $apiImage;
+  //   }
+
+  //   // 3) Try legacy download first...
+  //   /** @var \Drupal\rep\ApiConnectorInterface $api */
+  //   $api = \Drupal::service('rep.api_connector');
+  //   $response = $api->downloadFile($uri, $apiImage);
+
+  //   // 4) If legacy failed and Social is enabled, try Social:
+  //   if (
+  //     (! $response || (method_exists($response, 'getStatusCode') && $response->getStatusCode() !== 200))
+  //     && \Drupal::config('rep.settings')->get('social_conf')
+  //   ) {
+  //     $response = $api->downloadFileSocial($uri, $apiImage);
+  //   }
+
+  //   // 5) If we have a response, extract the bytes & content-type:
+  //   if ($response) {
+  //     // 5a) Get the raw bytes:
+  //     if (method_exists($response, 'getContent')) {
+  //       // Symfony ResponseInterface
+  //       $file_content = $response->getContent();
+  //     }
+  //     elseif (method_exists($response, 'getBody')) {
+  //       // PSR-7 ResponseInterface fallback
+  //       $file_content = $response->getBody()->getContents();
+  //     }
+  //     else {
+  //       return $placeholder_image;
+  //     }
+
+  //     // 5b) Get the content-type:
+  //     if (isset($response->headers)) {
+  //       // Symfony ResponseInterface
+  //       $content_type = $response->headers->get('Content-Type');
+  //     }
+  //     elseif (method_exists($response, 'getHeaderLine')) {
+  //       // PSR-7 fallback
+  //       $content_type = $response->getHeaderLine('Content-Type');
+  //     }
+  //     else {
+  //       $content_type = 'application/octet-stream';
+  //     }
+
+  //     // 5c) Return a base64 data-URI:
+  //     return 'data:' . $content_type . ';base64,' . base64_encode($file_content);
+  //   }
+
+  //   // 6) On any failure, placeholder.
+  //   return $placeholder_image;
+  // }
   public static function getAPIImage($uri, $apiImage, $placeholder_image) {
-    // 1) No image path → placeholder.
+    // 1) No image path: placeholder.
     if (empty($apiImage)) {
+      \Drupal::logger('rep')->debug('getAPIImage: no $apiImage, using placeholder.');
       return $placeholder_image;
     }
 
-    // 2) Full URL → return directly.
+    // 2) If it's already a full URL, return it.
     if (strpos($apiImage, 'http') === 0) {
+      \Drupal::logger('rep')->debug('getAPIImage: apiImage is full URL, returning it: @url', ['@url'=>$apiImage]);
       return $apiImage;
     }
 
-    // 3) Try legacy download first...
     /** @var \Drupal\rep\ApiConnectorInterface $api */
     $api = \Drupal::service('rep.api_connector');
+
+    // 3) Attempt legacy download.
+    \Drupal::logger('rep')->debug('getAPIImage: attempting legacy download for @f', ['@f'=>$apiImage]);
     $response = $api->downloadFile($uri, $apiImage);
 
-    // 4) If legacy failed and Social is enabled, try Social:
-    if (
-      (! $response || (method_exists($response, 'getStatusCode') && $response->getStatusCode() !== 200))
-      && \Drupal::config('rep.settings')->get('social_conf')
-    ) {
-      $response = $api->downloadFileSocial($uri, $apiImage);
+    // Inspect legacy response if present.
+    if ($response && method_exists($response, 'getStatusCode')) {
+      $status = $response->getStatusCode();
+      \Drupal::logger('rep')->debug('Legacy downloadFile returned HTTP @s', ['@s'=>$status]);
     }
 
-    // 5) If we have a response, extract the bytes & content-type:
-    if ($response) {
-      // 5a) Get the raw bytes:
+    // 4) If legacy failed (no object or non-200), try Social fallback.
+    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
+    if (
+      ! $response
+      || (method_exists($response, 'getStatusCode') && $status !== 200)
+    ) {
+      \Drupal::logger('rep')->debug('getAPIImage: legacy failed, social_enabled=@e', ['@e'=> $socialEnabled?'yes':'no']);
+      if ($socialEnabled) {
+        \Drupal::logger('rep')->debug('getAPIImage: attempting social download for @f', ['@f'=>$apiImage]);
+        $response = $api->downloadFileSocial($uri, $apiImage);
+        if ($response && method_exists($response, 'getStatusCode')) {
+          \Drupal::logger('rep')->debug('Social downloadFileSocial returned HTTP @s', [
+            '@s' => $response->getStatusCode(),
+          ]);
+        }
+      }
+    }
+
+    // 5) If we now have a 200‐response, inline it as data‐URI.
+    if ($response && method_exists($response, 'getStatusCode') && $response->getStatusCode() === 200) {
+      // a) Get bytes
       if (method_exists($response, 'getContent')) {
-        // Symfony ResponseInterface
-        $file_content = $response->getContent();
+        $content = $response->getContent();
       }
       elseif (method_exists($response, 'getBody')) {
-        // PSR-7 ResponseInterface fallback
-        $file_content = $response->getBody()->getContents();
+        $content = $response->getBody()->getContents();
       }
       else {
+        \Drupal::logger('rep')->warning('getAPIImage: response has no getContent/getBody methods.');
         return $placeholder_image;
       }
 
-      // 5b) Get the content-type:
+      // b) Get MIME type
       if (isset($response->headers)) {
-        // Symfony ResponseInterface
-        $content_type = $response->headers->get('Content-Type');
+        $mime = $response->headers->get('Content-Type');
       }
       elseif (method_exists($response, 'getHeaderLine')) {
-        // PSR-7 fallback
-        $content_type = $response->getHeaderLine('Content-Type');
+        $mime = $response->getHeaderLine('Content-Type');
       }
       else {
-        $content_type = 'application/octet-stream';
+        $mime = 'application/octet-stream';
       }
 
-      // 5c) Return a base64 data-URI:
-      return 'data:' . $content_type . ';base64,' . base64_encode($file_content);
+      \Drupal::logger('rep')->debug('getAPIImage: inlining image, MIME: @m', ['@m'=>$mime]);
+      return 'data:' . $mime . ';base64,' . base64_encode($content);
     }
 
-    // 6) On any failure, placeholder.
+    // 6) On any failure, log and return placeholder.
+    \Drupal::logger('rep')->warning('getAPIImage: all download attempts failed for @f, using placeholder.', ['@f'=>$apiImage]);
     return $placeholder_image;
   }
 
