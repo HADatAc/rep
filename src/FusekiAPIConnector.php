@@ -40,7 +40,7 @@ class FusekiAPIConnector {
   //   return $this->perform_http_request($method,$api_url.$endpoint,$data);
   // }
   public function getUri(string $uri) {
-    // 1) Chama primeiro o endpoint legado.
+    // 1) Callamos primero al endpoint legado (GET), tal como estaba.
     $legacyEndpoint = '/hascoapi/api/uri/' . rawurlencode($uri);
     $legacyUrl      = $this->getApiUrl() . $legacyEndpoint;
     $legacyOpts     = ['headers' => $this->getHeader() ?? []];
@@ -49,7 +49,7 @@ class FusekiAPIConnector {
     $rawLegacy = $this->perform_http_request('GET', $legacyUrl, $legacyOpts);
     \Drupal::logger('rep')->debug('Legacy raw response: @r', ['@r' => print_r($rawLegacy, TRUE)]);
 
-    // 2) Decodifica para objeto
+    // 2) Decodificamos para objeto para poder inspeccionar isSuccessful.
     if (is_string($rawLegacy)) {
       $decoded = json_decode($rawLegacy);
     }
@@ -61,31 +61,29 @@ class FusekiAPIConnector {
     }
     \Drupal::logger('rep')->debug('Decoded legacy payload: @d', ['@d' => print_r($decoded, TRUE)]);
 
-    // 3) Se legacy devolveu sucesso, retorna logo
+    // 3) Si legacy devolvió isSuccessful=true, lo devolvemos directamente.
     if (isset($decoded->isSuccessful) && $decoded->isSuccessful === TRUE) {
-      \Drupal::logger('rep')->debug('Legacy successful, returning it.');
+      \Drupal::logger('rep')->debug('Legacy successful, returning payload.');
       return $decoded;
     }
-    \Drupal::logger('rep')->debug('Legacy isSuccessful!=true, fallback para Social.');
+    \Drupal::logger('rep')->debug('Legacy not successful, falling back to Social POST.');
 
-    // 4) Se o fallback Social estiver OFF, devolve o legado (mesmo sem sucesso)
+    // 4) Si el fallback Social está desactivado, devolvemos el resultado legado.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    \Drupal::logger('rep')->debug('Social enabled? @e', ['@e' => $socialEnabled ? 'yes' : 'no']);
     if (!$socialEnabled) {
-      \Drupal::logger('rep')->debug('Social disabled, returning legacy payload.');
+      \Drupal::logger('rep')->debug('Social fallback disabled, returning legacy payload.');
       return $decoded;
     }
 
-    // 5) Verifica token na sessão
+    // 5) Aseguramos que tenemos un token válido en sesión, refrescando si hace falta...
     $session = \Drupal::request()->getSession();
     $token   = $session->get('oauth_access_token');
     \Drupal::logger('rep')->debug('Session token before refresh: @t', [
       '@t' => $token ? substr($token, 0, 8) . '...' : '(none)',
     ]);
 
-    // 6) Closure para refrescar token
     $refresh = function() use ($session) {
-      \Drupal::logger('rep')->debug('Refreshing token via OAuthController...');
+      \Drupal::logger('rep')->debug('Refreshing OAuth token via OAuthController...');
       $ctrl = \Drupal::service('controller_resolver')
         ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
       $resp = call_user_func($ctrl);
@@ -94,14 +92,13 @@ class FusekiAPIConnector {
         \Drupal::logger('rep')->debug('OAuthController returned: @p', ['@p' => print_r($pl, TRUE)]);
         if (!empty($pl['body']['access_token'])) {
           $session->set('oauth_access_token', $pl['body']['access_token']);
-          \Drupal::logger('rep')->debug('New token saved.');
+          \Drupal::logger('rep')->debug('New token saved to session.');
           return;
         }
       }
       throw new \Exception('Failed to refresh OAuth token.', 401);
     };
 
-    // 7) Garante token
     if (empty($token)) {
       try {
         $refresh();
@@ -114,85 +111,84 @@ class FusekiAPIConnector {
       }
     }
 
-    // 8) Constroi URL do Social apenas com scheme://host[:port]
+    // 6) Construimos la URL del Social POST (sin URI en la ruta).
     $oauthUrl = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
-    \Drupal::logger('rep')->debug('Configured oauth_url: @u', ['@u' => $oauthUrl]);
     $parts    = parse_url($oauthUrl);
     $scheme   = $parts['scheme'] ?? 'http';
     $host     = $parts['host']   ?? 'localhost';
     $port     = !empty($parts['port']) ? ":{$parts['port']}" : '';
     $hostPort = "{$scheme}://{$host}{$port}";
-    \Drupal::logger('rep')->debug('HostPort for Social calls: @hp', ['@hp' => $hostPort]);
+    $socialPostUrl = $hostPort . '/api/socialm/geturi';
+    \Drupal::logger('rep')->debug('Social POST URL: @u', ['@u' => $socialPostUrl]);
 
-    $socialUrl = $hostPort . '/api/socialm/geturi/' . rawurlencode($uri);
-    \Drupal::logger('rep')->debug('Constructed Social GET URL: @su', ['@su' => $socialUrl]);
-
-    // 9) Prepara headers para GET
-    $options = [
+    // 7) Preparamos la petición POST con JSON body.
+    $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
+    $postOptions = [
       'http_errors' => FALSE,
       'headers'     => [
         'Authorization' => "Bearer {$token}",
         'Accept'        => 'application/json',
       ],
+      'json'        => [
+        'token'       => $token,
+        'consumer_id' => $consumerId,
+        'uri'         => $uri,
+      ],
     ];
 
-    // 10) Helper GET com throw em 401
-    $doGet = function() use ($socialUrl, $options) {
-      \Drupal::logger('rep')->debug('Performing Social GET: @u', ['@u' => $socialUrl]);
-      $client   = \Drupal::httpClient();
-      $resp     = $client->request('GET', $socialUrl, $options);
-      $code     = $resp->getStatusCode();
-      $body     = $resp->getBody()->getContents();
-      \Drupal::logger('rep')->debug('Social code: @c', ['@c' => $code]);
-      \Drupal::logger('rep')->debug('Social body: @b', ['@b' => substr($body, 0, 200)]);
+    // 8) Ejecutamos el POST y manejamos el código HTTP.
+    \Drupal::logger('rep')->debug('Performing Social POST to getUri with body: @b', [
+      '@b' => print_r($postOptions['json'], TRUE),
+    ]);
+    $client   = \Drupal::httpClient();
+    $response = $client->request('POST', $socialPostUrl, $postOptions);
+    $code     = $response->getStatusCode();
+    $body     = $response->getBody()->getContents();
+    \Drupal::logger('rep')->debug('Social POST response code: @c', ['@c' => $code]);
+    \Drupal::logger('rep')->debug('Social POST raw body: @b', ['@b' => substr($body, 0, 200)]);
 
-      if ($code === 401
-          || (json_decode($body) === NULL && stripos($body, 'denied') !== FALSE)
-      ) {
-        throw new \Exception('Unauthorized or token revoked', 401);
+    // 9) Si 401 o “denied”, refrescamos token y reintentamos una vez.
+    if ($code === 401 || (json_decode($body) === NULL && stripos($body, 'denied') !== FALSE)) {
+      \Drupal::logger('rep')->warning('Social POST Unauthorized, refreshing token and retrying...');
+      try {
+        $refresh();
+        $newToken = $session->get('oauth_access_token');
+        $postOptions['headers']['Authorization'] = "Bearer {$newToken}";
+        $postOptions['json']['token']            = $newToken;
+        $response = $client->request('POST', $socialPostUrl, $postOptions);
+        $code     = $response->getStatusCode();
+        $body     = $response->getBody()->getContents();
+        \Drupal::logger('rep')->debug('Retry POST code: @c', ['@c' => $code]);
+        \Drupal::logger('rep')->debug('Retry POST body: @b', ['@b' => substr($body, 0, 200)]);
       }
-      if ($code >= 400) {
-        \Drupal::logger('rep')->error(
-          'Social API getUri HTTP @code error: @msg',
-          ['@code' => $code, '@msg' => substr($body, 0, 200)]
-        );
+      catch (\Exception $e) {
+        \Drupal::logger('rep')->error('Social POST retry failed: @m', ['@m' => $e->getMessage()]);
         return NULL;
       }
-      $data = json_decode($body);
-      if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new \Exception('Invalid JSON from Social getUri', 400);
-      }
-      return $data;
-    };
-
-    // 11) Executa + retry em 401
-    try {
-      $socialData = $doGet();
-    }
-    catch (\Exception $e) {
-      \Drupal::logger('rep')->warning('Social GET exception: @m', ['@m' => $e->getMessage()]);
-      if ((int) $e->getCode() === 401) {
-        try {
-          $refresh();
-          $newToken = $session->get('oauth_access_token');
-          $options['headers']['Authorization'] = "Bearer {$newToken}";
-          \Drupal::logger('rep')->debug('Retrying Social GET with new token...');
-          $socialData = $doGet();
-        }
-        catch (\Exception $e2) {
-          \Drupal::logger('rep')->error('Social retry failed: @m', ['@m' => $e2->getMessage()]);
-          $socialData = NULL;
-        }
-      }
-      else {
-        $socialData = NULL;
-      }
     }
 
-    // 12) Log final e retorna
-    \Drupal::logger('rep')->debug('Final getUri() return: @r', ['@r' => print_r($socialData, TRUE)]);
-    return $socialData;
+    // 10) Si error HTTP >=400, devolvemos NULL.
+    if ($code >= 400) {
+      \Drupal::logger('rep')->error('Social POST getUri HTTP @code error: @msg', [
+        '@code' => $code,
+        '@msg'  => substr($body, 0, 200),
+      ]);
+      return NULL;
+    }
+
+    // 11) Decodificamos JSON y lo devolvemos.
+    $data = json_decode($body);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+      \Drupal::logger('rep')->error('Invalid JSON from Social POST getUri: @e', [
+        '@e' => json_last_error_msg(),
+      ]);
+      return NULL;
+    }
+
+    \Drupal::logger('rep')->debug('Final Social getUri payload: @d', ['@d' => print_r($data, TRUE)]);
+    return $data;
   }
+
 
   public function getUsage($uri) {
     $endpoint = "/hascoapi/api/usage/".rawurlencode($uri);
