@@ -39,6 +39,15 @@ class FusekiAPIConnector {
   //   $data = $this->getHeader();
   //   return $this->perform_http_request($method,$api_url.$endpoint,$data);
   // }
+  /**
+   * Fetch a resource by URI, first from the legacy API then (if needed) from Social.
+   *
+   * @param string $uri
+   *   The full resource URI to fetch.
+   *
+   * @return object|null
+   *   Decoded JSON object from either legacy or Social API, or NULL on failure.
+   */
   public function getUri(string $uri) {
     // 1) LEGACY GET
     $legacyEndpoint = '/hascoapi/api/uri/' . rawurlencode($uri);
@@ -63,7 +72,7 @@ class FusekiAPIConnector {
 
     // 3) IF LEGACY SUCCESSFUL → RETURN
     if (isset($decoded->isSuccessful) && $decoded->isSuccessful === TRUE) {
-      \Drupal::logger('rep')->debug('Legacy successful, returning.');
+      \Drupal::logger('rep')->debug('Legacy successful, returning decoded payload.');
       return $decoded;
     }
     \Drupal::logger('rep')->debug('Legacy not successful, falling back to Social POST.');
@@ -78,21 +87,21 @@ class FusekiAPIConnector {
     $session = \Drupal::request()->getSession();
     $token   = $session->get('oauth_access_token');
     \Drupal::logger('rep')->debug('Session token before refresh: @t', [
-      '@t' => $token ? substr($token, 0, 8) . '...' : '(none)',
+      '@t' => $token ? substr($token, 0, 8) . '…' : '(none)',
     ]);
 
-    // Closure to refresh token via Social's OAuthController.
+    // Closure to refresh via OAuthController.
     $refresh = function() use ($session) {
-      \Drupal::logger('rep')->debug('Refreshing OAuth token...');
+      \Drupal::logger('rep')->debug('Refreshing OAuth token…');
       $ctrl = \Drupal::service('controller_resolver')
         ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
       $resp = call_user_func($ctrl);
-      if ($resp instanceof JsonResponse) {
+      if ($resp instanceof \Symfony\Component\HttpFoundation\JsonResponse) {
         $pl = json_decode($resp->getContent(), TRUE);
-        \Drupal::logger('rep')->debug('OAuthController payload: @p', ['@p' => print_r($pl, TRUE)]);
+        \Drupal::logger('rep')->debug('OAuthController returned: @p', ['@p' => print_r($pl, TRUE)]);
         if (!empty($pl['body']['access_token'])) {
           $session->set('oauth_access_token', $pl['body']['access_token']);
-          \Drupal::logger('rep')->debug('New token saved in session.');
+          \Drupal::logger('rep')->debug('New token saved to session.');
           return;
         }
       }
@@ -103,7 +112,7 @@ class FusekiAPIConnector {
       try {
         $refresh();
         $token = $session->get('oauth_access_token');
-        \Drupal::logger('rep')->debug('Token after refresh: @t', ['@t' => substr($token, 0, 8) . '...']);
+        \Drupal::logger('rep')->debug('Token after refresh: @t', ['@t' => substr($token, 0, 8) . '…']);
       }
       catch (\Exception $e) {
         \Drupal::logger('rep')->error('Token refresh failed: @m', ['@m' => $e->getMessage()]);
@@ -111,14 +120,9 @@ class FusekiAPIConnector {
       }
     }
 
-    // 6) BUILD SOCIAL POST URL (no {uri} in path)
-    $oauthUrl = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
-    $parts    = parse_url($oauthUrl);
-    $scheme   = $parts['scheme'] ?? 'http';
-    $host     = $parts['host']   ?? 'localhost';
-    $port     = !empty($parts['port']) ? ":{$parts['port']}" : '';
-    $hostPort = "{$scheme}://{$host}{$port}";
-    $socialPostUrl = $hostPort . '/api/socialm/geturi';
+    // 6) BUILD SOCIAL POST URL exactly like listByKeywordType does.
+    $oauthUrl      = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
+    $socialPostUrl = preg_replace('#/oauth/token$#', '/api/socialm/geturi', $oauthUrl);
     \Drupal::logger('rep')->debug('Social POST URL: @u', ['@u' => $socialPostUrl]);
 
     // 7) PREPARE POST OPTIONS
@@ -146,8 +150,10 @@ class FusekiAPIConnector {
     \Drupal::logger('rep')->debug('Social POST body: @b', ['@b' => substr($body, 0, 200)]);
 
     // 9) RETRY ON 401
-    if ($code === 401 || (json_decode($body) === NULL && stripos($body, 'denied') !== FALSE)) {
-      \Drupal::logger('rep')->warning('Social POST Unauthorized, refreshing token and retrying...');
+    if ($code === 401
+        || (json_decode($body) === NULL && stripos($body, 'denied') !== FALSE)
+    ) {
+      \Drupal::logger('rep')->warning('Social POST unauthorized, refreshing token & retrying…');
       try {
         $refresh();
         $newToken = $session->get('oauth_access_token');
@@ -165,7 +171,7 @@ class FusekiAPIConnector {
       }
     }
 
-    // 10) HTTP >=400 → log & return NULL
+    // 10) HTTP >= 400 → log & return NULL
     if ($code >= 400) {
       \Drupal::logger('rep')->error(
         'Social POST getUri HTTP @code error: @msg',
