@@ -1998,44 +1998,106 @@ class FusekiAPIConnector {
    *  If anything goes wrong, this method will return NULL and issue a Drupal error message fowrarding the message provided by
    *  the HASCO API.
    */
+  // public function parseObjectResponse($response, $methodCalled) {
+  //   if ($this->error != NULL) {
+  //     if ($this->error == 'CON') {
+  //       \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
+  //     } else {
+  //       \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
+  //     }
+  //     return NULL;
+  //   }
+  //   if ($response == NULL || $response == "") {
+  //       \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
+  //       return NULL;
+  //   }
+
+  //   // Se já veio um array (já decodificado), devolve-o logo
+  //   if (is_array($response)) {
+  //     return $response;
+  //   }
+
+  //   // Caso venha um Stream ou outro objecto com __toString(), força string
+  //   if (!is_string($response) && method_exists($response, '__toString')) {
+  //     $response = (string) $response;
+  //   }
+
+  //   $obj = json_decode($response);
+  //   if ($obj == NULL) {
+  //     \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
+  //     return NULL;
+  //   }
+  //   if ($obj->isSuccessful) {
+  //     return $obj->body;
+  //   }
+  //   $message = $obj->body;
+  //   if ($message != NULL && is_string($message) &&
+  //       str_starts_with($message,"No") && str_ends_with($message,"has been found")) {
+  //     return array();
+  //   }
+  //   \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
+  //   return NULL;
+  // }
   public function parseObjectResponse($response, $methodCalled) {
-    if ($this->error != NULL) {
-      if ($this->error == 'CON') {
-        \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
-      } else {
-        \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
+    // 1) Any prior connection or HTTP error?
+    if ($this->error !== NULL) {
+      if ($this->error === 'CON') {
+        \Drupal::messenger()->addError(t('Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect.'));
+      }
+      else {
+        \Drupal::messenger()->addError(t('API ERROR @code. Message: @msg', [
+          '@code' => $this->error,
+          '@msg'  => $this->error_message,
+        ]));
       }
       return NULL;
     }
-    if ($response == NULL || $response == "") {
-        \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
-        return NULL;
+
+    // 2) Empty response?
+    if ($response === NULL || $response === '') {
+      \Drupal::messenger()->addError(t('API service has returned no response: called @method', [
+        '@method' => $methodCalled,
+      ]));
+      return NULL;
     }
 
-    // Se já veio um array (já decodificado), devolve-o logo
-    if (is_array($response)) {
+    // 3) If already decoded into an array or object, return it immediately.
+    if (is_array($response) || is_object($response)) {
       return $response;
     }
 
-    // Caso venha um Stream ou outro objecto com __toString(), força string
+    // 4) If it's a stream or other object with __toString(), cast to string.
     if (!is_string($response) && method_exists($response, '__toString')) {
       $response = (string) $response;
     }
 
+    // 5) Now decode the JSON string.
     $obj = json_decode($response);
-    if ($obj == NULL) {
-      \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
+    if ($obj === NULL) {
+      \Drupal::messenger()->addError(t('API service has failed with following RAW message: [@raw]', [
+        '@raw' => $response,
+      ]));
       return NULL;
     }
-    if ($obj->isSuccessful) {
+
+    // 6) If the call indicated success, return its body.
+    if (!empty($obj->isSuccessful)) {
       return $obj->body;
     }
-    $message = $obj->body;
-    if ($message != NULL && is_string($message) &&
-        str_starts_with($message,"No") && str_ends_with($message,"has been found")) {
-      return array();
+
+    // 7) Handle “no results” case specifically.
+    $message = $obj->body ?? '';
+    if (is_string($message)
+        && str_starts_with($message, 'No')
+        && str_ends_with($message, 'has been found')
+    ) {
+      return [];
     }
-    \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
+
+    // 8) Otherwise surface the API error.
+    \Drupal::messenger()->addError(t('API service has failed with following message: @msg', [
+      '@msg' => $obj->body,
+    ]));
     return NULL;
   }
 
