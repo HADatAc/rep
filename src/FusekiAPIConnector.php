@@ -167,7 +167,7 @@ class FusekiAPIConnector {
     if ($code === 401
         || (is_string($body) && json_decode($body) === NULL && stripos($body,'denied')!==FALSE)
     ) {
-      \Drupal::logger('rep')->warning('Unauthorized, refreshing token & retrying…');
+      // \Drupal::logger('rep')->warning('Unauthorized, refreshing token & retrying…');
       try {
         $refresh();
         $newToken = $session->get('oauth_access_token');
