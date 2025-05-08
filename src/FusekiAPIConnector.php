@@ -2326,4 +2326,62 @@ class FusekiAPIConnector {
     }
     return($res->getBody());
   }
+
+  /**
+   * Download a “file” (e.g. image) via the Social API.
+   *
+   * @param string $uri
+   *   The resource URI.
+   * @param string $fileName
+   *   The file path/identifier as returned by the KG.
+   *
+   * @return \Psr\Http\Message\ResponseInterface|null
+   *   The Guzzle response with binary content, or NULL on failure.
+   */
+  public function downloadFileSocial(string $uri, string $fileName) {
+    // 1) Grab/refresh token exactly like in getUri()
+    $session = \Drupal::request()->getSession();
+    $token   = $session->get('oauth_access_token');
+    // ... your existing refresh closure and logic to ensure $token ...
+
+    // 2) Build the Social‐download URL (same preg_replace trick)
+    $oauthUrl = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
+    $downloadUrl = preg_replace('#/oauth/token$#', '/api/socialm/downloadfile', $oauthUrl);
+
+    // 3) Prepare a POST with JSON payload
+    $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
+    $options = [
+      'http_errors' => FALSE,
+      'headers' => [
+        'Authorization' => "Bearer {$token}",
+        'Accept'        => 'application/octet-stream',
+      ],
+      'json' => [
+        'token'       => $token,
+        'consumer_id' => $consumerId,
+        'uri'         => $uri,
+        'file'        => $fileName,
+      ],
+    ];
+
+    // 4) Execute + retry on 401 exactly as in getUri()
+    $client = \Drupal::httpClient();
+    try {
+      $response = $client->request('POST', $downloadUrl, $options);
+      if ($response->getStatusCode() === 401) {
+        // refresh & retry…
+        // …call your refresh closure…
+        $options['headers']['Authorization'] = "Bearer " . $session->get('oauth_access_token');
+        $options['json']['token']            = $session->get('oauth_access_token');
+        $response = $client->request('POST', $downloadUrl, $options);
+      }
+    }
+    catch (\Exception $e) {
+      \Drupal::logger('rep')->error('Social downloadFile error: @m', ['@m' => $e->getMessage()]);
+      return NULL;
+    }
+
+    // 5) Return the response if 200, else NULL.
+    return $response->getStatusCode() === 200 ? $response : NULL;
+  }
 }

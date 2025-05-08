@@ -1073,29 +1073,67 @@ class Utils {
     return \Drupal::service('file_url_generator')->generateAbsoluteString($file_uri);
   }
 
+  // public static function getAPIImage($uri, $apiImage, $placeholder_image) {
+
+  //   // Empty Value return Placeholder
+  //   if ($apiImage === '')
+  //     return $placeholder_image;
+
+  //   // Image starts with http so return the link
+  //   if (strpos($apiImage, 'http') === 0)
+  //     return $apiImage;
+
+  //   // Return API image
+  //   $api = \Drupal::service('rep.api_connector');
+  //   $response = $api->downloadFile($uri, $apiImage);
+
+  //   if ($response) {
+  //       $file_content = $response->getContent();
+  //       $content_type = $response->headers->get('Content-Type');
+  //       $base64_image = base64_encode($file_content);
+  //       return "data:" . $content_type . ";base64," . $base64_image;
+  //   } else {
+  //     return $placeholder_image;
+  //   }
+  // }
   public static function getAPIImage($uri, $apiImage, $placeholder_image) {
-
-    // Empty Value return Placeholder
-    if ($apiImage === '')
-      return $placeholder_image;
-
-    // Image starts with http so return the link
-    if (strpos($apiImage, 'http') === 0)
-      return $apiImage;
-
-    // Return API image
-    $api = \Drupal::service('rep.api_connector');
-    $response = $api->downloadFile($uri, $apiImage);
-
-    if ($response) {
-        $file_content = $response->getContent();
-        $content_type = $response->headers->get('Content-Type');
-        $base64_image = base64_encode($file_content);
-        return "data:" . $content_type . ";base64," . $base64_image;
-    } else {
+    // 1) If there’s no image path, show the placeholder.
+    if (empty($apiImage)) {
       return $placeholder_image;
     }
+
+    // 2) If it’s already a full URL, just return it.
+    if (strpos($apiImage, 'http') === 0) {
+      return $apiImage;
+    }
+
+    // 3) Ask your API‐connector to fetch the binary.
+    /** @var \Drupal\rep\ApiConnectorInterface $api */
+    $api = \Drupal::service('rep.api_connector');
+
+    // Try the legacy download first.
+    $response = $api->downloadFile($uri, $apiImage);
+
+    // If that failed or returned non‐200, and Social is enabled, try the Social endpoint.
+    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
+    if (
+      (! $response || $response->getStatusCode() !== 200) &&
+      $socialEnabled
+    ) {
+      $response = $api->downloadFileSocial($uri, $apiImage);
+    }
+
+    // 4) If we got a 200 back, base64‐inline it.
+    if ($response && $response->getStatusCode() === 200) {
+      $file_content = $response->getBody()->getContents();
+      $content_type = $response->getHeaderLine('Content-Type');
+      return 'data:' . $content_type . ';base64,' . base64_encode($file_content);
+    }
+
+    // 5) Otherwise fall back to the placeholder.
+    return $placeholder_image;
   }
+
 
   public static function getAPIDocument($uri, $apiDocument) {
     if (empty($apiDocument)) {
