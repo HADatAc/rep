@@ -147,16 +147,32 @@ class SocialApiMakerController extends ControllerBase {
         }
 
         if ($status === 200) {
-          $payload = json_decode($response->getBody()->getContents());
-          $makers  = $payload->body ?? [];
-          \Drupal::logger('rep')->debug('Social parsed makers count: @c', ['@c'=>count($makers)]);
+          // **NEW**: read raw body into a variable
+          $rawBody = $response->getBody()->getContents();
+          \Drupal::logger('rep')->debug('Social raw response body: @rb', [
+            '@rb' => substr($rawBody, 0, 1000),  // log up to 1000 chars
+          ]);
+
+          // Decode the JSON
+          $payload = json_decode($rawBody);
+          \Drupal::logger('rep')->debug('Social decoded payload: @pd', [
+            '@pd' => print_r($payload, TRUE),
+          ]);
+
+          // Extract the body (array of items)
+          $makers = $payload->body ?? [];
+          \Drupal::logger('rep')->debug('Social makers count: @c', [
+            '@c' => is_array($makers) ? count($makers) : '(not array)',
+          ]);
         }
         else {
-          throw new \Exception("Social API HTTP $status");
+          throw new \Exception("Social API returned HTTP {$status}");
         }
       }
       catch (\Throwable $e) {
-        \Drupal::logger('rep')->error('Social autocomplete failed: @m', ['@m'=>$e->getMessage()]);
+        \Drupal::logger('rep')->error('Social autocomplete failed: @m', [
+          '@m' => $e->getMessage(),
+        ]);
       }
     }
 
@@ -167,7 +183,9 @@ class SocialApiMakerController extends ControllerBase {
       $results[] = ['value'=>"$label [$uri]", 'label'=>$label];
     }
 
-    \Drupal::logger('rep')->debug('Returning @n suggestions.', ['@n'=>count($results)]);
+    \Drupal::logger('rep')->debug('Final results array: @res', [
+      '@res' => print_r($results, TRUE),
+    ]);
     return new JsonResponse($results);
   }
 
