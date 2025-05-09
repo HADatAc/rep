@@ -106,7 +106,7 @@ class SocialApiMakerController extends ControllerBase {
 
         // Build URL
         $baseUrl = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
-        $url     = preg_replace('#/oauth/token$#', '/api/socialm/list', $baseUrl);
+        $url     = preg_replace('#/oauth/token$#', '/api/socialm/autocomplete', $baseUrl);
         \Drupal::logger('rep')->debug('Social list URL: @u', ['@u'=>$url]);
 
         // Options
