@@ -359,5 +359,5 @@ rep.autocomplete_maker:
   methods: [GET]
   options:
     _format: 'json'
-    _auth: ['oauth2']
+    # _auth: ['oauth2']
 
