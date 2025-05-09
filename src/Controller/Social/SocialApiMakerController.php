@@ -147,26 +147,29 @@ class SocialApiMakerController extends ControllerBase {
         }
 
         if ($status === 200) {
-          // **NEW**: read raw body into a variable
           $rawBody = $response->getBody()->getContents();
-          \Drupal::logger('rep')->debug('Social raw response body: @rb', [
-            '@rb' => substr($rawBody, 0, 1000),  // log up to 1000 chars
-          ]);
+          \Drupal::logger('rep')->debug('Social raw response body: @rb', ['@rb' => substr($rawBody, 0, 1000)]);
+          $payload = json_decode($rawBody, FALSE);
 
-          // Decode the JSON
-          $payload = json_decode($rawBody);
-          \Drupal::logger('rep')->debug('Social decoded payload: @pd', [
-            '@pd' => print_r($payload, TRUE),
-          ]);
-
-          // Extract the body (array of items)
-          $makers = $payload->body ?? [];
-          \Drupal::logger('rep')->debug('Social makers count: @c', [
-            '@c' => is_array($makers) ? count($makers) : '(not array)',
-          ]);
-        }
-        else {
-          throw new \Exception("Social API returned HTTP {$status}");
+          // NEW: handle both array and object payloads
+          if (is_array($payload)) {
+            // Social returns a bare array
+            $makers = $payload;
+            \Drupal::logger('rep')->debug('Detected bare array payload, count: @c', ['@c' => count($makers)]);
+          }
+          elseif (is_object($payload) && isset($payload->body)) {
+            // Legacy‐style wrapper: { body: [...] }
+            $makers = is_array($payload->body)
+              ? $payload->body
+              : (is_string($payload->body)
+                  ? (json_decode($payload->body) ?: [])
+                  : []);
+            \Drupal::logger('rep')->debug('Detected wrapped payload, count: @c', ['@c' => count($makers)]);
+          }
+          else {
+            \Drupal::logger('rep')->warning('Unknown payload format: @t', ['@t' => gettype($payload)]);
+            $makers = [];
+          }
         }
       }
       catch (\Throwable $e) {
@@ -183,10 +186,10 @@ class SocialApiMakerController extends ControllerBase {
       $results[] = ['value'=>"$label [$uri]", 'label'=>$label];
     }
 
-    \Drupal::logger('rep')->debug('Final results array: @res', [
-      '@res' => print_r($results, TRUE),
-    ]);
+    \Drupal::logger('rep')->debug('Final makers count: @c', ['@c' => count($makers)]);
+    \Drupal::logger('rep')->debug('Final results array: @res', ['@res' => print_r($results, TRUE)]);
     return new JsonResponse($results);
+
   }
 
 }
