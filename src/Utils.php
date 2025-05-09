@@ -617,31 +617,58 @@ class Utils {
   /**
    * Recursively checks if an element has a superUri that is of type VSTOI::QUESTIONAIRE.
    */
+  // public static function hasQuestionnaireAncestor($uri) {
+  //   $api = \Drupal::service('rep.api_connector');
+  //   $rawResponse = $api->getUri($uri);
+  //   $obj = json_decode($rawResponse);
+
+  //   // Check if the response is valid and contains a body
+  //   if (!$obj || !isset($obj->body)) {
+  //       return false;
+  //   }
+
+  //   $result = $obj->body;
+
+  //   // If the current element is of type QUESTIONAIRE, return true
+  //   if (isset($result->superUri) && $result->superUri === VSTOI::QUESTIONNAIRE) {
+  //       return true;
+  //   }
+
+  //   // If there is a superUri, call the function recursively
+  //   if (!empty($result->superUri)) {
+  //       return self::hasQuestionnaireAncestor($result->superUri);
+  //   }
+
+  //   // If no QUESTIONAIRE was found in the hierarchy, return false
+  //   return false;
+  // }
   public static function hasQuestionnaireAncestor($uri) {
+    /** @var \Drupal\rep\ApiConnectorInterface $api */
     $api = \Drupal::service('rep.api_connector');
-    $rawResponse = $api->getUri($uri);
-    $obj = json_decode($rawResponse);
 
-    // Verifica se a resposta da API é válida e se contém um corpo
-    if (!$obj || !isset($obj->body)) {
-        return false;
+    // 1) Fetch raw response (string, array or stdClass)
+    $raw = $api->getUri($uri);
+
+    // 2) Normalize to an object (or array) and extract the “body”
+    $body = $api->parseObjectResponse($raw, 'getUri');
+    if (empty($body) || !is_object($body)) {
+      return FALSE;
     }
 
-    $result = $obj->body;
-
-    // Se o elemento atual for do tipo QUESTIONAIRE, retorna true
-    if (isset($result->superUri) && $result->superUri === VSTOI::QUESTIONNAIRE) {
-        return true;
+    // 3) If this node’s direct superUri *is* a questionnaire type, bingo.
+    if (($body->superUri ?? NULL) === VSTOI::QUESTIONNAIRE) {
+      return TRUE;
     }
 
-    // Se existir um superUri, chama a função recursivamente
-    if (!empty($result->superUri)) {
-        return self::hasQuestionnaireAncestor($result->superUri);
+    // 4) Otherwise, if there *is* a superUri, recurse.
+    if (!empty($body->superUri)) {
+      return self::hasQuestionnaireAncestor($body->superUri);
     }
 
-    // Se não encontrou nenhum QUESTIONAIRE na hierarquia, retorna false
-    return false;
+    // 5) Reached the root with no questionnaire found.
+    return FALSE;
   }
+
 
   public static function getLabelFromURI($text) {
     // Split the string at the "[" character.
