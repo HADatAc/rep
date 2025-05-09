@@ -354,9 +354,10 @@ rep.social_autocomplete:
   path: '/api/socialm/autocomplete/{entityType}'
   defaults:
     _controller: '\Drupal\rep\Controller\Social\SocialApiMakerController::handleAutocomplete'
+    _title: 'Social Autocomplete'
   requirements:
     _permission: 'access content'
-  methods: [GET]
+  methods: ['GET']
   options:
     _format: 'json'
-
+    _auth: ['oauth2']
