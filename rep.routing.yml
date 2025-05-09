@@ -359,5 +359,4 @@ rep.social_autocomplete:
   methods: [GET]
   options:
     _format: 'json'
-    # _auth: ['oauth2']
 
