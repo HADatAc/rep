@@ -20,10 +20,10 @@ class SocialApiMakerController extends ControllerBase {
 
     // 1) Read & sanitize the 'q' query param.
     $input = Xss::filter($request->query->get('q', ''));
-    \Drupal::logger('rep')->debug('Autocomplete @et called with q="@q"', [
-      '@et' => $entityType,
-      '@q'  => $input,
-    ]);
+    // \Drupal::logger('rep')->debug('Autocomplete @et called with q="@q"', [
+    //   '@et' => $entityType,
+    //   '@q'  => $input,
+    // ]);
     if ($input === '') {
       return new JsonResponse($results);
     }
@@ -47,12 +47,12 @@ class SocialApiMakerController extends ControllerBase {
       $makers = [];
     }
 
-    \Drupal::logger('rep')->debug('Legacy makers count: @c', ['@c' => count($makers)]);
+    // \Drupal::logger('rep')->debug('Legacy makers count: @c', ['@c' => count($makers)]);
 
     // 3) Se houver resultados legacy, ou social_conf OFF, devolve-os já.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
     if (!empty($makers) || !$socialEnabled) {
-      \Drupal::logger('rep')->debug('Returning legacy results (or social disabled).');
+      // \Drupal::logger('rep')->debug('Returning legacy results (or social disabled).');
       foreach ($makers as $m) {
         $label = $m->label ?? '';
         $uri   = $m->uri   ?? '';
@@ -62,13 +62,13 @@ class SocialApiMakerController extends ControllerBase {
     }
 
     // 4) Agora sim: fallback ao Social API porque legacy não devolveu nada.
-    \Drupal::logger('rep')->debug('No legacy results; using Social fallback.');
+    // \Drupal::logger('rep')->debug('No legacy results; using Social fallback.');
 
     // --- token/session logic (igual ao anterior) ---
     $session = \Drupal::request()->getSession();
     $token   = $session->get('oauth_access_token');
     $refreshToken = function() use ($session) {
-      \Drupal::logger('rep')->debug('Refreshing OAuth token...');
+      // \Drupal::logger('rep')->debug('Refreshing OAuth token...');
       $resp = call_user_func(
         \Drupal::service('controller_resolver')
           ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken')
@@ -104,10 +104,10 @@ class SocialApiMakerController extends ControllerBase {
       'offset'      => 0,
     ];
 
-    \Drupal::logger('rep')->debug('Social POST to @u with body: @b', [
-      '@u' => $url,
-      '@b' => print_r($body, TRUE),
-    ]);
+    // \Drupal::logger('rep')->debug('Social POST to @u with body: @b', [
+    //   '@u' => $url,
+    //   '@b' => print_r($body, TRUE),
+    // ]);
 
     $client  = \Drupal::httpClient();
     $options = [
@@ -122,7 +122,7 @@ class SocialApiMakerController extends ControllerBase {
     try {
       $response = $client->request('POST', $url, $options);
       $code     = $response->getStatusCode();
-      \Drupal::logger('rep')->debug('Social POST HTTP code: @c', ['@c' => $code]);
+      // \Drupal::logger('rep')->debug('Social POST HTTP code: @c', ['@c' => $code]);
 
       if ($code === 401) {
         $refreshToken();
@@ -131,7 +131,7 @@ class SocialApiMakerController extends ControllerBase {
         $options['json']['token']            = $newToken;
         $response = $client->request('POST', $url, $options);
         $code     = $response->getStatusCode();
-        \Drupal::logger('rep')->debug('Retry POST HTTP code: @c', ['@c' => $code]);
+        // \Drupal::logger('rep')->debug('Retry POST HTTP code: @c', ['@c' => $code]);
       }
 
       if ($code !== 200) {
@@ -139,7 +139,7 @@ class SocialApiMakerController extends ControllerBase {
       }
 
       $rawBody = $response->getBody()->getContents();
-      \Drupal::logger('rep')->debug('Social raw response body: @rb', ['@rb' => substr($rawBody, 0, 1000)]);
+      // \Drupal::logger('rep')->debug('Social raw response body: @rb', ['@rb' => substr($rawBody, 0, 1000)]);
 
       $payload = json_decode($rawBody, FALSE);
       if (is_array($payload)) {
@@ -154,7 +154,7 @@ class SocialApiMakerController extends ControllerBase {
         throw new \Exception('Unknown payload format');
       }
 
-      \Drupal::logger('rep')->debug('Social makers count: @c', ['@c' => count($makers)]);
+      // \Drupal::logger('rep')->debug('Social makers count: @c', ['@c' => count($makers)]);
     }
     catch (\Throwable $e) {
       \Drupal::logger('rep')->error('Social autocomplete failed: @m', ['@m' => $e->getMessage()]);
@@ -168,7 +168,7 @@ class SocialApiMakerController extends ControllerBase {
       $results[] = ['value' => "$label [$uri]", 'label' => $label];
     }
 
-    \Drupal::logger('rep')->debug('Returning @n suggestions', ['@n' => count($results)]);
+    // \Drupal::logger('rep')->debug('Returning @n suggestions', ['@n' => count($results)]);
     return new JsonResponse($results);
   }
 

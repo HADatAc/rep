@@ -7,7 +7,7 @@ use Drupal\rep\Vocabulary\REPGUI;
 class ListKeywordTypePage {
 
   public static function exec($elementtype, $page, $pagesize, $project = '_', $keyword = '_', $type = '_', $manageremail = '_', $status = '_') {
-    \Drupal::logger('rep')->debug('E='.$elementtype.', PR='.$project.', K='.$keyword.', T='.$type.', M='.$manageremail.', S='.$status.', P='.$page.', O='.$pagesize);
+    // \Drupal::logger('rep')->debug('E='.$elementtype.', PR='.$project.', K='.$keyword.', T='.$type.', M='.$manageremail.', S='.$status.', P='.$page.', O='.$pagesize);
     if ($elementtype == NULL || $page == NULL || $pagesize == NULL) {
         $resp = array();
         return $resp;
