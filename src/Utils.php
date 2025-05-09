@@ -1213,13 +1213,13 @@ class Utils {
   public static function getAPIImage($uri, $apiImage, $placeholder_image) {
     // 1) No image path: placeholder.
     if (empty($apiImage)) {
-      \Drupal::logger('rep')->debug('getAPIImage: no $apiImage, using placeholder.');
+      // \Drupal::logger('rep')->debug('getAPIImage: no $apiImage, using placeholder.');
       return $placeholder_image;
     }
 
     // 2) If it's already a full URL, return it.
     if (strpos($apiImage, 'http') === 0) {
-      \Drupal::logger('rep')->debug('getAPIImage: apiImage is full URL, returning it: @url', ['@url'=>$apiImage]);
+      // \Drupal::logger('rep')->debug('getAPIImage: apiImage is full URL, returning it: @url', ['@url'=>$apiImage]);
       return $apiImage;
     }
 
@@ -1227,13 +1227,13 @@ class Utils {
     $api = \Drupal::service('rep.api_connector');
 
     // 3) Attempt legacy download.
-    \Drupal::logger('rep')->debug('getAPIImage: attempting legacy download for @f', ['@f'=>$apiImage]);
+    // \Drupal::logger('rep')->debug('getAPIImage: attempting legacy download for @f', ['@f'=>$apiImage]);
     $response = $api->downloadFile($uri, $apiImage);
 
     // Inspect legacy response if present.
     if ($response && method_exists($response, 'getStatusCode')) {
       $status = $response->getStatusCode();
-      \Drupal::logger('rep')->debug('Legacy downloadFile returned HTTP @s', ['@s'=>$status]);
+      // \Drupal::logger('rep')->debug('Legacy downloadFile returned HTTP @s', ['@s'=>$status]);
     }
 
     // 4) If legacy failed (no object or non-200), try Social fallback.
@@ -1242,14 +1242,14 @@ class Utils {
       ! $response
       || (method_exists($response, 'getStatusCode') && $status !== 200)
     ) {
-      \Drupal::logger('rep')->debug('getAPIImage: legacy failed, social_enabled=@e', ['@e'=> $socialEnabled?'yes':'no']);
+      // \Drupal::logger('rep')->debug('getAPIImage: legacy failed, social_enabled=@e', ['@e'=> $socialEnabled?'yes':'no']);
       if ($socialEnabled) {
-        \Drupal::logger('rep')->debug('getAPIImage: attempting social download for @f', ['@f'=>$apiImage]);
+        // \Drupal::logger('rep')->debug('getAPIImage: attempting social download for @f', ['@f'=>$apiImage]);
         $response = $api->downloadFileSocial($uri, $apiImage);
         if ($response && method_exists($response, 'getStatusCode')) {
-          \Drupal::logger('rep')->debug('Social downloadFileSocial returned HTTP @s', [
-            '@s' => $response->getStatusCode(),
-          ]);
+          // \Drupal::logger('rep')->debug('Social downloadFileSocial returned HTTP @s', [
+          //   '@s' => $response->getStatusCode(),
+          // ]);
         }
       }
     }
@@ -1279,12 +1279,12 @@ class Utils {
         $mime = 'application/octet-stream';
       }
 
-      \Drupal::logger('rep')->debug('getAPIImage: inlining image, MIME: @m', ['@m'=>$mime]);
+      // \Drupal::logger('rep')->debug('getAPIImage: inlining image, MIME: @m', ['@m'=>$mime]);
       return 'data:' . $mime . ';base64,' . base64_encode($content);
     }
 
     // 6) On any failure, log and return placeholder.
-    \Drupal::logger('rep')->warning('getAPIImage: all download attempts failed for @f, using placeholder.', ['@f'=>$apiImage]);
+    // \Drupal::logger('rep')->warning('getAPIImage: all download attempts failed for @f, using placeholder.', ['@f'=>$apiImage]);
     return $placeholder_image;
   }
 
