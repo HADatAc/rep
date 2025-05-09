@@ -647,6 +647,9 @@ class Utils {
     $api = \Drupal::service('rep.api_connector');
 
     // 1) Fetch raw response (string, array or stdClass)
+    if (strpos($uri, 'http') !== 0) {
+      return FALSE;
+    }
     $raw = $api->getUri($uri);
 
     // 2) Normalize to an object (or array) and extract the “body”

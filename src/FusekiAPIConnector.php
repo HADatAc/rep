@@ -2074,9 +2074,9 @@ class FusekiAPIConnector {
     // 5) Now decode the JSON string.
     $obj = json_decode($response);
     if ($obj === NULL) {
-      \Drupal::messenger()->addError(t('API service has failed with following RAW message: [@raw]', [
-        '@raw' => $response,
-      ]));
+      // \Drupal::messenger()->addError(t('API service has failed with following RAW message: [@raw]', [
+      //   '@raw' => $response,
+      // ]));
       return NULL;
     }
 
