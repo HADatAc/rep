@@ -2038,6 +2038,7 @@ class FusekiAPIConnector {
   //   \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
   //   return NULL;
   // }
+
   public function parseObjectResponse($response, $methodCalled) {
     // 1) Any prior connection or HTTP error?
     if ($this->error !== NULL) {
