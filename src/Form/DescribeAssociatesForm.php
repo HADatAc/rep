@@ -24,15 +24,15 @@
  class DescribeAssociatesForm extends FormBase {
 
   protected $element;
-  
+
     public function getElement() {
       return $this->element;
     }
-  
+
     public function setElement($object) {
-      return $this->element = $object; 
+      return $this->element = $object;
     }
-  
+
     /**
      * {@inheritdoc}
      */
@@ -60,7 +60,7 @@
           $this->setElement($api->parseObjectResponse($finalUri,'getUri'));
           if ($this->getElement() != NULL) {
             $objectProperties = GenericObject::inspectObject($this->getElement());
-            //dpm($objectProperties);
+            // dpm($objectProperties);
             //dpm($this->getElement());
           }
         }
@@ -71,9 +71,8 @@
         ];
 
         foreach ($objectProperties['objects'] as $propertyName => $propertyValue) {
-
           // PROCESS EMBEDDED OBJECTS
-          if ($propertyName === 'hasAddress') {  
+          if ($propertyName === 'hasAddress') {
 
             $this->processPropertyAddress($propertyValue, $form, $form_state);
 
@@ -122,7 +121,7 @@
 
         if ($this->getElement()->hascoTypeUri === VSTOI::DEPLOYMENT) {
           AssocDeployment::process($this->getElement(), $form, $form_state);
-        } else if ($this->getElement()->hascoTypeUri === FOAF::ORGANIZATION) {
+        } else if ($this->getElement()->hascoTypeUri === SCHEMA::ORGANIZATION) {
           AssocOrganization::process($this->getElement(), $form, $form_state);
         } else if ($this->getElement()->hascoTypeUri === SCHEMA::PLACE) {
           AssocPlace::process($this->getElement(), $form, $form_state);
@@ -140,34 +139,53 @@
           $this->processClass($form, $form_state);
         }
 
-        return $form;        
+        return $form;
     }
 
     public function processPropertyAddress($addressObject, array &$form, FormStateInterface $form_state) {
       $addressProperties = GenericObject::inspectObject($addressObject);
-      $form['beginAddress'] = [
+      $form['labelAddress'] = [
         '#type' => 'markup',
-        '#markup' => $this->t("<b>Postal Address</b>:<br><ul>"),
+        '#markup' => $this->t("<b>Postal Address</b>:<br>"),
       ];
-      $excludedLiterals = ['label','typeLabel','hascoTypeLabel'];
-      foreach ($addressProperties['literals'] as $propertyNameAddress => $propertyValueAddress) {
-        if (!in_array($propertyNameAddress,$excludedLiterals)) {
-          $form[$propertyNameAddress] = [
-            '#type' => 'markup',
-            '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . $propertyValueAddress. "<br>"),
-          ];
-        }
-      }
-      foreach ($addressProperties['objects'] as $propertyNameAddress => $propertyValueAddress) {
-        $form[$propertyNameAddress] = [
-          '#type' => 'markup',
-          '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . Utils::link($propertyValueAddress->label,$propertyValueAddress->uri) . "<br>"),
-        ];
-      }
-      $form['endAddress'] = [
+
+      // dpm($addressProperties);
+      // LETS BUILD NAD ADDRESS
+      $form['fullAddress'] = [
         '#type' => 'markup',
-        '#markup' => $this->t("</ul>"),
+        '#markup' => $this->t('<ul><b>'
+          . $addressProperties['literals']['hasStreetAddress'] . '<br />'
+          . $addressProperties['literals']['hasPostalCode'] . ' '
+          . Utils::link($addressProperties['objects']['hasAddressLocality']->label, $addressProperties['objects']['hasAddressLocality']->uri) . ', '
+          . Utils::link($addressProperties['objects']['hasAddressRegion']->label, $addressProperties['objects']['hasAddressRegion']->uri) . ' - '
+          . Utils::link($addressProperties['objects']['hasAddressCountry']->label, $addressProperties['objects']['hasAddressCountry']->uri)
+          .'</b></ul><br />'
+        ),
       ];
+
+      // $form['endAddress'] = [
+      //   '#type' => 'markup',
+      //   '#markup' => $this->t("<ul>"),
+      // ];
+      // $excludedLiterals = ['label','typeLabel','hascoTypeLabel', 'hasStatus'];
+      // foreach ($addressProperties['literals'] as $propertyNameAddress => $propertyValueAddress) {
+      //   if (!in_array($propertyNameAddress,$excludedLiterals) && $propertyNameAddress !== 'hasStatus') {
+      //     $form[$propertyNameAddress] = [
+      //       '#type' => 'markup',
+      //       '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . $propertyValueAddress. "<br>"),
+      //     ];
+      //   }
+      // }
+      // foreach ($addressProperties['objects'] as $propertyNameAddress => $propertyValueAddress) {
+      //   $form[$propertyNameAddress] = [
+      //     '#type' => 'markup',
+      //     '#markup' => $this->t("<b>" . $propertyNameAddress . "</b>: " . Utils::link($propertyValueAddress->label,$propertyValueAddress->uri) . "<br>"),
+      //   ];
+      // }
+      // $form['endAddress'] = [
+      //   '#type' => 'markup',
+      //   '#markup' => $this->t("</ul>"),
+      // ];
     }
 
     public function processClass(array &$form, FormStateInterface $form_state) {
@@ -176,18 +194,18 @@
         $hascoTypeRaw = $api->getHascoType($this->getElement()->uri);
         if ($hascoTypeRaw != NULL) {
           $hascoTypeJSON = $api->parseObjectResponse($hascoTypeRaw,'hascoTypeRaw');
-          $response = json_decode($hascoTypeJSON, true);  
-          $hascoType = $response['hascoType'] ?? null;      
+          $response = json_decode($hascoTypeJSON, true);
+          $hascoType = $response['hascoType'] ?? null;
           if ($hascoType != NULL && $hascoType == VSTOI::PLATFORM) {
             AssocPlatform::process($this->getElement(), $form, $form_state);
           }
         }
       }
     }
-     
+
     public function validateForm(array &$form, FormStateInterface $form_state) {
     }
-     
+
     /**
      * {@inheritdoc}
      */

@@ -10,6 +10,8 @@
  use Drupal\Core\Form\ConfigFormBase;
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\Core\Url;
+ use Drupal\rep\Constant;
+
 
  class REPSettingsForm extends ConfigFormBase {
 
@@ -65,10 +67,31 @@
             ],
         ];
 
+        $form['sync_with_sagres'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Synchronize Users with Sagres'),
+            '#name' => 'sync_sagres',
+            '#attributes' => [
+                'class' => ['btn', 'btn-warning'],
+            ],
+        ];
+
         $form['rep_home'] = [
             '#type' => 'checkbox',
             '#title' => 'Do you want rep to be the home (first page) of the Drupal?',
             '#default_value' => $home,
+        ];
+
+        $form['sagres_conf'] = [
+            '#type' => 'checkbox',
+            '#title' => 'Do you want to connect this repository to Sagres?',
+            '#default_value' => $config->get("sagres_conf"),
+        ];
+
+        $form['social_conf'] = [
+            '#type' => 'checkbox',
+            '#title' => 'Do you want to connect this repository to a Social Knowledge Graph?',
+            '#default_value' => $config->get("social_conf"),
         ];
 
         $shortName = "";
@@ -160,6 +183,13 @@
             '#default_value' => $description,
         ];
 
+        $form['sagres_base_url'] = [
+            '#type' => 'textfield',
+            '#title' => 'Sagres Base URL',
+            '#default_value' => $config->get("sagres_base_url") ?? 'https://52.214.194.214',
+            '#description' => 'Sagres Base URL for Users Synchronization.',
+        ];
+        
         $form['api_url'] = [
             '#type' => 'textfield',
             '#title' => 'rep API Base URL',
@@ -180,7 +210,7 @@
             '#title' => 'JWT Secret',
             '#key_filters' => ['type' => 'authentication'],
             '#default_value' => $config->get("jwt_secret"),
-        ];
+        ];       
 
         $form['filler_1'] = [
             '#type' => 'item',
@@ -235,7 +265,7 @@
     public function submitForm(array &$form, FormStateInterface $form_state) {
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
-
+        \Drupal::logger('rep')->notice('Botão pressionado: ' . $button_name);
         if ($button_name === 'namespace') {
           $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
           return;
@@ -246,10 +276,20 @@
           return;
         }
 
+        if ($button_name === 'sync_sagres') {
+            \Drupal::logger('rep')->notice('Chamando syncUsersWithSagres()');
+            $this->syncUsersWithSagres();
+            $messenger = \Drupal::service('messenger');
+            $messenger->addMessage($this->t('User synchronization with Sagres completed!'));
+            return;
+        }        
+
           $config = $this->config(static::CONFIGNAME);
 
         //save confs
         $config->set("rep_home", $form_state->getValue('rep_home'));
+        $config->set('sagres_conf', $form_state->getValue('sagres_conf'));
+        $config->set('social_conf', $form_state->getValue('social_conf'));
         $config->set("site_label", trim($form_state->getValue('site_label')));
         $config->set("site_name", trim($form_state->getValue('site_name')));
         $config->set("repository_domain_url", trim($form_state->getValue('repository_domain_url')));
@@ -258,10 +298,11 @@
         $config->set("repository_namespace_source_mime", trim($form_state->getValue('repository_namespace_source_mime')));
         $config->set("repository_namespace_source", trim($form_state->getValue('repository_namespace_source')));
         $config->set("repository_description", trim($form_state->getValue('repository_description')));
+        $config->set("sagres_base_url", $form_state->getValue('sagres_base_url'));
         $config->set("api_url", $form_state->getValue('api_url'));
         $config->set("jwt_secret", $form_state->getValue('jwt_secret'));
         $config->save();
-
+ 
         //site name
         $configdrupal = \Drupal::service('config.factory')->getEditable('system.site');
         $configdrupal->set('name', $form_state->getValue('site_name'));
@@ -270,28 +311,29 @@
         //update Repository configuration
         $api = \Drupal::service('rep.api_connector');
 
+        $resp = '';
         //label
-        $api->repoUpdateLabel(
+        $resp .= $api->repoUpdateLabel(
             $form_state->getValue('api_url'),
             $form_state->getValue('site_label'));
 
         //title
-        $api->repoUpdateTitle(
+        $resp .= $api->repoUpdateTitle(
             $form_state->getValue('api_url'),
             $form_state->getValue('site_name'));
 
         //domain URL
-        $api->repoUpdateURL(
+        $resp .= $api->repoUpdateURL(
             $form_state->getValue('api_url'),
             $form_state->getValue('repository_domain_url'));
 
         //description
-        $api->repoUpdateDescription(
+        $resp .= $api->repoUpdateDescription(
             $form_state->getValue('api_url'),
             $form_state->getValue('repository_description'));
 
         //namespace
-        $api->repoUpdateNamespace(
+        $resp .= $api->repoUpdateNamespace(
             $form_state->getValue('api_url'),
             $form_state->getValue('repository_namespace_prefix'),
             $form_state->getValue('repository_namespace_url'),
@@ -304,11 +346,123 @@
         //  ->save();
 
         $messenger = \Drupal::service('messenger');
-        $messenger->addMessage($this->t('Your new rep configuration has been saved'));
+        if ($resp !== '') {
+          $messenger->addMessage($this->t('Your new rep configuration has been saved'));
+        } else {
+          $messenger->addError($this->t('Failed to set rep configuration. Message: [@resp]', ['@resp' => $resp]));
+        }
 
         $url = Url::fromRoute('rep.repo_info');
         $form_state->setRedirectUrl($url);
 
     }
 
- }
+    private function syncUsersWithSagres() {
+        $config = $this->config(static::CONFIGNAME);
+        $sagres_base_url = $config->get("sagres_base_url");
+        $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
+    
+        if (!$sagres_token) {
+            \Drupal::logger('rep')->error("Token não encontrado na sessão.");
+            return;
+        }
+
+        $repo_instance = \Drupal::request()->getHost();
+        \Drupal::logger('rep')->notice('Iniciando sincronização de utilizadores...');
+
+        \Drupal::logger('rep')->notice("Sagres Base Url: " . $sagres_base_url);
+
+        // Obter a lista de usuários do sguser de uma só vez
+        try {
+            $response = \Drupal::httpClient()->get("{$sagres_base_url}/sguser/account/list", [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'Authorization' => "Bearer {$sagres_token}"
+                ],
+            ]);
+            $sguser_users = json_decode($response->getBody(), true);
+            \Drupal::logger('rep')->notice('Lista de utilizadores obtida com sucesso');
+        } catch (\Exception $e) {
+            \Drupal::logger('rep')->error("Erro ao obter lista de utilizadores do sguser: " . $e->getMessage());
+            return;
+        }
+    
+        // Criar um mapa de usuários do sguser para facilitar a comparação
+        $sguser_map = [];
+        foreach ($sguser_users as $user) {
+            $sguser_map[$user['acc_id']] = $user;
+        }
+    
+        $users_created = 0;
+        $users_updated = 0;
+        
+        $users = \Drupal::entityTypeManager()->getStorage('user')->loadMultiple();
+    
+        foreach ($users as $user) {
+
+            if ($user->id() == 0 || $user->isBlocked()) {
+                \Drupal::logger('rep')->notice("Utilizador ignorado: " . $user->id());
+                continue;
+            }
+
+            \Drupal::logger('rep')->notice("Processando utilizador: " . $user->getEmail());
+
+            $user_data = [
+                'acc_id' => $user->id(),
+                'acc_repo_instance' => $repo_instance,
+                'acc_name' => $user->getDisplayName(),
+                'acc_email' => $user->getEmail(),
+                'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $user->id(),
+            ];
+    
+            if (isset($sguser_map[$user->id()])) {
+                // Usuário já existe no sguser, verificar necessidade de atualização
+                $existing_user = $sguser_map[$user->id()];
+    
+                if ($existing_user['acc_name'] !== $user_data['acc_name'] || $existing_user['acc_email'] !== $user_data['acc_email']) {
+                    try {
+                        \Drupal::httpClient()->patch("{$sagres_base_url}/sguser/account/update", [
+                            'json' => $user_data,
+                            'headers' => [
+                                'Content-Type' => 'application/json',
+                                'Authorization' => "Bearer {$sagres_token}"
+                            ],
+                        ]);
+
+                        if ($response->getStatusCode() === 200) {
+                            $users_updated++;
+                        } else {
+                            \Drupal::logger('rep')->error("Erro ao atualizar utilizador {$user->id()}. Status: " . $response->getStatusCode());
+                        }
+
+                    } catch (\Exception $e) {
+                        \Drupal::logger('rep')->error("Erro ao atualizar utilizador {$user->id()}: " . $e->getMessage());
+                    }
+                }
+
+            } else {
+
+                try {
+                    \Drupal::httpClient()->post("{$sagres_base_url}/sguser/account/add", [
+                        'json' => $user_data,
+                        'headers' => [
+                            'Content-Type' => 'application/json',
+                            'Authorization' => "Bearer {$sagres_token}"
+                        ],
+                    ]);
+
+                    if ($response->getStatusCode() === 201) {
+                        $users_created++;
+                    } else {
+                        \Drupal::logger('rep')->error("Erro ao criar utilizador {$user->id()}. Status: " . $response->getStatusCode());
+                    }
+
+                } catch (\Exception $e) {
+                    \Drupal::logger('rep')->error("Erro ao criar utilizador {$user->id()}: " . $e->getMessage());
+                }
+            }
+        }
+    
+        \Drupal::messenger()->addMessage("Sincronização concluída: $users_created utilizadores criados, $users_updated atualizados.");
+    }
+}

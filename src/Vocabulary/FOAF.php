@@ -11,8 +11,8 @@
      */
 
     const GROUP                           = FOAF::FOAF . "Group";
-    const ORGANIZATION                    = FOAF::FOAF . "Organization";
-    const PERSON                          = FOAF::FOAF . "Person";
+    //const ORGANIZATION                    = FOAF::FOAF . "Organization";
+    //const PERSON                          = FOAF::FOAF . "Person";
 
     /*
      *    PROPERTIES

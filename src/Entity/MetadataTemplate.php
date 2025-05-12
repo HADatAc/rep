@@ -97,8 +97,7 @@ class MetadataTemplate
   private static function generateOutputWithMode($elementType, $list, $mode)
   {
 
-    //dpm($list);
-
+    $useremail = \Drupal::currentUser()->getEmail();
 
     // ROOT URL
     $root_url = \Drupal::request()->getBaseUrl();
@@ -174,7 +173,7 @@ class MetadataTemplate
           }
         }
       }
-      
+
       $encodedUri = rawurlencode(rawurlencode($element->uri));
       if ($mode == 'normal') {
         $output[$element->uri] = [
@@ -222,9 +221,9 @@ class MetadataTemplate
         // Criar os links adicionais
         // Verificar se $view_da, $edit_da, $delete_da, $download_da são URLs válidas
 
-        $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<none>');
-        $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<none>');
-        $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<none>');
+        $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<nolink>');
+        $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<nolink>');
+        $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<nolink>');
         $download_da = '/download-file/' . base64_encode($element->hasDataFile->filename) . '/' . base64_encode($element->isMemberOf->uri) . '/da';
 
         $view_bto = Link::fromTextAndUrl(
@@ -236,45 +235,47 @@ class MetadataTemplate
           'style' => 'margin-right: 10px;',
         ];
 
-        $edit_bto = Link::fromTextAndUrl(
-          Markup::create('<i class="fa-solid fa-pen-to-square"></i>'),
-          $edit_da
-        )->toRenderable();
-        $edit_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'btn-secondary'],
-          'style' => 'margin-right: 10px;',
-        ];
+        if ($element->hasSIRManagerEmail === $useremail) {
+          $edit_bto = Link::fromTextAndUrl(
+            Markup::create('<i class="fa-solid fa-pen-to-square"></i>'),
+            $edit_da
+          )->toRenderable();
+          $edit_bto['#attributes'] = [
+            'class' => ['btn', 'btn-sm', 'btn-secondary'],
+            'style' => 'margin-right: 10px;',
+          ];
+        }
 
-        // Criar a URL real do botão de delete (use o método toString)
+        // Dete button
         $data_url = $delete_da instanceof Url ? $delete_da->toString() : '#';
 
-        // Criar o botão de delete manualmente
-        $delete_bto = [
-          '#markup' => Markup::create('<a href="#" class="btn btn-sm btn-secondary btn-danger delete-button" 
-            data-url="' . $data_url . '" 
-            onclick="return false;">
-            <i class="fa-solid fa-trash-can"></i>
-            </a>'),
-        ];
+        if ($element->hasSIRManagerEmail === $useremail) {
+          $delete_bto = [
+            '#markup' => Markup::create('<a href="#" class="btn btn-sm btn-secondary btn-danger delete-button"
+              data-url="' . $data_url . '"
+              onclick="return false;">
+              <i class="fa-solid fa-trash-can"></i>
+              </a>'),
+          ];
 
-        $ingest_bto = Link::fromTextAndUrl(
-          Markup::create('<i class="fa-solid fa-download"></i>'),
-          $view_da
-        )->toRenderable();
-        $ingest_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'btn-secondary', !$element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
-          'style' => 'margin-right: 10px;',
-        ];
+          $ingest_bto = Link::fromTextAndUrl(
+            Markup::create('<i class="fa-solid fa-download"></i>'),
+            $view_da
+          )->toRenderable();
+          $ingest_bto['#attributes'] = [
+            'class' => ['btn', 'btn-sm', 'btn-secondary', !$element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
+            'style' => 'margin-right: 10px;',
+          ];
 
-        $uningest_bto = Link::fromTextAndUrl(
-          Markup::create('<i class="fa-solid fa-upload"></i>'),
-          $view_da
-        )->toRenderable();
-        $uningest_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
-          'style' => 'margin-right: 10px;',
-        ];
-
+          $uningest_bto = Link::fromTextAndUrl(
+            Markup::create('<i class="fa-solid fa-upload"></i>'),
+            $view_da
+          )->toRenderable();
+          $uningest_bto['#attributes'] = [
+            'class' => ['btn', 'btn-sm', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
+            'style' => 'margin-right: 10px;',
+          ];
+        }
 
         $download_bto = [
           '#type' => 'link',
@@ -359,90 +360,68 @@ class MetadataTemplate
     }
   }
 
-  public static function generateOutputAsCards($elementType, $list)
-  {
-    $output = [];
+  public static function generateOutputAsCards($elementType, $list) {
 
-    // ROOT URL
-    $root_url = \Drupal::request()->getBaseUrl();
+    $useremail = \Drupal::currentUser()->getEmail();
 
-    if ($list == NULL) {
-      return $output;
+    $edit_da = NULL;
+    $delete_da = NULL;
+    $download_da = NULL;
+    $ingest_da = NULL;
+    $uningest_da = NULL;
+
+    $cards = [];
+
+    // Return an empty array if the list is empty.
+    if (empty($list)) {
+      return [];
     }
 
-    $index = 0;
-    foreach ($list as $element) {
-      $index++;
-      $uri = $element->uri ?? '';
+    // Get the current request URL for use in links.
+    $previousUrl = base64_encode(\Drupal::request()->getRequestUri());
+
+    // Process each element in the list.
+    foreach ($list as $index => $element) {
+      // Basic values.
+      $uri = isset($element->uri) ? $element->uri : '';
       $label = $element->label ?? '';
       $title = $element->title ?? '';
 
+      // Determine the URL if the URI is complete.
+      $url = '';
       $urlComponents = parse_url($uri);
-
       if (isset($urlComponents['scheme']) && isset($urlComponents['host'])) {
         $url = Url::fromUri($uri);
-      } else {
-        $url = '';
       }
 
-      if ($element->uri != NULL && $element->uri != "") {
-        $previousUrl = base64_encode(\Drupal::request()->getRequestUri());
-
-        $view_da_str = base64_encode(Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($element->uri)])->toString());
-        $view_da_route = 'rep.describe_element';
-        $view_da = Url::fromRoute('rep.back_url', [
-          'previousurl' => $previousUrl,
-          'currenturl' => $view_da_str,
-          'currentroute' => 'rep.describe_element'
-        ]);
-
-        $edit_da_str = base64_encode(Url::fromRoute('rep.edit_mt', [
-          'elementtype' => 'da',
-          'elementuri' => base64_encode($element->uri),
-          'fixstd' => 'T',
-        ])->toString());
-        $edit_da = Url::fromRoute('rep.back_url', [
-          'previousurl' => $previousUrl,
-          'currenturl' => $edit_da_str,
-          'currentroute' => 'rep.edit_mt'
-        ]);
-
-        $delete_da = Url::fromRoute('rep.delete_element', [
-          'elementtype' => 'da',
-          'elementuri' => base64_encode($element->uri),
-          'currenturl' => $previousUrl,
-        ]);
-
-        $download_da = Url::fromRoute('rep.datafile_download', [
-          'datafileuri' => base64_encode($element->hasDataFile->uri),
-        ]);
-      }
-
-      if (
-        $element->hasDataFile->filename != NULL &&
-        $element->hasDataFile->filename != ''
-      ) {
+      // Process file data.
+      $filename = '';
+      if (isset($element->hasDataFile) && !empty($element->hasDataFile->filename)) {
         $filename = $element->hasDataFile->filename;
       }
-      if (
-        $element->hasDataFile->fileStatus != NULL &&
-        $element->hasDataFile->fileStatus != ''
-      ) {
+      $filestatus = '';
+      if (isset($element->hasDataFile) && !empty($element->hasDataFile->fileStatus)) {
         if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
           $filestatus = '<b><font style="color:#ff0000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
-        } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED) {
+        }
+        else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED) {
           $filestatus = '<b><font style="color:#008000;">' . Constant::FILE_STATUS_PROCESSED . '</font></b>';
-        } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING) {
+        }
+        else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING) {
           $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING . '</font></b>';
-        } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED_STD) {
+        }
+        else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED_STD) {
           $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_PROCESSED_STD . '</font></b>';
-        } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING_STD) {
+        }
+        else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING_STD) {
           $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING_STD . '</font></b>';
-        } else {
+        }
+        else {
           $filestatus = ' ';
         }
       }
 
+      // Documentation data.
       $dd = '(none)';
       if (isset($element->hasDD) && $element->hasDD != NULL) {
         $dd = $element->hasDD->label . ' (' . $element->hasDD->hasDataFile->filename . ') [<b>' . $element->hasDD->hasDataFile->fileStatus . '</b>] ';
@@ -452,102 +431,209 @@ class MetadataTemplate
         $sdd = $element->hasSDD->label . ' (' . $element->hasSDD->hasDataFile->filename . ') [<b>' . $element->hasSDD->hasDataFile->fileStatus . '</b>] ';
       }
 
-      $properties = ' ';
-      if ($elementType == 'da') {
-        $properties = '<p class="card-text">' .
-          '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' .
-          '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' [' . $filestatus . ']<br><br>' .
-          'Documentation: <br>' .
-          '&nbsp;&nbsp;&nbsp;<b>Data Dictionary</b>: ' . $dd . '<br>' .
-          '&nbsp;&nbsp;&nbsp;<b>Semantic Data Dictionary</b>: ' . $sdd . '<br>' .
-          '</p>';
-      } else {
-        $properties = '<p class="card-text">' .
-          '&nbsp;&nbsp;&nbsp;<b>URI</b>: ' . $uri . '<br>' .
-          '&nbsp;&nbsp;&nbsp;<b>File Name</b>: ' . $filename . ' (' . $filestatus . ')<br>' .
-          '</p>';
+      if (is_string($uri) && !empty($uri)) {
+        $url = Url::fromUserInput(REPGUI::DESCRIBE_PAGE . base64_encode($uri));
+        $url->setOption('attributes', ['target' => '_new']);
+        $link = Link::fromTextAndUrl($uri, $url)->toString();
       }
 
-      $ingest_da = '';
-      $uningest_da = '';
+      // Build the properties string based on the element type.
+      if ($elementType == 'da') {
+        $properties = t('<p class="card-text">' .
+          '<b>URI</b>: ' . $link . '<br>' .
+          '<b>File Name</b>: ' . $filename . ' [' . $filestatus . ']<br><br>' .
+          'Documentation: <br>' .
+          '<b>Data Dictionary</b>: ' . $dd . '<br>' .
+          '<b>Semantic Data Dictionary</b>: ' . $sdd . '<br>' .
+          '</p>');
+      }
+      else {
+        $properties = t('<p class="card-text">' .
+          '<b>URI</b>: ' . $link . '<br>' .
+          '<b>File Name</b>: ' . $filename . ' (' . $filestatus . ')<br>' .
+          '</p>');
+      }
 
-      $output[$index] = [
-        '#type' => 'container', // Use container instead of html_tag for better semantics
+      // Generate action links.
+      // Link for View.
+      $view_da_str = base64_encode(Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($uri)])->toString());
+      $view_da = Url::fromRoute('rep.back_url', [
+        'previousurl' => $previousUrl,
+        'currenturl' => $view_da_str,
+        'currentroute' => 'rep.describe_element'
+      ]);
+
+      // Link for Edit.
+      // if ($element->hasSIRManagerEmail === $useremail) {
+      //   $edit_da_str = base64_encode(Url::fromRoute('rep.edit_mt', [
+      //     'elementtype' => 'da',
+      //     'elementuri' => base64_encode($uri),
+      //     'fixstd' => 'T',
+      //   ])->toString());
+      //   $edit_da = Url::fromRoute('rep.back_url', [
+      //     'previousurl' => $previousUrl,
+      //     'currenturl' => $edit_da_str,
+      //     'currentroute' => 'rep.edit_mt'
+      //   ]);
+      // }
+
+      // Link for Delete.
+      // if ($element->hasSIRManagerEmail === $useremail) {
+      //   $delete_da = Url::fromRoute('rep.delete_element', [
+      //     'elementtype' => 'da',
+      //     'elementuri' => base64_encode($uri),
+      //     'currenturl' => $previousUrl,
+      //   ]);
+      // }
+
+      // Link for Download.
+      $download_da = Url::fromRoute('rep.datafile_download', [
+        'datafileuri' => isset($element->hasDataFile) ? base64_encode($element->hasDataFile->uri) : '',
+      ]);
+
+      // Create the card outer container.
+      $card = [
+        '#type' => 'container',
         '#attributes' => [
-          'class' => ['card', 'mb-3'],
+          'class' => ['col-md-4'],
+          'id' => 'card-item-' . md5($uri),
         ],
-        '#prefix' => '<div class="col-md-6">',
-        '#suffix' => '</div>',
-        'card_body_' . $index => [
-          '#type' => 'container', // Use container for the card body
+      ];
+
+      // Card inner container.
+      $card['card'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['card', 'mb-3']],
+      ];
+
+      // Card header.
+      $card['card']['header'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['card-header', 'mb-0'],
+          'style' => 'margin-bottom:0!important;',
+        ],
+        '#markup' => '<h5>' . $label . '</h5>',
+      ];
+
+      // Set the image: if an image exists in the element, use it; otherwise, use a placeholder.
+      if (isset($element->hasImageUri) && !empty($element->hasImageUri)) {
+        $image_uri = $element->hasImageUri;
+      }
+      else {
+        $image_uri = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/std_placeholder.png';
+      }
+
+      // Card body: divided into a row with a single column for details.
+      $card['card']['body'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['card-body', 'mb-0'],
+          'style' => 'margin-bottom:0!important;',
+        ],
+        'row' => [
+          '#type' => 'container',
           '#attributes' => [
-            'class' => ['card-body'],
+            'class' => ['row'],
+            'style' => 'margin-bottom:0!important;',
           ],
-          'title' => [
-            '#markup' => '<h5 class="card-title">' . $label . '</h5><br>',
+          // Details column.
+          'text_column' => [
+            '#type' => 'container',
+            '#attributes' => [
+              'class' => ['col-md-12'],
+              'style' => 'margin-bottom:0!important;',
+            ],
+            'text' => [
+              '#markup' => $properties,
+            ],
           ],
-          'text' => [
-            '#markup' => $properties,
-          ],
-          'link1_' . $index => [
+        ],
+      ];
+
+      // Card footer: action buttons.
+      $card['card']['footer'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['card-footer', 'text-right', 'd-flex', 'justify-content-end'],
+          'style' => 'margin-bottom:0!important;',
+        ],
+        'actions' => [
+          'link1' => [
             '#type' => 'link',
             '#title' => Markup::create('<i class="fa-solid fa-eye"></i> View'),
             '#url' => $view_da,
             '#attributes' => [
-              'class' => ['btn', 'btn-sm', 'btn-secondary'],
-              'style' => 'margin-right: 10px;',
+              'class' => ['btn', 'btn-sm', 'btn-secondary', 'mx-1'],
+              'target' => '_new',
             ],
           ],
-          'link2_' . $index => [
+          'link2' => [
             '#type' => 'link',
             '#title' => Markup::create('<i class="fa-solid fa-pen-to-square"></i> Edit'),
             '#url' => $edit_da,
+            '#access' => !is_null($edit_da), // Hide if not set
             '#attributes' => [
-              'class' => ['btn', 'btn-sm', 'btn-secondary'],
-              'style' => 'margin-right: 10px;',
+              'class' => ['btn', 'btn-sm', 'btn-secondary', 'mx-1'],
             ],
           ],
-          'link3_' . $index => [
+          'link3' => [
             '#type' => 'link',
             '#title' => Markup::create('<i class="fa-solid fa-trash-can"></i> Delete'),
             '#url' => $delete_da,
+            '#access' => !is_null($delete_da), // Hide if not set
             '#attributes' => [
+              'class' => ['btn', 'btn-sm', 'btn-secondary', 'btn-danger', 'mx-1'],
               'onclick' => 'if(!confirm("Really Delete?")){return false;}',
-              'class' => ['btn', 'btn-sm', 'btn-secondary', 'btn-danger'],
-              'style' => 'margin-right: 10px;',
             ],
           ],
-          'link4_' . $index => [
+          'link4' => [
             '#type' => 'link',
             '#title' => Markup::create('<i class="fa-solid fa-download"></i> Download'),
             '#url' => $download_da,
             '#attributes' => [
+              'class' => ['btn', 'btn-sm', 'btn-secondary', 'mx-1'],
               'onclick' => 'if(!confirm("Really Download?")){return false;}',
-              'class' => ['btn', 'btn-sm', 'btn-secondary'],
-              'style' => 'margin-right: 10px;',
             ],
           ],
-          'link5_' . $index => [
+          'link5' => [
             '#type' => 'link',
             '#title' => Markup::create('<i class="fa-solid fa-arrow-down"></i> Ingest'),
             '#url' => $view_da,
+            '#access' => !is_null($ingest_da), // Hide if not set
             '#attributes' => [
-              'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
-              'style' => 'margin-right: 10px;',
+              'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled', 'mx-1'],
             ],
           ],
-          'link6_' . $index => [
+          'link6' => [
             '#type' => 'link',
             '#title' => Markup::create('<i class="fa-solid fa-arrow-up"></i> Uningest'),
             '#url' => $view_da,
+            '#access' => !is_null($uningest_da), // Hide if not set
             '#attributes' => [
-              'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled'],
+              'class' => ['btn', 'btn-sm', 'btn-secondary', 'disabled', 'mx-1'],
             ],
           ],
         ],
+      ];
+
+      // Add the card to the cards array.
+      $cards[] = $card;
+    }
+
+    // Group the cards into rows (3 cards per row).
+    $output = [];
+    foreach (array_chunk($cards, 3) as $row) {
+      $output[] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['row', 'mb-0'],
+        ],
+        'cards' => $row,
       ];
     }
 
     return $output;
   }
+
 }

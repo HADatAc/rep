@@ -5,6 +5,7 @@ use Drupal\Core\Path\AliasStorageInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Menu\MenuLinkTreeInterface;
 
 /**
  * Implements hook_install().
@@ -58,18 +59,6 @@ function rep_form_alter(&$form, &$form_state, $form_id) {
 }
 
 /**
- * Implements hook_menu_alter().
- */
-/*
-function rep_menu_alter(&$items) {
-  // Change the title of the menu item with path 'node/1/edit'.
-  if (isset($items['node/1/edit'])) {
-    $items['node/1/edit']['title'] = 'Edit Article';
-  }
-}
-*/
-
-/**
  * Implements hook_theme
  */
 function rep_theme($existing, $type, $theme, $path)
@@ -120,7 +109,27 @@ function rep_update_8001() {
 }
 
 /**
- * Implementa hook_menu_links_discovered_alter().
+ * Ensure the sidebar first width setting is set to 3 cols.
+ */
+function rep_update_8002() {
+  // Retrieve the editable configuration for the Bootstrap Barrio theme.
+  $config = \Drupal::configFactory()->getEditable('bootstrap_barrio.settings');
+
+  // Get the current value of the sidebar first width setting.
+  $current_value = $config->get('bootstrap_barrio_sidebar_first_width');
+
+  // Check if the current value is not equal to 3.
+  if ($current_value != 3) {
+    // Update the setting to 3.
+    $config->set('bootstrap_barrio_sidebar_first_width', 3)->save();
+
+    // Optionally, add a message to inform the administrator about the change.
+    \Drupal::messenger()->addMessage(t('The Sidebar First Width has been updated to 3 cols.'));
+  }
+}
+
+/**
+ * Implements hook_menu_links_discovered_alter().
  */
 function rep_menu_links_discovered_alter(&$links) {
   $target_links = [
@@ -134,16 +143,53 @@ function rep_menu_links_discovered_alter(&$links) {
       $links[$link_key]['requirements']['_custom_access_check'] = 'TRUE';
     }
   }
+
+  $config = \Drupal::config('rep.settings');
+  $sagres_enabled = $config->get('sagres_conf');
+  // \Drupal::logger('rep')->notice('sagres_conf: ' . $sagres_enabled);
+  $social_enabled = $config->get('social_conf');
+
+  if ($sagres_enabled == 0) {
+    $to_hide = [
+      'rep.sagres',
+      'rep.sagres_config',
+      'rep.sagres_status',
+    ];
+
+    foreach ($links as $key => $link) {
+      if ((isset($link['route_name']) && in_array($link['route_name'], [
+              'rep.sagres.status_form',
+              'rep.sagres.config_form'
+          ])) || in_array($key, $to_hide)) {
+          unset($links[$key]);
+      }
+    }
+  }
+
+  if ($social_enabled == 0) {
+    $to_hide_social = [
+      'rep.socialkg',
+      'rep.social_config',
+      'rep.social_status',
+    ];
+
+    foreach ($links as $key => $link) {
+      if ((isset($link['route_name']) && in_array($link['route_name'], [
+              'social.config_form',
+              'social.status_form'
+          ])) || in_array($key, $to_hide_social)) {
+          unset($links[$key]);
+      }
+    }
+  }
 }
 
 /**
  * Função de callback de acesso personalizada.
  *
  * @param \Drupal\Core\Session\AccountInterface $account
- *   A conta do usuário.
  *
  * @return \Drupal\Core\Access\AccessResultInterface
- *   O resultado do acesso.
  */
 function rep_custom_access_callback(AccountInterface $account) {
   // Verifica se o utilizador possui o papel 'content_editor'.
@@ -159,3 +205,147 @@ function rep_custom_access_callback(AccountInterface $account) {
   return AccessResult::forbidden()->cachePerUser();
 }
 
+/**
+ * Implementa hook_user_insert().
+ * É chamado quando um novo usuário é criado no Drupal.
+ */
+function rep_user_insert($account) {
+
+  $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
+
+  if (!$sagres_token) {
+    \Drupal::logger('rep')->error("Token não encontrado na sessão.");
+    return;
+  }
+
+  $json_data = json_encode([
+    'acc_id' => $account->id(),
+    'acc_repo_instance' => \Drupal::request()->getHost(),
+    'acc_name' => $account->getDisplayName(),
+    'acc_email' => $account->getEmail(),
+    'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
+  ]);
+
+  try {
+    $response = \Drupal::httpClient()->post('https://sagres.graxiom.com/sguser/account/add', [
+      'headers' => [
+        'Content-Type' => 'application/json',
+        'Authorization' => "Bearer {$sagres_token}",
+      ],
+      'body' => $json_data,
+    ]);
+
+    if ($response->getStatusCode() == 201) {
+      \Drupal::logger('rep')->notice("Conta {$account->id()} enviada para sguser.");
+    }
+  } catch (RequestException $e) {
+    \Drupal::logger('rep')->error("Erro ao enviar conta {$account->id()} para sguser: " . $e->getMessage());
+  }
+}
+
+/**
+ * Implementa hook_user_update().
+ * É chamado quando um usuário é atualizado no Drupal.
+ */
+function rep_user_update($account) {
+
+  $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
+
+  if (!$sagres_token) {
+    \Drupal::logger('rep')->error("Token não encontrado na sessão.");
+    return;
+  }
+
+  $json_data = json_encode([
+    'acc_id' => $account->id(),
+    'acc_repo_instance' => \Drupal::request()->getHost(),
+    'acc_name' => $account->getDisplayName(),
+    'acc_email' => $account->getEmail(),
+    'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
+  ]);
+
+  try {
+    $response = \Drupal::httpClient()->post('https://sagres.graxiom.com/sguser/account/update', [
+      'headers' => [
+        'Content-Type' => 'application/json',
+        'Authorization' => "Bearer {$sagres_token}", // Adicionando o token aqui
+      ],
+      'body' => $json_data,
+    ]);
+
+    if ($response->getStatusCode() == 200) {
+      \Drupal::logger('rep')->notice("Conta {$account->id()} atualizada no sguser.");
+    }
+  } catch (RequestException $e) {
+    \Drupal::logger('rep')->error("Erro ao atualizar conta {$account->id()} no sguser: " . $e->getMessage());
+  }
+}
+
+/**
+ * Implementa hook_user_delete().
+ * É chamado quando um usuário é removido no Drupal.
+ */
+function rep_user_delete($account) {
+
+  $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
+
+  if (!$sagres_token) {
+    \Drupal::logger('rep')->error("Token não encontrado na sessão.");
+    return;
+  }
+
+  $acc_repo_instance = \Drupal::request()->getHost();
+
+  $url = 'https://sagres.graxiom.com/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
+
+  try {
+    $response = \Drupal::httpClient()->delete($url, [
+      'headers' => [
+        'Authorization' => "Bearer {$sagres_token}",
+      ],
+    ]);
+
+    if ($response->getStatusCode() == 200) {
+      \Drupal::logger('rep')->notice("Conta {$account->id()} removida do sguser.");
+    }
+  } catch (RequestException $e) {
+    \Drupal::logger('rep')->error("Erro ao remover conta {$account->id()} do sguser: " . $e->getMessage());
+  }
+}
+
+/* Implements hook_file_download().
+ *
+ * Allow authenticated users to download images from private://resources/.
+ *
+ * @param string $uri
+ *   The file URI being requested.
+ *
+ * @return array|int
+ *   An empty array to allow access or -1 to deny.
+ */
+function rep_file_download($uri) {
+  if (strpos($uri, 'private://resources/') === 0) {
+    if (\Drupal::currentUser()->isAuthenticated()) {
+      $extension = pathinfo($uri, PATHINFO_EXTENSION);
+
+      if (strtolower($extension) === 'pdf') {
+        return [
+          'Content-Type' => 'application/pdf',
+        ];
+      }
+      else {
+        return [
+          'Content-Type' => 'image/jpeg',
+        ];
+      }
+    }
+    else {
+      return -1;
+    }
+  }
+  return -1;
+}
+
+function rep_page_attachments(array &$attachments) {
+  $attachments['#attached']['library'][] = 'rep/rep_js_css';
+}

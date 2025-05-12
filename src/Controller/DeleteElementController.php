@@ -154,6 +154,12 @@ class DeleteElementController extends ControllerBase {
       }
     } elseif ($elementtype === 'study') {
         $elementname = 'study';
+    } elseif ($elementtype === 'process') {
+        $elementname = 'process';
+    } elseif ($elementtype === 'task') {
+        $elementname = 'task';
+    } elseif ($elementtype === 'taskstem') {
+        $elementname = 'taskstem';
     } else {
         \Drupal::messenger()->addMessage('Element ' . $elementtype . ' cannot be deleted via controller.');
         $response = new RedirectResponse($url);
@@ -164,7 +170,7 @@ class DeleteElementController extends ControllerBase {
     // DELETE ELEMENT para outros tipos
     $api = \Drupal::service('rep.api_connector');
     $api->elementDel($elementtype, $uri);
-    \Drupal::messenger()->addMessage('Selected ' . $elementname . ' has/have been deleted successfully.');
+    \Drupal::messenger()->addMessage('Selected ' . $elementname . ' deleted successfully.');
 
     // Redireciona para a URL atual
     $response = new RedirectResponse($url);

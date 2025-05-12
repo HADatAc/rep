@@ -95,6 +95,7 @@ class TreeForm extends FormBase {
       'instrument' => ["Instrument", EntryPoints::INSTRUMENT],
       'organization' => ["Organization", EntryPoints::ORGANIZATION],
       'person' => ["Person", EntryPoints::PERSON],
+      'place' => ["Place", EntryPoints::PLACE],
       'platform' => ["Platform", EntryPoints::PLATFORM],
       'processstem' => ["Process Stem", EntryPoints::PROCESS_STEM],
       'questionnaire' => ["Questionnaire", EntryPoints::QUESTIONNAIRE],
@@ -102,6 +103,7 @@ class TreeForm extends FormBase {
       'study' => ["Study", EntryPoints::STUDY],
       'unit' => ["Unit", EntryPoints::UNIT],
       'detectorattribute' => ["Detector Attribute", EntryPoints::DETECTOR_ATTRIBUTE],
+      'actuatorattribute' => ["Actuator Attribute", EntryPoints::ACTUATOR_ATTRIBUTE],
     ];
 
     $branches_param = [
@@ -123,6 +125,13 @@ class TreeForm extends FormBase {
         'label' => 'Actuator Stem',
         'typeNamespace' => EntryPoints::ACTUATOR_STEM,
         'uriNamespace' => EntryPoints::ACTUATOR_STEM
+      ],
+      [
+        'id' => 'actuatorattribute',
+        'uri' => EntryPoints::ACTUATOR_ATTRIBUTE,
+        'label' => 'Actuator Attribute',
+        'typeNamespace' => EntryPoints::ACTUATOR_ATTRIBUTE,
+        'uriNamespace' => EntryPoints::ACTUATOR_ATTRIBUTE
       ],
       [
         'id' => 'detectorstem',
@@ -153,6 +162,18 @@ class TreeForm extends FormBase {
         'uri' => EntryPoints::INSTRUMENT,
         'label' => 'Instrument',
         'uriNamespace' => Utils::namespaceUri(EntryPoints::INSTRUMENT),
+      ],
+      [
+        'id' => 'organization',
+        'uri' => EntryPoints::ORGANIZATION,
+        'label' => 'Organization',
+        'uriNamespace' => EntryPoints::ORGANIZATION,
+      ],
+      [
+        'id' => 'place',
+        'uri' => EntryPoints::PLACE,
+        'label' => 'Place',
+        'uriNamespace' => EntryPoints::PLACE,
       ],
       [
         'id' => 'platform',
@@ -424,18 +445,34 @@ class TreeForm extends FormBase {
       ];
     }
 
-    if ($mode == 'modal')
-    {
+    if ($mode === 'modal') {
+      // Determine who opened this modal.
+      $caller = \Drupal::request()->query->get('caller');
+
+      // Base button classes.
+      $button_classes = ['btn', 'btn-primary', 'mt-3', 'mb-3'];
+
+      // Only add the automatic data-dialog-close if NOT called from the AddTaskForm.
+      $auto_close = ($caller !== 'add_task_form');
+
       $form['select_node'] = [
-        '#type' => 'inline_template',
-        '#attributes' => [
-          'id' => 'select-tree-node',
-          'class' => ['btn', 'btn-primary', 'mt-3', 'mb-3', 'disabled'],
-        ],
+        '#type'     => 'inline_template',
         '#template' => '
           <div style="margin-bottom: 10px;">
-            <button type="button" id="select-tree-node" class="btn btn-primary btn-sm" data-field-id="' . (\Drupal::request()->query->get('field_id') ?? '').'">'.t('Select Node').'</button>
-          </div>'
+            <button type="button"
+                    id="select-tree-node"
+                    class="{{ classes|join(" ") }}"
+                    data-field-id="{{ field_id }}"
+                    {% if auto_close %}data-dialog-close="true"{% endif %}>
+              {{ label }}
+            </button>
+          </div>',
+        '#context'  => [
+          'classes'    => $button_classes,
+          'field_id'   => \Drupal::request()->query->get('field_id'),
+          'auto_close' => $auto_close,
+          'label'      => $this->t('Select Node'),
+        ],
       ];
     }
 

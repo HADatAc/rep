@@ -70,6 +70,15 @@ class Utils {
       return NULL;
     }
     switch ($elementType) {
+      case "actuator":
+        $short = Constant::PREFIX_ACTUATOR;
+        break;
+      case "actuatorinstance":
+        $short = Constant::PREFIX_ACTUATOR_INSTANCE;
+        break;
+      case "actuatorstem":
+        $short = Constant::PREFIX_ACTUATOR_STEM;
+        break;
       case "annotation":
         $short = Constant::PREFIX_ANNOTATION;
         break;
@@ -82,23 +91,14 @@ class Utils {
       case "da":
         $short = Constant::PREFIX_DA;
         break;
-      case "dd":
-        $short = Constant::PREFIX_DD;
-        break;
       case "datafile":
         $short = Constant::PREFIX_DATAFILE;
         break;
+      case "dd":
+        $short = Constant::PREFIX_DD;
+        break;
       case "deployment":
         $short = Constant::PREFIX_DEPLOYMENT;
-        break;
-      case "actuator":
-        $short = Constant::PREFIX_ACTUATOR;
-        break;
-      case "actuatorinstance":
-        $short = Constant::PREFIX_ACTUATOR_INSTANCE;
-        break;
-      case "actuatorstem":
-        $short = Constant::PREFIX_ACTUATOR_STEM;
         break;
       case "detector":
         $short = Constant::PREFIX_DETECTOR;
@@ -114,6 +114,9 @@ class Utils {
         break;
       case "dsg":
         $short = Constant::PREFIX_DSG;
+        break;
+      case "fundingscheme":
+        $short = Constant::PREFIX_FUNDING_SCHEME;
         break;
       case "ins":
         $short = Constant::PREFIX_INS;
@@ -144,6 +147,15 @@ class Utils {
         break;
       case "postaladdress":
         $short = Constant::PREFIX_POSTAL_ADDRESS;
+        break;
+      case "process":
+        $short = Constant::PREFIX_PROCESS;
+        break;
+      case "processstem":
+        $short = Constant::PREFIX_PROCESS_STEM;
+        break;
+      case "project":
+        $short = Constant::PREFIX_PROJECT;
         break;
       case "responseoption":
         $short = Constant::PREFIX_RESPONSE_OPTION;
@@ -181,14 +193,12 @@ class Utils {
       case "virtualcolumn":
         $short = Constant::PREFIX_VIRTUAL_COLUMN;
         break;
-      case "processstem":
-        $short = Constant::PREFIX_PROCESS_STEM;
+      case "task":
+        $short = Constant::PREFIX_TASK;
         break;
-      case "process":
-        $short = Constant::PREFIX_PROCESS;
+      case "taskstem":
+        $short = Constant::PREFIX_TASK_STEM;
         break;
-      default:
-        $short = NULL;
     }
     return $short;
   }
@@ -290,9 +300,9 @@ class Utils {
       if (\Drupal::moduleHandler()->moduleExists('std')) {
         $rt = 'std.search';
       }
-    } else if ($module == 'meugrafo') {
-      if (\Drupal::moduleHandler()->moduleExists('meugrafo')) {
-        $rt = 'meugrafo.search';
+    } else if ($module == 'social') {
+      if (\Drupal::moduleHandler()->moduleExists('social')) {
+        $rt = 'social.search';
       }
     }
 
@@ -320,18 +330,42 @@ class Utils {
     return $uri;
   }
 
-  public static function namespaceUri($uri) {
-    $tables = new Tables;
+  // public static function namespaceUri($uri) {
+  //   $tables = new Tables;
+  //   $namespaces = $tables->getNamespaces();
+
+  //   foreach ($namespaces as $abbrev => $ns) {
+  //     if ($abbrev != NULL && $abbrev != "" && $ns != NULL && $ns != "") {
+  //       if (str_starts_with($uri,$ns)) {
+  //         $replacement = $abbrev . ":";
+  //         return str_replace($ns, $replacement ,$uri);
+  //       }
+  //     }
+  //   }
+  //   return $uri;
+  // }
+  public static function namespaceUri(?string $uri): string {
+    // If no URI provided, just return empty string.
+    if ($uri === NULL || $uri === '') {
+      return '';
+    }
+
+    $tables     = new Tables();
     $namespaces = $tables->getNamespaces();
 
     foreach ($namespaces as $abbrev => $ns) {
-      if ($abbrev != NULL && $abbrev != "" && $ns != NULL && $ns != "") {
-        if (str_starts_with($uri,$ns)) {
-          $replacement = $abbrev . ":";
-          return str_replace($ns, $replacement ,$uri);
-        }
+      // Skip any empty entries.
+      if (empty($abbrev) || empty($ns)) {
+        continue;
+      }
+      // Only call str_starts_with() on a real string.
+      if (str_starts_with($uri, $ns)) {
+        $replacement = $abbrev . ':';
+        return str_replace($ns, $replacement, $uri);
       }
     }
+
+    // No prefix matched—return original.
     return $uri;
   }
 
@@ -380,7 +414,7 @@ class Utils {
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];
     $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance', 'actuatorinstance', 'deployment'];
-    $meugrafo = ['kgr','place','organization','person','postaladdress'];
+    $socialm = ['kgr','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {
@@ -391,8 +425,8 @@ class Utils {
       return 'std';
     } else if (in_array($elementtype,$dpl)) {
       return 'dpl';
-    } else if (in_array($elementtype,$meugrafo)) {
-      return 'meugrafo';
+    } else if (in_array($elementtype,$socialm)) {
+      return 'socialm';
     }
     return NULL;
   }
@@ -400,11 +434,11 @@ class Utils {
   public static function elementModule($element) {
     //dpm($element);
     $std = [HASCO::STD,HASCO::STUDY,HASCO::STUDY_ROLE,HASCO::STUDY_OBJECT_COLLECTION,HASCO::STUDY_OBJECT, HASCO::VIRTUAL_COLUMN];
-    $meugrafo = [FOAF::PERSON, FOAF::ORGANIZATION, SCHEMA::PLACE, SCHEMA::POSTAL_ADDRESS];
+    $social = [SCHEMA::PERSON, SCHEMA::ORGANIZATION, SCHEMA::PLACE, SCHEMA::POSTAL_ADDRESS];
     if (in_array($element->hascoTypeUri,$std)) {
       return 'std';
-    } else if (in_array($element->hascoTypeUri,$meugrafo)) {
-      return 'meugrafo';
+    } else if (in_array($element->hascoTypeUri,$social)) {
+      return 'social';
     }
     return NULL;
   }
@@ -583,31 +617,61 @@ class Utils {
   /**
    * Recursively checks if an element has a superUri that is of type VSTOI::QUESTIONAIRE.
    */
+  // public static function hasQuestionnaireAncestor($uri) {
+  //   $api = \Drupal::service('rep.api_connector');
+  //   $rawResponse = $api->getUri($uri);
+  //   $obj = json_decode($rawResponse);
+
+  //   // Check if the response is valid and contains a body
+  //   if (!$obj || !isset($obj->body)) {
+  //       return false;
+  //   }
+
+  //   $result = $obj->body;
+
+  //   // If the current element is of type QUESTIONAIRE, return true
+  //   if (isset($result->superUri) && $result->superUri === VSTOI::QUESTIONNAIRE) {
+  //       return true;
+  //   }
+
+  //   // If there is a superUri, call the function recursively
+  //   if (!empty($result->superUri)) {
+  //       return self::hasQuestionnaireAncestor($result->superUri);
+  //   }
+
+  //   // If no QUESTIONAIRE was found in the hierarchy, return false
+  //   return false;
+  // }
   public static function hasQuestionnaireAncestor($uri) {
+    /** @var \Drupal\rep\ApiConnectorInterface $api */
     $api = \Drupal::service('rep.api_connector');
-    $rawResponse = $api->getUri($uri);
-    $obj = json_decode($rawResponse);
 
-    // Verifica se a resposta da API é válida e se contém um corpo
-    if (!$obj || !isset($obj->body)) {
-        return false;
+    // 1) Fetch raw response (string, array or stdClass)
+    if (strpos($uri, 'http') !== 0) {
+      return FALSE;
+    }
+    $raw = $api->getUri($uri);
+
+    // 2) Normalize to an object (or array) and extract the “body”
+    $body = $api->parseObjectResponse($raw, 'getUri');
+    if (empty($body) || !is_object($body)) {
+      return FALSE;
     }
 
-    $result = $obj->body;
-
-    // Se o elemento atual for do tipo QUESTIONAIRE, retorna true
-    if (isset($result->superUri) && $result->superUri === VSTOI::QUESTIONNAIRE) {
-        return true;
+    // 3) If this node’s direct superUri *is* a questionnaire type, bingo.
+    if (($body->superUri ?? NULL) === VSTOI::QUESTIONNAIRE) {
+      return TRUE;
     }
 
-    // Se existir um superUri, chama a função recursivamente
-    if (!empty($result->superUri)) {
-        return self::hasQuestionnaireAncestor($result->superUri);
+    // 4) Otherwise, if there *is* a superUri, recurse.
+    if (!empty($body->superUri)) {
+      return self::hasQuestionnaireAncestor($body->superUri);
     }
 
-    // Se não encontrou nenhum QUESTIONAIRE na hierarquia, retorna false
-    return false;
+    // 5) Reached the root with no questionnaire found.
+    return FALSE;
   }
+
 
   public static function getLabelFromURI($text) {
     // Split the string at the "[" character.
@@ -762,250 +826,506 @@ class Utils {
   //   }
   // }
 
-/*****************************************************
- * Build and render slot elements in either a table
- * or a tree format, **recursively** starting from
- * the instrument/container URI.
- *****************************************************/
-public static function buildSlotElements($containerUri, $api, $renderMode = 'table') {
-  // ------------------------------------------
-  // 1) Internal recursive function:
-  //    Build a "tree" data structure by exploring
-  //    subcontainers, container slots, detectors, etc.
-  // ------------------------------------------
-  $buildTree = function($uri) use (&$buildTree, $api) {
+  /*****************************************************
+   * Build and render slot elements in either a table
+   * or a tree format, **recursively** starting from
+   * the instrument/container URI.
+   *****************************************************/
+  public static function buildSlotElements($containerUri, $api, $renderMode = 'table') {
+    // ------------------------------------------
+    // 1) Internal recursive function:
+    //    Build a "tree" data structure by exploring
+    //    subcontainers, container slots, detectors, etc.
+    // ------------------------------------------
+    $buildTree = function($uri) use (&$buildTree, $api) {
 
-    $root_url = \Drupal::request()->getBaseUrl();
-    // 1. Fetch slotElements for the current URI (instrument/container/subcontainer)
-    $slotElements = $api->parseObjectResponse($api->slotElements($uri), 'slotElements');
-    if (empty($slotElements)) {
-      return [];
-    }
-
-    $tree = [];
-
-    // 2. Loop over each slotElement
-    foreach ($slotElements as $slotElement) {
-      // Basic fields
-      $typeUri  = $slotElement->hascoTypeUri ?? '';
-      $type     = Utils::namespaceUri($typeUri);
-      $label    = $slotElement->label        ?? '';
-      $priority = $slotElement->hasPriority  ?? '';
-      $elemUri  = $slotElement->uri          ?? '';
-
-      // Prepare a structure for the tree node
-      $item = [
-        'uri'      => $elemUri,
-        'type'     => $type,
-        'label'    => $label,
-        'priority' => $priority,
-        'element'  => '',   // Will hold your custom "content" or description
-        'children' => [],   // Potential recursion for subcontainers or nested components
-      ];
-
-      /****************************************************
-       * Logic to determine if it's a subcontainer,
-       * a container slot referencing another container,
-       * or a leaf (detector, actuator, etc.).
-       ****************************************************/
-      if ($typeUri === VSTOI::SUBCONTAINER) {
-        // Mark as subcontainer
-        $item['element'] = 'Subcontainer: ' . ($label ?: '[no label]');
-        // Recursively explore all slotElements inside this subcontainer
-        if (!empty($elemUri)) {
-          $item['children'] = $buildTree($elemUri);
-        }
+      $root_url = \Drupal::request()->getBaseUrl();
+      // 1. Fetch slotElements for the current URI (instrument/container/subcontainer)
+      $slotElements = $api->parseObjectResponse($api->slotElements($uri), 'slotElements');
+      if (empty($slotElements)) {
+        return [];
       }
-      elseif ($typeUri === VSTOI::CONTAINER_SLOT) {
-        // Possibly a container slot with a component
-        // (detector, actuator, or even another subcontainer)
-        $item['element'] = 'No element was added to slot.'; // Adjust as needed
 
-        if (!empty($slotElement->hasComponent)) {
-          // 1. Get the "component" data
-          $componentUri = $slotElement->hasComponent;
-          $componentObj = $api->parseObjectResponse($api->getUri($componentUri), 'getUri');
+      $tree = [];
 
-          if (!empty($componentObj) && !empty($componentObj->hascoTypeUri)) {
-            $componentType = $componentObj->hascoTypeUri;
+      // 2. Loop over each slotElement
+      foreach ($slotElements as $slotElement) {
+        // Basic fields
+        $typeUri  = $slotElement->hascoTypeUri ?? '';
+        $type     = Utils::namespaceUri($typeUri);
+        $label    = $slotElement->label        ?? '';
+        $priority = $slotElement->hasPriority  ?? '';
+        $elemUri  = $slotElement->uri          ?? '';
 
-            // Example: if the component is actually a container or subcontainer,
-            // we can recursively call buildTree on *that* URI.
-            // (You may need to adapt this to your actual model.)
-            if ($componentType === VSTOI::SUBCONTAINER || $componentType === VSTOI::CONTAINER) {
-              // Let's say we do recursion on the component's URI
-              $item['element'] = 'ContainerSlot referencing a container: ' . ($componentObj->label ?? '[no label]');
-              $item['children'] = $buildTree($componentObj->uri);
-            }
-            // If the component is a DETECTOR, ACTUATOR, or other "leaf" type
-            else if ($componentType === VSTOI::DETECTOR || $componentType === VSTOI::ACTUATOR) {
-              $type = self::namespaceUri($componentObj->hascoTypeUri);
-              if (isset($componentObj->uri)) {
-                // $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
-                $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a> ('.Utils::plainStatus($componentObj->hasStatus).')]');
+        // Prepare a structure for the tree node
+        $item = [
+          'uri'      => $elemUri,
+          'type'     => $type,
+          'label'    => $label,
+          'priority' => $priority,
+          'element'  => '',   // Will hold your custom "content" or description
+          'children' => [],   // Potential recursion for subcontainers or nested components
+        ];
+
+        /****************************************************
+         * Logic to determine if it's a subcontainer,
+         * a container slot referencing another container,
+         * or a leaf (detector, actuator, etc.).
+         ****************************************************/
+        if ($typeUri === VSTOI::SUBCONTAINER) {
+          // Mark as subcontainer
+          $item['element'] = 'Subcontainer: ' . ($label ?: '[no label]');
+          // Recursively explore all slotElements inside this subcontainer
+          if (!empty($elemUri)) {
+            $item['children'] = $buildTree($elemUri);
+          }
+        }
+        elseif ($typeUri === VSTOI::CONTAINER_SLOT) {
+          // Possibly a container slot with a component
+          // (detector, actuator, or even another subcontainer)
+          $item['element'] = 'No element was added to slot.'; // Adjust as needed
+
+          if (!empty($slotElement->hasComponent)) {
+            // 1. Get the "component" data
+            $componentUri = $slotElement->hasComponent;
+            $componentObj = $api->parseObjectResponse($api->getUri($componentUri), 'getUri');
+
+            if (!empty($componentObj) && !empty($componentObj->hascoTypeUri)) {
+              $componentType = $componentObj->hascoTypeUri;
+
+              // Example: if the component is actually a container or subcontainer,
+              // we can recursively call buildTree on *that* URI.
+              // (You may need to adapt this to your actual model.)
+              if ($componentType === VSTOI::SUBCONTAINER || $componentType === VSTOI::CONTAINER) {
+                // Let's say we do recursion on the component's URI
+                $item['element'] = 'ContainerSlot referencing a container: ' . ($componentObj->label ?? '[no label]');
+                $item['children'] = $buildTree($componentObj->uri);
               }
-              if (isset($componentObj->isAttributeOf)) {
-                // $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(self::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. self::namespaceUri($componentObj->isAttributeOf) . "</a>]";
-                $attributOfStatus = $api->parseObjectResponse($api->getUri($componentObj->isAttributeOf),'getUri');
-                $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(Utils::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. Utils::namespaceUri($componentObj->isAttributeOf) . "</a> (".(Utils::plainStatus($attributOfStatus->hasStatus)??"Current").")]";
-              } else {
-                $content = '<b>Attribute Of</b>: [EMPTY]';
+              // If the component is a DETECTOR, ACTUATOR, or other "leaf" type
+              else if ($componentType === VSTOI::DETECTOR || $componentType === VSTOI::ACTUATOR) {
+                $type = self::namespaceUri($componentObj->hascoTypeUri);
+                if (isset($componentObj->uri)) {
+                  // $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
+                  $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a> ('.Utils::plainStatus($componentObj->hasStatus).')]');
+                }
+                if (isset($componentObj->isAttributeOf)) {
+                  // $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(self::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. self::namespaceUri($componentObj->isAttributeOf) . "</a>]";
+                  $attributOfStatus = $api->parseObjectResponse($api->getUri($componentObj->isAttributeOf),'getUri');
+                  $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(Utils::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. Utils::namespaceUri($componentObj->isAttributeOf) . "</a> (".(Utils::plainStatus($attributOfStatus->hasStatus)??"Current").")]";
+                } else {
+                  $content = '<b>Attribute Of</b>: [EMPTY]';
+                }
+                if (isset($componentObj->codebook->label)) {
+                  // $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a>]";
+                  $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a> (".Utils::plainStatus($componentObj->codebook->hasStatus).")]";
+                } else {
+                  $codebook = '<b>CB</b>: [EMPTY]';
+                }
+                $item['element'] = $componentUri . " " . $content . " " . $codebook;
+                // $item['element'] = 'Detector: ' . ($componentObj->label ?? '[no label]');
+                // No recursion, as a detector is typically a leaf
               }
-              if (isset($componentObj->codebook->label)) {
-                // $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a>]";
-                $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a> (".Utils::plainStatus($componentObj->codebook->hasStatus).")]";
-              } else {
-                $codebook = '<b>CB</b>: [EMPTY]';
+              else {
+                // Unknown or other type
+                $item['element'] = 'ContainerSlot referencing: ' . Utils::namespaceUri($componentType);
               }
-              $item['element'] = $componentUri . " " . $content . " " . $codebook;
-              // $item['element'] = 'Detector: ' . ($componentObj->label ?? '[no label]');
-              // No recursion, as a detector is typically a leaf
-            }
-            else {
-              // Unknown or other type
-              $item['element'] = 'ContainerSlot referencing: ' . Utils::namespaceUri($componentType);
             }
           }
         }
-      }
-      else {
-        // Unknown or other type
-        $item['element'] = '(Unknown type: ' . $type . ')';
-      }
+        else {
+          // Unknown or other type
+          $item['element'] = '(Unknown type: ' . $type . ')';
+        }
 
-      // Add this item to the $tree array
-      $tree[] = $item;
-    }
-
-    return $tree;
-  };
-
-  // ------------------------------------------
-  // 2) Render the tree data as a nested <ul>
-  // ------------------------------------------
-  $renderAsTree = function(array $tree) use (&$renderAsTree) {
-    if (empty($tree)) {
-      return '';
-    }
-
-    $html = '<ul>';
-    foreach ($tree as $item) {
-      // For display, e.g. "[Type] Label (priority)"
-      $title = '[' . $item['type'] . '] ' . $item['label']
-             . ' (priority: ' . $item['priority'] . ')';
-
-      $html .= '<li>';
-      $html .= '<div>' . $title . '</div>';
-      $html .= '<div>' . $item['element'] . '</div>';
-
-      // Recursively render children
-      if (!empty($item['children'])) {
-        $html .= $renderAsTree($item['children']);
+        // Add this item to the $tree array
+        $tree[] = $item;
       }
 
-      $html .= '</li>';
-    }
-    $html .= '</ul>';
+      return $tree;
+    };
 
-    return $html;
-  };
-
-  // ------------------------------------------
-  // 3) Render the tree data as nested tables
-  // ------------------------------------------
-  $renderAsTable = function(array $tree) use (&$renderAsTable) {
-    // Define the table header
-    $header = [
-      t('Type'),
-      t('Label'),
-      t('Priority'),
-      t('Element'),
-    ];
-
-    $rows = [];
-    foreach ($tree as $item) {
-      // Check if the current item is a subcontainer
-      if ($item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
-        // Insert a row that says "Sub-container: X"
-        $rows[] = [
-          [
-            'data' => t('Sub-container: <strong>@label</strong>', ['@label' => $item['label']]),
-            'colspan' => 4,  // Spans all columns
-            'class' => ['subcontainer-title'], // Optional CSS class
-          ],
-        ];
-        // Optionally, you could also insert another row
-        // for Priority/Element if you want:
-        /*
-        $rows[] = [
-          t('Type') . ': ' . $item['type'],
-          t('Priority') . ': ' . $item['priority'],
-          '',
-          $item['element'],
-        ];
-        */
-      }
-      else {
-        // Normal item (container slot, detector, etc.)
-        $rows[] = [
-          $item['type'],
-          $item['label'],
-          $item['priority'],
-          // If you need HTML markup in 'element', do: ['data' => $item['element'], 'escape' => FALSE],
-          // $item['element'],
-          ['data' => t($item['element'])],
-        ];
+    // ------------------------------------------
+    // 2) Render the tree data as a nested <ul>
+    // ------------------------------------------
+    $renderAsTree = function(array $tree) use (&$renderAsTree) {
+      if (empty($tree)) {
+        return '';
       }
 
-      // If there are children, render them as a sub-table
-      if (!empty($item['children'])) {
-        $subTable = $renderAsTable($item['children']);
-        $rows[] = [
-          [
-            'data' => $subTable,
-            'colspan' => 4,
-          ],
-        ];
-      } else {
-        // If there are no child elements, insert a row with a message.
-        if (empty($item['children']) && $item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
+      $html = '<ul>';
+      foreach ($tree as $item) {
+        // For display, e.g. "[Type] Label (priority)"
+        $title = '[' . $item['type'] . '] ' . $item['label']
+              . ' (priority: ' . $item['priority'] . ')';
+
+        $html .= '<li>';
+        $html .= '<div>' . $title . '</div>';
+        $html .= '<div>' . $item['element'] . '</div>';
+
+        // Recursively render children
+        if (!empty($item['children'])) {
+          $html .= $renderAsTree($item['children']);
+        }
+
+        $html .= '</li>';
+      }
+      $html .= '</ul>';
+
+      return $html;
+    };
+
+    // ------------------------------------------
+    // 3) Render the tree data as nested tables
+    // ------------------------------------------
+    $renderAsTable = function(array $tree) use (&$renderAsTable) {
+      // Define the table header
+      $header = [
+        t('Type'),
+        t('Label'),
+        t('Priority'),
+        t('Element'),
+      ];
+
+      $rows = [];
+      foreach ($tree as $item) {
+        // Check if the current item is a subcontainer
+        if ($item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
+          // Insert a row that says "Sub-container: X"
           $rows[] = [
             [
-              'data' => t('<span style="padding-left:50px;"><em>Sub-container has no elements!</em></span>'),
+              'data' => t('Sub-container: <strong>@label</strong>', ['@label' => $item['label']]),
+              'colspan' => 4,  // Spans all columns
+              'class' => ['subcontainer-title'], // Optional CSS class
+            ],
+          ];
+          // Optionally, you could also insert another row
+          // for Priority/Element if you want:
+          /*
+          $rows[] = [
+            t('Type') . ': ' . $item['type'],
+            t('Priority') . ': ' . $item['priority'],
+            '',
+            $item['element'],
+          ];
+          */
+        }
+        else {
+          // Normal item (container slot, detector, etc.)
+          $rows[] = [
+            $item['type'],
+            $item['label'],
+            $item['priority'],
+            // If you need HTML markup in 'element', do: ['data' => $item['element'], 'escape' => FALSE],
+            // $item['element'],
+            ['data' => t($item['element'])],
+          ];
+        }
+
+        // If there are children, render them as a sub-table
+        if (!empty($item['children'])) {
+          $subTable = $renderAsTable($item['children']);
+          $rows[] = [
+            [
+              'data' => $subTable,
               'colspan' => 4,
             ],
           ];
+        } else {
+          // If there are no child elements, insert a row with a message.
+          if (empty($item['children']) && $item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
+            $rows[] = [
+              [
+                'data' => t('<span style="padding-left:50px;"><em>Sub-container has no elements!</em></span>'),
+                'colspan' => 4,
+              ],
+            ];
+          }
+        }
+      }
+
+      // Return a Drupal render array for the table
+      return [
+        '#type'   => 'table',
+        '#header' => $header,
+        '#rows'   => $rows,
+        '#empty'  => t('No response options found'),
+      ];
+    };
+
+    // ------------------------------------------
+    // 4) Build the tree data from the top-level
+    //    container/instrument URI, then render.
+    // ------------------------------------------
+    $tree = $buildTree($containerUri);
+
+    if ($renderMode === 'tree') {
+      // Return a markup render array with <ul> HTML
+      return [
+        '#type'   => 'markup',
+        '#markup' => $renderAsTree($tree),
+      ];
+    }
+    else {
+      // Return a nested table render array
+      return $renderAsTable($tree);
+    }
+  }
+
+  /**
+   * Returns the accessible URL for an image.
+   *
+   * This function builds the file path as:
+   *   private://resources/<uri>/image/<image_filename>
+   * If the provided API image value starts with "http", it returns it directly.
+   * Otherwise, it generates an absolute URL for the file using the file_url_generator service.
+   *
+   * @param string $uri
+   *   The URI segment used in the file path.
+   * @param string $api_image
+   *   The image filename or API image value.
+   * @param string $placeholder_image
+   *   The fallback image value if $api_image is empty.
+   *
+   * @return string
+   *   The accessible image URL.
+   */
+  public static function getAccessibleImageUrl($uri, $api_image, $placeholder_image) {
+
+    // Format URI
+    $uri = explode(":/", utils::namespaceUri($uri))[1];
+
+    // Use the API image value if available; otherwise, fallback to the placeholder.
+    if (empty($api_image)) {
+      return $placeholder_image;
+    }
+    // If the image value starts with "http", assume it is a complete URL and return it.
+    if (strpos($api_image, 'http') === 0) {
+      return $api_image;
+    }
+    // Otherwise, build the file URI according to the given structure.
+    $file_uri = 'private://resources/' . $uri . '/image/' . $api_image;
+    // Generate the accessible URL using the file_url_generator service.
+    return \Drupal::service('file_url_generator')->generateAbsoluteString($file_uri);
+  }
+
+  public static function getAccessibleDocumentUrl($uri, $api_document) {
+
+    // Format URI
+    $uri = explode(":/", utils::namespaceUri($uri))[1];
+
+    // Use the API image value if available; otherwise, fallback to the placeholder.
+    if (empty($api_document)) {
+      return '';
+    }
+    // If the document value starts with "http", assume it is a complete URL and return it.
+    if (strpos($api_document, 'http') === 0) {
+      return $api_document;
+    }
+    // Otherwise, build the file URI according to the given structure.
+    $file_uri = 'private://resources/' . $uri . '/webdocument/' . $api_document;
+    // Generate the accessible URL using the file_url_generator service.
+    return \Drupal::service('file_url_generator')->generateAbsoluteString($file_uri);
+  }
+
+  // public static function getAPIImage($uri, $apiImage, $placeholder_image) {
+
+  //   // Empty Value return Placeholder
+  //   if ($apiImage === '')
+  //     return $placeholder_image;
+
+  //   // Image starts with http so return the link
+  //   if (strpos($apiImage, 'http') === 0)
+  //     return $apiImage;
+
+  //   // Return API image
+  //   $api = \Drupal::service('rep.api_connector');
+  //   $response = $api->downloadFile($uri, $apiImage);
+
+  //   if ($response) {
+  //       $file_content = $response->getContent();
+  //       $content_type = $response->headers->get('Content-Type');
+  //       $base64_image = base64_encode($file_content);
+  //       return "data:" . $content_type . ";base64," . $base64_image;
+  //   } else {
+  //     return $placeholder_image;
+  //   }
+  // }
+  // WORKING VERSION
+  // public static function getAPIImage($uri, $apiImage, $placeholder_image) {
+  //   // 1) No image path → placeholder.
+  //   if (empty($apiImage)) {
+  //     return $placeholder_image;
+  //   }
+
+  //   // 2) Full URL → return directly.
+  //   if (strpos($apiImage, 'http') === 0) {
+  //     return $apiImage;
+  //   }
+
+  //   // 3) Try legacy download first...
+  //   /** @var \Drupal\rep\ApiConnectorInterface $api */
+  //   $api = \Drupal::service('rep.api_connector');
+  //   $response = $api->downloadFile($uri, $apiImage);
+
+  //   // 4) If legacy failed and Social is enabled, try Social:
+  //   if (
+  //     (! $response || (method_exists($response, 'getStatusCode') && $response->getStatusCode() !== 200))
+  //     && \Drupal::config('rep.settings')->get('social_conf')
+  //   ) {
+  //     $response = $api->downloadFileSocial($uri, $apiImage);
+  //   }
+
+  //   // 5) If we have a response, extract the bytes & content-type:
+  //   if ($response) {
+  //     // 5a) Get the raw bytes:
+  //     if (method_exists($response, 'getContent')) {
+  //       // Symfony ResponseInterface
+  //       $file_content = $response->getContent();
+  //     }
+  //     elseif (method_exists($response, 'getBody')) {
+  //       // PSR-7 ResponseInterface fallback
+  //       $file_content = $response->getBody()->getContents();
+  //     }
+  //     else {
+  //       return $placeholder_image;
+  //     }
+
+  //     // 5b) Get the content-type:
+  //     if (isset($response->headers)) {
+  //       // Symfony ResponseInterface
+  //       $content_type = $response->headers->get('Content-Type');
+  //     }
+  //     elseif (method_exists($response, 'getHeaderLine')) {
+  //       // PSR-7 fallback
+  //       $content_type = $response->getHeaderLine('Content-Type');
+  //     }
+  //     else {
+  //       $content_type = 'application/octet-stream';
+  //     }
+
+  //     // 5c) Return a base64 data-URI:
+  //     return 'data:' . $content_type . ';base64,' . base64_encode($file_content);
+  //   }
+
+  //   // 6) On any failure, placeholder.
+  //   return $placeholder_image;
+  // }
+  public static function getAPIImage($uri, $apiImage, $placeholder_image) {
+    // 1) No image path: placeholder.
+    if (empty($apiImage)) {
+      // \Drupal::logger('rep')->debug('getAPIImage: no $apiImage, using placeholder.');
+      return $placeholder_image;
+    }
+
+    // 2) If it's already a full URL, return it.
+    if (strpos($apiImage, 'http') === 0) {
+      // \Drupal::logger('rep')->debug('getAPIImage: apiImage is full URL, returning it: @url', ['@url'=>$apiImage]);
+      return $apiImage;
+    }
+
+    /** @var \Drupal\rep\ApiConnectorInterface $api */
+    $api = \Drupal::service('rep.api_connector');
+
+    // 3) Attempt legacy download.
+    // \Drupal::logger('rep')->debug('getAPIImage: attempting legacy download for @f', ['@f'=>$apiImage]);
+    $response = $api->downloadFile($uri, $apiImage);
+
+    // Inspect legacy response if present.
+    if ($response && method_exists($response, 'getStatusCode')) {
+      $status = $response->getStatusCode();
+      // \Drupal::logger('rep')->debug('Legacy downloadFile returned HTTP @s', ['@s'=>$status]);
+    }
+
+    // 4) If legacy failed (no object or non-200), try Social fallback.
+    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
+    if (
+      ! $response
+      || (method_exists($response, 'getStatusCode') && $status !== 200)
+    ) {
+      // \Drupal::logger('rep')->debug('getAPIImage: legacy failed, social_enabled=@e', ['@e'=> $socialEnabled?'yes':'no']);
+      if ($socialEnabled) {
+        // \Drupal::logger('rep')->debug('getAPIImage: attempting social download for @f', ['@f'=>$apiImage]);
+        $response = $api->downloadFileSocial($uri, $apiImage);
+        if ($response && method_exists($response, 'getStatusCode')) {
+          // \Drupal::logger('rep')->debug('Social downloadFileSocial returned HTTP @s', [
+          //   '@s' => $response->getStatusCode(),
+          // ]);
         }
       }
     }
 
-    // Return a Drupal render array for the table
-    return [
-      '#type'   => 'table',
-      '#header' => $header,
-      '#rows'   => $rows,
-      '#empty'  => t('No response options found'),
-    ];
-  };
+    // 5) If we now have a 200‐response, inline it as data‐URI.
+    if ($response && method_exists($response, 'getStatusCode') && $response->getStatusCode() === 200) {
+      // a) Get bytes
+      if (method_exists($response, 'getContent')) {
+        $content = $response->getContent();
+      }
+      elseif (method_exists($response, 'getBody')) {
+        $content = $response->getBody()->getContents();
+      }
+      else {
+        \Drupal::logger('rep')->warning('getAPIImage: response has no getContent/getBody methods.');
+        return $placeholder_image;
+      }
 
-  // ------------------------------------------
-  // 4) Build the tree data from the top-level
-  //    container/instrument URI, then render.
-  // ------------------------------------------
-  $tree = $buildTree($containerUri);
+      // b) Get MIME type
+      if (isset($response->headers)) {
+        $mime = $response->headers->get('Content-Type');
+      }
+      elseif (method_exists($response, 'getHeaderLine')) {
+        $mime = $response->getHeaderLine('Content-Type');
+      }
+      else {
+        $mime = 'application/octet-stream';
+      }
 
-  if ($renderMode === 'tree') {
-    // Return a markup render array with <ul> HTML
-    return [
-      '#type'   => 'markup',
-      '#markup' => $renderAsTree($tree),
-    ];
+      // \Drupal::logger('rep')->debug('getAPIImage: inlining image, MIME: @m', ['@m'=>$mime]);
+      return 'data:' . $mime . ';base64,' . base64_encode($content);
+    }
+
+    // 6) On any failure, log and return placeholder.
+    // \Drupal::logger('rep')->warning('getAPIImage: all download attempts failed for @f, using placeholder.', ['@f'=>$apiImage]);
+    return $placeholder_image;
   }
-  else {
-    // Return a nested table render array
-    return $renderAsTable($tree);
-  }
-}
 
+
+  public static function getAPIDocument($uri, $apiDocument) {
+    if (empty($apiDocument)) {
+      return '';
+    }
+
+    // Se o valor já for uma URL completa, retorna diretamente.
+    if (strpos($apiDocument, 'http') === 0) {
+      return $apiDocument;
+    }
+
+    $api = \Drupal::service('rep.api_connector');
+    $response = $api->downloadFile($uri, $apiDocument);
+
+    if ($response) {
+      $file_content = $response->getContent();
+      $original_content_type = $response->headers->get('Content-Type');
+
+      // Verifica a extensão do arquivo com base no nome.
+      $extension = strtolower(pathinfo($apiDocument, PATHINFO_EXTENSION));
+
+      if ($extension === 'pdf') {
+        // Se for PDF, force o Content-Type para application/pdf.
+        $content_type = 'application/pdf';
+        $response->headers->set('Content-Type', $content_type);
+        $response->headers->set('Content-Disposition', 'inline; filename="' . $apiDocument . '"');
+      }
+      else {
+        // Para outros tipos de arquivo, usa o Content-Type original.
+        $content_type = $original_content_type;
+      }
+
+      $base64_document = base64_encode($file_content);
+      return "data:" . $content_type . ";base64," . $base64_document;
+    }
+    else {
+      return '';
+    }
+  }
 
 }

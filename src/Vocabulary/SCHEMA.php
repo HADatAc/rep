@@ -12,8 +12,12 @@
 
     const CITY                              = SCHEMA::SCHEMA . "City";
     const COUNTRY                           = SCHEMA::SCHEMA . "Country";
+    const FUNDING_SCHEME                    = SCHEMA::SCHEMA . "FundingScheme";
+    const ORGANIZATION                      = SCHEMA::SCHEMA . "Organization";
+    const PERSON                            = SCHEMA::SCHEMA . "Person";
     const PLACE                             = SCHEMA::SCHEMA . "Place";
     const POSTAL_ADDRESS                    = SCHEMA::SCHEMA . "PostalAddress";
+    const PROJECT                           = SCHEMA::SCHEMA . "Project";
     const STATE                             = SCHEMA::SCHEMA . "State";
 
     /*
@@ -28,3 +32,4 @@
     const SUB_ORGANIZATION                  = SCHEMA::SCHEMA . "subOrganization";
 
   }
+
