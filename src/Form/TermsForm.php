@@ -21,7 +21,7 @@ class TermsForm extends FormBase {
       $client = \Drupal::httpClient();
       $project_id = 'hascorepo';
 
-      $response = $client->get('http://192.168.1.169/sguser/terms/latest', [
+      $response = $client->get('http://192.168.1.169/sgcontract/terms/latest', [
         'query' => [
           'project_id' => $project_id,
         ],
@@ -64,7 +64,7 @@ class TermsForm extends FormBase {
 
     try {
       $client = \Drupal::httpClient();
-      $response = $client->post('http://192.168.1.169/sguser/account/accept-terms', [
+      $response = $client->post('http://192.168.1.169/sgcontract/account/accept-terms', [
         'json' => [
           'acc_id' => $username,
           'acc_repo_instance' => $repo_instance,

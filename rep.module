@@ -254,7 +254,7 @@ function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
 
   $client = \Drupal::httpClient();
   try {
-    $response = $client->get('http://192.168.1.169/sguser/account/terms-status', [
+    $response = $client->get('http://192.168.1.169/sgcontract/account/terms-status', [
       'query' => [
         'acc_id' => $username,
         'acc_repo_instance' => $repo_instance,
