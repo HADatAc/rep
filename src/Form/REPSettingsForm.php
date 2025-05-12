@@ -390,7 +390,8 @@
         // Criar um mapa de usuários do sguser para facilitar a comparação
         $sguser_map = [];
         foreach ($sguser_users as $user) {
-            $sguser_map[$user['acc_id']] = $user;
+            $key = $user['acc_repo_instance'] . ':' . $user['acc_id'];
+            $sguser_map[$key] = $user;
         }
     
         $users_created = 0;
@@ -407,39 +408,44 @@
 
             \Drupal::logger('rep')->notice("Processando utilizador: " . $user->getEmail());
 
+            
             $user_data = [
                 'acc_id' => $user->id(),
                 'acc_repo_instance' => $repo_instance,
                 'acc_name' => $user->getDisplayName(),
                 'acc_email' => $user->getEmail(),
                 'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $user->id(),
+                'acc_cellphone' => $user->hasField('field_cellphone') && !$user->get('field_cellphone')->isEmpty()
+                    ? (int) $user->get('field_cellphone')->value
+                    : null,
             ];
-    
-            if (isset($sguser_map[$user->id()])) {
+
+            $user_key = $repo_instance . ':' . $user->id();
+
+            if (isset($sguser_map[$user_key])) {
                 // Usuário já existe no sguser, verificar necessidade de atualização
-                $existing_user = $sguser_map[$user->id()];
+                $existing_user = $sguser_map[$user_key];
     
-                if ($existing_user['acc_name'] !== $user_data['acc_name'] || $existing_user['acc_email'] !== $user_data['acc_email']) {
+                if ($existing_user['acc_name'] !== $user_data['acc_name'] || $existing_user['acc_email'] !== $user_data['acc_email'] || $existing_user['acc_cellphone'] !== $user_data['acc_cellphone']) {
                     try {
-                        \Drupal::httpClient()->patch("{$sagres_base_url}/sguser/account/update", [
+                        $response = \Drupal::httpClient()->patch("{$sagres_base_url}/sguser/account/update", [
                             'json' => $user_data,
                             'headers' => [
                                 'Content-Type' => 'application/json',
                                 'Authorization' => "Bearer {$sagres_token}"
                             ],
                         ]);
-
+        
                         if ($response->getStatusCode() === 200) {
                             $users_updated++;
                         } else {
                             \Drupal::logger('rep')->error("Erro ao atualizar utilizador {$user->id()}. Status: " . $response->getStatusCode());
                         }
-
+        
                     } catch (\Exception $e) {
                         \Drupal::logger('rep')->error("Erro ao atualizar utilizador {$user->id()}: " . $e->getMessage());
                     }
-                }
-
+                }            
             } else {
 
                 try {

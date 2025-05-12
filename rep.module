@@ -205,113 +205,6 @@ function rep_custom_access_callback(AccountInterface $account) {
   return AccessResult::forbidden()->cachePerUser();
 }
 
-/**
- * Implementa hook_user_insert().
- * É chamado quando um novo usuário é criado no Drupal.
- */
-function rep_user_insert($account) {
-
-  $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
-
-  if (!$sagres_token) {
-    \Drupal::logger('rep')->error("Token não encontrado na sessão.");
-    return;
-  }
-
-  $json_data = json_encode([
-    'acc_id' => $account->id(),
-    'acc_repo_instance' => \Drupal::request()->getHost(),
-    'acc_name' => $account->getDisplayName(),
-    'acc_email' => $account->getEmail(),
-    'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
-  ]);
-
-  try {
-    $response = \Drupal::httpClient()->post('https://sagres.graxiom.com/sguser/account/add', [
-      'headers' => [
-        'Content-Type' => 'application/json',
-        'Authorization' => "Bearer {$sagres_token}",
-      ],
-      'body' => $json_data,
-    ]);
-
-    if ($response->getStatusCode() == 201) {
-      \Drupal::logger('rep')->notice("Conta {$account->id()} enviada para sguser.");
-    }
-  } catch (RequestException $e) {
-    \Drupal::logger('rep')->error("Erro ao enviar conta {$account->id()} para sguser: " . $e->getMessage());
-  }
-}
-
-/**
- * Implementa hook_user_update().
- * É chamado quando um usuário é atualizado no Drupal.
- */
-function rep_user_update($account) {
-
-  $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
-
-  if (!$sagres_token) {
-    \Drupal::logger('rep')->error("Token não encontrado na sessão.");
-    return;
-  }
-
-  $json_data = json_encode([
-    'acc_id' => $account->id(),
-    'acc_repo_instance' => \Drupal::request()->getHost(),
-    'acc_name' => $account->getDisplayName(),
-    'acc_email' => $account->getEmail(),
-    'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
-  ]);
-
-  try {
-    $response = \Drupal::httpClient()->post('https://sagres.graxiom.com/sguser/account/update', [
-      'headers' => [
-        'Content-Type' => 'application/json',
-        'Authorization' => "Bearer {$sagres_token}", // Adicionando o token aqui
-      ],
-      'body' => $json_data,
-    ]);
-
-    if ($response->getStatusCode() == 200) {
-      \Drupal::logger('rep')->notice("Conta {$account->id()} atualizada no sguser.");
-    }
-  } catch (RequestException $e) {
-    \Drupal::logger('rep')->error("Erro ao atualizar conta {$account->id()} no sguser: " . $e->getMessage());
-  }
-}
-
-/**
- * Implementa hook_user_delete().
- * É chamado quando um usuário é removido no Drupal.
- */
-function rep_user_delete($account) {
-
-  $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
-
-  if (!$sagres_token) {
-    \Drupal::logger('rep')->error("Token não encontrado na sessão.");
-    return;
-  }
-
-  $acc_repo_instance = \Drupal::request()->getHost();
-
-  $url = 'https://sagres.graxiom.com/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
-
-  try {
-    $response = \Drupal::httpClient()->delete($url, [
-      'headers' => [
-        'Authorization' => "Bearer {$sagres_token}",
-      ],
-    ]);
-
-    if ($response->getStatusCode() == 200) {
-      \Drupal::logger('rep')->notice("Conta {$account->id()} removida do sguser.");
-    }
-  } catch (RequestException $e) {
-    \Drupal::logger('rep')->error("Erro ao remover conta {$account->id()} do sguser: " . $e->getMessage());
-  }
-}
 
 /* Implements hook_file_download().
  *
@@ -348,4 +241,52 @@ function rep_file_download($uri) {
 
 function rep_page_attachments(array &$attachments) {
   $attachments['#attached']['library'][] = 'rep/rep_js_css';
+}
+
+/**
+ * Implements hook_user_login().
+ */
+function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
+  $user = \Drupal\user\Entity\User::load($account->id());
+  $username = $user->getAccountName();
+  $repo_instance = \Drupal::request()->getHost();
+  $project_id = 'hascorepo';
+
+  $client = \Drupal::httpClient();
+  try {
+    $response = $client->get('http://192.168.1.169/sgcontract/account/terms-status', [
+      'query' => [
+        'acc_id' => $username,
+        'acc_repo_instance' => $repo_instance,
+        'project_id' => $project_id,
+      ],
+    ]);
+
+    $data = json_decode($response->getBody(), TRUE);
+
+    if (empty($data['accepted']) || !$data['accepted']) {
+      \Drupal::messenger()->addWarning(t('Tem de aceitar os Termos de Uso para continuar.'));
+      \Drupal::service('session')->set('terms_pending', TRUE);
+    }
+  } catch (\Exception $e) {
+    \Drupal::logger('rep')->error('Erro ao verificar aceitação dos termos: @msg', ['@msg' => $e->getMessage()]);
+  }
+}
+
+/**
+ * Redirects to terms acceptance page if terms are pending.
+ */
+function rep_page_top(&$page_top) {
+  $current_user = \Drupal::currentUser();
+
+  if ($current_user->isAuthenticated()) {
+    $session = \Drupal::service('session');
+    $current_path = \Drupal::service('path.current')->getPath();
+
+    if ($session->get('terms_pending') === TRUE && $current_path !== '/terms-aceptance') {
+      $response = new \Symfony\Component\HttpFoundation\RedirectResponse('/terms-aceptance');
+      $response->send();
+      exit;
+    }
+  }
 }
