@@ -211,7 +211,6 @@ class FusekiAPIConnector {
     return $data;
   }
 
-
   public function getUsage($uri) {
     $endpoint = "/hascoapi/api/usage/".rawurlencode($uri);
     $method = 'GET';
@@ -514,6 +513,10 @@ class FusekiAPIConnector {
             'token'       => $token,
             'consumer_id' => $consumerId,
             'elementType' => $elementType,
+            'keyword'     => $keyword,
+            'type'        => $type,
+            'manageremail'=> $manageremail,
+            'status'      => $status,
             // …add any other required payload fields here…
         ],
     ];
@@ -2388,8 +2391,8 @@ class FusekiAPIConnector {
         $refresh();
         $token = $session->get('oauth_access_token');
         // \Drupal::logger('rep')->debug('downloadFileSocial(): token after refresh: @t', [
-          '@t' => substr($token, 0, 8) . '…',
-        ]);
+        //   '@t' => substr($token, 0, 8) . '…',
+        // ]);
       }
       catch (\Exception $e) {
         \Drupal::logger('rep')->error('downloadFileSocial(): token refresh failed: @m', [
