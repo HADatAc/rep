@@ -211,7 +211,6 @@ class FusekiAPIConnector {
     return $data;
   }
 
-
   public function getUsage($uri) {
     $endpoint = "/hascoapi/api/usage/".rawurlencode($uri);
     $method = 'GET';
@@ -514,6 +513,10 @@ class FusekiAPIConnector {
             'token'       => $token,
             'consumer_id' => $consumerId,
             'elementType' => $elementType,
+            'keyword'     => $keyword,
+            'type'        => $type,
+            'manageremail'=> $manageremail,
+            'status'      => $status,
             // …add any other required payload fields here…
         ],
     ];
@@ -2352,31 +2355,31 @@ class FusekiAPIConnector {
  */
   public function downloadFileSocial(string $uri, string $fileName) {
     // 1) Entry log
-    \Drupal::logger('rep')->debug('downloadFileSocial(): uri=@u, file=@f', [
-      '@u' => $uri,
-      '@f' => $fileName,
-    ]);
+    // \Drupal::logger('rep')->debug('downloadFileSocial(): uri=@u, file=@f', [
+    //   '@u' => $uri,
+    //   '@f' => $fileName,
+    // ]);
 
     // 2) Ensure OAuth token in session (refresh if needed).
     $session = \Drupal::request()->getSession();
     $token   = $session->get('oauth_access_token');
-    \Drupal::logger('rep')->debug('downloadFileSocial(): session token before refresh: @t', [
-      '@t' => $token ? substr($token, 0, 8) . '…' : '(none)',
-    ]);
+    // \Drupal::logger('rep')->debug('downloadFileSocial(): session token before refresh: @t', [
+    //   '@t' => $token ? substr($token, 0, 8) . '…' : '(none)',
+    // ]);
 
     $refresh = function() use ($session) {
-      \Drupal::logger('rep')->debug('downloadFileSocial(): refreshing OAuth token...');
+      // \Drupal::logger('rep')->debug('downloadFileSocial(): refreshing OAuth token...');
       $controller = \Drupal::service('controller_resolver')
         ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
       $response = call_user_func($controller);
       if ($response instanceof \Symfony\Component\HttpFoundation\JsonResponse) {
         $payload = json_decode($response->getContent(), TRUE);
-        \Drupal::logger('rep')->debug('downloadFileSocial(): OAuthController payload: @p', [
-          '@p' => print_r($payload, TRUE),
-        ]);
+        // \Drupal::logger('rep')->debug('downloadFileSocial(): OAuthController payload: @p', [
+        //   '@p' => print_r($payload, TRUE),
+        // ]);
         if (!empty($payload['body']['access_token'])) {
           $session->set('oauth_access_token', $payload['body']['access_token']);
-          \Drupal::logger('rep')->debug('downloadFileSocial(): new token saved.');
+          // \Drupal::logger('rep')->debug('downloadFileSocial(): new token saved.');
           return;
         }
       }
@@ -2387,9 +2390,9 @@ class FusekiAPIConnector {
       try {
         $refresh();
         $token = $session->get('oauth_access_token');
-        \Drupal::logger('rep')->debug('downloadFileSocial(): token after refresh: @t', [
-          '@t' => substr($token, 0, 8) . '…',
-        ]);
+        // \Drupal::logger('rep')->debug('downloadFileSocial(): token after refresh: @t', [
+        //   '@t' => substr($token, 0, 8) . '…',
+        // ]);
       }
       catch (\Exception $e) {
         \Drupal::logger('rep')->error('downloadFileSocial(): token refresh failed: @m', [
@@ -2402,9 +2405,9 @@ class FusekiAPIConnector {
     // 3) Build the Social download URL using the same base as listByKeywordType/getUri.
     $oauthUrl    = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
     $downloadUrl = preg_replace('#/oauth/token$#', '/api/socialm/downloadfile', $oauthUrl);
-    \Drupal::logger('rep')->debug('downloadFileSocial(): POST URL is @url', [
-      '@url' => $downloadUrl,
-    ]);
+    // \Drupal::logger('rep')->debug('downloadFileSocial(): POST URL is @url', [
+    //   '@url' => $downloadUrl,
+    // ]);
 
     // 4) Prepare the POST options.
     $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
@@ -2421,18 +2424,18 @@ class FusekiAPIConnector {
         'file'        => $fileName,
       ],
     ];
-    \Drupal::logger('rep')->debug('downloadFileSocial(): POST body @b', [
-      '@b' => print_r($options['json'], TRUE),
-    ]);
+    // \Drupal::logger('rep')->debug('downloadFileSocial(): POST body @b', [
+    //   '@b' => print_r($options['json'], TRUE),
+    // ]);
 
     // 5) Execute the POST request, retrying once on 401.
     $client = \Drupal::httpClient();
     try {
       $response = $client->request('POST', $downloadUrl, $options);
       $status   = $response->getStatusCode();
-      \Drupal::logger('rep')->debug('downloadFileSocial(): first attempt HTTP @s', [
-        '@s' => $status,
-      ]);
+      // \Drupal::logger('rep')->debug('downloadFileSocial(): first attempt HTTP @s', [
+      //   '@s' => $status,
+      // ]);
 
       if ($status === 401) {
         // Token expired or revoked: refresh and retry once.
@@ -2443,9 +2446,9 @@ class FusekiAPIConnector {
         $options['json']['token']            = $newToken;
         $response = $client->request('POST', $downloadUrl, $options);
         $status   = $response->getStatusCode();
-        \Drupal::logger('rep')->debug('downloadFileSocial(): retry attempt HTTP @s', [
-          '@s' => $status,
-        ]);
+        // \Drupal::logger('rep')->debug('downloadFileSocial(): retry attempt HTTP @s', [
+        //   '@s' => $status,
+        // ]);
       }
     }
     catch (\Exception $e) {
@@ -2457,7 +2460,7 @@ class FusekiAPIConnector {
 
     // 6) Return the response only if HTTP 200, else NULL.
     if (isset($status) && $status === 200) {
-      \Drupal::logger('rep')->debug('downloadFileSocial(): successful download.');
+      // \Drupal::logger('rep')->debug('downloadFileSocial(): successful download.');
       return $response;
     }
 
