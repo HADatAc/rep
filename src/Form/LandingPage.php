@@ -43,18 +43,60 @@ class LandingPage extends FormBase {
             '#title' => 'This repository currently hosts a knowledge graph about the following:<br>',
         ];
 
-        $form['row'] = array(
+        $form['row1'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('row')),
+        );
+
+        $totalsSocial = '<h3>Social/Organizational Elements</h3>';
+        $totalsSocial .= '<div class="row text-center">';
+
+        $totalsSocial .= '<div class="col-md-3">' .
+                         ' <a href="' . Utils::selectBackUrl('organization')->toString() . '">Organization(s)</a><br>' . 
+                         About::total('organization') . '</div>';
+        
+        $totalsSocial .= '<div class="col-md-3">' .  
+                         ' <a href="' . Utils::selectBackUrl('person')->toString() . '">Person(s)</a><br>' . 
+                         About::total('person') . '</div>';
+        
+        $totalsSocial .= '<div class="col-md-3">' .  
+                         ' <a href="' . Utils::selectBackUrl('place')->toString() . '">Place(s)</a><br>' . 
+                         About::total('place') . '</div>';
+        
+        $totalsSocial .= '<div class="col-md-3">' .  
+                         ' <a href="' . Utils::selectBackUrl('postaladdress')->toString() . '">Postal Address(es)</a><br>' . 
+                         About::total('postaladdress') . '</div>';
+        
+        $totalsSocial .= '</div>';
+        
+
+        $form['row1']['column1'] = array(
+            '#type' => 'container',
+            //'#attributes' => array('class' => array('row')),
+            'card' => array(
+                '#type' => 'markup',
+                '#markup' => '<div class="card"><div class="card-body">' . $totalsSocial . '</div></div>',
+                //'<div class="card-footer text-center"><a href="(link)" class="btn btn-secondary">Manage</a></div></div>',
+            ),
+        );
+
+        $form['row2'] = array(
+            '#type' => 'container',
+            '#attributes' => array('class' => array('row')),
+        );
+
+        $form['row2']['column1'] = array(
+            '#type' => 'container',
+            '#attributes' => array('class' => array('col-md-12')),
         );
 
         //
         //  FIRST COLUMN
         //
 
-        $form['row']['column1'] = array(
+        $form['row2']['column1'] = array(
             '#type' => 'container',
-            '#attributes' => array('class' => array('col-md-2')),
+            '#attributes' => array('class' => array('col-md-3')),
         );
 
         $totalsInst = '<h3>Instrument Elements</h3>';
@@ -71,7 +113,7 @@ class LandingPage extends FormBase {
         $totalsInst .=  '<li> ' . About::total('annotation') . ' <a href="'.Utils::selectBackUrl('annotation')->toString().'">annotation(s)</a></li>';
         $totalsInst .= '</ul>';
 
-        $form['row']['column1']['card1'] = array(
+        $form['row2']['column1']['card1'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-12')),
             'card' => array(
@@ -80,9 +122,9 @@ class LandingPage extends FormBase {
             ),
         );
 
-        $form['row']['column1']['filler'] = [
+        $form['row2']['column1']['filler'] = [
             '#type' => 'markup',
-            '#markup' => '<br><br><br><br>',
+            '#markup' => '<br>',
         ];
 
         $totalsStudy = '<h3>Study Elements</h3>';
@@ -96,8 +138,11 @@ class LandingPage extends FormBase {
         $totalsStudy .=  '<li> ' . About::total('studyobjectcollection') . ' <a href="'.Utils::selectBackUrl('studyobjectcollection')->toString().'">studyobjectcollection(s)</a></li>';
         $totalsStudy .=  '<li> ' . About::total('studyobject') . ' <a href="'.Utils::selectBackUrl('studyobject')->toString().'">studyobject(s)</a></li>';
         $totalsStudy .= '</ul>';
+        $totalsStudy  .= '<br>';
+        $totalsStudy  .= '<br>';
+        $totalsStudy  .= '<br>';
 
-        $form['row']['column1']['card2'] = array(
+        $form['row2']['column1']['card2'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-12')),
             'card' => array(
@@ -121,6 +166,7 @@ class LandingPage extends FormBase {
         // SECOND COLUMN: MAIN IMAGE
         //
 
+        /*
         $form['row']['column2'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-4')),
@@ -129,14 +175,15 @@ class LandingPage extends FormBase {
                 '#markup' => '<img src="' . $image_path . '" alt="HASCO Cycle" style="width:100%;" border="0" />',
             ),
         );
+        */
 
         //
         // THIRD COLUMN: MAIN IMAGE
         //
 
-        $form['row']['column3'] = array(
+        $form['row2']['column3'] = array(
             '#type' => 'container',
-            '#attributes' => array('class' => array('col-md-2')),
+            '#attributes' => array('class' => array('col-md-3')),
         );
 
         $totalsDeploy = '<h3>Deployment Elements</h3>';
@@ -150,8 +197,10 @@ class LandingPage extends FormBase {
         $totalsDeploy .=  '<li> ' . About::total('deployment') . ' <a href="'.Utils::selectBackUrl('deployment')->toString().'">deployment(s)</a></li>';
         $totalsDeploy .=  '<li> ' . About::total('stream') . ' <a href="'.Utils::selectBackUrl('stream')->toString().'">stream(s)</a></li>';
         $totalsDeploy  .= '</ul>';
+        $totalsDeploy  .= '<br>';
+        $totalsDeploy  .= '<br>';
 
-        $form['row']['column3']['card3'] = array(
+        $form['row2']['column3']['card3'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-12')),
             'card' => array(
@@ -160,7 +209,7 @@ class LandingPage extends FormBase {
             ),
         );
 
-        $form['row']['column3']['filler'] = [
+        $form['row2']['column3']['filler'] = [
             '#type' => 'markup',
             '#markup' => '<br>',
         ];
@@ -181,7 +230,7 @@ class LandingPage extends FormBase {
         $totalsData .= '</ul>';
 
         // Define each card individually
-        $form['row']['column3']['card4'] = array(
+        $form['row2']['column3']['card4'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-12')),
             'card' => array(
@@ -195,9 +244,9 @@ class LandingPage extends FormBase {
         //
 
         // Second row with 3 cards
-        $form['row']['column4'] = array(
+        $form['row2']['column4'] = array(
             '#type' => 'container',
-            '#attributes' => array('class' => array('col-md-4')),
+            '#attributes' => array('class' => array('col-md-6')),
         );
 
         $ontologies = '<h3>Ontologies</h3><table>';
@@ -235,31 +284,12 @@ class LandingPage extends FormBase {
         $ontologies .= '</ul>';
         */
 
-        $form['row']['column4']['card5'] = array(
+        $form['row2']['column4']['card1'] = array(
             '#type' => 'container',
             '#attributes' => array('class' => array('col-md-12')),
             'card' => array(
                 '#type' => 'markup',
                 '#markup' => '<div class="card"><div class="card-body">' . $ontologies . '</div></div>',
-                //'<div class="card-footer text-center"><a href="(link)" class="btn btn-secondary">Manage</a></div></div>',
-            ),
-        );
-
-        $totalsSocial = '<h3>Social/Organizational Elements</h3>';
-        $totalsSocial .= '<ul>';
-        //$totals .=  '<li> ' . About::total('kgr') . ' <a href="'.Utils::selectBackUrl('kgr')->toString().'">KGR(s)</a> (MT)</li>';
-        $totalsSocial .=  '<li> ' . About::total('place') . ' <a href="'.Utils::selectBackUrl('place')->toString().'">place(s)</a></li>';
-        $totalsSocial .=  '<li> ' . About::total('organization') . ' <a href="'.Utils::selectBackUrl('organization')->toString().'">organization(s)</a></li>';
-        $totalsSocial .=  '<li> ' . About::total('person') . ' <a href="'.Utils::selectBackUrl('person')->toString().'">person(s)</a></li>';
-        $totalsSocial .=  '<li> ' . About::total('postaladdress') . ' <a href="'.Utils::selectBackUrl('postaladdress')->toString().'">postaladdress(es)</a></li>';
-        $totalsSocial .= '</ul>';
-
-        $form['row']['column4']['card6'] = array(
-            '#type' => 'container',
-            '#attributes' => array('class' => array('col-md-12')),
-            'card' => array(
-                '#type' => 'markup',
-                '#markup' => '<div class="card"><div class="card-body">' . $totalsSocial . '</div></div>',
                 //'<div class="card-footer text-center"><a href="(link)" class="btn btn-secondary">Manage</a></div></div>',
             ),
         );
