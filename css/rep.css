@@ -974,3 +974,9 @@ button.view-active {
   white-space: nowrap;
   z-index: 10000; /* make sure it floats above other elements */
 }
+
+
+/* DASHBOARD PAGE RELATES */
+body.path-rep .card {
+  min-height: fit-content!important;
+}
