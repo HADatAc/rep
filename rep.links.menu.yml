@@ -190,7 +190,7 @@ rep.social_status:
 rep.socialm_manageConsumer:
   title: Social KG Manage Consumer Organization
   description: Social KG Manage Consumer Organization
-  route_name: socialm.select_element
+  route_name: socialm.select_consumer_element
   route_parameters:
     elementtype: 'consumer'
     page: '1'
