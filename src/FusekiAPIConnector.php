@@ -78,7 +78,7 @@ class FusekiAPIConnector {
       $decodedLegacy = $rawLegacy;
     }
     // \Drupal::logger('rep')->debug('Decoded legacy payload: @d', ['@d' => print_r($decodedLegacy, TRUE)]);
-    // dpm($decodedLegacy); // Added dpm() to debug the decoded legacy
+    dpm($decodedLegacy); // Added dpm() to debug the decoded legacy
 
     // 3) If legacy succeeded, return JSON string
     if (isset($decodedLegacy->isSuccessful) && $decodedLegacy->isSuccessful === TRUE) {
