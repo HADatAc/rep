@@ -32,13 +32,13 @@ class FusekiAPIConnector {
    *   GENERIC
    */
 
-  // public function getUri($uri) {
-  //   $endpoint = "/hascoapi/api/uri/".rawurlencode($uri);
-  //   $method = "GET";
-  //   $api_url = $this->getApiUrl();
-  //   $data = $this->getHeader();
-  //   return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  // }
+  public function getUri($uri) {
+    $endpoint = "/hascoapi/api/uri/".rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
   /**
    * Fetch a resource by URI, first from the legacy API then (if needed) from Social.
    *
@@ -57,159 +57,159 @@ class FusekiAPIConnector {
    * @return string|null
    *   A JSON‐encoded string from either the legacy or Social API, or NULL on failure.
    */
-  public function getUri(string $uri) {
-    // 1) LEGACY GET
-    $legacyEndpoint = '/hascoapi/api/uri/' . rawurlencode($uri);
-    $legacyUrl      = $this->getApiUrl() . $legacyEndpoint;
-    $opts           = ['headers' => $this->getHeader() ?? []];
-    // \Drupal::logger('rep')->debug('Legacy GET: @url', ['@url' => $legacyUrl]);
+  // public function getUri(string $uri) {
+  //   // 1) LEGACY GET
+  //   $legacyEndpoint = '/hascoapi/api/uri/' . rawurlencode($uri);
+  //   $legacyUrl      = $this->getApiUrl() . $legacyEndpoint;
+  //   $opts           = $this->getHeader() ?? [];
+  //   // \Drupal::logger('rep')->debug('Legacy GET: @url', ['@url' => $legacyUrl]);
 
-    $rawLegacy = $this->perform_http_request('GET', $legacyUrl, $opts);
-    // \Drupal::logger('rep')->debug('Legacy raw response: @r', ['@r' => print_r($rawLegacy, TRUE)]);
+  //   $rawLegacy = $this->perform_http_request('GET', $legacyUrl, $opts);
+  //   // \Drupal::logger('rep')->debug('Legacy raw response: @r', ['@r' => print_r($rawLegacy, TRUE)]);
 
-    // 2) Decode only if it's a string
-    if (is_string($rawLegacy)) {
-      $decodedLegacy = json_decode($rawLegacy);
-    }
-    elseif (is_array($rawLegacy)) {
-      $decodedLegacy = json_decode(json_encode($rawLegacy));
-    }
-    else {
-      $decodedLegacy = $rawLegacy;
-    }
-    // \Drupal::logger('rep')->debug('Decoded legacy payload: @d', ['@d' => print_r($decodedLegacy, TRUE)]);
-    dpm($decodedLegacy); // Added dpm() to debug the decoded legacy
+  //   // 2) Decode only if it's a string
+  //   if (is_string($rawLegacy)) {
+  //     $decodedLegacy = json_decode($rawLegacy);
+  //   }
+  //   elseif (is_array($rawLegacy)) {
+  //     $decodedLegacy = json_decode(json_encode($rawLegacy));
+  //   }
+  //   else {
+  //     $decodedLegacy = $rawLegacy;
+  //   }
+  //   // \Drupal::logger('rep')->debug('Decoded legacy payload: @d', ['@d' => print_r($decodedLegacy, TRUE)]);
+  //   dpm($decodedLegacy); // Added dpm() to debug the decoded legacy
 
-    // 3) If legacy succeeded, return JSON string
-    if (isset($decodedLegacy->isSuccessful) && $decodedLegacy->isSuccessful === TRUE) {
-      // \Drupal::logger('rep')->debug('Legacy successful, returning its JSON.');
-      return is_string($rawLegacy)
-        ? $rawLegacy
-        : json_encode($decodedLegacy);
-    }
-    // \Drupal::logger('rep')->debug('Legacy not successful, falling back to Social POST.');
+  //   // 3) If legacy succeeded, return JSON string
+  //   if (isset($decodedLegacy->isSuccessful) && $decodedLegacy->isSuccessful === TRUE) {
+  //     // \Drupal::logger('rep')->debug('Legacy successful, returning its JSON.');
+  //     return is_string($rawLegacy)
+  //       ? $rawLegacy
+  //       : json_encode($decodedLegacy);
+  //   }
+  //   // \Drupal::logger('rep')->debug('Legacy not successful, falling back to Social POST.');
 
-    // 4) Fallback enabled?
-    if (!\Drupal::config('rep.settings')->get('social_conf')) {
-      // \Drupal::logger('rep')->debug('Social fallback disabled, returning legacy JSON.');
-      return is_string($rawLegacy)
-        ? $rawLegacy
-        : json_encode($decodedLegacy);
-    }
+  //   // 4) Fallback enabled?
+  //   if (!\Drupal::config('rep.settings')->get('social_conf')) {
+  //     // \Drupal::logger('rep')->debug('Social fallback disabled, returning legacy JSON.');
+  //     return is_string($rawLegacy)
+  //       ? $rawLegacy
+  //       : json_encode($decodedLegacy);
+  //   }
 
-    // 5) Ensure OAuth token in session
-    $session = \Drupal::request()->getSession();
-    $token   = $session->get('oauth_access_token');
-    // \Drupal::logger('rep')->debug('Session token: @t', ['@t' => $token ? substr($token,0,8).'…' : '(none)']);
+  //   // 5) Ensure OAuth token in session
+  //   $session = \Drupal::request()->getSession();
+  //   $token   = $session->get('oauth_access_token');
+  //   // \Drupal::logger('rep')->debug('Session token: @t', ['@t' => $token ? substr($token,0,8).'…' : '(none)']);
 
-    $refresh = function() use ($session) {
-      // \Drupal::logger('rep')->debug('Refreshing token…');
-      $ctrl = \Drupal::service('controller_resolver')
-        ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
-      $resp = call_user_func($ctrl);
-      if ($resp instanceof \Symfony\Component\HttpFoundation\JsonResponse) {
-        $pl = json_decode($resp->getContent(), TRUE);
-        // \Drupal::logger('rep')->debug('OAuthController payload: @p', ['@p'=>print_r($pl,TRUE)]);
-        if (!empty($pl['body']['access_token'])) {
-          $session->set('oauth_access_token', $pl['body']['access_token']);
-          // \Drupal::logger('rep')->debug('New token saved.');
-          return;
-        }
-      }
-      throw new \Exception('Failed to refresh OAuth token.', 401);
-    };
+  //   $refresh = function() use ($session) {
+  //     // \Drupal::logger('rep')->debug('Refreshing token…');
+  //     $ctrl = \Drupal::service('controller_resolver')
+  //       ->getControllerFromDefinition('Drupal\social\Controller\OAuthController::getAccessToken');
+  //     $resp = call_user_func($ctrl);
+  //     if ($resp instanceof \Symfony\Component\HttpFoundation\JsonResponse) {
+  //       $pl = json_decode($resp->getContent(), TRUE);
+  //       // \Drupal::logger('rep')->debug('OAuthController payload: @p', ['@p'=>print_r($pl,TRUE)]);
+  //       if (!empty($pl['body']['access_token'])) {
+  //         $session->set('oauth_access_token', $pl['body']['access_token']);
+  //         // \Drupal::logger('rep')->debug('New token saved.');
+  //         return;
+  //       }
+  //     }
+  //     throw new \Exception('Failed to refresh OAuth token.', 401);
+  //   };
 
-    if (empty($token)) {
-      try {
-        $refresh();
-        $token = $session->get('oauth_access_token');
-        // \Drupal::logger('rep')->debug('Token after refresh: @t', ['@t'=>substr($token,0,8).'…']);
-      }
-      catch (\Exception $e) {
-        \Drupal::logger('rep')->error('Token refresh failed: @m', ['@m'=>$e->getMessage()]);
-        // Return legacy JSON to keep parseObjectResponse happy
-        return is_string($rawLegacy)
-          ? $rawLegacy
-          : json_encode($decodedLegacy);
-      }
-    }
+  //   if (empty($token)) {
+  //     try {
+  //       $refresh();
+  //       $token = $session->get('oauth_access_token');
+  //       // \Drupal::logger('rep')->debug('Token after refresh: @t', ['@t'=>substr($token,0,8).'…']);
+  //     }
+  //     catch (\Exception $e) {
+  //       \Drupal::logger('rep')->error('Token refresh failed: @m', ['@m'=>$e->getMessage()]);
+  //       // Return legacy JSON to keep parseObjectResponse happy
+  //       return is_string($rawLegacy)
+  //         ? $rawLegacy
+  //         : json_encode($decodedLegacy);
+  //     }
+  //   }
 
-    // 6) Build Social POST URL exactly like listByKeywordType
-    $oauthUrl      = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
-    $socialPostUrl = preg_replace('#/oauth/token$#', '/api/socialm/geturi', $oauthUrl);
-    // \Drupal::logger('rep')->debug('Social POST URL: @u', ['@u'=>$socialPostUrl]);
+  //   // 6) Build Social POST URL exactly like listByKeywordType
+  //   $oauthUrl      = rtrim(\Drupal::config('social.oauth.settings')->get('oauth_url'), '/');
+  //   $socialPostUrl = preg_replace('#/oauth/token$#', '/api/socialm/geturi', $oauthUrl);
+  //   // \Drupal::logger('rep')->debug('Social POST URL: @u', ['@u'=>$socialPostUrl]);
 
-    // 7) Prepare POST body
-    $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
-    $postOptions= [
-      'http_errors'=> FALSE,
-      'headers'    => [
-        'Authorization'=> "Bearer {$token}",
-        'Accept'       => 'application/json',
-      ],
-      'json'       => [
-        'token'       => $token,
-        'consumer_id' => $consumerId,
-        'uri'         => $uri,
-      ],
-    ];
-    // \Drupal::logger('rep')->debug('Social POST body: @b', ['@b'=>print_r($postOptions['json'],TRUE)]);
+  //   // 7) Prepare POST body
+  //   $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
+  //   $postOptions= [
+  //     'http_errors'=> FALSE,
+  //     'headers'    => [
+  //       'Authorization'=> "Bearer {$token}",
+  //       'Accept'       => 'application/json',
+  //     ],
+  //     'json'       => [
+  //       'token'       => $token,
+  //       'consumer_id' => $consumerId,
+  //       'uri'         => $uri,
+  //     ],
+  //   ];
+  //   // \Drupal::logger('rep')->debug('Social POST body: @b', ['@b'=>print_r($postOptions['json'],TRUE)]);
 
-    // 8) Execute POST
-    $client   = \Drupal::httpClient();
-    $response = $client->request('POST', $socialPostUrl, $postOptions);
-    $code     = $response->getStatusCode();
-    $body     = $response->getBody()->getContents();
-    // \Drupal::logger('rep')->debug('Social POST code: @c', ['@c'=>$code]);
-    // \Drupal::logger('rep')->debug('Social POST body: @b', ['@b'=>print_r($body, TRUE)]);
+  //   // 8) Execute POST
+  //   $client   = \Drupal::httpClient();
+  //   $response = $client->request('POST', $socialPostUrl, $postOptions);
+  //   $code     = $response->getStatusCode();
+  //   $body     = $response->getBody()->getContents();
+  //   // \Drupal::logger('rep')->debug('Social POST code: @c', ['@c'=>$code]);
+  //   // \Drupal::logger('rep')->debug('Social POST body: @b', ['@b'=>print_r($body, TRUE)]);
 
-    // 9) Retry once on 401
-    if ($code === 401
-        || (is_string($body) && json_decode($body) === NULL && stripos($body,'denied')!==FALSE)
-    ) {
-      // \Drupal::logger('rep')->warning('Unauthorized, refreshing token & retrying…');
-      try {
-        $refresh();
-        $newToken = $session->get('oauth_access_token');
-        $postOptions['headers']['Authorization'] = "Bearer {$newToken}";
-        $postOptions['json']['token']            = $newToken;
-        $response = $client->request('POST', $socialPostUrl, $postOptions);
-        $code     = $response->getStatusCode();
-        $body     = $response->getBody()->getContents();
-        // \Drupal::logger('rep')->debug('Retry code: @c', ['@c'=>$code]);
-        // \Drupal::logger('rep')->debug('Retry body: @b', ['@b'=>substr($body,0,200)]);
-      }
-      catch (\Exception $e) {
-        \Drupal::logger('rep')->error('Social retry failed: @m', ['@m'=>$e->getMessage()]);
-        return is_string($rawLegacy)
-          ? $rawLegacy
-          : json_encode($decodedLegacy);
-      }
-    }
+  //   // 9) Retry once on 401
+  //   if ($code === 401
+  //       || (is_string($body) && json_decode($body) === NULL && stripos($body,'denied')!==FALSE)
+  //   ) {
+  //     // \Drupal::logger('rep')->warning('Unauthorized, refreshing token & retrying…');
+  //     try {
+  //       $refresh();
+  //       $newToken = $session->get('oauth_access_token');
+  //       $postOptions['headers']['Authorization'] = "Bearer {$newToken}";
+  //       $postOptions['json']['token']            = $newToken;
+  //       $response = $client->request('POST', $socialPostUrl, $postOptions);
+  //       $code     = $response->getStatusCode();
+  //       $body     = $response->getBody()->getContents();
+  //       // \Drupal::logger('rep')->debug('Retry code: @c', ['@c'=>$code]);
+  //       // \Drupal::logger('rep')->debug('Retry body: @b', ['@b'=>substr($body,0,200)]);
+  //     }
+  //     catch (\Exception $e) {
+  //       \Drupal::logger('rep')->error('Social retry failed: @m', ['@m'=>$e->getMessage()]);
+  //       return is_string($rawLegacy)
+  //         ? $rawLegacy
+  //         : json_encode($decodedLegacy);
+  //     }
+  //   }
 
-    // 10) HTTP >=400, give up
-    if ($code >= 400) {
-      \Drupal::logger('rep')->error('Social POST getUri HTTP @c error: @m', [
-        '@c'=>$code,'@m'=>substr($body,0,200)
-      ]);
-      return is_string($rawLegacy)
-        ? $rawLegacy
-        : json_encode($decodedLegacy);
-    }
+  //   // 10) HTTP >=400, give up
+  //   if ($code >= 400) {
+  //     \Drupal::logger('rep')->error('Social POST getUri HTTP @c error: @m', [
+  //       '@c'=>$code,'@m'=>substr($body,0,200)
+  //     ]);
+  //     return is_string($rawLegacy)
+  //       ? $rawLegacy
+  //       : json_encode($decodedLegacy);
+  //   }
 
-    // 11) SUCCESS → decode JSON to stdClass and return
-    // \Drupal::logger('rep')->debug('Social getUri decoding JSON to object.');
-    $data = json_decode($body);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-      \Drupal::logger('rep')->error(
-        'Invalid JSON from Social POST getUri: @e',
-        ['@e' => json_last_error_msg()]
-      );
-      return NULL;
-    }
-    // dpm($data, 'Decoded Social getUri response');
-    return $data;
-  }
+  //   // 11) SUCCESS → decode JSON to stdClass and return
+  //   // \Drupal::logger('rep')->debug('Social getUri decoding JSON to object.');
+  //   $data = json_decode($body);
+  //   if (json_last_error() !== JSON_ERROR_NONE) {
+  //     \Drupal::logger('rep')->error(
+  //       'Invalid JSON from Social POST getUri: @e',
+  //       ['@e' => json_last_error_msg()]
+  //     );
+  //     return NULL;
+  //   }
+  //   // dpm($data, 'Decoded Social getUri response');
+  //   return $data;
+  // }
 
   public function getUsage($uri) {
     $endpoint = "/hascoapi/api/usage/".rawurlencode($uri);
