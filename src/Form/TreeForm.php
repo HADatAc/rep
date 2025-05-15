@@ -116,7 +116,7 @@ class TreeForm extends FormBase {
       [
         'id' => 'attribute',
         'uri' => EntryPoints::ATTRIBUTE,
-        'label' => 'Attribute',~
+        'label' => 'Attribute',
         'uriNamespace' => EntryPoints::ATTRIBUTE
       ],
       [
@@ -268,6 +268,8 @@ class TreeForm extends FormBase {
     //dpm($branches_param, 'Debug $branches_param');     // See the final array of branches
 
     // Retrieve root node
+    dpm($api->getUri($nodeUri), 'Debug $nodeUri'); // See the URI being used
+    dpm($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'), 'Debug $api->parseObjectResponse'); // See the response from the API
     $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
     if ($this->getRootNode() == NULL) {
       \Drupal::messenger()->addError(t("Failed to retrieve root node " . $nodeUri . "."));
