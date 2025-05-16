@@ -52,23 +52,23 @@ class LandingPage extends FormBase {
         $totalsSocial .= '<div class="row text-center">';
 
         $totalsSocial .= '<div class="col-md-3">' .
-                         ' <a href="' . Utils::selectBackUrl('organization')->toString() . '">Organization(s)</a><br>' . 
+                         ' <a href="' . Utils::selectBackUrl('organization')->toString() . '">Organization(s)</a><br>' .
                          About::total('organization') . '</div>';
-        
-        $totalsSocial .= '<div class="col-md-3">' .  
-                         ' <a href="' . Utils::selectBackUrl('person')->toString() . '">Person(s)</a><br>' . 
+
+        $totalsSocial .= '<div class="col-md-3">' .
+                         ' <a href="' . Utils::selectBackUrl('person')->toString() . '">Person(s)</a><br>' .
                          About::total('person') . '</div>';
-        
-        $totalsSocial .= '<div class="col-md-3">' .  
-                         ' <a href="' . Utils::selectBackUrl('place')->toString() . '">Place(s)</a><br>' . 
+
+        $totalsSocial .= '<div class="col-md-3">' .
+                         ' <a href="' . Utils::selectBackUrl('place')->toString() . '">Place(s)</a><br>' .
                          About::total('place') . '</div>';
-        
-        $totalsSocial .= '<div class="col-md-3">' .  
-                         ' <a href="' . Utils::selectBackUrl('postaladdress')->toString() . '">Postal Address(es)</a><br>' . 
+
+        $totalsSocial .= '<div class="col-md-3">' .
+                         ' <a href="' . Utils::selectBackUrl('postaladdress')->toString() . '">Postal Address(es)</a><br>' .
                          About::total('postaladdress') . '</div>';
-        
+
         $totalsSocial .= '</div>';
-        
+
 
         $form['row1']['column1'] = array(
             '#type' => 'container',
@@ -193,7 +193,8 @@ class LandingPage extends FormBase {
         $totalsDeploy .=  '<li> ' . About::total('platform') . ' <a href="'.Utils::selectBackUrl('platform')->toString().'">platform(s)</a></li>';
         $totalsDeploy .=  '<li> ' . About::total('platforminstance') . ' <a href="'.Utils::selectBackUrl('platforminstance')->toString().'">platform instance(s)</a></li>';
         $totalsDeploy .=  '<li> ' . About::total('instrumentinstance') . ' <a href="'.Utils::selectBackUrl('instrumentinstance')->toString().'">instrument instance(s)</a></li>';
-        $totalsDeploy .=  '<li> ' . About::total('detectorinstance') . ' <a href="'.Utils::selectBackUrl('deploymentinstance')->toString().'">detector instance(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('detectorinstance') . ' <a href="'.Utils::selectBackUrl('detectorinstance')->toString().'">detector instance(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('actuatorinstance') . ' <a href="'.Utils::selectBackUrl('actuatorinstance')->toString().'">actuator instance(s)</a></li>';
         $totalsDeploy .=  '<li> ' . About::total('deployment') . ' <a href="'.Utils::selectBackUrl('deployment')->toString().'">deployment(s)</a></li>';
         $totalsDeploy .=  '<li> ' . About::total('stream') . ' <a href="'.Utils::selectBackUrl('stream')->toString().'">stream(s)</a></li>';
         $totalsDeploy  .= '</ul>';
