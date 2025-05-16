@@ -38,8 +38,9 @@ class AssocProject {
         $label = !empty($contrib->label) ? $contrib->label : $contrib->name;
         // build an <a> to the URI
         $url   = Html::escape($contrib->uri);
-        $items .= '<li>' . Utils::link(Html::escape($label . ' - ' . $contrib->name), $url, '_new') .'</li>';
-        // . ' ['.Utils::namespaceUri($url).']
+        $items .= '<li>' . Utils::link(Html::escape($label), $url, '_new') . ' ['.Utils::namespaceUri($url).']</li>';
+        // $items .= '<li><a href="' . $url . '" target="_blank" rel="noopener">'
+        //           . Html::escape($label) . '</a></li>';
       }
       $ul = '<ul style="list-style: disc; margin-left: 1.5em;">' . $items . '</ul>';
 
