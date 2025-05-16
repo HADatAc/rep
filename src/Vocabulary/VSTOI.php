@@ -70,6 +70,7 @@
     const UNDER_REVIEW                    = VSTOI::VSTOI . "UnderReview";
     const CURRENT                         = VSTOI::VSTOI . "Current";
     const DEPRECATED                      = VSTOI::VSTOI . "Deprecated";
+    const DAMAGED                         = VSTOI::VSTOI . "Damaged";
 
     /*
      *    POSITIONS
