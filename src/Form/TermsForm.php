@@ -4,6 +4,7 @@ namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Markup;
 
 /**
  * Formulário para aceitar os termos de uso.
