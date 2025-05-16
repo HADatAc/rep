@@ -15,42 +15,68 @@ class TermsForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $terms_text = '';
+    $form['#attached']['library'][] = 'rep/terms_modal';
 
     try {
       $client = \Drupal::httpClient();
       $project_id = 'hascorepo';
 
       $response = $client->get('http://192.168.1.169/sgcontract/terms/latest', [
-        'query' => [
-          'project_id' => $project_id,
-        ],
+        'query' => ['project_id' => $project_id],
       ]);
-      $data = json_decode($response->getBody(), TRUE);
 
-      if (!empty($data['content'])) {
-        $terms_text = $data['content'];
-      } else {
-        $terms_text = 'Não foi possível carregar os termos de uso.';
-      }
+      $data = json_decode($response->getBody(), TRUE);
+      $version = $data['version'];
+      $download_url = $data['download_url'];
+      $terms_hash = hash('sha256', file_get_contents($download_url));
     }
     catch (\Exception $e) {
-      $terms_text = 'Erro ao carregar os termos: ' . $e->getMessage();
+      $this->messenger()->addError($this->t('Erro ao carregar os termos: @msg', ['@msg' => $e->getMessage()]));
+      $download_url = '';
+      $version = '';
+      $terms_hash = '';
     }
 
-    $form['description'] = [
-      '#markup' => '<h2>Termos de Uso</h2><div class="terms-content" style="border:1px solid #ccc; padding:15px; max-height:300px; overflow-y:auto;">' . $terms_text . '</div>',
+
+    // Botão para visualizar termos no modal
+    $form['terms_button'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => $this->t('Visualizar Termos de Uso'),
+      '#attributes' => [
+        'class' => ['view-terms-button', 'btn', 'btn-secondary'],
+        'type' => 'button',
+        'data-terms-url' => $download_url,
+        'style' => 'margin-bottom:15px;',
+      ],
+      '#disabled' => empty($download_url),
     ];
-      
-    $form['accept'] = [
+
+    $form['terms_modal'] = [
+      '#type' => 'markup',
+      '#markup' => Markup::create('
+        <div id="drupal-modal" class="modal-media" style="display:none;"></div>
+      '),
+    ];
+
+    $form['description'] = [
+      '#markup' => empty($download_url)
+        ? '<p><strong>Os Termos de Uso não estão disponíveis de momento. Por favor, tente mais tarde.</strong></p>'
+        : '<p>Clique no botão acima para visualizar os Termos de Uso.</p>',
+    ];
+
+    $form['accept_terms'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Li e aceito os Termos de Uso.'),
+      '#title' => $this->t('Li e aceito os Termos de Uso'),
       '#required' => TRUE,
     ];
 
+    $form_state->set('terms_version', $version);
+    $form_state->set('terms_hash', $terms_hash);
+
     $form['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Aceitar Termos'),
+      '#value' => $this->t('Aceitar'),
     ];
 
     return $form;
@@ -69,6 +95,12 @@ class TermsForm extends FormBase {
           'acc_id' => $username,
           'acc_repo_instance' => $repo_instance,
           'project_id' => $project_id,
+          'terms_version' => $form_state->get('terms_version'),
+          'accepted_at' => date('Y-m-d H:i:s'),
+          'user_ip' => \Drupal::request()->getClientIp(),
+          'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+          'session_id' => \Drupal::service('session')->getId(),
+          'terms_hash' => $form_state->get('terms_hash'),
         ],
       ]);
       $data = json_decode($response->getBody(), TRUE);
@@ -77,11 +109,13 @@ class TermsForm extends FormBase {
         \Drupal::service('session')->remove('terms_pending');
         $this->messenger()->addStatus($this->t('Obrigado por aceitar os termos de uso.'));
         $form_state->setRedirect('<front>');
-      } elseif (!empty($data['status']) && $data['status'] === 'already_accepted') {
+      }
+      elseif (!empty($data['status']) && $data['status'] === 'already_accepted') {
         \Drupal::service('session')->remove('terms_pending');
         $this->messenger()->addWarning($this->t('Já tinha aceite os termos.'));
         $form_state->setRedirect('<front>');
-      } else {
+      }
+      else {
         $this->messenger()->addError($this->t('Erro ao registar aceitação.'));
       }      
     }

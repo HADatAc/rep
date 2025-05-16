@@ -242,3 +242,51 @@ function rep_file_download($uri) {
 function rep_page_attachments(array &$attachments) {
   $attachments['#attached']['library'][] = 'rep/rep_js_css';
 }
+
+/**
+ * Implements hook_user_login().
+ */
+function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
+  $user = \Drupal\user\Entity\User::load($account->id());
+  $username = $user->getAccountName();
+  $repo_instance = \Drupal::request()->getHost();
+  $project_id = 'hascorepo';
+
+  $client = \Drupal::httpClient();
+  try {
+    $response = $client->get('http://192.168.1.169/sgcontract/account/terms-status', [
+      'query' => [
+        'acc_id' => $username,
+        'acc_repo_instance' => $repo_instance,
+        'project_id' => $project_id,
+      ],
+    ]);
+
+    $data = json_decode($response->getBody(), TRUE);
+
+    if (empty($data['accepted']) || !$data['accepted']) {
+      \Drupal::messenger()->addWarning(t('Tem de aceitar os Termos de Uso para continuar.'));
+      \Drupal::service('session')->set('terms_pending', TRUE);
+    }
+  } catch (\Exception $e) {
+    \Drupal::logger('rep')->error('Erro ao verificar aceitação dos termos: @msg', ['@msg' => $e->getMessage()]);
+  }
+}
+
+/**
+ * Redirects to terms acceptance page if terms are pending.
+ */
+function rep_page_top(&$page_top) {
+  $current_user = \Drupal::currentUser();
+
+  if ($current_user->isAuthenticated()) {
+    $session = \Drupal::service('session');
+    $current_path = \Drupal::service('path.current')->getPath();
+
+    if ($session->get('terms_pending') === TRUE && $current_path !== '/terms-aceptance') {
+      $response = new \Symfony\Component\HttpFoundation\RedirectResponse('/terms-aceptance');
+      $response->send();
+      exit;
+    }
+  }
+}
