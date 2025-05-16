@@ -272,21 +272,3 @@ function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
     \Drupal::logger('rep')->error('Erro ao verificar aceitação dos termos: @msg', ['@msg' => $e->getMessage()]);
   }
 }
-
-/**
- * Redirects to terms acceptance page if terms are pending.
- */
-function rep_page_top(&$page_top) {
-  $current_user = \Drupal::currentUser();
-
-  if ($current_user->isAuthenticated()) {
-    $session = \Drupal::service('session');
-    $current_path = \Drupal::service('path.current')->getPath();
-
-    if ($session->get('terms_pending') === TRUE && $current_path !== '/terms-aceptance') {
-      $response = new \Symfony\Component\HttpFoundation\RedirectResponse('/terms-aceptance');
-      $response->send();
-      exit;
-    }
-  }
-}
