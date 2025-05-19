@@ -34,13 +34,13 @@ class LandingPage extends FormBase {
 
         $form['rep_home'] = [
             '#type' => 'item',
-            '#title' => '<br>This is an instance of the <a href="http://hadatac.org/software/hascoapp/">HAScO App</a> knowledge repository ' .
+            '#title' => '<br>This is a <a href="http://hadatac.org/software/hascorepo/">HAScO/Repo</a> instance ' .
                 'developed by <a href="http://hadatac.org/">HADatAc.org</a> community.<br>',
         ];
 
         $form['rep_content1'] = [
             '#type' => 'item',
-            '#title' => 'This repository currently hosts a knowledge graph about the following:<br>',
+            '#title' => 'This repository currently hosts a knowledge graph containing the following kinds of <b>core elements</b>:<br>',
         ];
 
         $form['row1'] = array(
@@ -48,125 +48,111 @@ class LandingPage extends FormBase {
             '#attributes' => array('class' => array('row')),
         );
 
-        // TITLE ROW
-
-        $totals = '<div class="row text-center">';
-
-        $totals .= '<div class="col-md-2"><h4>Social<br>Dimension</h4></div>';
-        
-        $totals .= '<div class="col-md-2"><h4>Sensing/Acting<br>Dimension</h4></div>';
-
-        $totals .= '<div class="col-md-2"><h4>Infrastructure<br>Dimension</h4></div>';
-
-        $totals .= '<div class="col-md-2"><h4>Science<br>Dimension</h4></div>';
-
-        $totals .= '<div class="col-md-2"><h4>Semantic<br>Dimension</h4></div>';
-
-        $totals .= '<div class="col-md-2"><h4>Data<br>Dimension</h4></div>';
-
-        $totals .= '</div>';
-        
-        // FIRST ROW
-
-        $totals .= '<div class="row text-center">';
-
-        $totals .= '<div class="col-md-2">' .
-                         ' <a href="' . Utils::selectBackUrl('project')->toString() . '">Project(s)</a><br>' . 
-                         About::total('project') . '</div>';
-        
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('instrument')->toString() . '">Instrument(s)</a><br>' . 
-                         About::total('instrument') . '</div>';
-        
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('instrumentinstance')->toString() . '">Instrument instance(s)</a><br>' . 
-                         About::total('instrumentinstance') . '</div>';
-        
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('study')->toString() . '">Study(ies)</a><br>' . 
-                         About::total('study') . '</div>';
-
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('entity')->toString() . '">Entity Type(s)</a><br>' . 
-                         About::total('entity') . '</div>';
-                
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('stream')->toString() . '">Datafile Stream(s)</a><br>' . 
-                         About::total('stream') . '</div>';
-                
-        $totals .= '</div>';
-        
-
-        // SECOND ROW
-
-        $totals .= '<div class="row text-center">';
-
-        $totals .= '<div class="col-md-2">' .
-                         ' <a href="' . Utils::selectBackUrl('organization')->toString() . '">Organization(s)</a><br>' . 
-                         About::total('organization') . '</div>';
-        
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('person')->toString() . '">Component(s)</a><br>' . 
-                         About::total('person') . '</div>';
-        
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('componentinstance')->toString() . '">Component Instance(s)</a><br>' . 
-                         About::total('componentinstance') . '</div>';
-        
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('objectcollection')->toString() . '">Object Collection(s)</a><br>' . 
-                         About::total('objectcollection') . '</div>';
-
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('variable')->toString() . '">Variable(s)</a><br>' . 
-                         About::total('variable') . '</div>';
-                
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('stream')->toString() . '">Message Stream(s)</a><br>' . 
-                         About::total('stream') . '</div>';
-                
-        $totals .= '</div>';
-        
-        // THIRD ROW
-
-        $totals .= '<div class="row text-center">';
-
-        $totals .= '<div class="col-md-2">' .
-                         ' <a href="' . Utils::selectBackUrl('person')->toString() . '">Person(s)</a><br>' . 
-                         About::total('person') . '</div>';
-        
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('codebook')->toString() . '">Codebook(s)</a><br>' . 
-                         About::total('codebook') . '</div>';
-        
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('deployment')->toString() . '">Deployment(s)</a><br>' . 
-                         About::total('deployment') . '</div>';
-        
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('object')->toString() . '">Object(s)</a><br>' . 
-                         About::total('object') . '</div>';
-
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('semanticvariable')->toString() . '">Semantic Variable(s)</a><br>' . 
-                         About::total('semanticvariable') . '</div>';
-                
-        $totals .= '<div class="col-md-2">' .  
-                         ' <a href="' . Utils::selectBackUrl('value')->toString() . '">Value(s)</a><br>' . 
-                         About::total('value') . '</div>';
-                
-        $totals .= '</div>';
-        
-
-        $form['row1']['column1'] = array(
+        $form['totals_wrapper'] = [
             '#type' => 'container',
-            //'#attributes' => array('class' => array('row')),
-            'card' => array(
-                '#type' => 'markup',
-                '#markup' => '<div class="card"><div class="card-body">' . $totals . '</div></div>',
-                //'<div class="card-footer text-center"><a href="(link)" class="btn btn-secondary">Manage</a></div></div>',
-            ),
-        );
+            '#attributes' => ['class' => ['card']],
+            'body' => [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['card-body']],
+            ],
+          ];
+          
+          // Title row
+          $form['totals_wrapper']['body']['titles'] = [
+            '#type' => 'container',
+            '#attributes' => ['class' => ['row', 'text-center']],
+          ];
+          
+          $dimensions = [
+            'Social<br>Dimension',
+            'Sensing/Acting<br>Dimension',
+            'Infrastructure<br>Dimension',
+            'Science<br>Dimension',
+            'Semantic<br>Dimension',
+            'Data<br>Dimension',
+          ];
+          
+          foreach ($dimensions as $i => $label) {
+            $form['totals_wrapper']['body']['titles']["col_$i"] = [
+              '#type' => 'markup',
+              '#markup' => "<div class='col-md-2'><h4>$label</h4></div>",
+            ];
+          }
+          
+          // Data rows
+          $rows = [
+            // Row 1
+            [
+              ['project', 'Project(s)', null, 'fa-diagram-project'],
+              ['instrument', 'Instrument(s)', null, 'fa-microchip'],
+              ['instrumentinstance', 'Instrument instance(s)', null, 'fa-plug'],
+              ['study', 'Study(ies)', null, 'fa-graduation-cap'],
+              ['entity', 'Entity Type(s)', null, 'fa-cubes'],
+              ['stream', 'Datafile Stream(s)', null, 'fa-database'],
+            ],
+            // Row 2
+            [
+              ['organization', 'Organization(s)', null, 'fa-building'],
+              ['component', 'Component(s)', null, 'fa-puzzle-piece'],
+              ['componentinstance', 'Component Instance(s)', null, 'fa-shapes'],
+              ['objectcollection', 'Object Collection(s)', 'studyobjectcollection', 'fa-boxes-stacked'],
+              ['variable', 'Variable(s)', null, 'fa-chart-line'],
+              ['stream', 'Message Stream(s)', null, 'fa-envelope'],
+            ],
+            // Row 3
+            [
+              ['person', 'Person(s)', null, 'fa-user'],
+              ['codebook', 'Codebook(s)', null, 'fa-book'],
+              ['deployment', 'Deployment(s)', null, 'fa-rocket'],
+              ['object', 'Object(s)', 'studyobject', 'fa-cube'],
+              ['semanticvariable', 'Semantic Variable(s)', null, 'fa-language'],
+              ['value', 'Value(s)', null, 'fa-equals'],
+            ],
+          ];
+          
+          // Icon styling
+          $iconStyle = 'padding:30px; width:80px; height:80px; display:inline-flex; align-items:center; justify-content:center;';
+          
+          foreach ($rows as $row_index => $row) {
+            $form['totals_wrapper']['body']["row_$row_index"] = [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['row', 'text-center']],
+            ];
+          
+            foreach ($row as $col_index => $item) {
+              $key = $item[0];
+              $label = $item[1];
+              $total_key = $item[2] ?? $key;
+              $icon_class = $item[3] ?? 'fa-database'; // Default icon if not specified
+          
+              $url = Utils::selectBackUrl($key)->toString();
+              $count = About::total($total_key);
+          
+              $form['totals_wrapper']['body']["row_$row_index"]["col_{$col_index}"] = [
+                '#type' => 'container',
+                '#attributes' => ['class' => ['col-md-2', 'text-center']],
+                'icon' => [
+                  '#type' => 'html_tag',
+                  '#tag' => 'i',
+                  '#attributes' => [
+                    'class' => [
+                      'fa-button', 'fa-3x', 'fa-solid', $icon_class, 'view-active',
+                    ],
+                    'style' => $iconStyle,
+                  ],
+                ],
+                'label' => [
+                  '#type' => 'markup',
+                  '#markup' => "<div><a href=\"$url\">$label</a><br><h3>$count</h3></div>",
+                ],
+              ];
+            }
+          }        
+          
+        $form['rep_full_list'] = [
+            '#type' => 'item',
+            '#title' => '<br>There is the <a href="/rep/full">full list of kinds of elements</a> in this knowledge graph.<br>',
+        ];
 
         $form['rep_newline1'] = [
             '#type' => 'item',

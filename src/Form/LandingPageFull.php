@@ -34,9 +34,15 @@ class LandingPageFull extends FormBase {
 
         $form['rep_home'] = [
             '#type' => 'item',
-            '#title' => '<br>This is an instance of the <a href="http://hadatac.org/software/hascoapp/">HAScO App</a> knowledge repository ' .
-                'developed by <a href="http://hadatac.org/">HADatAc.org</a> community.<br>',
+            '#title' => '<br>This is a <a href="http://hadatac.org/software/hascorepo/">HAScO/Repo</a> instance ' .
+                'developed by <a href="http://hadatac.org/">HADatAc.org</a> community.',
         ];
+
+        $form['rep_full_list'] = [
+            '#type' => 'item',
+            '#title' => 'There is a list of <a href="/rep">kinds of core elements</a> in this knowledge graph.<br>',
+        ];
+
 
         $form['rep_content1'] = [
             '#type' => 'item',
