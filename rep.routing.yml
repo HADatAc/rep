@@ -8,6 +8,13 @@ rep.home:
   requirements:
     _permission: 'access content'
 
+rep.home_full:
+  path: 'rep/full'
+  defaults:
+    _form: '\Drupal\rep\Form\LandingPageFull'
+  requirements:
+    _permission: 'access content'
+
 # Main menu options
 
 rep.describe_element:
