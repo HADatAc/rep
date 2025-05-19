@@ -59,12 +59,13 @@ class FusekiAPIConnector {
    */
   public function getUri(string $uri) {
     // 1) LEGACY GET
-    $legacyEndpoint = '/hascoapi/api/uri/' . rawurlencode($uri);
-    $legacyUrl      = $this->getApiUrl() . $legacyEndpoint;
-    $opts           = ['headers' => $this->getHeader() ?? []];
+    $endpoint = "/hascoapi/api/uri/".rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
     // \Drupal::logger('rep')->debug('Legacy GET: @url', ['@url' => $legacyUrl]);
 
-    $rawLegacy = $this->perform_http_request('GET', $legacyUrl, $opts);
+    $rawLegacy = $this->perform_http_request($method,$api_url.$endpoint,$data);
     // \Drupal::logger('rep')->debug('Legacy raw response: @r', ['@r' => print_r($rawLegacy, TRUE)]);
 
     // 2) Decode only if it's a string
