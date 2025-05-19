@@ -104,10 +104,10 @@ class TreeForm extends FormBase {
       'unit' => ["Unit", EntryPoints::UNIT],
       'detectorattribute' => ["Detector Attribute", EntryPoints::DETECTOR_ATTRIBUTE],
       'actuatorattribute' => ["Actuator Attribute", EntryPoints::ACTUATOR_ATTRIBUTE],
-      // 'platforminstance' => ["Platform Instance", EntryPoints::PLATFORM_INSTANCE],
-      // 'instrumentinstance' => ["Instrument Instance", EntryPoints::INSTRUMENT_INSTANCE],
-      // 'detectorinstance' => ["Detector Instance", EntryPoints::DETECTOR_INSTANCE],
-      // 'actuatorinstance' => ["Actuator Instance", EntryPoints::ACTUATOR_INSTANCE]
+      'platforminstance' => ["Platform Instance", EntryPoints::PLATFORM_INSTANCE],
+      'instrumentinstance' => ["Instrument Instance", EntryPoints::INSTRUMENT_INSTANCE],
+      'detectorinstance' => ["Detector Instance", EntryPoints::DETECTOR_INSTANCE],
+      'actuatorinstance' => ["Actuator Instance", EntryPoints::ACTUATOR_INSTANCE]
     ];
 
     $branches_param = [
