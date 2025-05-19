@@ -299,7 +299,7 @@ class MetadataTemplate
 
         // Adicionar todos os links concatenados ao campo `element_operations`
         $output[$element->uri] = [
-          'element_filename' => $filename,
+          'element_filename' => t('<span style="display: inline-block; max-width: 20ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>'),
           'element_status' => t($filestatus),
           'element_log' => t($log),
           'element_operations' => implode(' ', $links), // Concatenar links com espaço entre eles
