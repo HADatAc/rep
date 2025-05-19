@@ -980,3 +980,11 @@ button.view-active {
 body.path-rep .card {
   min-height: fit-content!important;
 }
+
+span.filename {
+  display: inline-block;
+  max-width: 20ch;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
