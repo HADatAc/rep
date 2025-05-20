@@ -42,19 +42,11 @@
     const IS_MEMBER_OF                  = HASCO::HASCO . "isMemberOf";
 
     /*
-     * STREAM STATUS
+     * STATUS
      */
 
-    const DRAFT                         = HASCO::HASCO . "Draft";
-    const DEPRECATED                    = HASCO::HASCO . "Active";
-    const DAMAGED                       = HASCO::HASCO . "Suspended";
-    const DEPLOYED                      = HASCO::HASCO . "Closed";
-
-    /*
-     * PERMISSION URI
-     */
-
-    const PUBLIC                        = HASCO::HASCO . "Public";
-    const PRIVATE                       = HASCO::HASCO . "Private";
-
-   }
+    const DRAFT                           = HASCO::HASCO . "Draft";
+    const ACTIVE                          = HASCO::HASCO . "Active";
+    const SUSPENDED                       = HASCO::HASCO . "Suspended";
+    const CLOSED                          = HASCO::HASCO . "Closed";
+  }
