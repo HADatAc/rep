@@ -72,6 +72,8 @@
     const DEPRECATED                      = VSTOI::VSTOI . "Deprecated";    // Cannot be deployed
     const DAMAGED                         = VSTOI::VSTOI . "Damaged";       // Cannot be deployed
     const DEPLOYED                        = VSTOI::VSTOI . "Deployed";      // Needs to become current before being deprecated or damaged
+    const SUSPENDED                       = VSTOI::VSTOI . "Suspended";
+    const CLOSED                          = VSTOI::VSTOI . "Closed";
 
     /*
      * STREAM STATUS (plus DRAFT/UNDER_REVIEW from SIR/DPL STATUS)
