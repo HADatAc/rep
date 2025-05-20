@@ -45,10 +45,10 @@
      * STREAM STATUS
      */
 
-    const DRAFT                           = HASCO::HASCO . "Draft";
-    const ACTIVE                          = HASCO::HASCO . "Active";
-    const SUSPENDED                       = HASCO::HASCO . "Suspended";
-    const CLOSED                          = HASCO::HASCO . "Closed";
+    const DRAFT                         = HASCO::HASCO . "Draft";
+    const DEPRECATED                    = HASCO::HASCO . "Active";
+    const DAMAGED                       = HASCO::HASCO . "Suspended";
+    const DEPLOYED                      = HASCO::HASCO . "Closed";
 
     /*
      * PERMISSION URI
