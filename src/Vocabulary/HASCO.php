@@ -40,4 +40,21 @@
     // PROPERTIES
 
     const IS_MEMBER_OF                  = HASCO::HASCO . "isMemberOf";
-  }
+
+    /*
+     * STREAM STATUS
+     */
+
+    const DRAFT                         = HASCO::HASCO . "Draft";      
+    const DEPRECATED                    = HASCO::HASCO . "Active";    
+    const DAMAGED                       = HASCO::HASCO . "Suspended";  
+    const DEPLOYED                      = HASCO::HASCO . "Closed";     
+
+    /*
+     * PERMISSION URI
+     */
+
+    const PUBLIC                        = HASCO::HASCO . "Public";      
+    const PRIVATE                       = HASCO::HASCO . "Private";    
+ 
+   }
