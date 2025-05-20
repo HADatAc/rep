@@ -40,4 +40,13 @@
     // PROPERTIES
 
     const IS_MEMBER_OF                  = HASCO::HASCO . "isMemberOf";
+
+    /*
+     * STATUS
+     */
+
+    const DRAFT                           = HASCO::HASCO . "Draft";
+    const ACTIVE                          = HASCO::HASCO . "Active";
+    const SUSPENDED                       = HASCO::HASCO . "Suspended";
+    const CLOSED                          = HASCO::HASCO . "Closed";
   }
