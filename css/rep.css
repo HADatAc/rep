@@ -996,3 +996,9 @@ span.filename {
   background-color: var(--bs-nav-link-color)!important;
   color: var(--bs-nav-pills-link-active-color)!important;
 }
+
+
+/* DATE field */
+#edit-instance-acquisition-date {
+  max-width: 9rem!important;
+}
