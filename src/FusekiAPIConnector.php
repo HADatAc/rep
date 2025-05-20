@@ -1084,7 +1084,6 @@ class FusekiAPIConnector {
    public function deploymentByStateEmail($state, $email, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/deployment/".
       $state."/".
-      // rawurlencode($email)."/".
       $email."/".
       $pageSize."/".
       $offset;
