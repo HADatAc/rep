@@ -79,7 +79,7 @@
 
      const PUBLIC                          = VSTOI::VSTOI . "Public";
      const PRIVATE                         = VSTOI::VSTOI . "Private";
- 
+
      /*
      *    POSITIONS
      */

@@ -989,3 +989,10 @@ span.filename {
   overflow-wrap: anywhere;
   word-break: break-all;
 }
+
+
+/* PILLS */
+.nav-link.active-dp2 {
+  background-color: var(--bs-nav-link-color)!important;
+  color: var(--bs-nav-pills-link-active-color)!important;
+}
