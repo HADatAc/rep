@@ -66,12 +66,12 @@
      * SIR/DPL STATUS
      */
 
-    const DRAFT                           = VSTOI::VSTOI . "Draft";         // Cannot be deployed
-    const UNDER_REVIEW                    = VSTOI::VSTOI . "UnderReview";   // Cannot be deployed
-    const CURRENT                         = VSTOI::VSTOI . "Current";       // Undeployed and can be Deployed, not Damaged
-    const DEPRECATED                      = VSTOI::VSTOI . "Deprecated";    // Cannot be deployed
-    const DAMAGED                         = VSTOI::VSTOI . "Damaged";       // Cannot be deployed
-    const DEPLOYED                        = VSTOI::VSTOI . "Deployed";      // Needs to become current before being deprecated or damaged
+    const DRAFT                           = VSTOI::VSTOI . "Draft";
+    const UNDER_REVIEW                    = VSTOI::VSTOI . "UnderReview";
+    const CURRENT                         = VSTOI::VSTOI . "Current";
+    const DEPRECATED                      = VSTOI::VSTOI . "Deprecated";
+    const DAMAGED                         = VSTOI::VSTOI . "Damaged";
+    const DEPLOYED                        = VSTOI::VSTOI . "Deployed";
 
     /*
      * PERMISSION
