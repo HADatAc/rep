@@ -71,6 +71,7 @@
     const CURRENT                         = VSTOI::VSTOI . "Current";
     const DEPRECATED                      = VSTOI::VSTOI . "Deprecated";
     const DAMAGED                         = VSTOI::VSTOI . "Damaged";
+    const DEPLOYED                        = VSTOI::VSTOI . "Deployed";
 
     /*
      *    POSITIONS
