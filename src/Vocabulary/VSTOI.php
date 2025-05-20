@@ -74,6 +74,16 @@
     const DEPLOYED                        = VSTOI::VSTOI . "Deployed";
 
     /*
+     * STREAM STATUS (plus DRAFT/UNDER_REVIEW from SIR/DPL STATUS)
+     */
+
+     //const DRAFT                        = VSTOI::VSTOI . "Draft";        
+     //const UNDER_REVIEW                 = VSTOI::VSTOI . "UnderReview";   
+     const ACTIVE                         = VSTOI::VSTOI . "Active";          
+     const SUSPENDED                      = VSTOI::VSTOI . "Suspended";       
+     const CLOSED                         = VSTOI::VSTOI . "Closed";       
+ 
+     /*
      * PERMISSION
      */
 
