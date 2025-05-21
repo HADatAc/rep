@@ -1000,6 +1000,8 @@ span.filename {
 
 /* DATE field */
 #edit-instance-acquisition-date,
+#edit-deployment-end-datetime-date,
+#edit-deployment-end-datetime-time,
 #edit-deployment-start-datetime-date,
 #edit-deployment-start-datetime-time,
 #edit-stream-start-datetime-date,
