@@ -42,11 +42,11 @@
     const IS_MEMBER_OF                  = HASCO::HASCO . "isMemberOf";
 
     /*
-     * STATUS
+     * STREAM STATUS
      */
-
-    const DRAFT                           = HASCO::HASCO . "Draft";
-    const ACTIVE                          = HASCO::HASCO . "Active";
-    const SUSPENDED                       = HASCO::HASCO . "Suspended";
-    const CLOSED                          = HASCO::HASCO . "Closed";
+    const DRAFT                         = HASCO::HASCO . "Draft";
+    const ACTIVE                        = HASCO::HASCO . "Active";
+    const SUSPENDED                     = HASCO::HASCO . "Suspended";
+    const CLOSED                        = HASCO::HASCO . "Closed";
+    const ALL_STATUSES                   = HASCO::HASCO . "AllStatuses";
   }
