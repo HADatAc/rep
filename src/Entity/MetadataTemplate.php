@@ -177,7 +177,7 @@ class MetadataTemplate
       }
 
       // STREAM RELATED
-      dpm($element->streamUri);
+      // dpm($element->streamUri);
       if ($element->streamUri !== null) {
         $stream = array();
         $api = \Drupal::service('rep.api_connector');
@@ -185,7 +185,7 @@ class MetadataTemplate
         $strObj = json_decode($strRawResponse);
         if ($strObj->isSuccessful) {
           $stream = $strObj->body;
-          dpm($stream);
+          // dpm($stream);
         } else {
           \Drupal::messenger()->addError(t("Failed to retrieve Stream."));
           return;
@@ -316,8 +316,8 @@ class MetadataTemplate
 
         // Adicionar todos os links concatenados ao campo `element_operations`
         $output[$element->uri] = [
-          'element_filename' => t('<span style="display: inline-block; max-width: 20ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>'),
-          'element_stream' => t(isset($stream) ? ($stream->method === 'file' ? $stream->datasetPattern : ($stream->messageProtocol . ' (' . $stream->messageIP .":".$stream->messagePort)) : ''),
+          'element_filename' => t('<span style="display: inline-block; max-width: 80ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>'),
+          'element_stream' => t('<span style="display: inline-block; max-width: 30ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">' . (isset($stream) ? $stream->datasetPattern : '-') . '</span>'),
           'element_status' => t($filestatus),
           'element_log' => t($log),
           'element_operations' => implode(' ', $links), // Concatenar links com espaço entre eles
