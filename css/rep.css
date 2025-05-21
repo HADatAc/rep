@@ -1005,6 +1005,8 @@ span.filename {
 #edit-deployment-start-datetime-date,
 #edit-deployment-start-datetime-time,
 #edit-stream-start-datetime-date,
-#edit-stream-start-datetime-time {
+#edit-stream-start-datetime-time,
+#edit-stream-end-datetime-date,
+#edit-stream-end-datetime-time {
   max-width: 9rem!important;
 }
