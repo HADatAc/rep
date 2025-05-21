@@ -999,6 +999,10 @@ span.filename {
 
 
 /* DATE field */
-#edit-instance-acquisition-date {
+#edit-instance-acquisition-date,
+#edit-deployment-start-datetime-date,
+#edit-deployment-start-datetime-time,
+#edit-stream-start-datetime-date,
+#edit-stream-start-datetime-time {
   max-width: 9rem!important;
 }
