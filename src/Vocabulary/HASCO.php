@@ -48,7 +48,7 @@
     const ACTIVE                        = HASCO::HASCO . "Active";
     const SUSPENDED                     = HASCO::HASCO . "Suspended";
     const CLOSED                        = HASCO::HASCO . "Closed";
-    const ALL_STATUSES                   = HASCO::HASCO . "AllStatuses";
+    const ALL_STATUSES                  = HASCO::HASCO . "AllStatuses";
 
     /*
      * PERMISSION URI
