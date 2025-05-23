@@ -1547,7 +1547,29 @@ class FusekiAPIConnector {
    *   STREAM
    */
 
-   public function streamByStateEmailDeployment($state, $email, $deploymenturi, $pageSize, $offset) {
+  public function streamByStudyState( $studyuri, $state, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/stream/bystudy/".
+      rawurlencode($studyuri)."/".
+      rawurlencode($state)."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function streamSizeByStudyState( $studyuri, $state) {
+    $endpoint = "/hascoapi/api/stream/bystudy/total/".
+      rawurlencode($studyuri)."/".
+      $state;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function streamByStateEmailDeployment($state, $email, $deploymenturi, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/stream/".
       $state."/".
       $email."/".
