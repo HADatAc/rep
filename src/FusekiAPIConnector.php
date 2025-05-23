@@ -1562,7 +1562,7 @@ class FusekiAPIConnector {
   public function streamSizeByStudyState( $studyuri, $state) {
     $endpoint = "/hascoapi/api/stream/bystudy/total/".
       rawurlencode($studyuri)."/".
-      $state;
+      rawurlencode($state);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
