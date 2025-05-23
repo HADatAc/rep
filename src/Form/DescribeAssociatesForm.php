@@ -14,7 +14,8 @@
  use Drupal\rep\Form\Associates\AssocStudy;
  use Drupal\rep\Form\Associates\AssocStudyObjectCollection;
  use Drupal\rep\Entity\GenericObject;
- use Drupal\rep\Vocabulary\FOAF;
+use Drupal\rep\Form\Associates\AssocProject;
+use Drupal\rep\Vocabulary\FOAF;
  use Drupal\rep\Vocabulary\HASCO;
  use Drupal\rep\Vocabulary\REPGUI;
  use Drupal\rep\Vocabulary\OWL;
@@ -61,7 +62,7 @@
           if ($this->getElement() != NULL) {
             $objectProperties = GenericObject::inspectObject($this->getElement());
             // dpm($objectProperties);
-            //dpm($this->getElement());
+            // dpm($this->getElement());
           }
         }
 
@@ -137,6 +138,8 @@
           AssocStudyObjectCollection::process($this->getElement(), $form, $form_state);
         } else if ($this->getElement()->typeUri === OWL::CLAZZ) {
           $this->processClass($form, $form_state);
+        }  else if ($this->getElement()->typeUri === SCHEMA::PROJECT) {
+          AssocProject::process($this->getElement(), $form, $form_state);
         }
 
         return $form;

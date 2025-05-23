@@ -56,8 +56,8 @@ class Stream {
         $version = $element->hasVersion;
       }
       $output[$element->uri] = [
-        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),     
-        'element_name' => $label,     
+        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+        'element_name' => $label,
         'element_version' => $version,
       ];
     }
@@ -90,14 +90,14 @@ class Stream {
         $study = $element->study->label;
       }
       $sdd = ' ';
-      if (isset($element->sdd) && isset($element->sdd->label)) {
-        $sdd = $element->sdd->label;
+      if (isset($element->semanticDataDictionary) && isset($element->semanticDataDictionary->label)) {
+        $sdd = $element->semanticDataDictionary->label;
       }
       $source = ' ';
       if ($element->method != NULL) {
         if ($element->method == 'files') {
           $source = "Files ";
-        } 
+        }
         if ($element->method == 'messages') {
           $source = "Messages ";
           if ($element->messageProtocol != NULL) {
@@ -124,8 +124,8 @@ class Stream {
         }
       }
       $output[$element->uri] = [
-        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),     
-        'element_datetime' => $datetime,     
+        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+        'element_datetime' => $datetime,
         'element_deployment' => $deployment,
         'element_study' => $study,
         'element_sdd' => $sdd,

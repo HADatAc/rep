@@ -14,6 +14,7 @@ use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\Component\Render\Markup;
+use Drupal\Component\Utility\Html;
 
 class Utils {
 
@@ -404,7 +405,7 @@ class Utils {
   public static function link($label,$uri) {
     $root_url = \Drupal::request()->getBaseUrl();
     $uriFinal = Utils::namespaceUri($uri);
-    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'">' . $label . '</a>';
+    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'" rel="noopener">' . $label . '</a>';
     return $link;
   }
 

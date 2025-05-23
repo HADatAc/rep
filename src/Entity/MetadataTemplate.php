@@ -78,6 +78,7 @@ class MetadataTemplate
 
     return $header = [
       'element_filename' => t('FileName'),
+      'element_stream' => t('Stream'),
       'element_status' => t('Status'),
       'element_log' => t('Log'),
       'element_operations' => t('Operations'),
@@ -108,6 +109,7 @@ class MetadataTemplate
     }
 
     foreach ($list as $element) {
+
       $uri = ' ';
       if ($element->uri != NULL) {
         $uri = $element->uri;
@@ -174,7 +176,22 @@ class MetadataTemplate
         }
       }
 
-      $encodedUri = rawurlencode(rawurlencode($element->uri));
+      // STREAM RELATED
+      // dpm($element->streamUri);
+      if ($element->streamUri !== null) {
+        $stream = array();
+        $api = \Drupal::service('rep.api_connector');
+        $strRawResponse = $api->getUri($element->streamUri);
+        $strObj = json_decode($strRawResponse);
+        if ($strObj->isSuccessful) {
+          $stream = $strObj->body;
+          // dpm($stream);
+        } else {
+          \Drupal::messenger()->addError(t("Failed to retrieve Stream."));
+          return;
+        }
+      }
+
       if ($mode == 'normal') {
         $output[$element->uri] = [
           'element_uri' => t('<a href="' . $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($uri) . '">' . $uri . '</a>'),
@@ -299,7 +316,8 @@ class MetadataTemplate
 
         // Adicionar todos os links concatenados ao campo `element_operations`
         $output[$element->uri] = [
-          'element_filename' => $filename,
+          'element_filename' => t('<span style="display: inline-block; max-width: 80ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>'),
+          'element_stream' => t('<span style="display: inline-block; max-width: 30ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">' . (isset($stream) ? $stream->datasetPattern : '-') . '</span>'),
           'element_status' => t($filestatus),
           'element_log' => t($log),
           'element_operations' => implode(' ', $links), // Concatenar links com espaço entre eles
