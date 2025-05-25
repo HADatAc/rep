@@ -1570,7 +1570,7 @@ class FusekiAPIConnector {
   }
 
   public function streamByStateEmailDeployment($state, $email, $deploymenturi, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/stream/".
+    $endpoint = "/hascoapi/api/stream/bydeployment/".
       $state."/".
       $email."/".
       rawurlencode($deploymenturi)."/".
@@ -1583,7 +1583,7 @@ class FusekiAPIConnector {
   }
 
   public function streamSizeByStateEmailDeployment($state, $email, $deploymenturi) {
-    $endpoint = "/hascoapi/api/stream/total/".
+    $endpoint = "/hascoapi/api/stream/bydeployment/total/".
       $state."/".
       $email."/".
       rawurlencode($deploymenturi);
