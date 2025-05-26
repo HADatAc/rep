@@ -144,7 +144,9 @@ class MetadataTemplate
           $element->hasDataFile->fileStatus != NULL &&
           $element->hasDataFile->fileStatus != ''
         ) {
-          if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
+          if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED && $element->streamUri == NULL) {
+            $filestatus = '<b><font style="color:#000000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
+          } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
             $filestatus = '<b><font style="color:#ff0000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED) {
             $filestatus = '<b><font style="color:#008000;">' . Constant::FILE_STATUS_PROCESSED . '</font></b>';
