@@ -4,6 +4,9 @@ namespace Drupal\rep\Entity;
 
 use Drupal\rep\Utils;
 use Drupal\rep\Vocabulary\REPGUI;
+use Drupal\rep\Vocabulary\HASCO;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
 
 class Stream {
 
@@ -35,6 +38,17 @@ class Stream {
         'element_source' => t('Source'),
       ];
     }
+  }
+
+  public static function generateHeaderStudy() {
+    return [
+      'element_uri'        => t('URI'),
+      'element_datetime'   => t('Execution Time'),
+      'element_deployment' => t('Deployment'),
+      'element_sdd'        => t('SDD'),
+      'element_source'     => t('Source'),
+      'element_operations' => t('Operations'),
+    ];
   }
 
   public static function generateOutput($list) {
@@ -132,6 +146,56 @@ class Stream {
         'element_source' => $source,
       ];
     }
+    return $output;
+  }
+
+  public static function generateOutputStudy($list) {
+    $root_url = \Drupal::request()->getBaseUrl();
+    $output   = [];
+
+    foreach ($list as $element) {
+      // 1) chave “segura”
+      $safe_key = base64_encode($element->uri);
+
+      // 2) link como render array
+      $link = t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($element->uri).'">'.UTILS::namespaceUri($element->uri).'</a>');
+
+
+      // 3) resto dos campos
+      $datetime   = '';
+      if (isset($element->startedAt)) {
+        $dt = new \DateTime($element->startedAt);
+        $datetime = $dt->format('F j, Y \a\t g:i A');
+      }
+
+      $deployment = $element->deployment->label ?? '';
+      $sdd = t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($element->semanticDataDictionary->uri).'">'.UTILS::namespaceUri($element->semanticDataDictionary->label).'</a>');
+      $source     = '';
+      if ($element->method === 'files') {
+        $source = t('Files');
+      }
+      elseif ($element->method === 'messages') {
+        $source = $element->messageProtocol
+          ? $element->messageProtocol . ' ' . t('messages')
+          : t('Messages');
+        if ($element->messageIP) {
+          $source .= ' @' . $element->messageIP;
+        }
+        if ($element->messagePort) {
+          $source .= ':' . $element->messagePort;
+        }
+      }
+
+      $output[$safe_key] = [
+        'element_uri'        => $link,
+        'element_datetime'   => $datetime,
+        'element_deployment' => $deployment,
+        'element_sdd'        => $sdd,
+        'element_source'     => $source,
+        'element_operations' => '',
+      ];
+    }
+
     return $output;
   }
 
