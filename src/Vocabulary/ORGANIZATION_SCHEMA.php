@@ -12,6 +12,8 @@ class ORGANIZATION_SCHEMA {
   const GovernmentOrganization                  = SCHEMA::SCHEMA . "GovernmentOrganization";
   const MedicalOrganization                     = SCHEMA::SCHEMA . "MedicalOrganization";
   const ResearchOrganization                    = SCHEMA::SCHEMA . "ResearchOrganization";
+  const Corporation                             = SCHEMA::SCHEMA . "Corporation";
+  const Consortium                              = SCHEMA::SCHEMA . "Consortium";
 
   public static function getOptions(): array {
     // IF WANTED schema:City UNCOMMENT
@@ -29,6 +31,8 @@ class ORGANIZATION_SCHEMA {
       self::GovernmentOrganization                => 'Governament Organization',
       self::MedicalOrganization                   => 'Medical Organization',
       self::ResearchOrganization                  => 'Research Organization',
+      self::Corporation                           => 'Corporation',
+      self::Consortium                            => 'Consortium',
     ];
   }
 }
