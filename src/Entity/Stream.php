@@ -447,6 +447,9 @@ class Stream {
         'element_pattern'    => $pattern,
         'element_source'     => $source,
         'element_operations' => $ops_container,
+        '#attributes'        => [
+          'data-stream-uri' => $safe_key,
+        ],
       ];
     }
 
