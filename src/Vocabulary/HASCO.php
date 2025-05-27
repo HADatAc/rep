@@ -2,6 +2,8 @@
 
   namespace Drupal\rep\Vocabulary;
 
+use PHPUnit\Event\Application\Started;
+
   class HASCO {
 
     const HASCO                   = "http://hadatac.org/ont/hasco/";
@@ -49,6 +51,11 @@
     const SUSPENDED                     = HASCO::HASCO . "Suspended";
     const CLOSED                        = HASCO::HASCO . "Closed";
     const ALL_STATUSES                  = HASCO::HASCO . "AllStatuses";
+
+    const Recording                     = HASCO::HASCO . "Recording";
+    const Started                       = HASCO::HASCO . "Started";
+    const Paused                        = HASCO::HASCO . "Paused";
+    const Stopped                       = HASCO::HASCO . "Stopped";
 
     /*
      * PERMISSION URI
