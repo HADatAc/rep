@@ -217,6 +217,18 @@ class MetadataTemplate
           'currentroute' => 'rep.describe_element'
         ]);
 
+        $ingest_da = Url::fromRoute('rep.ingest_element', [
+          'elementtype' => 'da',
+          'elementuri' => base64_encode($element->uri),
+          'currenturl' => $previousUrl,
+        ]);
+
+        $uningest_da = Url::fromRoute('rep.uningest_element', [
+          'elementtype' => 'da',
+          'elementuri' => base64_encode($element->uri),
+          'currenturl' => $previousUrl,
+        ]);
+
         $edit_da_str = base64_encode(Url::fromRoute('rep.edit_mt', [
           'elementtype' => 'da',
           'elementuri' => base64_encode($element->uri),
@@ -250,8 +262,7 @@ class MetadataTemplate
           $view_da
         )->toRenderable();
         $view_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'btn-secondary'],
-          'style' => 'margin-right: 10px;',
+          'class' => ['btn', 'btn-sm', 'btn-secondary', 'me-1'],
         ];
 
         if ($element->hasSIRManagerEmail === $useremail) {
@@ -260,8 +271,7 @@ class MetadataTemplate
             $edit_da
           )->toRenderable();
           $edit_bto['#attributes'] = [
-            'class' => ['btn', 'btn-sm', 'btn-secondary'],
-            'style' => 'margin-right: 10px;',
+            'class' => ['btn', 'btn-sm', 'btn-secondary', 'me-1'],
           ];
         }
 
@@ -282,8 +292,7 @@ class MetadataTemplate
             $view_da
           )->toRenderable();
           $ingest_bto['#attributes'] = [
-            'class' => ['btn', 'btn-sm', 'btn-secondary', !$element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
-            'style' => 'margin-right: 10px;',
+            'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', !$element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
           ];
 
           $uningest_bto = Link::fromTextAndUrl(
@@ -291,8 +300,7 @@ class MetadataTemplate
             $view_da
           )->toRenderable();
           $uningest_bto['#attributes'] = [
-            'class' => ['btn', 'btn-sm', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
-            'style' => 'margin-right: 10px;',
+            'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
           ];
         }
 
@@ -301,24 +309,23 @@ class MetadataTemplate
           '#title' => Markup::create('<i class="fa-solid fa-save"></i>'),
           '#url' => Url::fromUserInput("#", ['attributes' => ['data-download-url' => $download_da]]),
           '#attributes' => [
-            'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-url'],
-            'style' => 'margin-right: 10px;',
+            'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', 'download-url'],
           ],
         ];
 
         // Concatenar os links como HTML
         $links = [
-          \Drupal::service('renderer')->render($view_bto),
-          \Drupal::service('renderer')->render($edit_bto),
+          // \Drupal::service('renderer')->render($view_bto),
+          // \Drupal::service('renderer')->render($edit_bto),
           \Drupal::service('renderer')->render($ingest_bto),
           \Drupal::service('renderer')->render($uningest_bto),
-          \Drupal::service('renderer')->render($download_bto),
+          // \Drupal::service('renderer')->render($download_bto),
           \Drupal::service('renderer')->render($delete_bto),
         ];
 
         // Adicionar todos os links concatenados ao campo `element_operations`
         $output[$element->uri] = [
-          'element_filename' => t('<span style="display: inline-block; max-width: 80ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>'),
+          'element_filename' => t('<span style="display: inline-block; max-width: 60ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>'),
           'element_stream' => t('<span style="display: inline-block; max-width: 30ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">' . (isset($stream) ? $stream->datasetPattern : '-') . '</span>'),
           'element_status' => t($filestatus),
           'element_log' => t($log),
