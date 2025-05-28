@@ -80,6 +80,7 @@
           drupalModal.innerHTML = modalMarkup;
           // Torna o modal visível.
           drupalModal.style.display = "block";
+          window.scrollTo(0, 0);
         }
 
         // Make an AJAX request to fetch the file as binary data.
