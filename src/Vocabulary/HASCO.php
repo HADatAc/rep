@@ -48,12 +48,16 @@ use PHPUnit\Event\Application\Started;
      */
     const DRAFT                         = HASCO::HASCO . "Draft";
     const ACTIVE                        = HASCO::HASCO . "Active";
-    const SUSPENDED                     = HASCO::HASCO . "Suspended";
     const CLOSED                        = HASCO::HASCO . "Closed";
     const ALL_STATUSES                  = HASCO::HASCO . "AllStatuses";
 
-    const STREAM_RECORDING_START        = HASCO::HASCO . "Recording";
-    const STREAM_RECORDING_STOP         = HASCO::HASCO . "Stopped";
+    /*
+     * STREAM RECORDING STATUS
+     */
+    const INACTIVE                      = HASCO::HASCO . "Inactive";
+    const RECORDING                     = HASCO::HASCO . "Recording";
+    const INGESTING                     = HASCO::HASCO . "Ingesting";
+    const SUSPENDED                     = HASCO::HASCO . "Suspended";
 
     /*
      * PERMISSION URI
