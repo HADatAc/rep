@@ -26,13 +26,13 @@ class ORGANIZATION_SCHEMA {
     // ];
 
     return [
-      self::CollegeOrUniversity                   => 'College or University',
-      self::CollegeOrUniversityOrFacultyOrSchool  => 'College or University’s Faculty, School',
-      self::GovernmentOrganization                => 'Governament Organization',
-      self::MedicalOrganization                   => 'Medical Organization',
-      self::ResearchOrganization                  => 'Research Organization',
-      self::Corporation                           => 'Corporation',
-      self::Consortium                            => 'Consortium',
+      self::CollegeOrUniversity                  => 'College or University',
+      self::CollegeOrUniversityOrFacultyOrSchool => 'College or University’s Faculty, School',
+      self::Consortium                           => 'Consortium',
+      self::Corporation                          => 'Corporation',
+      self::GovernmentOrganization               => 'Governament Organization',
+      self::MedicalOrganization                  => 'Medical Organization',
+      self::ResearchOrganization                 => 'Research Organization',
     ];
   }
 }
