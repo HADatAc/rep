@@ -680,12 +680,15 @@ div#media-table-pager span.current-page {
   font-weight: 500;
 }
 
-div.toast {
+/* div.toast {
   position: fixed;
   bottom: 20px;
   right: 20px;
   width: fit-content!important;
   z-index: 99999;
+} */
+#toast-container {
+  float: right;
 }
 
 /* TREE */
