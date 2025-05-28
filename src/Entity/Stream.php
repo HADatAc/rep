@@ -401,38 +401,26 @@ class Stream {
         ])->toString()),
       ])->toString();
 
-      $ops_html[] = '<a href="' . $view_url . '" class="btn btn-sm btn-secondary me-1">'
-                  . '<i class="fa-solid fa-eye"></i>'
+      $ops_html[] = '<a href="' . $view_url . '" target="_new" class="btn btn-sm btn-secondary me-1" alt="Expose Stream" title="Expose Stream">'
+                  . '<i class="fa-solid fa-hexagon-nodes"></i>'
                   . '</a>';
 
-      if ($element->method == 'files') {
-        $record_url = Url::fromRoute('dpl.stream_record', [
-          'streamUri' => base64_encode($element->uri),
-        ])->toString();
-        $ops_html[] = '<a href="' . $record_url . '" alt="Start Recording" title="Start Recording" class="btn btn-sm btn-danger me-1">'
-                  . '<i class="fa-solid fa-compact-disc"></i>'
-                  . '</a>';
-
-        $play_url = Url::fromRoute('dpl.stream_play', [
-          'streamUri' => base64_encode($element->uri),
-        ])->toString();
-        $ops_html[] = '<a href="' . $play_url . '" alt="Start Stream" title="Start Stream" class="btn btn-sm btn-success me-1">'
-                  . '<i class="fa-solid fa-play"></i>'
-                  . '</a>';
-
-        $pause_url = Url::fromRoute('dpl.stream_pause', [
-          'streamUri' => base64_encode($element->uri),
-        ])->toString();
-        $ops_html[] = '<a href="' . $pause_url . '" alt="Pause Stream" title="Pause Stream" class="btn btn-sm btn-warning me-1">'
-                  . '<i class="fa-solid fa-pause"></i>'
-                  . '</a>';
-
-        $stop_url = Url::fromRoute('dpl.stream_stop', [
-          'streamUri' => base64_encode($element->uri),
-        ])->toString();
-        $ops_html[] = '<a href="' . $stop_url . '" alt="Stop Stream" title="Stop Stream" class="btn btn-sm btn-secondary me-1">'
-                  . '<i class="fa-solid fa-stop"></i>'
-                  . '</a>';
+      if ($element->method !== 'files') {
+        if (isset($element->hasMessageStreamState) && $element->hasMessageStreamState !== HASCO::STREAM_RECORDING_START) {
+          $record_url = Url::fromRoute('dpl.stream_record', [
+            'streamUri' => base64_encode($element->uri),
+          ])->toString();
+          $ops_html[] = '<a href="' . $record_url . '" alt="Record Stream" title="Record Stream" class="btn btn-sm btn-danger me-1">'
+                    . '<i class="fa-solid fa-compact-disc"></i>'
+                    . '</a>';
+        } else if (isset($element->hasMessageStreamState) && $element->hasMessageStreamState === HASCO::STREAM_RECORDING_START) {
+          $stop_url = Url::fromRoute('dpl.stream_stop', [
+            'streamUri' => base64_encode($element->uri),
+          ])->toString();
+          $ops_html[] = '<a href="' . $stop_url . '" alt="Stop Recording" title="Stop Recording" class="btn btn-sm btn-secondary me-1">'
+                    . '<i class="fa-solid fa-stop"></i>'
+                    . '</a>';
+        }
       }
 
       // 11) Wrap all operations into one Markup object.

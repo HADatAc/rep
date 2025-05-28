@@ -52,10 +52,8 @@ use PHPUnit\Event\Application\Started;
     const CLOSED                        = HASCO::HASCO . "Closed";
     const ALL_STATUSES                  = HASCO::HASCO . "AllStatuses";
 
-    const Recording                     = HASCO::HASCO . "Recording";
-    const Started                       = HASCO::HASCO . "Started";
-    const Paused                        = HASCO::HASCO . "Paused";
-    const Stopped                       = HASCO::HASCO . "Stopped";
+    const STREAM_RECORDING_START        = HASCO::HASCO . "Recording";
+    const STREAM_RECORDING_STOP         = HASCO::HASCO . "Stopped";
 
     /*
      * PERMISSION URI
