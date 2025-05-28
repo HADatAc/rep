@@ -235,14 +235,12 @@ class MetadataTemplate
           'currentroute' => 'rep.describe_element'
         ]);
 
-        $ingest_da = Url::fromRoute('rep.ingest_element', [
-          'elementtype' => 'da',
+        $ingest_da = Url::fromRoute('dpl.fileIngest', [
           'elementuri' => base64_encode($element->uri),
           'currenturl' => $previousUrl,
         ]);
 
-        $uningest_da = Url::fromRoute('rep.uningest_element', [
-          'elementtype' => 'da',
+        $uningest_da = Url::fromRoute('dpl.fileUningest', [
           'elementuri' => base64_encode($element->uri),
           'currenturl' => $previousUrl,
         ]);
@@ -304,29 +302,31 @@ class MetadataTemplate
               </a>'),
           ];
 
-          $ingest_bto = Link::fromTextAndUrl(
-            Markup::create('<i class="fa-solid fa-down-long"></i>'),
-            $view_da
-          )->toRenderable();
-
-          $ingest_bto['#attributes'] = [
-            'class' => [
-              'btn','btn-sm','me-1','btn-secondary',
-              $element->hasDataFile->fileStatus != Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : '',
-            ],
-            'title' => t('Ingest the file'),
+          // Build the ingest link render array.
+          $encoded = base64_encode($element->uri);
+          $ingest_bto = [
+            '#markup' => Markup::create('
+              <button
+                type="button"
+                class="btn btn-sm btn-secondary ingest-button"
+                data-elementuri="' . $encoded . '"
+                title="' . t('Ingest the file') . '">
+                <i class="fa-solid fa-down-long"></i>
+              </button>
+            '),
           ];
 
-          $uningest_bto = Link::fromTextAndUrl(
-            Markup::create('<i class="fa-solid fa-up-long"></i>'),
-            $view_da
-          )->toRenderable();
-          $uningest_bto['#attributes'] = [
-            'class' => [
-              'btn','btn-sm','me-1','btn-secondary',
-              $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : '',
-            ],
-            'title' => t('Uningest the file'),
+          // Build the uningest button
+          $uningest_bto = [
+            '#markup' => Markup::create('
+              <button
+                type="button"
+                class="btn btn-sm btn-secondary uningest-button"
+                data-elementuri="' . $encoded . '"
+                title="' . t('Uningest the file') . '">
+                <i class="fa-solid fa-up-long"></i>
+              </button>
+            '),
           ];
         }
 
@@ -343,8 +343,8 @@ class MetadataTemplate
         $links = [
           // \Drupal::service('renderer')->render($view_bto),
           // \Drupal::service('renderer')->render($edit_bto),
-          \Drupal::service('renderer')->render($ingest_bto),
-          \Drupal::service('renderer')->render($uningest_bto),
+          // \Drupal::service('renderer')->render($ingest_bto),
+          // \Drupal::service('renderer')->render($uningest_bto),
           // \Drupal::service('renderer')->render($download_bto),
           \Drupal::service('renderer')->render($delete_bto),
         ];
@@ -474,18 +474,6 @@ class MetadataTemplate
         'currentroute' => 'rep.describe_element'
       ]);
 
-      $ingest_da = Url::fromRoute('rep.ingest_element', [
-        'elementtype' => 'da',
-        'elementuri' => base64_encode($element->uri),
-        'currenturl' => $previousUrl,
-      ]);
-
-      $uningest_da = Url::fromRoute('rep.uningest_element', [
-        'elementtype' => 'da',
-        'elementuri' => base64_encode($element->uri),
-        'currenturl' => $previousUrl,
-      ]);
-
       $edit_da_str = base64_encode(Url::fromRoute('rep.edit_mt', [
         'elementtype' => 'da',
         'elementuri' => base64_encode($element->uri),
@@ -508,8 +496,6 @@ class MetadataTemplate
 
       $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<nolink>');
       $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<nolink>');
-      $ingest_da = $ingest_da instanceof Url ? $ingest_da : Url::fromRoute('<nolink>');
-      $uningest_da = $uningest_da instanceof Url ? $uningest_da : Url::fromRoute('<nolink>');
       $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<nolink>');
       $download_da = '/download-file/' . base64_encode($element->hasDataFile->filename) . '/' . base64_encode($element->isMemberOf->uri) . '/da';
 
@@ -543,14 +529,6 @@ class MetadataTemplate
             </a>'),
         ];
 
-        $ingest_bto = Link::fromTextAndUrl(
-          Markup::create('<i class="fa-solid fa-download"></i>'),
-          $view_da
-        )->toRenderable();
-        $ingest_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', !$element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
-        ];
-
         $uningest_bto = Link::fromTextAndUrl(
           Markup::create('<i class="fa-solid fa-upload"></i>'),
           $view_da
@@ -559,6 +537,33 @@ class MetadataTemplate
           'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
         ];
       }
+
+      // Build the ingest link render array.
+      $encoded = base64_encode($element->uri);
+      $ingest_bto = [
+        '#markup' => Markup::create('
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary ingest-button"
+            data-elementuri="' . $encoded . '"
+            title="' . t('Ingest the file') . '">
+            <i class="fa-solid fa-down-long"></i>
+          </button>
+        '),
+      ];
+
+      // Build the uningest button
+      $uningest_bto = [
+        '#markup' => Markup::create('
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary uningest-button"
+            data-elementuri="' . $encoded . '"
+            title="' . t('Uningest the file') . '">
+            <i class="fa-solid fa-up-long"></i>
+          </button>
+        '),
+      ];
 
       $download_bto = [
         '#type' => 'link',
