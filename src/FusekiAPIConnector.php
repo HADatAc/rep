@@ -1628,9 +1628,45 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function getTotalStudyDAs($uri) {
-    $endpoint = "/hascoapi/api/study/dataacquisitions/total/".
-      urlencode($uri);
+  // public function getTotalStudyDAs($uri) {
+  //   $endpoint = "/hascoapi/api/study/dataacquisitions/total/".
+  //     urlencode($uri);
+  //   $method = "GET";
+  //   $api_url = $this->getApiUrl();
+  //   $data = $this->getHeader();
+  //   return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  // }
+
+  // GET     /hascoapi/api/dataacquisition/bystream/:uri/:pageSize/:offset
+  public function getStudyDAsByStream($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/dataacquisition/bystream/".rawurlencode($uri)."/".$pageSize."/".$offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/dataacquisition/bystream/total/:uri^
+  public function getTotalStudyDAsByStream($uri) {
+    $endpoint = "/hascoapi/api/dataacquisition/bystream/total/".rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/dataacquisition/bystudy/:uri/:pageSize/:offset
+  public function getStudyDAsByStudy($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/dataacquisition/bystudy/".rawurlencode($uri)."/".$pageSize."/".$offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/dataacquisition/bystudy/total/:uri
+  public function getTotalStudyDAsByStudy($uri) {
+    $endpoint = "/hascoapi/api/dataacquisition/bystudy/total/".rawurlencode($uri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

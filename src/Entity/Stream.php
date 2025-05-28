@@ -406,14 +406,14 @@ class Stream {
                   . '</a>';
 
       if ($element->method !== 'files') {
-        if (isset($element->hasMessageStreamState) && $element->hasMessageStreamState !== HASCO::STREAM_RECORDING_START) {
+        if (isset($element->hasMessageStreamState) && $element->hasMessageStreamState !== HASCO::RECORDING) {
           $record_url = Url::fromRoute('dpl.stream_record', [
             'streamUri' => base64_encode($element->uri),
           ])->toString();
           $ops_html[] = '<a href="' . $record_url . '" alt="Record Stream" title="Record Stream" class="btn btn-sm btn-danger me-1">'
                     . '<i class="fa-solid fa-compact-disc"></i>'
                     . '</a>';
-        } else if (isset($element->hasMessageStreamState) && $element->hasMessageStreamState === HASCO::STREAM_RECORDING_START) {
+        } else if (isset($element->hasMessageStreamState) && $element->hasMessageStreamState === HASCO::RECORDING) {
           $stop_url = Url::fromRoute('dpl.stream_stop', [
             'streamUri' => base64_encode($element->uri),
           ])->toString();
