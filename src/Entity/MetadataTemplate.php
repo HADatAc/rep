@@ -95,7 +95,7 @@ class MetadataTemplate
     if ($streamType == 'files') {
       $header['element_messages_total'] = t('Data Points');
     } else {
-      $header['element_messages_total'] = t('Messages');
+      $header['element_messages_total'] = t('Total Messages');
       $header['element_messages_ingested'] = t('Ingested Messages');
     }
 
@@ -530,7 +530,7 @@ class MetadataTemplate
 
       if ($element->hasSIRManagerEmail === $useremail) {
         $delete_bto = [
-          '#markup' => Markup::create('<a href="#" class="btn btn-sm btn-secondary btn-danger delete-button"
+          '#markup' => Markup::create('<a href="#" class="btn btn-sm btn-secondary btn-danger delete-stream-file-button"
             data-url="' . $data_url . '"
             onclick="return false;">
             <i class="fa-solid fa-trash-can"></i>
