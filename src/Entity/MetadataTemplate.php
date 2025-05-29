@@ -85,17 +85,25 @@ class MetadataTemplate
     ];
   }
 
-  public static function generateStreamHeader()
+  public static function generateStreamHeader($streamType)
   {
 
-    return $header = [
-      'element_filename' => t('FileName'),
-      'element_messages_total' => t('Total Messages'),
-      'element_messages_ingested' => t('Ingested Messages'),
-      'element_status' => t('Status'),
-      'element_log' => t('Log'),
-      'element_operations' => t('Operations'),
-    ];
+    $header = [];
+
+    $header['element_filename'] = t('FileName');
+
+    if ($streamType == 'files') {
+      $header['element_messages_total'] = t('Data Points');
+    } else {
+      $header['element_messages_total'] = t('Messages');
+      $header['element_messages_ingested'] = t('Ingested Messages');
+    }
+
+    $header['element_status'] = t('Status');
+    $header['element_log'] = t('Log');
+    $header['element_operations'] = t('Operations');
+
+    return $header;
   }
 
   public static function generateOutput($elementType, $list)
@@ -108,9 +116,9 @@ class MetadataTemplate
     return MetadataTemplate::generateOutputWithMode($elementType, $list, 'compact');
   }
 
-  public static function generateStreamOutputCompact($elementType, $list)
+  public static function generateStreamOutputCompact($streamType, $list)
   {
-    return MetadataTemplate::generateStreamOutputWithMode($elementType, $list, 'compact');
+    return MetadataTemplate::generateStreamOutputWithMode($streamType, $list);
   }
 
   private static function generateOutputWithMode($elementType, $list, $mode)
@@ -343,8 +351,8 @@ class MetadataTemplate
         $links = [
           // \Drupal::service('renderer')->render($view_bto),
           // \Drupal::service('renderer')->render($edit_bto),
-          // \Drupal::service('renderer')->render($ingest_bto),
-          // \Drupal::service('renderer')->render($uningest_bto),
+          \Drupal::service('renderer')->render($ingest_bto),
+          \Drupal::service('renderer')->render($uningest_bto),
           // \Drupal::service('renderer')->render($download_bto),
           \Drupal::service('renderer')->render($delete_bto),
         ];
@@ -363,7 +371,7 @@ class MetadataTemplate
     return $output;
   }
 
-  private static function generateStreamOutputWithMode($elementType, $list, $mode)
+  private static function generateStreamOutputWithMode($streamType, $list)
   {
 
     $useremail = \Drupal::currentUser()->getEmail();
@@ -585,15 +593,20 @@ class MetadataTemplate
       ];
 
       // Adicionar todos os links concatenados ao campo `element_operations`
-      $output[$element->uri] = [
-        'element_filename' => t('<span style="display: inline-block; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>'),
-        // 'element_stream' => t('<span style="display: inline-block; max-width: 30ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">' . (isset($stream) ? $stream->datasetPattern : '-') . '</span>'),
-        'element_messages_total' => isset($element->totalMessages) ? $element->totalMessages : 0,
-        'element_messages_ingested' => isset($element->ingestedMessages) ? $element->ingestedMessages : 0,
-        'element_status' => t($filestatus),
-        'element_log' => t($log),
-        'element_operations' => implode(' ', $links), // Concatenar links com espaço entre eles
-      ];
+      $output[$element->uri] = [];
+      $output[$element->uri]['element_filename'] = t('<span style="display: inline-block; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>');
+
+      if ($streamType == 'files') {
+        $output[$element->uri]['element_messages_total'] = isset($element->numberDataPoints) ? $element->numberDataPoints : 0;
+      } else {
+        $output[$element->uri]['element_messages_total'] = isset($element->totalMessages) ? $element->totalMessages : 0;
+        $output[$element->uri]['element_messages_ingested'] = isset($element->ingestedMessages) ? $element->ingestedMessages : 0;
+      }
+
+      $output[$element->uri]['element_status'] = t($filestatus);
+      $output[$element->uri]['element_log'] = t($log);
+      $output[$element->uri]['element_operations'] = Markup::create( implode(' ', $links) ); // Concatenar links com espaço entre eles
+
 
     }
 

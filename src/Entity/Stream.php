@@ -406,18 +406,24 @@ class Stream {
                   . '</a>';
 
       if ($element->method !== 'files') {
-        if (isset($element->hasMessageStreamState) && $element->hasMessageStreamState !== HASCO::RECORDING) {
+        if (isset($element->hasMessageStatus) && $element->hasMessageStatus === HASCO::SUSPENDED) {
           $record_url = Url::fromRoute('dpl.stream_record', [
             'streamUri' => base64_encode($element->uri),
           ])->toString();
           $ops_html[] = '<a href="' . $record_url . '" alt="Record Stream" title="Record Stream" class="btn btn-sm btn-danger me-1">'
-                    . '<i class="fa-solid fa-compact-disc"></i>'
+                    . '<i class="fa-solid fa-record-vinyl"></i>'
                     . '</a>';
-        } else if (isset($element->hasMessageStreamState) && $element->hasMessageStreamState === HASCO::RECORDING) {
-          $stop_url = Url::fromRoute('dpl.stream_stop', [
+          $record_ingest_url = Url::fromRoute('dpl.stream_ingest', [
             'streamUri' => base64_encode($element->uri),
           ])->toString();
-          $ops_html[] = '<a href="' . $stop_url . '" alt="Stop Recording" title="Stop Recording" class="btn btn-sm btn-secondary me-1">'
+          $ops_html[] = '<a href="' . $record_ingest_url . '" alt="Record and Ingest Stream" title="Record and Ingest Stream" class="btn btn-sm btn-warning me-1">'
+                    . '<i class="fa-solid fa-compact-disc"></i>'
+                    . '</a>';
+        } else if (isset($element->hasMessageStatus) && ($element->hasMessageStatus === HASCO::RECORDING || $element->hasMessageStatus === HASCO::INGESTING)) {
+          $suspend_url = Url::fromRoute('dpl.stream_suspend', [
+            'streamUri' => base64_encode($element->uri),
+          ])->toString();
+          $ops_html[] = '<a href="' . $suspend_url . '" alt="Suspend Recording" title="Suspend Recording" class="btn btn-sm btn-secondary me-1">'
                     . '<i class="fa-solid fa-stop"></i>'
                     . '</a>';
         }
