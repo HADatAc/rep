@@ -1,100 +1,106 @@
-/* #drupal-modal {
+/* ============================================================
+   Modal Media Viewer
+   Styles for backdrop, modal wrapper, conteúdo (PDF/imagem)
+   ============================================================ */
+
+/* 1) Main Wrapper for Drupal modal: occupy view port */
+#drupal-modal {
   position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+/* 2) Backdrop: darkens the screen behind the content */
+#drupal-modal .my-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 10001;        /* immediately above the wrapper */
+  pointer-events: all;   /* captures click to close modal */
+}
+
+/* 3) Main Container for the modal (where the PDF or image goes) */
+#drupal-modal .modal-content {
+  position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 10000; /* Garante que fique acima de outros elementos */
-} */
-
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  z-index: 9999;
+  background: #fff;
+  max-width: 50%;
+  max-height: 95%;
+  overflow: visible;     /* the internal scroll comes from the content containers */
+  z-index: 10002;        /* above the backdrop */
+  pointer-events: all;   /* allows interaction inside the modal */
+  border-radius: 4px;
+  padding: 1em;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
-/* Modal backdrop styles */
-.my-modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  z-index: 10000;
-}
-
-/* Close button styles */
-.modal-close-btn {
+/* 4) Close button */
+#drupal-modal .close-btn,
+#drupal-modal #modal-close {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 24px;
+  top: 0.5em;
+  right: 0.5em;
   background: transparent;
   border: none;
+  font-size: 1.5rem;
+  line-height: 1;
   cursor: pointer;
+  z-index: 10003;       /* above all else */
   color: #333;
 }
 
-/* Optionally, style the pdf-pages container */
-#pdf-container {
-  z-index: 1000001;
-  position: relative;
-}
-
-.pdf-pages-container {
+/* 5) Container for PDF pages */
+#drupal-modal .pdf-pages-container {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 1em;
   overflow-y: auto;
-  max-height: 100vh !important;
+  max-height: calc(90vh - 2em); /* adjusts to the padding of .modal-content */
+  margin: 0 auto;
 }
 
-.modal-content {
-  display: block !important;
-  position: absolute !important;
-  top: 0 !important;
+/* Adjustments for each PDF canvas */
+#drupal-modal .pdf-pages-container canvas {
+  display: block;
+  margin: 0 auto;
 }
 
-#drupal-modal.ui-front {
-  background: #fff !important;
-  /* width: 0% !important; */
-  min-width: 50% !important;
-  max-width: 100% !important;
-  max-height: 100vh !important;
-  overflow-y: visible !important;
-  z-index: 10000 !important; */
-}
-
-.pdf-pages-container canvas {margin-top:40px !important;margin-bottom:40px !important;}
-
-/* Assegure que o container do modal tenha posição relativa */
-.modal-content {
-  position: relative;
-  background: #fff; /* ou outra cor de fundo */
-  /* padding: 20px; */
+#drupal-modal .pdf-pages-container canvas {
+  border: 1px solid #ddd; /* light border to highlight */
   border-radius: 4px;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
 }
 
-/* Estilos para o botão de fechar */
-.close-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 24px;
-  background: transparent;
-  border: none;
-  color: #333;
-  cursor: pointer;
-  z-index: 100;
+/* 6) Adjustments for images inseide modal */
+#drupal-modal #media-container img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(90vh - 2em); /* leaves space for padding and button */
+  margin: 0 auto;
 }
 
-#modal-close {
-  z-index: 9999999999;
-  color: #fff;
-  margin-right: 30px;
-  font-size: 50px;
+/* 7) Error messages / download fallback */
+#drupal-modal #media-container p {
+  text-align: center;
+  font-size: 1rem;
+  margin: 1em 0;
 }
+
+#drupal-modal #media-container a {
+  color: #0074d9;
+  text-decoration: underline;
+}
+
+/* ============================================================
+   End of modal-media.css
+   ============================================================ */
