@@ -52,7 +52,7 @@ use PHPUnit\Event\Application\Started;
     const ALL_STATUSES                  = HASCO::HASCO . "AllStatuses";
 
     /*
-     * STREAM RECORDING STATUS
+     * STREAM TYPE=MESSAGES RECORDING STATUS
      */
     const INACTIVE                      = HASCO::HASCO . "Inactive";
     const RECORDING                     = HASCO::HASCO . "Recording";
