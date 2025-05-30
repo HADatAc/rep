@@ -303,7 +303,7 @@ class MetadataTemplate
 
         if ($element->hasSIRManagerEmail === $useremail) {
           $delete_bto = [
-            '#markup' => Markup::create('<a href="#" class="btn btn-sm btn-secondary btn-danger delete-button"
+            '#markup' => Markup::create('<a href="#" title="Delete file" class="btn btn-sm btn-secondary btn-danger delete-button"
               data-url="' . $data_url . '"
               onclick="return false;">
               <i class="fa-solid fa-trash-can"></i>
@@ -316,6 +316,7 @@ class MetadataTemplate
             '#markup' => Markup::create('
               <button
                 type="button"
+                '.($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED ? 'disabled' : '').'
                 class="btn btn-sm btn-secondary ingest-button"
                 data-elementuri="' . $encoded . '"
                 title="' . t('Ingest the file') . '">
@@ -329,6 +330,7 @@ class MetadataTemplate
             '#markup' => Markup::create('
               <button
                 type="button"
+                '.($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : '').'
                 class="btn btn-sm btn-secondary uningest-button"
                 data-elementuri="' . $encoded . '"
                 title="' . t('Uningest the file') . '">
@@ -530,7 +532,7 @@ class MetadataTemplate
 
       if ($element->hasSIRManagerEmail === $useremail) {
         $delete_bto = [
-          '#markup' => Markup::create('<a href="#" class="btn btn-sm btn-secondary btn-danger delete-stream-file-button"
+          '#markup' => Markup::create('<a href="#" title="Delete Stream Data file" class="btn btn-sm btn-secondary btn-danger delete-stream-file-button"
             data-url="' . $data_url . '"
             onclick="return false;">
             <i class="fa-solid fa-trash-can"></i>
@@ -552,6 +554,7 @@ class MetadataTemplate
         '#markup' => Markup::create('
           <button
             type="button"
+            '.($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED ? 'disabled' : '').'
             class="btn btn-sm btn-secondary ingest-button"
             data-elementuri="' . $encoded . '"
             title="' . t('Ingest the file') . '">
@@ -565,6 +568,7 @@ class MetadataTemplate
         '#markup' => Markup::create('
           <button
             type="button"
+            '.($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : '').'
             class="btn btn-sm btn-secondary uningest-button"
             data-elementuri="' . $encoded . '"
             title="' . t('Uningest the file') . '">
