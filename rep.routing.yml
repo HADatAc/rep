@@ -375,3 +375,14 @@ rep.terms_form:
     _title: 'Terms of Use Acceptance'
   requirements:
     _permission: 'access content'
+
+# Generic FORM modal open
+
+rep.form_modal:
+  path: '/rep/formModal'
+  defaults:
+    _controller: '\Drupal\rep\Controller\FormAjax::open'
+  requirements:
+    _permission: 'access content'
+  options:
+    _admin_route: TRUE
