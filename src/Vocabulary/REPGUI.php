@@ -40,6 +40,7 @@
 
     const ADD_SEMANTIC_DATA_DICTIONARY   = "/sem/manage/addsemanticdatadictionary/";
     const EDIT_SEMANTIC_DATA_DICTIONARY  = "/sem/manage/editsemanticdatadictionary/";
+    const VIEW_SEMANTIC_DATA_DICTIONARY  = "/sem/manage/viewsemanticdatadictionary/";
 
     const ADD_PROCESS          = "/sir/manage/addprocess/";
     const EDIT_PROCESS         = "/sir/manage/editprocess/";
