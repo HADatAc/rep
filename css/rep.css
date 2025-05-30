@@ -690,6 +690,18 @@ div#media-table-pager span.current-page {
 }
 
 /* MODAL DESCRIPTION*/
+.rep-generic-modal {
+  min-width: 1280px!important;
+  margin: auto;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.rep-generic-modal .ui-dialog-titlebar {
+  margin-bottom: 20px;
+}
+
 .modal-dialog-centered {
   display: flex;
   align-items: center;

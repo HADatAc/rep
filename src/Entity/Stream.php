@@ -9,6 +9,7 @@ use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\Core\Render\Markup;
 use Drupal\rep\Constant;
+use Drupal\Component\Serialization\Json;
 
 class Stream {
 
@@ -200,10 +201,29 @@ class Stream {
       $deployment = $element->deployment->label ?? '';
 
       // 7) Build the SDD link as plain HTML.
-      $sdd_label = $element->semanticDataDictionary->label;
-      $sdd_path  = '/rep/uri/' . base64_encode($element->semanticDataDictionary->uri);
-      $sdd_url   = $root_url . $sdd_path;
-      $sdd       = Markup::create('<a href="' . $sdd_url . '">' . $sdd_label . '</a>');
+
+      $form_class = \Drupal\sem\Form\ViewSemanticDataDictionaryForm::class;
+      $args = [
+        'basic',
+        base64_encode($element->semanticDataDictionary->uri),
+      ];
+      $url = Url::fromRoute('rep.form_modal', [], [
+        'query' => [
+          'form_class' => $form_class,
+          'args'       => Json::encode($args),
+        ],
+        'attributes' => [
+          // Tell Drupal’s AJAX system to intercept and open a modal:
+          'class'               => ['use-ajax', 'btn', 'btn-sm', 'btn-secondary'],
+          'data-dialog-type'    => 'modal',
+          'data-dialog-options' => Json::encode([
+            'width'       => 800,
+            'dialogClass' => 'sdd-modal',
+          ]),
+        ],
+      ]);
+      $link = Link::fromTextAndUrl(t('View SDD'), $url)->toRenderable();
+      $sdd = \Drupal::service('renderer')->renderPlain($link);
 
       // 8) Dataset pattern or fallback.
       $pattern = $element->datasetPattern ?? '-';
