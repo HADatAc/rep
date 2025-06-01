@@ -204,6 +204,7 @@ class Stream {
 
       $form_class = \Drupal\sem\Form\ViewSemanticDataDictionaryForm::class;
       $args = [
+        'View SDD File',
         'basic',
         base64_encode($element->semanticDataDictionary->uri),
       ];

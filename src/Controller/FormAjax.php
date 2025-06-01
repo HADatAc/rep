@@ -82,6 +82,12 @@ class FormAjax extends ControllerBase {
       throw new BadRequestHttpException('The "args" parameter must be a JSON array.');
     }
 
+    $dialog_title = !empty($args[0]) && is_string($args[0])
+    ? $args[0]
+    : $this->t('Modal Form');
+
+    // array_shift($args);
+
     // 3) Build the form using the form builder.
     //    This pulls in all #attached libraries, preprocessors, etc.
     $form = $this->formBuilder->getForm($form_class, ...$args);
@@ -89,7 +95,7 @@ class FormAjax extends ControllerBase {
     // 4) Create an AjaxResponse and add an OpenModalDialogCommand to display the form.
     $response = new AjaxResponse();
     $response->addCommand(new OpenModalDialogCommand(
-      $this->t('Modal Form'),
+      $dialog_title,
       $form,
       [
         'width'       => '1280',              // Width in pixels.
