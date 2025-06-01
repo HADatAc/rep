@@ -731,13 +731,14 @@ div.details-wrapper [id^="edit-variables-"] .col input {
     padding: .375rem .75rem!important;
 }
 
-/* div.toast {
+div.toast {
   position: fixed;
   bottom: 20px;
   right: 20px;
   width: fit-content!important;
   z-index: 99999;
-} */
+}
+
 #toast-container {
   float: right;
 }
