@@ -113,7 +113,7 @@ class Deployment {
       }
 
       $output[$element->uri] = [
-        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+        'element_uri' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
         'element_datetime' => $datetime,
         'element_platform_instance' => $platformInstance,
         'element_instrument_instance' => $instrumentInstance,
@@ -159,7 +159,7 @@ class Deployment {
       }
 
       $output[$element->uri] = [
-        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+        'element_uri' => t('<a  target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
         'element_designedAt' => $designedAt,
         'element_startedAt' => $startedAt,
         'element_platform_instance' => $platformInstance,

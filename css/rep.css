@@ -713,6 +713,24 @@ div#media-table-pager span.current-page {
   font-weight: 500;
 }
 
+div.details-wrapper [id^="edit-codes-"] .col,
+div.details-wrapper [id^="edit-variables-"] .col{
+  padding: 0 0.1rem 0 0.1rem!important;
+}
+
+div.details-wrapper [id^="edit-codes-"]  .row,
+div.details-wrapper [id^="edit-variables-"] .row {
+  margin-right: 0!important;
+  margin-left: 0!important;
+  padding-right: 0!important;
+  padding-left: 0!important;
+}
+
+div.details-wrapper [id^="edit-codes-"] .col input,
+div.details-wrapper [id^="edit-variables-"] .col input {
+    padding: .375rem .75rem!important;
+}
+
 /* div.toast {
   position: fixed;
   bottom: 20px;
@@ -820,7 +838,7 @@ div#media-table-pager span.current-page {
 
 .ui-dialog {
   width: calc(100% - 30%) !important;
-  left: 25% !important;
+  /* left: 25% !important; */
   right: 25% !important;
   top: 10% !important;
   transform: none !important;
@@ -853,6 +871,10 @@ body.path-rep div.ui-dialog-titlebar {display:none!important;}
 div.vertical-tabs__panes {
   border-left: 1px solid #ccc !important;
   padding-left: 1.5rem!important;
+}
+
+#sdd-tabbed-form-wrapper div.vertical-tabs__panes {
+  width: 95%!important;
 }
 
 li.vertical-tabs__menu-item.is-selected {

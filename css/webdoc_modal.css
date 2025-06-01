@@ -13,6 +13,7 @@
   overflow: hidden;
   z-index: 10000;
   pointer-events: none;
+  overflow-y: scroll; /* allows scrolling if content overflows */
 }
 
 /* 2) Backdrop: darkens the screen behind the content */

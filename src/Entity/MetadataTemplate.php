@@ -278,7 +278,7 @@ class MetadataTemplate
         $ingest_da = $ingest_da instanceof Url ? $ingest_da : Url::fromRoute('<nolink>');
         $uningest_da = $uningest_da instanceof Url ? $uningest_da : Url::fromRoute('<nolink>');
         $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<nolink>');
-        $download_da = '/download-file/' . base64_encode($element->hasDataFile->filename) . '/' . base64_encode($element->isMemberOf->uri) . '/da';
+        $download_da = $root_url . '/std/download-file/' . base64_encode($element->hasDataFile->filename) . '/' . base64_encode($element->isMemberOf->uri) . '/da';
 
         $view_bto = Link::fromTextAndUrl(
           Markup::create('<i class="fa-solid fa-eye"></i>'),
@@ -345,7 +345,7 @@ class MetadataTemplate
           '#title' => Markup::create('<i class="fa-solid fa-save"></i>'),
           '#url' => Url::fromUserInput("#", ['attributes' => ['data-download-url' => $download_da]]),
           '#attributes' => [
-            'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', 'download-url'],
+            'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-url'],
           ],
         ];
 
@@ -355,7 +355,7 @@ class MetadataTemplate
           // \Drupal::service('renderer')->render($edit_bto),
           \Drupal::service('renderer')->render($ingest_bto),
           \Drupal::service('renderer')->render($uningest_bto),
-          // \Drupal::service('renderer')->render($download_bto),
+          \Drupal::service('renderer')->render($download_bto),
           \Drupal::service('renderer')->render($delete_bto),
         ];
 
@@ -507,7 +507,7 @@ class MetadataTemplate
       $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<nolink>');
       $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<nolink>');
       $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<nolink>');
-      $download_da = '/download-file/' . base64_encode($element->hasDataFile->filename) . '/' . base64_encode($element->isMemberOf->uri) . '/da';
+      $download_da = $root_url . '/std/download-file/' . base64_encode($element->hasDataFile->filename) . '/' . base64_encode($element->isMemberOf->uri) . '/da';
 
       $view_bto = Link::fromTextAndUrl(
         Markup::create('<i class="fa-solid fa-eye"></i>'),
@@ -582,7 +582,7 @@ class MetadataTemplate
         '#title' => Markup::create('<i class="fa-solid fa-save"></i>'),
         '#url' => Url::fromUserInput("#", ['attributes' => ['data-download-url' => $download_da]]),
         '#attributes' => [
-          'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', 'download-url'],
+          'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-url'],
         ],
       ];
 
@@ -592,7 +592,7 @@ class MetadataTemplate
         // \Drupal::service('renderer')->render($edit_bto),
         \Drupal::service('renderer')->render($ingest_bto),
         \Drupal::service('renderer')->render($uningest_bto),
-        // \Drupal::service('renderer')->render($download_bto),
+        \Drupal::service('renderer')->render($download_bto),
         \Drupal::service('renderer')->render($delete_bto),
       ];
 
