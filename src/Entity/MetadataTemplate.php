@@ -342,9 +342,10 @@ class MetadataTemplate
 
         $download_bto = [
           '#type' => 'link',
-          '#title' => Markup::create('<i class="fa-solid fa-save"></i>'),
+          '#title' => Markup::create('<i class="fa-solid fa-download"></i>'),
           '#url' => Url::fromUserInput("#", ['attributes' => ['data-download-url' => $download_da]]),
           '#attributes' => [
+            'title' => t('Download file'),
             'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-unassociated-url'],
           ],
         ];
@@ -579,9 +580,10 @@ class MetadataTemplate
 
       $download_bto = [
         '#type' => 'link',
-        '#title' => Markup::create('<i class="fa-solid fa-save"></i>'),
+        '#title' => Markup::create('<i class="fa-solid fa-download"></i>'),
         '#url' => Url::fromUserInput('#', [
           'attributes' => [
+            'title' => t('Download file'),
             'data-download-url' => $download_da,
           ],
         ]),
@@ -904,6 +906,7 @@ class MetadataTemplate
             '#title' => Markup::create('<i class="fa-solid fa-download"></i> Download'),
             '#url' => $download_da,
             '#attributes' => [
+              'title' => t('Download file'),
               'class' => ['btn', 'btn-sm', 'btn-secondary', 'mx-1'],
               'onclick' => 'if(!confirm("Really Download?")){return false;}',
             ],
