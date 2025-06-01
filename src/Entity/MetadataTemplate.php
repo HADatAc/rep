@@ -345,7 +345,7 @@ class MetadataTemplate
           '#title' => Markup::create('<i class="fa-solid fa-save"></i>'),
           '#url' => Url::fromUserInput("#", ['attributes' => ['data-download-url' => $download_da]]),
           '#attributes' => [
-            'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-url'],
+            'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-unassociated-url'],
           ],
         ];
 
@@ -580,11 +580,16 @@ class MetadataTemplate
       $download_bto = [
         '#type' => 'link',
         '#title' => Markup::create('<i class="fa-solid fa-save"></i>'),
-        '#url' => Url::fromUserInput("#", ['attributes' => ['data-download-url' => $download_da]]),
+        '#url' => Url::fromUserInput('#', [
+          'attributes' => [
+            'data-download-url' => $download_da,
+          ],
+        ]),
         '#attributes' => [
-          'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-url'],
+          'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-associated-url'],
         ],
       ];
+
 
       // Concatenar os links como HTML
       $links = [
