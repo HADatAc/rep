@@ -102,7 +102,14 @@ class GenericObject {
       $propertyMap['provenance'][$propertyName] = $propertyValue;
     } elseif ($propertyName === 'uri' || $propertyName === 'typeUri' || $propertyName === 'hascoTypeUri' || $propertyName === 'namedGraph') {
       $propertyMap['hascoUris'][$propertyName] = $propertyValue;
-    } elseif (is_string($propertyValue) && GenericObject::isUri($propertyValue) && $propertyName !== 'hasIdentifier' && $propertyName !== 'hasWebDocument' && $propertyName !== 'hasStatus') {
+    } elseif (is_string($propertyValue)
+              && GenericObject::isUri($propertyValue)
+              && $propertyName !== 'hasIdentifier'
+              && $propertyName !== 'hasWebDocument'
+              && $propertyName !== 'hasStatus'
+              && $propertyName !== 'hasStreamStatus'
+              && $propertyName !== 'hasMessageStatus'
+            ) {
       $propertyMap['uris'][$propertyName] = $propertyValue;
     } else {
       $propertyMap['literals'][$propertyName] = $propertyValue;

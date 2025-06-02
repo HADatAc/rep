@@ -125,13 +125,20 @@
 
         $prettyName = DescribeForm::prettyProperty($propertyName);
 
-        if ($propertyName !== 'hasImageUri' && $propertyName !== 'hasWebDocument' && $propertyName !== 'hasStatus') {
+        if ($propertyName !== 'hasImageUri'
+            && $propertyName !== 'hasWebDocument'
+            && $propertyName !== 'hasStatus'
+            && $propertyName !== 'hasStreamStatus'
+            && $propertyName !== 'hasMessageStatus'
+            ) {
 
           $form[$propertyName] = [
             '#type' => 'markup',
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
           ];
-        } else if ($propertyName === 'hasStatus') {
+        } else if ($propertyName === 'hasStatus'
+        || $propertyName === 'hasStreamStatus'
+        || $propertyName === 'hasMessageStatus') {
           $form[$propertyName] = [
             '#type' => 'markup',
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . Utils::plainStatus($propertyValue). "<br><br>"),
