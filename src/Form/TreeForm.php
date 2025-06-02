@@ -46,7 +46,7 @@ class TreeForm extends FormBase {
    * ]
    * @param string|null $output_field_selector Ex: '#my-custom-field'
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL, $silent = false) {
 
     // Toggles
     $hide_draft = $form_state->getValue('hide_draft') ?? true;
@@ -461,25 +461,27 @@ class TreeForm extends FormBase {
       // Only add the automatic data-dialog-close if NOT called from the AddTaskForm.
       $auto_close = ($caller !== 'add_task_form');
 
-      $form['select_node'] = [
-        '#type'     => 'inline_template',
-        '#template' => '
-          <div style="margin-bottom: 10px;">
-            <button type="button"
-                    id="select-tree-node"
-                    class="{{ classes|join(" ") }}"
-                    data-field-id="{{ field_id }}"
-                    {% if auto_close %}data-dialog-close="true"{% endif %}>
-              {{ label }}
-            </button>
-          </div>',
-        '#context'  => [
-          'classes'    => $button_classes,
-          'field_id'   => \Drupal::request()->query->get('field_id'),
-          'auto_close' => $auto_close,
-          'label'      => $this->t('Select Node'),
-        ],
-      ];
+      if ($silent) {
+        $form['select_node'] = [
+          '#type'     => 'inline_template',
+          '#template' => '
+            <div style="margin-bottom: 10px;">
+              <button type="button"
+                      id="select-tree-node"
+                      class="{{ classes|join(" ") }}"
+                      data-field-id="{{ field_id }}"
+                      {% if auto_close %}data-dialog-close="true"{% endif %}>
+                {{ label }}
+              </button>
+            </div>',
+          '#context'  => [
+            'classes'    => $button_classes,
+            'field_id'   => \Drupal::request()->query->get('field_id'),
+            'auto_close' => $auto_close,
+            'label'      => $this->t('Select Node'),
+          ],
+        ];
+      }
     }
 
     return $form;

@@ -153,10 +153,11 @@ rep.get_node:
     _permission: 'access content'
 
 rep.tree_form:
-  path: '/rep/tree-form/{mode}/{elementtype}'
+  path: '/rep/tree-form/{mode}/{elementtype}/{silent}'
   defaults:
     _form: '\Drupal\rep\Form\TreeForm'
     _title: 'Tree Form'
+    silent: 'FALSE'
   requirements:
     _permission: 'access content'
 
