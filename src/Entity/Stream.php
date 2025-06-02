@@ -269,9 +269,11 @@ class Stream {
           $record_url = Url::fromRoute('dpl.stream_record', [
             'streamUri' => base64_encode($element->uri),
           ])->toString();
-          $ops_html[] = '<a href="' . $record_url . '" alt="Record Stream" title="Record Stream" class="btn btn-sm btn-danger me-1">'
-                    . '<i class="fa-solid fa-record-vinyl"></i>'
-                    . '</a>';
+        
+          $ops_html[] = '<a href="#" data-url="' . $record_url . '" class="btn btn-sm btn-danger me-1 dpl-start-record" title="Start Recording">'
+          . '<i class="fa-solid fa-record-vinyl"></i>'
+          . '</a>';
+                    
           $record_ingest_url = Url::fromRoute('dpl.stream_ingest', [
             'streamUri' => base64_encode($element->uri),
           ])->toString();
