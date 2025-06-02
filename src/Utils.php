@@ -612,6 +612,20 @@ class Utils {
       return 'Current';
     } else if ($status == VSTOI::DEPRECATED) {
       return 'Deprecated';
+    } else if ($status == HASCO::DRAFT) {
+      return 'Draft';
+    } else if ($status == HASCO::ACTIVE) {
+      return 'Active';
+    } else if ($status == HASCO::CLOSED) {
+      return 'Closed';
+    } else if ($status == HASCO::INACTIVE) {
+      return 'Inactive';
+    } else if ($status == HASCO::RECORDING) {
+      return 'Recording';
+    } else if ($status == HASCO::INGESTING) {
+      return 'Ingesting';
+    } else if ($status == HASCO::SUSPENDED) {
+      return 'Suspended';
     }
   }
 
