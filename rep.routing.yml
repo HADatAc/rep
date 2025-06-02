@@ -157,7 +157,7 @@ rep.tree_form:
   defaults:
     _form: '\Drupal\rep\Form\TreeForm'
     _title: 'Tree Form'
-    silent: 'FALSE'
+    silent: false
   requirements:
     _permission: 'access content'
 
