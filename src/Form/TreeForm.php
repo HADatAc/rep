@@ -461,7 +461,8 @@ class TreeForm extends FormBase {
       // Only add the automatic data-dialog-close if NOT called from the AddTaskForm.
       $auto_close = ($caller !== 'add_task_form');
 
-      if ($silent) {
+      dpm($silent, 'Debug $silent'); // Check if silent mode is set
+      if ($silent === false) {
         $form['select_node'] = [
           '#type'     => 'inline_template',
           '#template' => '
