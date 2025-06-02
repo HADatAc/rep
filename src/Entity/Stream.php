@@ -202,29 +202,44 @@ class Stream {
 
       // 7) Build the SDD link as plain HTML.
 
-      $form_class = \Drupal\sem\Form\ViewSemanticDataDictionaryForm::class;
-      $args = [
-        'View SDD File',
-        'basic',
-        base64_encode($element->semanticDataDictionary->uri),
-      ];
-      $url = Url::fromRoute('rep.form_modal', [], [
-        'query' => [
-          'form_class' => $form_class,
-          'args'       => Json::encode($args),
-        ],
-        'attributes' => [
-          // Tell Drupal’s AJAX system to intercept and open a modal:
-          'class'               => ['use-ajax', 'btn', 'btn-sm', 'btn-secondary'],
-          'data-dialog-type'    => 'modal',
-          'data-dialog-options' => Json::encode([
-            'width'       => 800,
-            'dialogClass' => 'sdd-modal',
-          ]),
-        ],
-      ]);
-      $link = Link::fromTextAndUrl(t('View SDD'), $url)->toRenderable();
-      $sdd = \Drupal::service('renderer')->renderPlain($link);
+      // $form_class = \Drupal\sem\Form\ViewSemanticDataDictionaryForm::class;
+      // $args = [
+      //   'View SDD File',
+      //   'basic',
+      //   base64_encode($element->semanticDataDictionary->uri),
+      // ];
+      // $url = Url::fromRoute('rep.form_modal', [], [
+      //   'query' => [
+      //     'form_class' => $form_class,
+      //     'args'       => Json::encode($args),
+      //   ],
+      //   'attributes' => [
+      //     // Tell Drupal’s AJAX system to intercept and open a modal:
+      //     'class'               => ['use-ajax', 'btn', 'btn-sm', 'btn-secondary'],
+      //     'data-dialog-type'    => 'modal',
+      //     'data-dialog-options' => Json::encode([
+      //       'width'       => 800,
+      //       'dialogClass' => 'sdd-modal',
+      //     ]),
+      //   ],
+      // ]);
+      // $link = Link::fromTextAndUrl(t('View SDD'), $url)->toRenderable();
+      // $sdd = \Drupal::service('renderer')->renderPlain($link);
+
+      $url = Url::fromRoute('sem.view_semantic_data_dictionary', [
+        'state' => 'basic',
+        'uri' => base64_encode($element->semanticDataDictionary->uri)
+      ])->toString();
+
+      $uid = \Drupal::currentUser()->id();
+      $previousUrl = \Drupal::request()->getRequestUri();
+      Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
+
+      $sdd = Markup::create(
+        '<a href="' . $url . '" class="btn btn-sm btn-secondary">' .
+          t('SDD: @label', ['@label' => $element->semanticDataDictionary->label]) .
+        '</a>'
+      );
 
       // 8) Dataset pattern or fallback.
       $pattern = $element->datasetPattern ?? '-';

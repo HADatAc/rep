@@ -625,7 +625,9 @@ button.generate-ins-element-button::before {
   border: 0 !important;
 }
 
-
+ul.vertical-tabs__menu {
+  min-width: 250px!important;
+}
 
 /*others*/
 form#edit-mt-form h1,
