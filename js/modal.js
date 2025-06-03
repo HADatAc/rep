@@ -15,7 +15,7 @@
 
           $('#tree-root').data('field-id', fieldId);
 
-          console.log(fieldId);
+          // console.log(fieldId);
 
           if (!drupalSettings.rep_tree) {
             drupalSettings.rep_tree = {};
@@ -130,7 +130,7 @@
           const selectedNode = data.node.original;
           const typeNamespace = selectedNode.uri;
 
-          console.log(selectedNode);
+          // console.log(selectedNode);
         });
 
       $selectNodeButton

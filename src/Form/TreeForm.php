@@ -48,6 +48,8 @@ class TreeForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL, $silent = false) {
 
+    $form['#cache']['max-age'] = 0;
+
     // Toggles
     $hide_draft = $form_state->getValue('hide_draft') ?? true;
     $hide_deprecated = $form_state->getValue('hide_deprecated') ?? true;
@@ -215,7 +217,6 @@ class TreeForm extends FormBase {
         'label' => 'Unit',
         'uriNamespace' => EntryPoints::UNIT,
       ],
-
     ];
 
     // Divide string $elementtype into an array
@@ -271,6 +272,13 @@ class TreeForm extends FormBase {
     //dpm($elementtype, 'Debug $elementtype');           // See which string is arriving
     //dpm($branches_param, 'Debug $branches_param');     // See the final array of branches
 
+    // 1) Leia o valor que veio pela URL (se existir)
+    $search_value = \Drupal::request()->query->get('search_value');
+    // Se não vir nada, pode ficar como string vazia:
+    if ($search_value === NULL) {
+      $search_value = '';
+    }
+
     // Retrieve root node
     // dpm($api->getUri($nodeUri), 'Debug $nodeUri'); // See the URI being used
     // dpm($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'), 'Debug $api->parseObjectResponse'); // See the response from the API
@@ -305,7 +313,8 @@ class TreeForm extends FormBase {
       'hideDraft' => $hide_draft,
       'hideDeprecated' => $hide_deprecated,
       'showLabel' => $show_label,
-      'nameSpacesList' => $tables->getNamespaces()
+      'nameSpacesList' => $tables->getNamespaces(),
+      'searchValue' => $search_value,
     ];
 
     if ($mode == 'browse')
@@ -461,8 +470,8 @@ class TreeForm extends FormBase {
       // Only add the automatic data-dialog-close if NOT called from the AddTaskForm.
       $auto_close = ($caller !== 'add_task_form');
 
-      dpm($silent, 'Debug $silent'); // Check if silent mode is set
-      if ($silent === false) {
+      // dpm($silent, 'Debug $silent'); // Check if silent mode is set
+      if ($silent === "false") {
         $form['select_node'] = [
           '#type'     => 'inline_template',
           '#template' => '
