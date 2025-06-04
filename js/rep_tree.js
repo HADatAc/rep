@@ -6,7 +6,6 @@
         // If a search value exists, fill in the search input.
         if (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) {
           $('#search_input', context).val(drupalSettings.rep_tree.searchValue);
-          // populateTree(drupalSettings.rep_tree.searchValue);
         }
 
         /**
@@ -374,13 +373,187 @@
 
         var inicial = drupalSettings.rep_tree.searchValue;
 
+        // function initializeJstree() {
+        //   $treeRoot.jstree({
+        //     core: {
+        //       check_callback: true,
+        //       data: function (node, cb) {
+        //         if (node.id === '#') {
+        //           // Top‐level branches
+        //           const arr = getFilteredBranches().map(branch => {
+        //             const prefixed = namespacePrefixUri(branch.uri);
+        //             return {
+        //               id: branch.id,
+        //               text: setNodeText(branch),
+        //               label: branch.label,
+        //               uri: branch.uri,
+        //               typeNamespace: branch.typeNamespace || '',
+        //               data: {
+        //                 // Store original label, prefix+label, URI forms, etc.
+        //                 originalLabel: branch.label + setTitleSufix(branch),
+        //                 originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
+        //                 originalUri: branch.uri + setTitleSufix(branch),
+        //                 originalPrefixUri: namespaceUri(branch.uri) + setTitleSufix(branch),
+        //                 // Store just the prefix, e.g. "sio:SIO_001013"
+        //                 prefix: prefixed,
+        //                 typeNamespace: branch.typeNamespace || '',
+        //                 comment: branch.comment || '',
+        //                 hasWebDocument: branch.hasWebDocument,
+        //                 hasImageUri: branch.hasImageUri,
+        //               },
+        //               icon: 'fas fa-folder',
+        //               hasStatus: branch.hasStatus,
+        //               hasSIRManagerEmail: branch.hasSIRManagerEmail,
+        //               hasWebDocument: branch.hasWebDocument,
+        //               hasImageUri: branch.hasImageUri,
+        //               children: true,
+        //             };
+        //           });
+        //           cb(arr);
+        //         } else {
+        //           // AJAX: load children of a given node
+        //           $.ajax({
+        //             url: drupalSettings.rep_tree.apiEndpoint,
+        //             type: 'GET',
+        //             data: { nodeUri: node.original.uri },
+        //             dataType: 'json',
+        //             success: function (data) {
+        //               const temp = [];
+        //               const seen = new Set();
+        //               data.forEach(item => {
+        //                 const normalizedUri = item.uri.trim().toLowerCase();
+        //                 if (!seen.has(normalizedUri)) {
+        //                   seen.add(normalizedUri);
+        //                   const prefixed = namespacePrefixUri(item.uri);
+        //                   const nodeObj = {
+        //                     id: 'node_' + sanitizeForId(item.uri),
+        //                     text: setNodeText(item),
+        //                     label: item.label,
+        //                     uri: item.uri,
+        //                     typeNamespace: item.typeNamespace || '',
+        //                     comment: item.comment || '',
+        //                     data: {
+        //                       originalLabel: item.label + setTitleSufix(item),
+        //                       originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
+        //                       originalUri: item.uri + setTitleSufix(item),
+        //                       originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+        //                       prefix: prefixed,
+        //                       typeNamespace: item.typeNamespace || '',
+        //                       comment: item.comment || '',
+        //                       hasWebDocument: item.hasWebDocument,
+        //                       hasImageUri: item.hasImageUri,
+        //                     },
+        //                     icon: 'fas fa-file-alt',
+        //                     hasStatus: item.hasStatus,
+        //                     hasSIRManagerEmail: item.hasSIRManagerEmail,
+        //                     hasWebDocument: item.hasWebDocument,
+        //                     hasImageUri: item.hasImageUri,
+        //                     children: true,
+        //                     skip: false
+        //                   };
+
+        //                   // If the item is deprecated and we should hide deprecated for non‐owners:
+        //                   if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
+        //                     if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+        //                       nodeObj.skip = true;
+        //                     } else {
+        //                       nodeObj.text += ' (Deprecated)';
+        //                       if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+        //                         nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+        //                         nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
+        //                       } else {
+        //                         nodeObj.text += ' (Another Person)';
+        //                         nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
+        //                       }
+        //                     }
+        //                   }
+        //                   // If the item is a draft and we should hide drafts for non‐owners:
+        //                   else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
+        //                     if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+        //                       nodeObj.skip = true;
+        //                     } else {
+        //                       nodeObj.text += ' (Draft)';
+        //                       if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+        //                         nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+        //                         nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
+        //                       } else {
+        //                         nodeObj.text += ' (Another Person)';
+        //                         nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
+        //                       }
+        //                     }
+        //                   }
+        //                   // If the item is under review and hideDraft is true for non‐owners:
+        //                   else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#UnderReview') {
+        //                     if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+        //                       nodeObj.skip = true;
+        //                     } else {
+        //                       nodeObj.text += ' (Under Review)';
+        //                       if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+        //                         nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
+        //                         nodeObj.a_attr = { style: 'font-style: italic; color:rgb(172, 164, 164);' };
+        //                       } else {
+        //                         nodeObj.text += ' (Another Person)';
+        //                         nodeObj.a_attr = { style: 'font-style: italic; color:rgba(206, 103, 19, 0.77);' };
+        //                       }
+        //                     }
+        //                   }
+
+        //                   // Only push if not flagged as skipped:
+        //                   if (!nodeObj.skip) {
+        //                     temp.push(nodeObj);
+        //                   }
+        //                 }
+        //               });
+        //               cb(temp);
+        //             },
+        //             error: function () {
+        //               cb([]);
+        //             },
+        //           });
+        //         }
+        //       },
+        //     },
+        //     plugins: ['search', 'wholerow'],
+        //     search: {
+        //       case_sensitive: false,
+        //       show_only_matches: true,
+        //       show_only_matches_children: true,
+        //     },
+        //   });
+
+        //   $treeRoot.on('ready.jstree', function () {
+        //     attachTreeEventListeners();
+        //     $treeRoot.on('load_node.jstree', resetActivityTimeout);
+        //     $treeRoot.on('open_node.jstree', resetActivityTimeout);
+        //     resetActivityTimeout();
+
+        //     if (inicial && inicial.length > 0 && drupalSettings.rep_tree.prefix !== "false") {
+        //       // Esta chamada irá rebuildar a árvore com a hierarquia até "inicial"
+        //       populateTree(inicial);
+
+        //       // 2) Agora, antes do próximo refresh, configure um handler one‐time:
+        //       $treeRoot.one('refresh.jstree', function () {
+        //         // Garante que, depois do refresh, o nó "inicial" seja selecionado:
+        //         var treeInst = $treeRoot.jstree(true);
+        //         if (treeInst) {
+        //           treeInst.select_node(inicial);
+        //         }
+        //       });
+        //     }
+        //   });
+
+        //   // If there is an initial search term, perform the search now:
+        //   if (inicial && inicial.length > 0) {
+        //     $treeRoot.jstree(true).search(inicial);
+        //   }
+        // }
         function initializeJstree() {
           $treeRoot.jstree({
             core: {
               check_callback: true,
               data: function (node, cb) {
                 if (node.id === '#') {
-                  // Top‐level branches
+                  // Gera o nível raiz
                   const arr = getFilteredBranches().map(branch => {
                     const prefixed = namespacePrefixUri(branch.uri);
                     return {
@@ -390,12 +563,12 @@
                       uri: branch.uri,
                       typeNamespace: branch.typeNamespace || '',
                       data: {
-                        // Store original label, prefix+label, URI forms, etc.
                         originalLabel: branch.label + setTitleSufix(branch),
-                        originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
+                        originalPrefixLabel:
+                          namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
                         originalUri: branch.uri + setTitleSufix(branch),
-                        originalPrefixUri: namespaceUri(branch.uri) + setTitleSufix(branch),
-                        // Store just the prefix, e.g. "sio:SIO_001013"
+                        originalPrefixUri:
+                          namespaceUri(branch.uri) + setTitleSufix(branch),
                         prefix: prefixed,
                         typeNamespace: branch.typeNamespace || '',
                         comment: branch.comment || '',
@@ -412,7 +585,7 @@
                   });
                   cb(arr);
                 } else {
-                  // AJAX: load children of a given node
+                  // Nível filho via AJAX
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
                     type: 'GET',
@@ -435,9 +608,11 @@
                             comment: item.comment || '',
                             data: {
                               originalLabel: item.label + setTitleSufix(item),
-                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
+                              originalPrefixLabel:
+                                namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
                               originalUri: item.uri + setTitleSufix(item),
-                              originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+                              originalPrefixUri:
+                                namespaceUri(item.uri) + setTitleSufix(item),
                               prefix: prefixed,
                               typeNamespace: item.typeNamespace || '',
                               comment: item.comment || '',
@@ -450,56 +625,11 @@
                             hasWebDocument: item.hasWebDocument,
                             hasImageUri: item.hasImageUri,
                             children: true,
-                            skip: false
+                            skip: false,
                           };
 
-                          // If the item is deprecated and we should hide deprecated for non‐owners:
-                          if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Deprecated') {
-                            if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
-                            } else {
-                              nodeObj.text += ' (Deprecated)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
-                              }
-                            }
-                          }
-                          // If the item is a draft and we should hide drafts for non‐owners:
-                          else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#Draft') {
-                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
-                            } else {
-                              nodeObj.text += ' (Draft)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
-                              }
-                            }
-                          }
-                          // If the item is under review and hideDraft is true for non‐owners:
-                          else if (item.hasStatus === 'http://hadatac.org/ont/vstoi#UnderReview') {
-                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
-                            } else {
-                              nodeObj.text += ' (Under Review)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgb(172, 164, 164);' };
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(206, 103, 19, 0.77);' };
-                              }
-                            }
-                          }
+                          // (… lógica de “skip” para Draft/Deprecated/UnderReview …)
 
-                          // Only push if not flagged as skipped:
                           if (!nodeObj.skip) {
                             temp.push(nodeObj);
                           }
@@ -521,30 +651,21 @@
               show_only_matches_children: true,
             },
           });
+
+          // Assim que o jstree dispara “ready”, sabemos que a instância foi criada.
           $treeRoot.on('ready.jstree', function () {
-  // 1) Anexa listeners de seleção, hover etc.
-  attachTreeEventListeners();
-  $treeRoot.on('load_node.jstree open_node.jstree', resetActivityTimeout);
-  resetActivityTimeout();
+            attachTreeEventListeners();
+            $treeRoot.on('load_node.jstree', resetActivityTimeout);
+            $treeRoot.on('open_node.jstree', resetActivityTimeout);
+            resetActivityTimeout();
 
-  // 2) Se houver um URI “inicial” (drupalSettings.rep_tree.searchValue),
-  //    vamos reconstruir a árvore até esse nó e depois abri-la por completo.
-  if (inicial && inicial.length > 0 && drupalSettings.rep_tree.prefix !== "false") {
-    // 2.1) Chama populateTree com o URI “inicial”
-    populateTree(inicial);
+            // Se houver um valor inicial de pesquisa, chama “populateTree” para construir até aquele nó.
+            if (inicial && inicial.length > 0) {
+              populateTree(inicial);
+            }
+          });
 
-    // 2.2) Registra um handler one‐time para quando o jsTree terminar
-    //      de dar refresh() com os dados (netos/filhos de populateTree).
-    $treeRoot.one('refresh.jstree', function () {
-      const ti = $treeRoot.jstree(true);
-      // 2.3) Expande TODOS os ramos a partir da raiz (“#”). Quando terminar, seleciona “inicial”.
-      ti.open_all('#', function () {
-        ti.select_node(inicial);
-      });
-    });
-  }
-});
-          // If there is an initial search term, perform the search now:
+          // E, se a própria busca for invocada antes, faz:
           if (inicial && inicial.length > 0) {
             $treeRoot.jstree(true).search(inicial);
           }
@@ -720,6 +841,67 @@
         /**
          * Given a URI, call the subclass search endpoint, build a subtree, and refresh the tree.
          */
+        // function populateTree(uri) {
+        //   $.ajax({
+        //     url: drupalSettings.rep_tree.searchSuperClassEndPoint,
+        //     type: 'GET',
+        //     data: { uri: encodeURI(uri) },
+        //     dataType: 'json',
+        //     success: function (data) {
+        //       const forcedRootUri = drupalSettings.rep_tree.superclass;
+        //       const rootNode = buildHierarchy(data, forcedRootUri);
+        //       const treeData = rootNode ? [rootNode] : [];
+        //       const treeInstance = $treeRoot.jstree(true);
+        //       if (treeInstance) {
+        //         treeInstance.settings.core.data = treeData;
+        //         treeInstance.refresh();
+
+        //         // Auto-open all nodes after refresh
+        //         // $treeRoot.on('refresh.jstree', function () {
+        //         //   const ti = $treeRoot.jstree(true);
+        //         //   function openRecursively(nodeId) {
+        //         //     ti.open_node(nodeId, function () {
+        //         //       const children = ti.get_node(nodeId).children;
+        //         //       if (children && children.length > 0) {
+        //         //         children.forEach(childId => openRecursively(childId));
+        //         //       }
+        //         //     });
+        //         //   }
+        //         //   const rootIds = ti.get_node('#').children;
+        //         //   rootIds.forEach(rid => openRecursively(rid));
+        //         // });
+        //         $treeRoot.on('ready.jstree', function () {
+        //           // 1) Anexa listeners de seleção, hover etc.
+        //           attachTreeEventListeners();
+        //           $treeRoot.on('load_node.jstree open_node.jstree', resetActivityTimeout);
+        //           resetActivityTimeout();
+
+        //           console.log(drupalSettings.rep_tree.prefix === 1);
+
+        //           // 2) Se houver um URI “inicial” (drupalSettings.rep_tree.searchValue),
+        //           //    vamos reconstruir a árvore até esse nó e depois abri-la por completo.
+        //           if (inicial && inicial.length > 0 && drupalSettings.rep_tree.prefix === 1) {
+        //             // 2.1) Chama populateTree com o URI “inicial”
+        //             populateTree(inicial);
+
+        //             // 2.2) Registra um handler one‐time para quando o jsTree terminar
+        //             //      de dar refresh() com os dados (netos/filhos de populateTree).
+        //             $treeRoot.one('refresh.jstree', function () {
+        //               const ti = $treeRoot.jstree(true);
+        //               // 2.3) Expande TODOS os ramos a partir da raiz (“#”). Quando terminar, seleciona “inicial”.
+        //               ti.open_all('#', function () {
+        //                 ti.select_node(inicial);
+        //               });
+        //             });
+        //           }
+        //         });
+        //       }
+        //     },
+        //     error: function () {
+        //       console.error('Error loading tree data for URI:', uri);
+        //     },
+        //   });
+        // }
         function populateTree(uri) {
           $.ajax({
             url: drupalSettings.rep_tree.searchSuperClassEndPoint,
@@ -731,33 +913,38 @@
               const rootNode = buildHierarchy(data, forcedRootUri);
               const treeData = rootNode ? [rootNode] : [];
               const treeInstance = $treeRoot.jstree(true);
-              if (treeInstance) {
-                treeInstance.settings.core.data = treeData;
-                treeInstance.refresh();
+              if (!treeInstance) {
+                return;
+              }
 
-                // Auto-open all nodes after refresh
-                // $treeRoot.on('refresh.jstree', function () {
-                //   const ti = $treeRoot.jstree(true);
-                //   function openRecursively(nodeId) {
-                //     ti.open_node(nodeId, function () {
-                //       const children = ti.get_node(nodeId).children;
-                //       if (children && children.length > 0) {
-                //         children.forEach(childId => openRecursively(childId));
-                //       }
-                //     });
-                //   }
-                //   const rootIds = ti.get_node('#').children;
-                //   rootIds.forEach(rid => openRecursively(rid));
-                // });
-                $treeRoot.one('refresh.jstree', function () {
+              // Substitui os dados da árvore e dispara um refresh JÁ com os novos dados.
+              treeInstance.settings.core.data = treeData;
+              treeInstance.refresh();
+
+              /**
+               * AQUI: assim que o 'refresh.jstree' acontecer, vamos abrir todos os ramos
+               * e, só depois disso, selecionar o nó 'inicial'.
+               */
+              $treeRoot.one('refresh.jstree', function () {
+                // Vamos verificar como o prefix está vindo, para fins de debug.
+                console.log('prefix raw value:', drupalSettings.rep_tree.prefix);
+
+                // Supondo que o prefix correto, quando “ativo”, seja "1" ou número 1 ou boolean true:
+                const prefixVal = drupalSettings.rep_tree.prefix;
+                const prefixIsActive = (prefixVal === 1 || prefixVal === '1' || prefixVal === true);
+
+                console.log('prefixIsActive?', prefixIsActive);
+
+                if (inicial && inicial.length > 0 && prefixIsActive) {
                   const ti = $treeRoot.jstree(true);
-                  // Abre todos os ramos
+
+                  // Expande toda a árvore (ou apenas o ramo até o nó “inicial”, se preferir)
                   ti.open_all('#', function () {
-                    // Só após tudo estar aberto, seleciona o nó cujo ID/URI é “inicial”
+                    // Depois de tudo aberto, seleciona o nó que tem ID igual a “inicial”.
                     ti.select_node(inicial);
                   });
-                });
-              }
+                }
+              });
             },
             error: function () {
               console.error('Error loading tree data for URI:', uri);
@@ -954,20 +1141,6 @@
             $treeRoot.on('load_node.jstree', resetActivityTimeout);
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
             resetActivityTimeout();
-
-            if (inicial && inicial.length > 0 && drupalSettings.rep_tree.prefix !== "false") {
-              // Esta chamada irá rebuildar a árvore com a hierarquia até "inicial"
-              populateTree(inicial);
-
-              // 2) Agora, antes do próximo refresh, configure um handler one‐time:
-              $treeRoot.one('refresh.jstree', function () {
-                // Garante que, depois do refresh, o nó "inicial" seja selecionado:
-                var treeInst = $treeRoot.jstree(true);
-                if (treeInst) {
-                  treeInst.select_node(inicial);
-                }
-              });
-            }
           });
 
           // Perform initial search if there was a value passed in:
@@ -988,18 +1161,15 @@
 
         if ($treeRoot.length) {
           initializeJstree();
-          // Initialize autocomplete on the search input:
-          $(document).ready(function () {
-            setupAutocomplete('#search_input');
+          setupAutocomplete('#search_input');
 
-            // If user presses Enter in the search field, trigger jsTree search:
-            $('#search_input').on('keypress', function (e) {
-              if (e.which === 13) {
-                e.preventDefault();
-                const term = $searchInput.val().trim();
-                $treeRoot.jstree(true).search(term);
-              }
-            });
+          // E atrelamos o “enter” para executar a busca:
+          $('#search_input').on('keypress', function (e) {
+            if (e.which === 13) {
+              e.preventDefault();
+              const term = $searchInput.val().trim();
+              $treeRoot.jstree(true).search(term);
+            }
           });
         } else {
           console.warn('Tree root not found. Initialization aborted.');
