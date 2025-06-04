@@ -198,45 +198,30 @@ class Stream {
       }
 
       // 6) Deployment label, or blank.
-      $deployment = $element->deployment->label ?? '';
-
-      // 7) Build the SDD link as plain HTML.
-
-      // $form_class = \Drupal\sem\Form\ViewSemanticDataDictionaryForm::class;
-      // $args = [
-      //   'View SDD File',
-      //   'basic',
-      //   base64_encode($element->semanticDataDictionary->uri),
-      // ];
-      // $url = Url::fromRoute('rep.form_modal', [], [
-      //   'query' => [
-      //     'form_class' => $form_class,
-      //     'args'       => Json::encode($args),
-      //   ],
-      //   'attributes' => [
-      //     // Tell Drupal’s AJAX system to intercept and open a modal:
-      //     'class'               => ['use-ajax', 'btn', 'btn-sm', 'btn-secondary'],
-      //     'data-dialog-type'    => 'modal',
-      //     'data-dialog-options' => Json::encode([
-      //       'width'       => 800,
-      //       'dialogClass' => 'sdd-modal',
-      //     ]),
-      //   ],
-      // ]);
-      // $link = Link::fromTextAndUrl(t('View SDD'), $url)->toRenderable();
-      // $sdd = \Drupal::service('renderer')->renderPlain($link);
-
-      $url = Url::fromRoute('sem.view_semantic_data_dictionary', [
-        'state' => 'basic',
-        'uri' => base64_encode($element->semanticDataDictionary->uri)
-      ])->toString();
-
       $uid = \Drupal::currentUser()->id();
       $previousUrl = \Drupal::request()->getRequestUri();
       Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
 
+      // $deployment = $element->deployment->label ?? '';
+      $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
+        'deploymenturi' => base64_encode($element->deployment->uri)
+      ])->toString();
+
+      $deployment = Markup::create(
+        '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
+          t('Deployment: @label', ['@label' => $element->deployment->label]) .
+        '</a>'
+      );
+
+      // 7) Build the SDD link as plain HTML.
+
+      $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
+        'state' => 'basic',
+        'uri' => base64_encode($element->semanticDataDictionary->uri)
+      ])->toString();
+
       $sdd = Markup::create(
-        '<a href="' . $url . '" class="btn btn-sm btn-secondary">' .
+        '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
           t('SDD: @label', ['@label' => $element->semanticDataDictionary->label]) .
         '</a>'
       );
@@ -284,11 +269,11 @@ class Stream {
           $record_url = Url::fromRoute('dpl.stream_record', [
             'streamUri' => base64_encode($element->uri),
           ])->toString();
-        
+
           $ops_html[] = '<a href="#" data-url="' . $record_url . '" class="btn btn-sm btn-danger me-1 dpl-start-record" title="Start Recording">'
           . '<i class="fa-solid fa-record-vinyl"></i>'
           . '</a>';
-                    
+
           $record_ingest_url = Url::fromRoute('dpl.stream_ingest', [
             'streamUri' => base64_encode($element->uri),
           ])->toString();
