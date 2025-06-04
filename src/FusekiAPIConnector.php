@@ -2206,9 +2206,17 @@ class FusekiAPIConnector {
 
   // GENERATE MT METHODS
   // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:status/:filename
-  // Per status
-  public function generateMTPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri) {
+  // Per status (KGR)
+  public function generateMTKGRPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri) {
     $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // Per status
+  public function generateMTPerStatus($elementtype, $status, $filename) {    
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/_/false";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
