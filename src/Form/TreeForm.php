@@ -46,7 +46,7 @@ class TreeForm extends FormBase {
    * ]
    * @param string|null $output_field_selector Ex: '#my-custom-field'
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL, $silent = false) {
+  public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL, $silent = false, $prefix = false) {
 
     $form['#cache']['max-age'] = 0;
 
@@ -315,6 +315,7 @@ class TreeForm extends FormBase {
       'showLabel' => $show_label,
       'nameSpacesList' => $tables->getNamespaces(),
       'searchValue' => $search_value,
+      'prefix' => $prefix,
     ];
 
     if ($mode == 'browse')
