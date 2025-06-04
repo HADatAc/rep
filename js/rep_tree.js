@@ -12,6 +12,7 @@
         // If a previous search value was stored in drupalSettings, populate the search input field with it
         if (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) {
           $('#search_input', context).val(drupalSettings.rep_tree.searchValue);
+          $('#search_input', context).val(drupalSettings.rep_tree.searchValue);
         }
 
         /**
@@ -30,9 +31,11 @@
               // If the URI starts with this namespace URI, strip it and prepend the prefix
               if (abbrev && ns && uri.startsWith(ns)) {
                 return abbrev + ":" + uri.slice(ns.length);
+                return abbrev + ":" + uri.slice(ns.length);
               }
             }
           }
+          // Return original URI if no matching namespace found
           // Return original URI if no matching namespace found
           return uri;
         }
@@ -50,6 +53,7 @@
             if (namespaces.hasOwnProperty(abbrev)) {
               const ns = namespaces[abbrev];
               if (abbrev && ns && uri.startsWith(ns)) {
+                return uri.replace(ns, abbrev + ":");
                 return uri.replace(ns, abbrev + ":");
               }
             }
@@ -189,6 +193,7 @@
               break;
             default: // 'label'
               nodeText = item.label || item.uri;
+              nodeText = item.label || item.uri;
               break;
           }
           return nodeText;
@@ -213,7 +218,9 @@
             suffix += ' (Deprecated)';
             if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
               suffix += ' (' + drupalSettings.rep_tree.username + ')';
+              suffix += ' (' + drupalSettings.rep_tree.username + ')';
             } else {
+              suffix += ' (Another Person)';
               suffix += ' (Another Person)';
             }
           }
@@ -222,7 +229,9 @@
             suffix += ' (Draft)';
             if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
               suffix += ' (' + drupalSettings.rep_tree.username + ')';
+              suffix += ' (' + drupalSettings.rep_tree.username + ')';
             } else {
+              suffix += ' (Another Person)';
               suffix += ' (Another Person)';
             }
           }
@@ -231,10 +240,13 @@
             suffix += ' (Under Review)';
             if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
               suffix += ' (' + drupalSettings.rep_tree.username + ')';
+              suffix += ' (' + drupalSettings.rep_tree.username + ')';
             } else {
+              suffix += ' (Another Person)';
               suffix += ' (Another Person)';
             }
           }
+          return suffix;
           return suffix;
         }
 
@@ -353,9 +365,12 @@
             // Construct HTML to display selected node's details below the tree
             let html = `
               <strong>Label:</strong> ${selectedNode.label}<br/>
+              <strong>Label:</strong> ${selectedNode.label}<br/>
               <strong>URI:</strong>
               <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}" target="_new">
+              <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}" target="_new">
                 ${selectedNode.uri}
+              </a><br/>
               </a><br/>
             `;
 
@@ -367,13 +382,16 @@
                 html += `
                   <strong>Web Document:</strong>
                   <a href="${webDocument}" target="_new">${webDocument}</a><br/>
+                  <a href="${webDocument}" target="_new">${webDocument}</a><br/>
                 `;
               } else {
                 // Otherwise, generate a download link relative to baseUrl
                 const uriPart = selectedNode.uri.includes('#/') ? selectedNode.uri.split('#/')[1] : selectedNode.uri;
                 const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webDocument)}`;
+                const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webDocument)}`;
                 html += `
                   <strong>Web Document:</strong>
+                  <a href="#" class="view-media-button" data-view-url="${downloadUrl}">${webDocument}</a><br/>
                   <a href="#" class="view-media-button" data-view-url="${downloadUrl}">${webDocument}</a><br/>
                 `;
               }
@@ -383,6 +401,8 @@
             const comment = data.node.data.comment || "";
             if (comment.trim().length > 0) {
               html += `
+                <br/>
+                <strong>Description:</strong><br/>
                 <br/>
                 <strong>Description:</strong><br/>
                 ${comment}
@@ -474,6 +494,8 @@
                     success: function (data) {
                       const temp = [];
                       const seen = new Set();
+                      const temp = [];
+                      const seen = new Set();
                       data.forEach(item => {
                         const normalizedUri = item.uri.trim().toLowerCase();
                         // Deduplicate children by URI (case-insensitive)
@@ -489,7 +511,8 @@
                             comment: item.comment || '',
                             data: {
                               originalLabel: item.label + setTitleSufix(item),
-                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
+                              originalPrefixLabel:
+                                namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
                               originalUri: item.uri + setTitleSufix(item),
                               originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
                               prefix: prefixed,
@@ -657,6 +680,7 @@
                 }
               }
             } else if (item.hasStatus === DRAFT_URI) {
+            } else if (item.hasStatus === DRAFT_URI) {
               if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
                 item.skip = true;
               } else {
@@ -670,6 +694,7 @@
                   a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                 }
               }
+            } else if (item.hasStatus === UNDERREVIEW_URI) {
             } else if (item.hasStatus === UNDERREVIEW_URI) {
               if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
                 item.skip = true;
@@ -708,6 +733,8 @@
                 originalUri: item.uri + setTitleSufix(item),
                 originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
                 prefix: prefixed,
+                originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+                prefix: prefixed,
                 comment: item.comment || '',
                 typeNamespace: item.typeNamespace || '',
                 hasWebDocument: item.hasWebDocument,
@@ -727,6 +754,7 @@
             chain.forEach((item, index) => {
               const node = nodeMap.get(item.uri);
               if (!node) return;
+              if (!node) return;
               if (index === 0) {
                 // First after reversing is the forced root
                 root = node;
@@ -743,7 +771,9 @@
             // Standard hierarchical linking via superUri property
             filteredItems.forEach(item => {
               if (item.skip) return;
+              if (item.skip) return;
               const node = nodeMap.get(item.uri);
+              if (!node) return;
               if (!node) return;
               if (item.superUri && !item.skip) {
                 const parent = nodeMap.get(item.superUri);
@@ -883,7 +913,13 @@
                     success: function (data) {
                       const temp = [];
                       const seen = new Set();
+                      const temp = [];
+                      const seen = new Set();
                       data.forEach(item => {
+                        const normalizedUri = item.uri.trim().toLowerCase();
+                        if (!seen.has(normalizedUri)) {
+                          seen.add(normalizedUri);
+                          const prefixed = namespacePrefixUri(item.uri);
                         const normalizedUri = item.uri.trim().toLowerCase();
                         if (!seen.has(normalizedUri)) {
                           seen.add(normalizedUri);
@@ -900,6 +936,7 @@
                               originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
                               originalUri: item.uri + setTitleSufix(item),
                               originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+                              prefix: prefixed,
                               prefix: prefixed,
                               typeNamespace: item.typeNamespace || '',
                               comment: item.comment || '',
@@ -934,6 +971,7 @@
                               }
                             }
                           } else if (item.hasStatus === DRAFT_URI) {
+                          } else if (item.hasStatus === DRAFT_URI) {
                             if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
                               nodeObj.skip = true;
                             } else {
@@ -946,6 +984,7 @@
                                 nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                               }
                             }
+                          } else if (item.hasStatus === UNDERREVIEW_URI) {
                           } else if (item.hasStatus === UNDERREVIEW_URI) {
                             if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
                               nodeObj.skip = true;
@@ -964,8 +1003,13 @@
                           if (!nodeObj.skip) {
                             temp.push(nodeObj);
                           }
+
+                          if (!nodeObj.skip) {
+                            temp.push(nodeObj);
+                          }
                         }
                       });
+                      cb(temp);
                       cb(temp);
                     },
                     error: function () {

@@ -73,7 +73,7 @@
     const DAMAGED                         = VSTOI::VSTOI . "Damaged";       // Cannot be deployed
     const DEPLOYED                        = VSTOI::VSTOI . "Deployed";      // Needs to become current before being deprecated or damaged
 
-     /*
+    /*
      * PERMISSION
      */
 
