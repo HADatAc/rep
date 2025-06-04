@@ -6,6 +6,7 @@
         // If a search value exists, fill in the search input.
         if (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) {
           $('#search_input', context).val(drupalSettings.rep_tree.searchValue);
+          // populateTree(drupalSettings.rep_tree.searchValue);
         }
 
         /**
@@ -370,6 +371,9 @@
         /**
          * Initialize jsTree with root‐level branches, plus AJAX callback for children.
          */
+
+        var inicial = drupalSettings.rep_tree.searchValue;
+
         function initializeJstree() {
           $treeRoot.jstree({
             core: {
@@ -515,50 +519,31 @@
               case_sensitive: false,
               show_only_matches: true,
               show_only_matches_children: true,
-              search_callback: function (str, node) {
-                const searchTerm = str.toLowerCase();
-
-                // (1) Match against the displayed text:
-                if (node.text.toLowerCase().includes(searchTerm)) {
-                  return true;
-                }
-
-                // (2) Match against typeNamespace if provided:
-                if (
-                  node.data.typeNamespace &&
-                  node.data.typeNamespace.toLowerCase().includes(searchTerm)
-                ) {
-                  return true;
-                }
-
-                // (3) Match against the originalPrefixUri (which is prefix + URI suffix)
-                if (
-                  node.data.originalPrefixUri &&
-                  node.data.originalPrefixUri.toLowerCase().includes(searchTerm)
-                ) {
-                  return true;
-                }
-
-                // (4) Match against the simple prefix field (e.g. “sio:SIO_001013”)
-                if (
-                  node.data.prefix &&
-                  node.data.prefix.toLowerCase().includes(searchTerm)
-                ) {
-                  return true;
-                }
-
-                return false;
-              },
             },
           });
-
           $treeRoot.on('ready.jstree', function () {
-            attachTreeEventListeners();
-            $treeRoot.on('load_node.jstree', resetActivityTimeout);
-            $treeRoot.on('open_node.jstree', resetActivityTimeout);
-            resetActivityTimeout();
-          });
+  // 1) Anexa listeners de seleção, hover etc.
+  attachTreeEventListeners();
+  $treeRoot.on('load_node.jstree open_node.jstree', resetActivityTimeout);
+  resetActivityTimeout();
 
+  // 2) Se houver um URI “inicial” (drupalSettings.rep_tree.searchValue),
+  //    vamos reconstruir a árvore até esse nó e depois abri-la por completo.
+  if (inicial && inicial.length > 0 && drupalSettings.rep_tree.prefix !== "false") {
+    // 2.1) Chama populateTree com o URI “inicial”
+    populateTree(inicial);
+
+    // 2.2) Registra um handler one‐time para quando o jsTree terminar
+    //      de dar refresh() com os dados (netos/filhos de populateTree).
+    $treeRoot.one('refresh.jstree', function () {
+      const ti = $treeRoot.jstree(true);
+      // 2.3) Expande TODOS os ramos a partir da raiz (“#”). Quando terminar, seleciona “inicial”.
+      ti.open_all('#', function () {
+        ti.select_node(inicial);
+      });
+    });
+  }
+});
           // If there is an initial search term, perform the search now:
           if (inicial && inicial.length > 0) {
             $treeRoot.jstree(true).search(inicial);
@@ -751,18 +736,26 @@
                 treeInstance.refresh();
 
                 // Auto-open all nodes after refresh
-                $treeRoot.on('refresh.jstree', function () {
+                // $treeRoot.on('refresh.jstree', function () {
+                //   const ti = $treeRoot.jstree(true);
+                //   function openRecursively(nodeId) {
+                //     ti.open_node(nodeId, function () {
+                //       const children = ti.get_node(nodeId).children;
+                //       if (children && children.length > 0) {
+                //         children.forEach(childId => openRecursively(childId));
+                //       }
+                //     });
+                //   }
+                //   const rootIds = ti.get_node('#').children;
+                //   rootIds.forEach(rid => openRecursively(rid));
+                // });
+                $treeRoot.one('refresh.jstree', function () {
                   const ti = $treeRoot.jstree(true);
-                  function openRecursively(nodeId) {
-                    ti.open_node(nodeId, function () {
-                      const children = ti.get_node(nodeId).children;
-                      if (children && children.length > 0) {
-                        children.forEach(childId => openRecursively(childId));
-                      }
-                    });
-                  }
-                  const rootIds = ti.get_node('#').children;
-                  rootIds.forEach(rid => openRecursively(rid));
+                  // Abre todos os ramos
+                  ti.open_all('#', function () {
+                    // Só após tudo estar aberto, seleciona o nó cujo ID/URI é “inicial”
+                    ti.select_node(inicial);
+                  });
                 });
               }
             },
@@ -961,6 +954,20 @@
             $treeRoot.on('load_node.jstree', resetActivityTimeout);
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
             resetActivityTimeout();
+
+            if (inicial && inicial.length > 0 && drupalSettings.rep_tree.prefix !== "false") {
+              // Esta chamada irá rebuildar a árvore com a hierarquia até "inicial"
+              populateTree(inicial);
+
+              // 2) Agora, antes do próximo refresh, configure um handler one‐time:
+              $treeRoot.one('refresh.jstree', function () {
+                // Garante que, depois do refresh, o nó "inicial" seja selecionado:
+                var treeInst = $treeRoot.jstree(true);
+                if (treeInst) {
+                  treeInst.select_node(inicial);
+                }
+              });
+            }
           });
 
           // Perform initial search if there was a value passed in:
