@@ -284,9 +284,9 @@ class Stream {
           $suspend_url = Url::fromRoute('dpl.stream_suspend', [
             'streamUri' => base64_encode($element->uri),
           ])->toString();
-          $ops_html[] = '<a href="' . $suspend_url . '" alt="Suspend Recording" title="Suspend Recording" class="btn btn-sm btn-secondary me-1">'
-                    . '<i class="fa-solid fa-stop"></i>'
-                    . '</a>';
+          $ops_html[] = '<a href="#" data-url="' . $suspend_url . '" class="btn btn-sm btn-secondary me-1 dpl-suspend-record" title="Suspend Recording">'
+          . '<i class="fa-solid fa-stop"></i>'
+          . '</a>';
         }
       }
 
