@@ -612,13 +612,12 @@ class MetadataTemplate
       } else {
         $output[$element->uri]['element_messages_total'] = isset($element->totalMessages) ? $element->totalMessages : 0;
         $output[$element->uri]['element_messages_ingested'] = isset($element->ingestedMessages) ? $element->ingestedMessages : 0;
-        dpm ($output);
       }
 
       $output[$element->uri]['element_status'] = t($filestatus);
       $output[$element->uri]['element_log'] = t($log);
       $output[$element->uri]['element_operations'] = Markup::create( implode(' ', $links) ); // Concatenar links com espaço entre eles
-
+      dpm ($output);
 
     }
 
