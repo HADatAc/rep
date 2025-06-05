@@ -607,12 +607,12 @@ class MetadataTemplate
       // Adicionar todos os links concatenados ao campo `element_operations`
       $output[$element->uri] = [];
       $output[$element->uri]['element_filename'] = t('<span style="display: inline-block; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>');
-      dpm ($output);
       if ($streamType == 'files') {
         $output[$element->uri]['element_messages_total'] = isset($element->numberDataPoints) ? $element->numberDataPoints : 0;
       } else {
         $output[$element->uri]['element_messages_total'] = isset($element->totalMessages) ? $element->totalMessages : 0;
         $output[$element->uri]['element_messages_ingested'] = isset($element->ingestedMessages) ? $element->ingestedMessages : 0;
+        dpm ($output);
       }
 
       $output[$element->uri]['element_status'] = t($filestatus);
