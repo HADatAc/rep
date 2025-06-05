@@ -617,8 +617,6 @@ class MetadataTemplate
       $output[$element->uri]['element_status'] = t($filestatus);
       $output[$element->uri]['element_log'] = t($log);
       $output[$element->uri]['element_operations'] = Markup::create( implode(' ', $links) ); // Concatenar links com espaço entre eles
-      dpm ($output);
-
     }
 
     return $output;
