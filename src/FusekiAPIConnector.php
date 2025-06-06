@@ -1570,7 +1570,7 @@ class FusekiAPIConnector {
   }
 
   public function streamByStateEmail($state, $email, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/stream/bystateemail".
+    $endpoint = "/hascoapi/api/stream/bystateemail/".
       $state."/".
       $email."/".
       $pageSize."/".
