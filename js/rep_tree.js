@@ -1,105 +1,145 @@
-/**
- * Drupal behavior for rendering a jsTree-based taxonomy/ontology tree.
- * - If drupalSettings.rep_tree.prefix is true, immediately call populateTree() using the searchValue,
- *   then expand the entire tree down to the final node.
- * - Otherwise, perform a normal jsTree search on the searchValue.
- * All comments are in English and include console.log statements for debugging.
- */
+(function ($) {
+  // ===================================================================
+  // 1) Patch jQuery UI Dialog widget to suppress “cannot call methods
+  //    on dialog prior to initialization” errors.
+  // ===================================================================
+  var originalDialog = $.ui.dialog.prototype;
+  $.widget("ui.dialog", $.ui.dialog, {
+    _setOption: function (key, value) {
+      // If this element does NOT have “ui-dialog” data (not initialized),
+      // simply return without calling the original method.
+      if (!this.element.data("ui-dialog")) {
+        return;
+      }
+      // Otherwise, proceed normally.
+      originalDialog._setOption.apply(this, arguments);
+    }
+  });
+})(jQuery);
+
+
 (function ($, Drupal, drupalSettings) {
+  // =============================================================================
+  // 2) Drupal.behaviors.tree
+  //    - Responsible for initializing/destroying the jsTree each time the modal opens.
+  //    - Handles “prefix” → “normal” fallback and shows “No results” when needed.
+  //    - Handles “Hide Other User’s Draft?” and “Hide Other User’s Deprecated?” toggles.
+  // =============================================================================
+
   Drupal.behaviors.tree = {
     attach: function (context, settings) {
-      // Ensure jsTree initializes only once for #tree-root.
-      once('jstree-initialized', '#tree-root', context).forEach((element) => {
-        // Cache common selectors.
-        const $treeRoot         = $(element);
-        const $selectNodeButton = $('#select-tree-node', context);
-        const $searchInput      = $('#search_input', context);
-        const $clearButton      = $('#clear-search', context);
-        const $waitMessage      = $('#wait-message', context);
-        const $resetButton      = $('#reset-tree', context);
+      // // console.log('[tree] → BEGIN Drupal.behaviors.tree.attach', { context: context, settings: settings });
 
-        // Retrieve initial settings from drupalSettings.
-        const initialSearchValue = drupalSettings.rep_tree.searchValue || '';
-        const prefixIsActive     = !!drupalSettings.rep_tree.prefix; // true/false
-        let hideDraft            = drupalSettings.rep_tree.hideDraft      || false;
-        let hideDeprecated       = drupalSettings.rep_tree.hideDeprecated || false;
-        let showLabel            = drupalSettings.rep_tree.showLabel      || 'label';
-
-        // console.log('[tree] Initialization: searchValue =', initialSearchValue, ', prefixIsActive =', prefixIsActive);
-
-        // If a searchValue is provided, populate the search input.
-        if (initialSearchValue.length > 0) {
-          $searchInput.val(initialSearchValue);
+      // ------------------------------------------------------
+      // 2.1) Capture clicks on any .open-tree-modal trigger
+      // ------------------------------------------------------
+      $(context).find('.open-tree-modal').each(function () {
+        var $trigger = $(this);
+        // Ensure we only bind once per element by checking a data attribute
+        if ($trigger.data('tree-capture-bound')) {
+          return;
         }
+        $trigger.data('tree-capture-bound', true);
 
-        // Delay variables to wait until nodes load before showing the tree.
-        let activityTimeout   = null;
-        const activityDelay   = 1000;  // 1 second
-        let initialSearchDone = false;
+        $trigger.on('click', function (e) {
+          var passedValue = $trigger.data('search-value') || '';
+          // // console.log('[tree] .open-tree-modal clicked → data-search-value =', passedValue);
 
-        /**
-         * Sanitize a string to make a valid HTML ID.
-         * Replaces all non-alphanumeric, underscore, hyphen characters with underscore.
-         */
+          // Remove any old “No results” message
+          $('#no-results-message').remove();
+
+          // Ensure drupalSettings.rep_tree exists
+          if (!drupalSettings.rep_tree) {
+            drupalSettings.rep_tree = {};
+          }
+          drupalSettings.rep_tree.searchValue = passedValue;
+          // Reset internal flag to force re-initialization of jsTree
+          drupalSettings.rep_tree._initialSearchDone = false;
+
+          // If a jsTree was already active, destroy it and hide its container
+          var $treeRoot = $('#tree-root');
+          if ($treeRoot.length && $treeRoot.data('tree-initialized')) {
+            // // console.log('[tree] Clearing previous jsTree instance on #tree-root');
+            $treeRoot.jstree('destroy');
+            $treeRoot.removeData('tree-initialized');
+            $treeRoot.hide();
+          }
+
+          // Force the #search_input value to the passedValue
+          if ($('#search_input').length) {
+            $('#search_input').val(passedValue);
+            // // console.log('[tree] Forcing #search_input.val(', passedValue, ') on click.');
+            // // console.log('[tree] Current prefix state:', drupalSettings.rep_tree.prefix);
+          }
+        });
+      });
+
+      // ------------------------------------------------------
+      // 2.2) Initialize/destroy jsTree inside #tree-root
+      // ------------------------------------------------------
+      $(context).find('#tree-root').each(function () {
+        var $treeRoot = $(this);
+
+        // If we already initialized this #tree-root in this modal instance, skip
+        if ($treeRoot.data('tree-initialized')) {
+          // // console.log('[tree] jsTree already initialized on this #tree-root, skipping.');
+          return;
+        }
+        $treeRoot.data('tree-initialized', true);
+        // // console.log('[tree] → Initializing jsTree behavior for element:', $treeRoot);
+
+        // ----------------------------
+        // Helper Functions
+        // ----------------------------
         function sanitizeForId(str) {
+          // Replace any character that is not A-Z, a-z, 0-9, underscore, or hyphen with underscore
           return str.replace(/[^A-Za-z0-9_-]/g, '_');
         }
 
-        /**
-         * Base64-encode a Unicode string so it can be safely placed in a URL.
-         */
         function base64EncodeUnicode(str) {
-          const utf8Bytes = new TextEncoder().encode(str);
-          let asciiStr = '';
-          for (let i = 0; i < utf8Bytes.length; i++) {
+          // Encode a Unicode string as UTF-8 and then to base64
+          var utf8Bytes = new TextEncoder().encode(str);
+          var asciiStr = '';
+          for (var i = 0; i < utf8Bytes.length; i++) {
             asciiStr += String.fromCharCode(utf8Bytes[i]);
           }
           return btoa(asciiStr);
         }
 
-        /**
-         * Given a full URI, return its namespace:localName form if any namespace matches.
-         * Example: nameSpacesList = { "ABC": "http://abc.org/" }, uri = "http://abc.org/123"
-         * returns "ABC:123". Otherwise returns the original URI.
-         */
         function namespaceUri(uri) {
-          const namespaces = drupalSettings.rep_tree.nameSpacesList || {};
-          for (const abbrev in namespaces) {
-            if (namespaces.hasOwnProperty(abbrev)) {
-              const ns = namespaces[abbrev];
-              if (abbrev && ns && uri.startsWith(ns)) {
-                return abbrev + ":" + uri.slice(ns.length);
-              }
+          // Given a full URI, return a prefixed form if it matches a known namespace
+          var namespaces = (drupalSettings.rep_tree && drupalSettings.rep_tree.nameSpacesList) || {};
+          for (var abbrev in namespaces) {
+            if (!namespaces.hasOwnProperty(abbrev)) continue;
+            var ns = namespaces[abbrev];
+            if (abbrev && ns && uri.startsWith(ns)) {
+              return abbrev + ":" + uri.slice(ns.length);
             }
           }
           return uri;
         }
 
-        /**
-         * Given a full URI, return only its namespace prefix (e.g. "ABC:") if matched.
-         * Example: nameSpacesList = { "ABC": "http://abc.org/" }, uri = "http://abc.org/123"
-         * returns "ABC:". Otherwise returns the original URI.
-         */
         function namespacePrefixUri(uri) {
-          const namespaces = drupalSettings.rep_tree.nameSpacesList || {};
-          for (const abbrev in namespaces) {
-            if (namespaces.hasOwnProperty(abbrev)) {
-              const ns = namespaces[abbrev];
-              if (abbrev && ns && uri.startsWith(ns)) {
-                return abbrev + ":";
-              }
+          // Given a full URI, return just the prefix if it matches a known namespace
+          var namespaces = (drupalSettings.rep_tree && drupalSettings.rep_tree.nameSpacesList) || {};
+          for (var abbrev2 in namespaces) {
+            if (!namespaces.hasOwnProperty(abbrev2)) continue;
+            var ns2 = namespaces[abbrev2];
+            if (abbrev2 && ns2 && uri.startsWith(ns2)) {
+              return abbrev2 + ":";
             }
           }
           return uri;
         }
 
-        /**
-         * Remove duplicate branch entries by their label from drupalSettings.rep_tree.branches.
-         * Prevents root-level duplicates.
-         */
+        // ----------------------------
+        // getFilteredBranches()
+        //   Remove duplicate branches by label.
+        // ----------------------------
         function getFilteredBranches() {
-          const seenLabels = new Set();
-          return (drupalSettings.rep_tree.branches || []).filter(branch => {
+          var seenLabels = new Set();
+          var branches = (drupalSettings.rep_tree && drupalSettings.rep_tree.branches) || [];
+          return branches.filter(function (branch) {
             if (seenLabels.has(branch.label)) {
               console.warn("[tree] Duplicate branch removed:", branch.label);
               return false;
@@ -109,15 +149,12 @@
           });
         }
 
-        /**
-         * Compute the visible "text" for a node based on the current showLabel mode:
-         * - "label": display item.label
-         * - "labelprefix": prefix + label
-         * - "uri": display full URI
-         * - "uriprefix": namespaceUri form
-         */
+        // ----------------------------
+        // setNodeText(item)
+        //   Determine the display text for a node based on the “label_mode” radio.
+        // ----------------------------
         function setNodeText(item) {
-          const selectedMode = $('input[name="label_mode"]:checked').val() || 'label';
+          var selectedMode = $('input[name="label_mode"]:checked').val() || 'label';
           switch (selectedMode) {
             case 'labelprefix':
               return namespacePrefixUri(item.uri) + item.label;
@@ -130,15 +167,15 @@
           }
         }
 
-        /**
-         * Append a status suffix (e.g. "(Draft)", "(Deprecated)", "(Under Review)"),
-         * including ownership info if applicable.
-         */
-        function setTitleSufix(item) {
-          let suffix = '';
-          const DRAFT_URI       = 'http://hadatac.org/ont/vstoi#Draft';
-          const DEPRECATED_URI  = 'http://hadatac.org/ont/vstoi#Deprecated';
-          const UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
+        // ----------------------------
+        // setTitleSuffix(item)
+        //   Append “(Draft)”, “(Deprecated)”, etc., and indicate ownership.
+        // ----------------------------
+        function setTitleSuffix(item) {
+          var suffix = '';
+          var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
+          var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
+          var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
 
           if (item.hasStatus === DEPRECATED_URI) {
             suffix += ' (Deprecated)';
@@ -167,51 +204,129 @@
           return suffix;
         }
 
-        /**
-         * After nodes load or open, wait a moment, then hide the "please wait" message and show the tree.
-         * Only runs once on initial load. In prefix mode, do not close the tree.
-         */
+        // ----------------------------
+        // expandPrefix(maybePrefixed)
+        //   Convert “obo:PATO_0002370” → full URI using drupalSettings.rep_tree.nameSpacesList
+        // ----------------------------
+        function expandPrefix(maybePrefixed) {
+          // If it already looks like a URI, return as-is
+          if (/^https?:\/\//.test(maybePrefixed)) {
+            return maybePrefixed;
+          }
+          var parts = maybePrefixed.split(':', 2);
+          if (parts.length === 2) {
+            var prefix = parts[0];
+            var local = parts[1];
+            var nsList = (drupalSettings.rep_tree && drupalSettings.rep_tree.nameSpacesList) || {};
+            if (nsList[prefix]) {
+              return nsList[prefix] + local;
+            }
+          }
+          return maybePrefixed;
+        }
+
+        // --------------------------------------------------------------
+        // Convert the prefixed searchValue into a full URI:
+        // --------------------------------------------------------------
+        var rawSearchValue = (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) || '';
+        var initialSearchValue = expandPrefix(rawSearchValue);
+        if (!drupalSettings.rep_tree) {
+          drupalSettings.rep_tree = {};
+        }
+        drupalSettings.rep_tree.searchValue = initialSearchValue;
+        // // console.log('[tree] Initialization: initialSearchValue =', initialSearchValue);
+
+        // --------------------------------------------------------------
+        // Initial flags:
+        // --------------------------------------------------------------
+        var prefixIsActive = !!(drupalSettings.rep_tree && drupalSettings.rep_tree.prefix);
+        var hideDraft = (drupalSettings.rep_tree && drupalSettings.rep_tree.hideDraft) || false;
+        var hideDeprecated = (drupalSettings.rep_tree && drupalSettings.rep_tree.hideDeprecated) || false;
+        var showLabel = (drupalSettings.rep_tree && drupalSettings.rep_tree.showLabel) || 'label';
+        // // console.log('[tree] Initialization: prefixIsActive =', prefixIsActive,
+        //             ', hideDraft =', hideDraft,
+        //             ', hideDeprecated =', hideDeprecated,
+        //             ', showLabel =', showLabel);
+
+        if (initialSearchValue.length > 0) {
+          // console.log('[tree] Setting initialSearchValue in #search_input →', initialSearchValue);
+          $('#search_input').val(initialSearchValue);
+        }
+
+        // --------------------------------------------------------------
+        // Bind “Hide Other User’s Draft?” and “Hide Other User’s Deprecated?” toggles:
+        // --------------------------------------------------------------
+        // HTML must contain:
+        //   <input type="checkbox" id="toggle-draft" /> Hide Other User’s Draft?
+        //   <input type="checkbox" id="toggle-deprecated" /> Hide Other User’s Deprecated?
+        //
+        // Before binding, remove any previous handlers to avoid duplicates.
+
+        $('#toggle-draft', context).off('change').on('change', function () {
+          hideDraft = $(this).is(':checked');
+          // console.log('[tree] toggle-draft changed → hideDraft =', hideDraft);
+          resetTree();
+        });
+
+        $('#toggle-deprecated', context).off('change').on('change', function () {
+          hideDeprecated = $(this).is(':checked');
+          // console.log('[tree] toggle-deprecated changed → hideDeprecated =', hideDeprecated);
+          resetTree();
+        });
+
+        // --------------------------------------------------------------
+        // “Wait” variables for initial loading:
+        // --------------------------------------------------------------
+        var activityTimeout = null;
+        var activityDelay = 1000; // 1s
+        var initialSearchDone = false;
+
+        // --------------------------------------------------------------
+        // resetActivityTimeout(): hide “wait-message” and show tree
+        // --------------------------------------------------------------
         function resetActivityTimeout() {
           if (activityTimeout) {
             clearTimeout(activityTimeout);
           }
-          activityTimeout = setTimeout(() => {
+          activityTimeout = setTimeout(function () {
             if (!initialSearchDone) {
               // console.log("[tree] resetActivityTimeout: Hiding wait message and showing tree.");
-              // Only close all if not in prefix mode
               if (!prefixIsActive) {
                 $treeRoot.jstree('close_all');
               }
-              $waitMessage.hide();
+              $('#wait-message').hide();
               $treeRoot.show();
-              $searchInput.prop('disabled', false);
+              $('#search_input').prop('disabled', false);
               initialSearchDone = true;
             }
           }, activityDelay);
         }
 
-        /**
-         * Attach event listeners to the jsTree instance:
-         * - select_node: enable/disable "Select Node" button based on status & ownership.
-         * - hover_node: show comment as tooltip if present.
-         */
+        // --------------------------------------------------------------
+        // attachTreeEventListeners(): enable/disable “Select” button and show tooltip
+        // --------------------------------------------------------------
         function attachTreeEventListeners() {
           $treeRoot.off('select_node.jstree hover_node.jstree load_node.jstree open_node.jstree');
-          // Placeholder if load_node or open_node need handling in future.
-          $treeRoot.on('load_node.jstree open_node.jstree', function () {});
 
+          $treeRoot.on('load_node.jstree open_node.jstree', function () {
+            // We could handle custom logic here if needed
+          });
+
+          // When a node is selected:
           $treeRoot.on('select_node.jstree', function (e, data) {
-            const selectedNode = data.node.original;
-            const DRAFT_URI       = 'http://hadatac.org/ont/vstoi#Draft';
-            const DEPRECATED_URI  = 'http://hadatac.org/ont/vstoi#Deprecated';
-            const UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
+            var selectedNode = data.node.original;
+            var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
+            var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
+            var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
 
             // console.log("[tree] Node selected:", selectedNode.uri, ", status =", selectedNode.hasStatus);
 
-            // By default, disable the button and clear any previous data.
-            $selectNodeButton.prop('disabled', true).addClass('disabled').removeData('selected-value');
+            var $selectNodeButton = $('#select-tree-node');
+            $selectNodeButton.prop('disabled', true)
+                             .addClass('disabled')
+                             .removeData('selected-value');
 
-            // If node is restricted by status and not owned by the current user, keep disabled.
+            // Rule 1: Node is restricted (Draft/Deprecated/UnderReview) and not owned by current user → keep disabled
             if (
               (selectedNode.hasStatus === DRAFT_URI     && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) ||
               (selectedNode.hasStatus === DEPRECATED_URI && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) ||
@@ -219,14 +334,14 @@
             ) {
               // console.log("[tree] Node cannot be selected (restricted & not owned).");
             }
-            // If node is deprecated but owned by user, still disable.
+            // Rule 2: Node is Deprecated and is owned by current user → still disabled
             else if (
               selectedNode.hasStatus === DEPRECATED_URI &&
               selectedNode.hasSIRManagerEmail === drupalSettings.rep_tree.managerEmail
             ) {
               // console.log("[tree] Node is deprecated and owned by user → still cannot select.");
             }
-            // If node is draft and owned by user, enable selection.
+            // Rule 3: Node is Draft and owned by current user → enable selection
             else if (
               selectedNode.hasStatus === DRAFT_URI &&
               selectedNode.hasSIRManagerEmail === drupalSettings.rep_tree.managerEmail
@@ -241,14 +356,14 @@
                 )
                 .data('field-id', $('#tree-root').data('field-id'));
             }
-            // If node is under review and owned by user, remain disabled.
+            // Rule 4: Node is UnderReview and is owned by current user → still disabled
             else if (
               selectedNode.hasStatus === UNDERREVIEW_URI &&
               selectedNode.hasSIRManagerEmail === drupalSettings.rep_tree.managerEmail
             ) {
               // console.log("[tree] Node is under review and owned by user → still cannot select.");
             }
-            // Otherwise (normal node or draft by owner), enable selection.
+            // Rule 5: Otherwise (normal or Draft by user) → enable
             else {
               // console.log("[tree] Node is normal or draft by user → enabling selection.");
               $selectNodeButton
@@ -261,48 +376,43 @@
                 .data('field-id', $('#tree-root').data('field-id'));
             }
 
-            // Build HTML to display node details.
-            let html = `
-              <strong>Label:</strong> ${selectedNode.label}<br/>
-              <strong>URI:</strong>
-              <a href="${drupalSettings.rep_tree.baseUrl}/rep/uri/${base64EncodeUnicode(selectedNode.uri)}" target="_new">
-                ${selectedNode.uri}
-              </a><br/>
-            `;
+            // Build HTML for node details (Label, URI, Web Document, Description)
+            var html = ''
+              + '<strong>Label:</strong> ' + selectedNode.label + '<br/>'
+              + '<strong>URI:</strong> '
+              + '<a href="' + drupalSettings.rep_tree.baseUrl + '/rep/uri/' + base64EncodeUnicode(selectedNode.uri) + '" target="_new">'
+              + selectedNode.uri + '</a><br/>';
 
-            const webDocument = data.node.data.hasWebDocument || "";
+            var webDocument = data.node.data.hasWebDocument || "";
             if (webDocument.trim().length > 0) {
               if (webDocument.trim().toLowerCase().startsWith("http")) {
-                html += `
-                  <strong>Web Document:</strong>
-                  <a href="${webDocument}" target="_new">${webDocument}</a><br/>
-                `;
+                html += ''
+                  + '<strong>Web Document:</strong> '
+                  + '<a href="' + webDocument + '" target="_new">' + webDocument + '</a><br/>';
               } else {
-                const uriPart    = selectedNode.uri.includes('#/') ? selectedNode.uri.split('#/')[1] : selectedNode.uri;
-                const downloadUrl = `${drupalSettings.rep_tree.baseUrl}/rep/webdocdownload/${encodeURIComponent(uriPart)}?doc=${encodeURIComponent(webDocument)}`;
-                html += `
-                  <strong>Web Document:</strong>
-                  <a href="#" class="view-media-button" data-view-url="${downloadUrl}">${webDocument}</a><br/>
-                `;
+                var uriPart = selectedNode.uri.includes('#/') ? selectedNode.uri.split('#/')[1] : selectedNode.uri;
+                var downloadUrl = drupalSettings.rep_tree.baseUrl
+                  + '/rep/webdocdownload/' + encodeURIComponent(uriPart)
+                  + '?doc=' + encodeURIComponent(webDocument);
+                html += ''
+                  + '<strong>Web Document:</strong> '
+                  + '<a href="#" class="view-media-button" data-view-url="' + downloadUrl + '">'
+                  + webDocument + '</a><br/>';
               }
             }
 
-            const comment = data.node.data.comment || "";
+            var comment = data.node.data.comment || "";
             if (comment.trim().length > 0) {
-              html += `
-                <br/>
-                <strong>Description:</strong><br/>
-                ${comment}
-              `;
+              html += '<br/><strong>Description:</strong><br/>' + comment;
             }
 
             $('#node-comment-display').html(html).show();
           });
 
-          // On hover, show the node’s comment as a tooltip if present.
+          // Hover to show tooltip with comment
           $treeRoot.on('hover_node.jstree', function (e, data) {
-            const comment = data.node.data.comment || '';
-            const nodeAnchor = $('#' + $.escapeSelector(data.node.id + '_anchor'));
+            var comment = data.node.data.comment || '';
+            var nodeAnchor = $('#' + $.escapeSelector(data.node.id + '_anchor'));
             if (comment) {
               nodeAnchor.attr('title', comment);
             } else {
@@ -311,29 +421,17 @@
           });
         }
 
-        /**
-         * Build a hierarchical subtree from an array of items returned by searchSuperClassEndPoint.
-         * If forcedRootUri is provided, only items up to that URI are included and that URI becomes root.
-         * Returns a single root node object (with nested children), or null if none found.
-         *
-         * @param {Array<Object>} items
-         *   Array of objects from the searchSuperClassEndPoint, each having at least:
-         *     { uri, label, superUri, hasStatus, hasSIRManagerEmail, comment, typeNamespace, hasWebDocument, hasImageUri }
-         *
-         * @param {string|null} forcedRootUri
-         *   The URI to treat as the “top” of our subtree (typically drupalSettings.rep_tree.elementType).
-         *   If this appears in `items`, we stop building any ancestors above and immediately return that node alone.
-         *
-         * @returns {Object|null}
-         *   A single root node object (with nested children[] if not “short‐circuited”), or null if nothing matches.
-         */
-        function buildHierarchy(items, forcedRootUri = null) {
+        // --------------------------------------------------------------
+        // buildHierarchy(items, forcedRootUri)
+        //   - Builds an ancestry tree (or a single forced node).
+        // --------------------------------------------------------------
+        function buildHierarchy(items, forcedRootUri) {
           // console.log("[tree] buildHierarchy called. items.length =", items.length, ", forcedRootUri =", forcedRootUri);
 
-          // 1) Deduplicate by URI
-          const uniqueItems = [];
-          const seenUris = new Set();
-          items.forEach(item => {
+          // 1) Remove duplicates by URI
+          var uniqueItems = [];
+          var seenUris = new Set();
+          items.forEach(function (item) {
             if (!seenUris.has(item.uri)) {
               uniqueItems.push(item);
               seenUris.add(item.uri);
@@ -341,26 +439,26 @@
           });
           // console.log("[tree] After deduplication: uniqueItems.length =", uniqueItems.length);
 
-          // 2) If forcedRootUri is present in uniqueItems, and we want to "short‐circuit"
-          //    as soon as we see that elementType, then build exactly that one node and return it.
+          // 2) If forcedRootUri appears in uniqueItems, return just that node as a single root
           if (forcedRootUri) {
-            const shortCircuitItem = uniqueItems.find(item => item.uri === forcedRootUri);
+            var shortCircuitItem = uniqueItems.find(function (item) {
+              return item.uri === forcedRootUri;
+            });
             if (shortCircuitItem) {
               // console.log("[tree] Short‐circuit: found forcedRootUri =", forcedRootUri, "– returning single node.");
 
-              // Build nodeText + styling/skip logic exactly as we would below, but with no children.
-              let nodeText = setNodeText(shortCircuitItem);
-              let a_attr = {};
-              const item = shortCircuitItem; // for brevity
-              const DRAFT_URI       = 'http://hadatac.org/ont/vstoi#Draft';
-              const DEPRECATED_URI  = 'http://hadatac.org/ont/vstoi#Deprecated';
-              const UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
+              var itemSC = shortCircuitItem;
+              var nodeText = setNodeText(itemSC);
+              var a_attr = {};
+              var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
+              var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
+              var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
 
-              // Apply status suffix/a_attr exactly as usual
-              if (item.hasStatus === DEPRECATED_URI) {
-                if (!(hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail)) {
+              // Apply hideDeprecated/hideDraft logic even for the single node
+              if (itemSC.hasStatus === DEPRECATED_URI) {
+                if (!(hideDeprecated && drupalSettings.rep_tree.managerEmail !== itemSC.hasSIRManagerEmail)) {
                   nodeText += ' (Deprecated)';
-                  if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                  if (drupalSettings.rep_tree.managerEmail === itemSC.hasSIRManagerEmail) {
                     nodeText += ' (' + drupalSettings.rep_tree.username + ')';
                     a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
                   } else {
@@ -368,12 +466,11 @@
                     a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
                   }
                 }
-                // If `hideDeprecated && not owner`, we would skip--but short‐circuit wants to return anyway.
               }
-              else if (item.hasStatus === DRAFT_URI) {
-                if (!(hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail)) {
+              else if (itemSC.hasStatus === DRAFT_URI) {
+                if (!(hideDraft && drupalSettings.rep_tree.managerEmail !== itemSC.hasSIRManagerEmail)) {
                   nodeText += ' (Draft)';
-                  if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                  if (drupalSettings.rep_tree.managerEmail === itemSC.hasSIRManagerEmail) {
                     nodeText += ' (' + drupalSettings.rep_tree.username + ')';
                     a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
                   } else {
@@ -382,10 +479,10 @@
                   }
                 }
               }
-              else if (item.hasStatus === UNDERREVIEW_URI) {
-                if (!(hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail)) {
+              else if (itemSC.hasStatus === UNDERREVIEW_URI) {
+                if (!(hideDraft && drupalSettings.rep_tree.managerEmail !== itemSC.hasSIRManagerEmail)) {
                   nodeText += ' (Under Review)';
-                  if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
+                  if (drupalSettings.rep_tree.managerEmail === itemSC.hasSIRManagerEmail) {
                     nodeText += ' (' + drupalSettings.rep_tree.username + ')';
                     a_attr = { style: 'font-style: italic; color:rgb(172, 164, 164);' };
                   } else {
@@ -395,59 +492,60 @@
                 }
               }
 
-              const prefixed = namespacePrefixUri(item.uri);
-              // Construct exactly one node object, with no children:
-              const singleNode = {
-                id: item.uri,
+              var prefixed = namespacePrefixUri(itemSC.uri);
+              var singleNode = {
+                id: itemSC.uri,
                 text: nodeText,
-                label: item.label,
-                uri: item.uri,
-                superUri: item.superUri || null,
-                typeNamespace: item.typeNamespace || '',
+                label: itemSC.label,
+                uri: itemSC.uri,
+                superUri: itemSC.superUri || null,
+                typeNamespace: itemSC.typeNamespace || '',
                 icon: 'fas fa-file-alt',
-                hasStatus: item.hasStatus,
-                hasSIRManagerEmail: item.hasSIRManagerEmail,
-                hasWebDocument: item.hasWebDocument,
-                hasImageUri: item.hasImageUri,
+                hasStatus: itemSC.hasStatus,
+                hasSIRManagerEmail: itemSC.hasSIRManagerEmail,
+                hasWebDocument: itemSC.hasWebDocument,
+                hasImageUri: itemSC.hasImageUri,
                 data: {
-                  originalLabel: item.label + setTitleSufix(item),
-                  originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
-                  originalUri: item.uri + setTitleSufix(item),
-                  originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+                  originalLabel: itemSC.label + setTitleSuffix(itemSC),
+                  originalPrefixLabel: namespacePrefixUri(itemSC.uri) + itemSC.label + setTitleSuffix(itemSC),
+                  originalUri: itemSC.uri + setTitleSuffix(itemSC),
+                  originalPrefixUri: namespaceUri(itemSC.uri) + setTitleSuffix(itemSC),
                   prefix: prefixed,
-                  comment: item.comment || '',
-                  typeNamespace: item.typeNamespace || '',
-                  hasWebDocument: item.hasWebDocument,
-                  hasImageUri: item.hasImageUri
+                  comment: itemSC.comment || '',
+                  typeNamespace: itemSC.typeNamespace || '',
+                  hasWebDocument: itemSC.hasWebDocument,
+                  hasImageUri: itemSC.hasImageUri
                 },
                 a_attr: a_attr,
-                children: []  // no children because we terminate here
+                children: []
               };
 
               return singleNode;
             }
           }
 
-          // 3) If we did not return early above, now we “slice” items up to forcedRootUri
-          let filteredItems = uniqueItems;
+          // 3) If not short‐circuited, filter up to forcedRootUri (if provided)
+          var filteredItems = uniqueItems;
           if (forcedRootUri) {
-            const forcedIndex = uniqueItems.findIndex(item => item.uri === forcedRootUri);
+            var forcedIndex = uniqueItems.findIndex(function (item) {
+              return item.uri === forcedRootUri;
+            });
             if (forcedIndex !== -1) {
               filteredItems = uniqueItems.slice(0, forcedIndex + 1);
               // console.log("[tree] After slicing up to forcedRootUri: filteredItems.length =", filteredItems.length);
             }
           }
 
-          // 4) Build a map of URI → node object, marking “skip” for hidden statuses
-          const nodeMap = new Map();
-          filteredItems.forEach(item => {
-            let nodeText = setNodeText(item);
-            let a_attr = {};
+          // 4) Create a Map URI→node, marking skip for hidden statuses
+          var nodeMap = new Map();
+          filteredItems.forEach(function (item) {
+            var nodeText = setNodeText(item);
+            var a_attr = {};
             item.skip = false;
 
-            const DRAFT_URI       = 'http://hadatac.org/ont/vstoi#Draft';
-            const DEPRECATED_URI  = 'http://hadatac.org/ont/vstoi#Deprecated';
-            const UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
+            var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
+            var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
+            var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
 
             if (item.hasStatus === DEPRECATED_URI) {
               if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
@@ -492,7 +590,7 @@
               }
             }
 
-            const prefixed = namespacePrefixUri(item.uri);
+            var prefixed = namespacePrefixUri(item.uri);
             nodeMap.set(item.uri, {
               id: item.uri,
               text: nodeText,
@@ -506,10 +604,10 @@
               hasWebDocument: item.hasWebDocument,
               hasImageUri: item.hasImageUri,
               data: {
-                originalLabel: item.label + setTitleSufix(item),
-                originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
-                originalUri: item.uri + setTitleSufix(item),
-                originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+                originalLabel: item.label + setTitleSuffix(item),
+                originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSuffix(item),
+                originalUri: item.uri + setTitleSuffix(item),
+                originalPrefixUri: namespaceUri(item.uri) + setTitleSuffix(item),
                 prefix: prefixed,
                 comment: item.comment || '',
                 typeNamespace: item.typeNamespace || '',
@@ -521,23 +619,20 @@
             });
           });
 
-          // 5) Link each node to its parent.  If forcedRootUri was provided, we treat filteredItems
-          //    as a single linear “chain” (ignoring superUri)—otherwise we do a normal superUri link.
-          let root = null;
+          // 5) Link each node to its parent (forced chain or normal superUri)
+          var root = null;
           if (forcedRootUri) {
             // console.log("[tree] Linking chain nodes (forcedRootUri mode).");
-            const chain = filteredItems.slice();
-            chain.reverse(); // chain[0] is forcedRootUri as the top‐most in our subtree
+            var chain = filteredItems.slice();
+            chain.reverse(); // The first after reverse is forcedRootUri
 
-            chain.forEach((item, index) => {
-              const node = nodeMap.get(item.uri);
+            chain.forEach(function (item, index) {
+              var node = nodeMap.get(item.uri);
               if (!node) return;
               if (index === 0) {
-                // The forced root of our subtree:
                 root = node;
               } else {
-                // Every subsequent item goes one level deeper:
-                let current = root;
+                var current = root;
                 while (current.children && current.children.length > 0) {
                   current = current.children[0];
                 }
@@ -546,31 +641,31 @@
             });
           } else {
             // console.log("[tree] Linking nodes by superUri.");
-            filteredItems.forEach(item => {
+            filteredItems.forEach(function (item) {
               if (item.skip) return;
-              const node = nodeMap.get(item.uri);
+              var node = nodeMap.get(item.uri);
               if (!node) return;
               if (item.superUri && !item.skip) {
-                const parent = nodeMap.get(item.superUri);
+                var parent = nodeMap.get(item.superUri);
                 if (parent && !parent.skip) {
                   parent.children.push(node);
                 }
               } else {
-                // No superUri → potential root
                 root = node;
               }
             });
           }
 
-          // 6) If forcedRootUri exists in nodeMap, override root (in case chaining logic above didn’t do so).
+          // 6) If forcedRootUri exists, override root
           if (forcedRootUri && nodeMap.has(forcedRootUri)) {
             root = nodeMap.get(forcedRootUri);
           }
-          // 7) If we still have no root, pick the first item without a parent in filteredItems.
+          // 7) If still no root, pick the first item without a superUri
           else if (!root) {
-            for (const item of filteredItems) {
-              if (!item.superUri) {
-                root = nodeMap.get(item.uri);
+            for (var idx = 0; idx < filteredItems.length; idx++) {
+              var it = filteredItems[idx];
+              if (!it.superUri) {
+                root = nodeMap.get(it.uri);
                 break;
               }
             }
@@ -580,113 +675,108 @@
           return root;
         }
 
-        /**
-         * Given a URI, call the searchSuperClassEndPoint to retrieve that node’s ancestors,
-         * build a subtree via buildHierarchy(...), then refresh jsTree to contain only that subtree.
-         * After refreshing, expand all nodes and select the final node.
-         */
-function populateTree(uri) {
-  // console.log("[tree] → populateTree called with URI =", uri);
+        // --------------------------------------------------------------
+        // populateTree(uri)
+        //    - Calls searchSuperClassEndPoint, builds the hierarchy, and populates jsTree.
+        // --------------------------------------------------------------
+        function populateTree(uri) {
+          // console.log("[tree] → populateTree called with URI =", uri);
 
-  $.ajax({
-    url: drupalSettings.rep_tree.searchSuperClassEndPoint,
-    type: 'GET',
-    data: { uri: encodeURI(uri) },
-    dataType: 'json',
-    success: function (data) {
-      // console.log("[tree] → populateTree AJAX success: returned items.length =", data.length);
+          $.ajax({
+            url: drupalSettings.rep_tree.searchSuperClassEndPoint,
+            type: 'GET',
+            data: { uri: encodeURI(uri) },
+            dataType: 'json',
+            success: function (data) {
+              // console.log("[tree] → populateTree AJAX success; items.length =", data.length);
 
-      const elementTypeUri = drupalSettings.rep_tree.elementType || null;
-      const forcedRootUri  = elementTypeUri  || drupalSettings.rep_tree.superclass || null;
-      // console.log("[tree]    elementTypeUri =", elementTypeUri);
-      // console.log("[tree]    forcedRootUri  =", forcedRootUri);
+              $('#no-results-message').remove();
 
-      // 1) Monta a sub-árvore em memória
-      const rootNode = buildHierarchy(data, forcedRootUri);
-      const treeData = rootNode ? [rootNode] : [];
-      // console.log("[tree]    rootNode URI =", rootNode ? rootNode.uri : null);
+              var elementTypeUri = drupalSettings.rep_tree.elementType || null;
+              var forcedRootUri = elementTypeUri || drupalSettings.rep_tree.superclass || null;
+              var rootNode = buildHierarchy(data, forcedRootUri);
 
-      // 2) Pega instância do jsTree
-      const treeInstance = $treeRoot.jstree(true);
-      if (!treeInstance) {
-        console.warn("[tree]    jsTree instance not found in populateTree → aborting");
-        return;
-      }
+              // —— Case A: no results
+              if (data.length === 0) {
+                var $message = $(
+                  '<div id="no-results-message" style="color: #b00; margin-bottom: 10px;">' +
+                  'No results found for “' + uri + '”.</div>'
+                );
+                $treeRoot.before($message);
 
-      // 3) Substitui o core.data para conter só a sub-árvore
-      // console.log("[tree]    Substituindo core.data e chamando refresh()");
-      treeInstance.settings.core.data = treeData;
+                if (prefixIsActive && !rootNode) {
+                  console.warn("[tree] → prefixIsActive && no rootNode (null). Falling back to normal tree.");
 
-      // 4) Remove handlers antigos para evitar duplicação
-      $treeRoot.off("refresh.jstree.select_last");
-      // console.log("[tree]    Listener antigo de refresh.jstree.select_last removido");
+                  $treeRoot.jstree('destroy');
+                  $treeRoot.removeData('tree-initialized');
+                  resetTree();
+                  return;
+                }
 
-      // 5) Adiciona listener para abrir tudo e selecionar o último nó, MAS sem usar callback do open_all
-      $treeRoot.one("refresh.jstree.select_last", function () {
-        // console.log("[tree] → Evento 'refresh.jstree.select_last' disparado");
-        // Espera 50ms antes de acionar o open_all (só para garantir que o DOM do jsTree já foi inserido)
-        setTimeout(function () {
-          // console.log("[tree]    Dentro de setTimeout(50ms): chamando open_all('#')");
-          treeInstance.open_all("#");
-          // Não usamos callback do open_all. Em vez disso, aguardamos mais um pouco antes de selecionar.
-
-          // Aguarda mais 150ms para ter certeza de que todos os li já estão no DOM
-          setTimeout(function () {
-            // console.log("[tree]    Após open_all, buscando todos os nós (flat) e selecionando último");
-            const allNodes = treeInstance.get_json('#', { flat: true });
-            // console.log("[tree]    allNodes (flat) recebido. total de nós =", allNodes.length);
-
-            if (allNodes.length > 0) {
-              const ultimo = allNodes[allNodes.length - 1];
-              // console.log("[tree]    Nó mais profundo identificado →", ultimo.id);
-              treeInstance.select_node(ultimo.id);
-              // console.log("[tree]    select_node chamado para", ultimo.id);
-
-              const $anchor = $('#' + $.escapeSelector(ultimo.id + '_anchor'));
-              if ($anchor.length) {
-                // console.log("[tree]    Fazendo scrollIntoView para o nó", ultimo.id);
-                $anchor[0].scrollIntoView({ block: 'nearest', inline: 'nearest' });
-              } else {
-                console.warn("[tree]    Anchor do nó não encontrada para scroll:", ultimo.id + "_anchor");
+                $treeRoot.hide();
+                $('#wait-message').hide();
+                return;
               }
-            } else {
-              console.warn("[tree]    Nenhum nó encontrado em allNodes");
+
+              // —— Case B: results exist or prefixIsActive=false
+              var treeData = rootNode ? [rootNode] : [];
+              var treeInstance = $treeRoot.jstree(true);
+              if (!treeInstance) {
+                console.warn("[tree] → jsTree instance not found (it may have been destroyed). Aborting populateTree.");
+                return;
+              }
+
+              treeInstance.settings.core.data = treeData;
+              $treeRoot.off("refresh.jstree.select_last");
+
+              $treeRoot.one("refresh.jstree.select_last", function () {
+                setTimeout(function () {
+                  treeInstance.open_all("#");
+
+                  setTimeout(function () {
+                    var allNodes = treeInstance.get_json('#', { flat: true });
+                    if (allNodes.length > 0) {
+                      var lastNode = allNodes[allNodes.length - 1];
+                      treeInstance.select_node(lastNode.id);
+                      var $anchor = $('#' + $.escapeSelector(lastNode.id + '_anchor'));
+                      if ($anchor.length) {
+                        $anchor[0].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                      }
+                    }
+                    if (!initialSearchDone) {
+                      $('#wait-message').hide();
+                      $treeRoot.show();
+                      $('#search_input').prop("disabled", false);
+                      initialSearchDone = true;
+                    }
+                  }, 150);
+                }, 50);
+              });
+
+              // console.log("[tree] → Calling treeInstance.refresh() with new data.");
+              treeInstance.refresh();
+            },
+            error: function () {
+              console.error("[tree] → populateTree: error fetching data for URI", uri);
+
+              $('#no-results-message').remove();
+              var $errorMsg = $(
+                '<div id="no-results-message" style="color: #b00; margin-bottom: 10px;">' +
+                'Error loading data. Please try again.</div>'
+              );
+              $treeRoot.before($errorMsg);
             }
+          });
+        }
 
-            // Exibe a árvore e esconde a mensagem de "aguarde", se ainda não foi feito
-            if (!initialSearchDone) {
-              // console.log("[tree]    Hiding wait message e mostrando a árvore (initialSearchDone ainda false)");
-              $waitMessage.hide();
-              $treeRoot.show();
-              $searchInput.prop("disabled", false);
-              initialSearchDone = true;
-            } else {
-              // console.log("[tree]    initialSearchDone já era true, não altera estado de exibição");
-            }
-          }, 150); // <-- tempo extra para garantir o render completo de cada <li>
-        }, 50); // <-- tempo inicial antes de chamar open_all
-      });
-
-      // 6) Dispara o refresh para reconstruir a árvore
-      // console.log("[tree]    Chamando treeInstance.refresh() para reconstruir a árvore");
-      treeInstance.refresh();
-    },
-    error: function () {
-      console.error("[tree] → Error loading tree data for URI:", uri);
-    }
-  });
-}
-
-
-
-        /**
-         * Destroy and recreate jsTree in its original “root-level only” state.
-         * Clears search input, hides clear button, and loads only top-level branches.
-         */
+        // --------------------------------------------------------------
+        // resetTree()
+        //    - Destroys/recreates jsTree in “top-level only” state.
+        // --------------------------------------------------------------
         function resetTree() {
           // console.log("[tree] resetTree called: destroying and re-initializing jsTree.");
-          $searchInput.val('');
-          $clearButton.hide();
+          $('#search_input').val('');
+          $('#clear-search').hide();
           $treeRoot.jstree('destroy').empty();
 
           $treeRoot.jstree({
@@ -694,9 +784,10 @@ function populateTree(uri) {
               check_callback: true,
               data: function (node, cb) {
                 if (node.id === '#') {
-                  // Build root-level branches.
-                  const arr = getFilteredBranches().map(branch => {
-                    const prefixed = namespacePrefixUri(branch.uri);
+                  // Top-level (branches)
+                  var branches = getFilteredBranches();
+                  var arr = branches.map(function (branch) {
+                    var prefixed = namespacePrefixUri(branch.uri);
                     return {
                       id: branch.id,
                       text: setNodeText(branch),
@@ -704,10 +795,10 @@ function populateTree(uri) {
                       uri: branch.uri,
                       typeNamespace: branch.typeNamespace || '',
                       data: {
-                        originalLabel: branch.label + setTitleSufix(branch),
-                        originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
-                        originalUri: branch.uri + setTitleSufix(branch),
-                        originalPrefixUri: namespaceUri(branch.uri) + setTitleSufix(branch),
+                        originalLabel: branch.label + setTitleSuffix(branch),
+                        originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSuffix(branch),
+                        originalUri: branch.uri + setTitleSuffix(branch),
+                        originalPrefixUri: namespaceUri(branch.uri) + setTitleSuffix(branch),
                         prefix: prefixed,
                         typeNamespace: branch.typeNamespace || '',
                         comment: branch.comment || '',
@@ -726,7 +817,7 @@ function populateTree(uri) {
                   // console.log("[tree] resetTree → root data length =", arr.length);
                   cb(arr);
                 } else {
-                  // Fetch children via AJAX.
+                  // Fetch children via AJAX
                   // console.log("[tree] resetTree fetching children for", node.original.uri);
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
@@ -735,14 +826,15 @@ function populateTree(uri) {
                     dataType: 'json',
                     success: function (data) {
                       // console.log("[tree] resetTree AJAX success for children of", node.original.uri, "→ items.length =", data.length);
-                      const temp = [];
-                      const seen = new Set();
-                      data.forEach(item => {
-                        const normalizedUri = item.uri.trim().toLowerCase();
+                      var temp = [];
+                      var seen = new Set();
+                      data.forEach(function (item) {
+                        var normalizedUri = item.uri.trim().toLowerCase();
                         if (!seen.has(normalizedUri)) {
                           seen.add(normalizedUri);
-                          const prefixed = namespacePrefixUri(item.uri);
-                          const nodeObj = {
+
+                          var prefixed = namespacePrefixUri(item.uri);
+                          var nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
                             text: setNodeText(item),
                             label: item.label,
@@ -750,10 +842,10 @@ function populateTree(uri) {
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
                             data: {
-                              originalLabel: item.label + setTitleSufix(item),
-                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
-                              originalUri: item.uri + setTitleSufix(item),
-                              originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+                              originalLabel: item.label + setTitleSuffix(item),
+                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSuffix(item),
+                              originalUri: item.uri + setTitleSuffix(item),
+                              originalPrefixUri: namespaceUri(item.uri) + setTitleSuffix(item),
                               prefix: prefixed,
                               comment: item.comment || '',
                               typeNamespace: item.typeNamespace || '',
@@ -769,10 +861,11 @@ function populateTree(uri) {
                             skip: false
                           };
 
-                          const DRAFT_URI       = 'http://hadatac.org/ont/vstoi#Draft';
-                          const DEPRECATED_URI  = 'http://hadatac.org/ont/vstoi#Deprecated';
-                          const UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
+                          var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
+                          var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
+                          var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
 
+                          // Apply hideDeprecated/hideDraft to each child node
                           if (item.hasStatus === DEPRECATED_URI) {
                             if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
                               nodeObj.skip = true;
@@ -836,14 +929,9 @@ function populateTree(uri) {
               show_only_matches: true,
               show_only_matches_children: true,
               search_callback: function (str, node) {
-                const term = str.toLowerCase();
-                if (node.text.toLowerCase().includes(term)) {
-                  return true;
-                }
-                if (
-                  node.data.typeNamespace &&
-                  node.data.typeNamespace.toLowerCase().includes(term)
-                ) {
+                var term = str.toLowerCase();
+                if (node.text.toLowerCase().includes(term)) return true;
+                if (node.data.typeNamespace && node.data.typeNamespace.toLowerCase().includes(term)) {
                   return true;
                 }
                 return false;
@@ -854,20 +942,19 @@ function populateTree(uri) {
           $treeRoot.on('ready.jstree', function () {
             // console.log("[tree] resetTree ready.jstree event fired");
             attachTreeEventListeners();
-            // After reset, ensure rendering-mode listener is still bound
             bindRenderingModeChange();
           });
         }
 
-        /**
-         * Configure autocomplete for the search input:
-         * - On input length ≥ 3, call searchSubClassEndPoint
-         * - Show suggestions
-         * - On suggestion click, call populateTree(uri)
-         */
+        // --------------------------------------------------------------
+        // setupAutocomplete(inputField)
+        //   - Fetches suggestions from searchSubClassEndPoint.
+        //   - Displays suggestion list and handles clicks.
+        // --------------------------------------------------------------
         function setupAutocomplete(inputField) {
+          // console.log("[tree] setupAutocomplete called for", inputField);
           $(inputField).on('input', function () {
-            const searchTerm = $(this).val();
+            var searchTerm = $(this).val();
             if (searchTerm.length < 3) {
               $('#autocomplete-suggestions').hide();
               return;
@@ -884,12 +971,14 @@ function populateTree(uri) {
               dataType: 'json',
               success: function (data) {
                 // console.log("[tree] Autocomplete AJAX success: items.length =", data.length);
-                const suggestions = data.map(item => ({
-                  id: item.nodeId,
-                  label: item.label || 'Unnamed Node',
-                  uri: item.uri
-                }));
-                let suggestionBox = $('#autocomplete-suggestions');
+                var suggestions = data.map(function (item) {
+                  return {
+                    id: item.nodeId,
+                    label: item.label || 'Unnamed Node',
+                    uri: item.uri
+                  };
+                });
+                var suggestionBox = $('#autocomplete-suggestions');
                 if (suggestionBox.length === 0) {
                   suggestionBox = $('<div id="autocomplete-suggestions"></div>').css({
                     position: 'absolute',
@@ -901,8 +990,8 @@ function populateTree(uri) {
                   }).appendTo('body');
                 }
                 suggestionBox.empty();
-                suggestions.forEach(suggestion => {
-                  const suggestionItem = $('<div class="suggestion-item"></div>')
+                suggestions.forEach(function (suggestion) {
+                  var suggestionItem = $('<div class="suggestion-item"></div>')
                     .text(suggestion.label)
                     .css({ padding: '5px', cursor: 'pointer' });
                   suggestionItem.on('click', function () {
@@ -913,7 +1002,7 @@ function populateTree(uri) {
                   });
                   suggestionBox.append(suggestionItem);
                 });
-                const offset = $(inputField).offset();
+                var offset = $(inputField).offset();
                 suggestionBox.css({
                   top: offset.top + $(inputField).outerHeight(),
                   left: offset.left,
@@ -926,54 +1015,55 @@ function populateTree(uri) {
             });
           });
           $(inputField).on('blur', function () {
-            setTimeout(() => $('#autocomplete-suggestions').hide(), 200);
+            setTimeout(function () {
+              $('#autocomplete-suggestions').hide();
+            }, 200);
           });
         }
 
-        /**
-         * After jsTree is initialized, bind change handler on rendering-mode radios
-         * so that whenever the user switches “Rendering mode” (label/labelprefix/uri/uriprefix),
-         * we rename all existing nodes accordingly without reloading the tree.
-         */
+        // --------------------------------------------------------------
+        // bindRenderingModeChange()
+        //   - When the user changes the radio “label/labelprefix/uri/uriprefix”,
+        //     update all nodes without reloading.
+        // --------------------------------------------------------------
         function bindRenderingModeChange() {
+          // console.log("[tree] bindRenderingModeChange called");
           $('input[name="label_mode"]').on('change', function () {
-            const novoModo = $(this).val();
-            const tree = $treeRoot.jstree(true);
+            var newMode = $(this).val();
+            // console.log("[tree] Rendering mode changed to:", newMode);
+            var tree = $treeRoot.jstree(true);
             if (!tree) {
               return;
             }
 
-            // Get all nodes in a flat list
-            const todosNodes = tree.get_json('#', { flat: true });
-            todosNodes.forEach(node => {
-              let novoTexto = '';
-              switch (novoModo) {
+            var allNodes = tree.get_json('#', { flat: true });
+            allNodes.forEach(function (node) {
+              var newText = '';
+              switch (newMode) {
                 case 'labelprefix':
-                  novoTexto = node.data.originalPrefixLabel;
+                  newText = node.data.originalPrefixLabel;
                   break;
                 case 'uri':
-                  novoTexto = node.data.originalUri;
+                  newText = node.data.originalUri;
                   break;
                 case 'uriprefix':
-                  novoTexto = node.data.originalPrefixUri;
+                  newText = node.data.originalPrefixUri;
                   break;
                 default: // 'label'
-                  novoTexto = node.data.originalLabel;
+                  newText = node.data.originalLabel;
                   break;
               }
-              // Rename the node text in jsTree
-              tree.rename_node(node.id, novoTexto);
+              tree.rename_node(node.id, newText);
             });
           });
         }
 
-        /**
-         * Initialize jsTree:
-         * - Hide tree and show wait message
-         * - Build root-level branches
-         * - Attach listeners on ready
-         * - Immediately either call populateTree(initialSearchValue) if prefixIsActive, or perform normal search
-         */
+        // --------------------------------------------------------------
+        // initializeJstree()
+        //   - Builds the initial jsTree, shows “wait-message”, then either
+        //     calls populateTree(initialSearchValue) if prefix is active,
+        //     or does a normal search.
+        // --------------------------------------------------------------
         function initializeJstree() {
           // console.log("[tree] initializeJstree() called");
           $treeRoot.jstree({
@@ -981,9 +1071,9 @@ function populateTree(uri) {
               check_callback: true,
               data: function (node, cb) {
                 if (node.id === '#') {
-                  // Build root-level branch nodes
-                  const arr = getFilteredBranches().map(branch => {
-                    const prefixed = namespacePrefixUri(branch.uri);
+                  var branches = getFilteredBranches();
+                  var arr = branches.map(function (branch) {
+                    var prefixed = namespacePrefixUri(branch.uri);
                     return {
                       id: branch.id,
                       text: setNodeText(branch),
@@ -991,10 +1081,10 @@ function populateTree(uri) {
                       uri: branch.uri,
                       typeNamespace: branch.typeNamespace || '',
                       data: {
-                        originalLabel: branch.label + setTitleSufix(branch),
-                        originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSufix(branch),
-                        originalUri: branch.uri + setTitleSufix(branch),
-                        originalPrefixUri: namespaceUri(branch.uri) + setTitleSufix(branch),
+                        originalLabel: branch.label + setTitleSuffix(branch),
+                        originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSuffix(branch),
+                        originalUri: branch.uri + setTitleSuffix(branch),
+                        originalPrefixUri: namespaceUri(branch.uri) + setTitleSuffix(branch),
                         prefix: prefixed,
                         typeNamespace: branch.typeNamespace || '',
                         comment: branch.comment || '',
@@ -1012,7 +1102,6 @@ function populateTree(uri) {
                   // console.log("[tree] jsTree root data length =", arr.length);
                   cb(arr);
                 } else {
-                  // Fetch children via AJAX
                   // console.log("[tree] jsTree fetching children for", node.original.uri);
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
@@ -1021,14 +1110,14 @@ function populateTree(uri) {
                     dataType: 'json',
                     success: function (data) {
                       // console.log("[tree] jsTree AJAX success for children of", node.original.uri, ": items.length =", data.length);
-                      const temp = [];
-                      const seen = new Set();
-                      data.forEach(item => {
-                        const normalizedUri = item.uri.trim().toLowerCase();
+                      var temp = [];
+                      var seen = new Set();
+                      data.forEach(function (item) {
+                        var normalizedUri = item.uri.trim().toLowerCase();
                         if (!seen.has(normalizedUri)) {
                           seen.add(normalizedUri);
-                          const prefixed = namespacePrefixUri(item.uri);
-                          const nodeObj = {
+                          var prefixed = namespacePrefixUri(item.uri);
+                          var nodeObj = {
                             id: 'node_' + sanitizeForId(item.uri),
                             text: setNodeText(item),
                             label: item.label,
@@ -1036,10 +1125,10 @@ function populateTree(uri) {
                             typeNamespace: item.typeNamespace || '',
                             comment: item.comment || '',
                             data: {
-                              originalLabel: item.label + setTitleSufix(item),
-                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSufix(item),
-                              originalUri: item.uri + setTitleSufix(item),
-                              originalPrefixUri: namespaceUri(item.uri) + setTitleSufix(item),
+                              originalLabel: item.label + setTitleSuffix(item),
+                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSuffix(item),
+                              originalUri: item.uri + setTitleSuffix(item),
+                              originalPrefixUri: namespaceUri(item.uri) + setTitleSuffix(item),
                               prefix: prefixed,
                               comment: item.comment || '',
                               typeNamespace: item.typeNamespace || '',
@@ -1055,9 +1144,9 @@ function populateTree(uri) {
                             skip: false
                           };
 
-                          const DRAFT_URI       = 'http://hadatac.org/ont/vstoi#Draft';
-                          const DEPRECATED_URI  = 'http://hadatac.org/ont/vstoi#Deprecated';
-                          const UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
+                          var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
+                          var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
+                          var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
 
                           if (item.hasStatus === DEPRECATED_URI) {
                             if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
@@ -1122,12 +1211,9 @@ function populateTree(uri) {
               show_only_matches: true,
               show_only_matches_children: true,
               search_callback: function (str, node) {
-                const term = str.toLowerCase();
+                var term = str.toLowerCase();
                 if (node.text.toLowerCase().includes(term)) return true;
-                if (
-                  node.data.typeNamespace &&
-                  node.data.typeNamespace.toLowerCase().includes(term)
-                ) {
+                if (node.data.typeNamespace && node.data.typeNamespace.toLowerCase().includes(term)) {
                   return true;
                 }
                 return false;
@@ -1135,7 +1221,7 @@ function populateTree(uri) {
             }
           });
 
-          // When jsTree is ready, attach listeners, bind rendering-mode handler, and choose populateTree vs. search.
+          // Once jsTree is ready, attach listeners and decide populateTree vs. search
           $treeRoot.on('ready.jstree', function () {
             // console.log("[tree] ready.jstree event fired");
             attachTreeEventListeners();
@@ -1144,120 +1230,119 @@ function populateTree(uri) {
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
             resetActivityTimeout();
 
-            // If prefixIsActive is true and we have an initialSearchValue, call populateTree().
             if (initialSearchValue.length > 0 && prefixIsActive) {
               // console.log("[tree] prefixIsActive = true → calling populateTree(", initialSearchValue, ")");
               populateTree(initialSearchValue);
             }
-            // Otherwise, perform a normal jsTree search.
             else if (initialSearchValue.length > 0) {
               // console.log("[tree] prefixIsActive = false → performing normal search for", initialSearchValue);
               $treeRoot.jstree(true).search(initialSearchValue);
             }
           });
 
-          // If initialSearchValue was set before tree ready, trigger search immediately.
+          // If a search value is already set before ready, perform search immediately
           if (initialSearchValue.length > 0) {
             // console.log("[tree] initialSearchValue is set before ready → immediate search for", initialSearchValue);
             $treeRoot.jstree(true).search(initialSearchValue);
           }
         }
 
-        // Bind the Reset Tree button so it actually calls resetTree().
-        $resetButton.on('click', function (e) {
+        // --------------------------------------------------------------
+        // Bind “Reset Tree” button
+        // --------------------------------------------------------------
+        $('#reset-tree').on('click', function (e) {
           e.preventDefault();
           // console.log("[tree] Reset button clicked → calling resetTree()");
           resetTree();
         });
 
-        // If the tree container exists, initialize it.
+        // Hide the tree and show the “wait message” at first
         $treeRoot.hide();
-        $waitMessage.show();
-        $searchInput.prop('disabled', true);
+        $('#wait-message').show();
+        $('#search_input').prop('disabled', true);
 
         if ($treeRoot.length) {
           initializeJstree();
           setupAutocomplete('#search_input');
 
-          // Pressing Enter in the search input triggers a jsTree search.
-          $searchInput.on('keypress', function (e) {
+          // Pressing Enter in the search field triggers a search
+          $('#search_input').on('keypress', function (e) {
             if (e.which === 13) {
               e.preventDefault();
-              const term = $searchInput.val().trim();
-              // console.log("[tree] Enter pressed in search input → search for", term);
+              var term = $(this).val().trim();
+              // console.log("[tree] Enter pressed in search_input → searching for", term);
               $treeRoot.jstree(true).search(term);
             }
           });
         } else {
           console.warn("[tree] Tree root not found. Initialization aborted.");
         }
-
-        /**
-         * Drupal behavior to fix any jQuery UI dialog so it remains centered and at a comfortable width.
-         */
-        Drupal.behaviors.modalFix = {
-          attach: function (context, settings) {
-            const $selectNodeButton = $('#select-tree-node');
-
-            function adjustModal() {
-              $('.ui-dialog').each(function () {
-                $(this).css({
-                  width: 'calc(100% - 50%)',
-                  left: '25%',
-                  right: '25%',
-                  transform: 'none',
-                  top: '10%',
-                });
-              });
-            }
-
-            // Adjust on dialog open.
-            $(document).on('dialogopen', adjustModal);
-            // Adjust on node selection in jsTree, in case content changes size.
-            $(document).on('select_node.jstree', function () {
-              setTimeout(adjustModal, 100);
-            });
-            // Restore HTML overflow settings when dialog closes.
-            $(document).on('dialog:afterclose', function () {
-              $('html').css({
-                overflow: '',
-                'box-sizing': '',
-                'padding-right': '',
-              });
-            });
-
-            // When “Select Node” is clicked, close the dialog and trigger change on original field.
-            $selectNodeButton.on('click', function () {
-              $('html').css({
-                overflow: '',
-                'box-sizing': '',
-                'padding-right': '',
-              });
-              const fieldId = $(this).data('field-id');
-              if (fieldId) {
-                setTimeout(() => {
-                  $('#' + fieldId).trigger('change');
-                }, 100);
-              }
-            });
-
-            // If user clicks the “X” on the dialog title bar, restore overflow.
-            $(document).on('click', '.ui-dialog-titlebar-close', function () {
-              $('html').css({
-                overflow: '',
-                'box-sizing': '',
-                'padding-right': '',
-              });
-            });
-
-            // Observe any changes inside the dialog and re-adjust if needed.
-            const observer = new MutationObserver(adjustModal);
-            $('.ui-dialog-content').each(function () {
-              observer.observe(this, { childList: true, subtree: true });
-            });
-          }
-        };
-      });
+      }); // end of each #tree-root
     }
   };
+
+  // =============================================================================
+  // 3) Drupal.behaviors.modalFix
+  //    - Restores <html> overflow and destroys modal/jsTree on close.
+  // =============================================================================
+
+  Drupal.behaviors.modalFix = {
+    attach: function (context, settings) {
+      if (!window._modalFixInitialized) {
+        window._modalFixInitialized = true;
+
+        // When ANY dialog fires ‘dialogclose’:
+        $(document).on('dialogclose', function (event) {
+          var $dialogContent = $(event.target);
+
+          // Only proceed if it’s a jQuery UI Dialog container (class ui-dialog-content)
+          if (!$dialogContent.hasClass('ui-dialog-content')) {
+            return;
+          }
+
+          // 1) Immediately restore <html> overflow properties
+          $('html').css({
+            overflow: '',
+            'box-sizing': '',
+            'padding-right': ''
+          });
+
+          // 2) If jsTree still exists, destroy it
+          var $treeRoot = $('#tree-root');
+          if ($treeRoot.length && $treeRoot.data('jstree')) {
+            $treeRoot.jstree('destroy');
+          }
+          // Remove the <div id="tree-root"> element itself
+          $treeRoot.remove();
+
+          // 3) If the dialog widget is initialized, destroy it
+          if ($dialogContent.data('ui-dialog')) {
+            $dialogContent.dialog('destroy');
+          }
+
+          // 4) Remove the dialog container from the DOM
+          $dialogContent.remove();
+        });
+
+        // Also listen to ‘dialog:afterclose’ just to be sure
+        $(document).on('dialog:afterclose', function () {
+          $('html').css({
+            overflow: '',
+            'box-sizing': '',
+            'padding-right': ''
+          });
+        });
+
+        // If user clicks the “X” (titlebar-close), restore overflow as well
+        $(document).on('click', '.ui-dialog-titlebar-close', function () {
+          $('html').css({
+            overflow: '',
+            'box-sizing': '',
+            'padding-right': ''
+          });
+        });
+      }
+    }
+  };
+
 })(jQuery, Drupal, drupalSettings);
