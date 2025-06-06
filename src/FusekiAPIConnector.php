@@ -1569,11 +1569,10 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function streamByStateEmailDeployment($state, $email, $deploymenturi, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/stream/bydeployment/".
+  public function streamByStateEmail($state, $email, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/stream/bystateemail".
       $state."/".
       $email."/".
-      rawurlencode($deploymenturi)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
@@ -1582,11 +1581,10 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function streamSizeByStateEmailDeployment($state, $email, $deploymenturi) {
-    $endpoint = "/hascoapi/api/stream/bydeployment/total/".
+  public function streamSizeByStateEmail($state, $email) {
+    $endpoint = "/hascoapi/api/stream/bystateemail/total/".
       $state."/".
       $email."/".
-      rawurlencode($deploymenturi);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
