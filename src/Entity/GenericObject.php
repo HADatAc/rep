@@ -108,7 +108,6 @@ class GenericObject {
               && $propertyName !== 'hasWebDocument'
               && $propertyName !== 'hasStatus'
               && $propertyName !== 'hasStreamStatus'
-              && $propertyName !== 'hasMessageStatus'
             ) {
       $propertyMap['uris'][$propertyName] = $propertyValue;
     } else {

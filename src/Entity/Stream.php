@@ -197,28 +197,30 @@ class Stream {
       Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
 
       // $deployment = $element->deployment->label ?? '';
-      $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
-        'deploymenturi' => base64_encode($element->deployment->uri)
-      ])->toString();
+      if ($element->method === 'Files') {
+        $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
+          'deploymenturi' => base64_encode($element->deployment->uri)
+        ])->toString();
 
-      $deployment = Markup::create(
-        '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
-          t('Deployment: @label', ['@label' => $element->deployment->label]) .
-        '</a>'
-      );
+        $deployment = Markup::create(
+          '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
+            t('Deployment: @label', ['@label' => $element->deployment->label]) .
+          '</a>'
+        );
 
-      // 7) Build the SDD link as plain HTML.
+        // 7) Build the SDD link as plain HTML.
 
-      $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
-        'state' => 'basic',
-        'uri' => base64_encode($element->semanticDataDictionary->uri)
-      ])->toString();
+        $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
+          'state' => 'basic',
+          'uri' => base64_encode($element->semanticDataDictionary->uri)
+        ])->toString();
 
-      $sdd = Markup::create(
-        '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
-          t('SDD: @label', ['@label' => $element->semanticDataDictionary->label]) .
-        '</a>'
-      );
+        $sdd = Markup::create(
+          '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
+            t('SDD: @label', ['@label' => $element->semanticDataDictionary->label]) .
+          '</a>'
+        );
+      }
 
       // 8) Dataset pattern or fallback.
       $pattern = $element->datasetPattern ?? '-';
@@ -258,33 +260,6 @@ class Stream {
                   . '<i class="fa-solid fa-hexagon-nodes"></i>'
                   . '</a>';
 
-      // COMMENTED BECAUSE IT WAS MOVED TO TOPICS
-      // if ($element->method !== 'files') {
-      //   if (isset($element->hasMessageStatus) && $element->hasMessageStatus === HASCO::SUSPENDED) {
-      //     $record_url = Url::fromRoute('dpl.stream_record', [
-      //       'streamUri' => base64_encode($element->uri),
-      //     ])->toString();
-
-      //     $ops_html[] = '<a href="#" data-url="' . $record_url . '" class="btn btn-sm btn-danger me-1 dpl-start-record" title="Start Recording">'
-      //     . '<i class="fa-solid fa-record-vinyl"></i>'
-      //     . '</a>';
-
-      //     $record_ingest_url = Url::fromRoute('dpl.stream_ingest', [
-      //       'streamUri' => base64_encode($element->uri),
-      //     ])->toString();
-      //     $ops_html[] = '<a href="' . $record_ingest_url . '" alt="Record and Ingest Stream" title="Record and Ingest Stream" class="btn btn-sm btn-warning me-1">'
-      //               . '<i class="fa-solid fa-compact-disc"></i>'
-      //               . '</a>';
-      //   } else if (isset($element->hasMessageStatus) && ($element->hasMessageStatus === HASCO::RECORDING || $element->hasMessageStatus === HASCO::INGESTING)) {
-      //     $suspend_url = Url::fromRoute('dpl.stream_suspend', [
-      //       'streamUri' => base64_encode($element->uri),
-      //     ])->toString();
-      //     $ops_html[] = '<a href="#" data-url="' . $suspend_url . '" class="btn btn-sm btn-secondary me-1 dpl-suspend-record" title="Suspend Recording">'
-      //     . '<i class="fa-solid fa-stop"></i>'
-      //     . '</a>';
-      //   }
-      // }
-
       // 11) Wrap all operations into one Markup object.
       $ops_container = Markup::create(implode('', $ops_html));
 
@@ -292,8 +267,8 @@ class Stream {
       $output[$safe_key] = [
         'element_uri'        => $uri_link,
         'element_datetime'   => $datetime,
-        'element_deployment' => $deployment,
-        'element_sdd'        => $sdd,
+        'element_deployment' => $deployment ?? '-',
+        'element_sdd'        => $sdd ?? '-',
         'element_pattern'    => $pattern,
         'element_source'     => $source,
         'element_operations' => $ops_container,
@@ -301,6 +276,7 @@ class Stream {
           'data-stream-uri' => $safe_key,
         ],
       ];
+
     }
 
     return $output;

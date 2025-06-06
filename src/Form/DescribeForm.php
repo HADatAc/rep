@@ -129,7 +129,6 @@
             && $propertyName !== 'hasWebDocument'
             && $propertyName !== 'hasStatus'
             && $propertyName !== 'hasStreamStatus'
-            && $propertyName !== 'hasMessageStatus'
             ) {
 
           $form[$propertyName] = [
@@ -137,8 +136,7 @@
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
           ];
         } else if ($propertyName === 'hasStatus'
-        || $propertyName === 'hasStreamStatus'
-        || $propertyName === 'hasMessageStatus') {
+        || $propertyName === 'hasStreamStatus') {
           $form[$propertyName] = [
             '#type' => 'markup',
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . Utils::plainStatus($propertyValue). "<br><br>"),
