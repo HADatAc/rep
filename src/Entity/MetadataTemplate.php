@@ -602,7 +602,7 @@ class MetadataTemplate
         \Drupal::service('renderer')->render($download_bto),
         \Drupal::service('renderer')->render($delete_bto),
       ];
-      
+
 
       // Adicionar todos os links concatenados ao campo `element_operations`
       $output[$element->uri] = [];
