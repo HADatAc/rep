@@ -2,6 +2,8 @@
 
   namespace Drupal\rep\Vocabulary;
 
+use PHPUnit\Event\Application\Started;
+
   class HASCO {
 
     const HASCO                   = "http://hadatac.org/ont/hasco/";
@@ -40,4 +42,28 @@
     // PROPERTIES
 
     const IS_MEMBER_OF                  = HASCO::HASCO . "isMemberOf";
-  }
+
+    /*
+     * STREAM STATUS
+     */
+    const DRAFT                         = HASCO::HASCO . "Draft";
+    const ACTIVE                        = HASCO::HASCO . "Active";
+    const CLOSED                        = HASCO::HASCO . "Closed";
+    const ALL_STATUSES                  = HASCO::HASCO . "AllStatuses";
+
+    /*
+     * STREAM TYPE=MESSAGES RECORDING STATUS
+     */
+    const INACTIVE                      = HASCO::HASCO . "Inactive";
+    const RECORDING                     = HASCO::HASCO . "Recording";
+    const INGESTING                     = HASCO::HASCO . "Ingesting";
+    const SUSPENDED                     = HASCO::HASCO . "Suspended";
+
+    /*
+     * PERMISSION URI
+     */
+
+    const PUBLIC                        = HASCO::HASCO . "Public";
+    const PRIVATE                       = HASCO::HASCO . "Private";
+
+   }

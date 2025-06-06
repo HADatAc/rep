@@ -1547,8 +1547,30 @@ class FusekiAPIConnector {
    *   STREAM
    */
 
-   public function streamByStateEmailDeployment($state, $email, $deploymenturi, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/stream/".
+  public function streamByStudyState( $studyuri, $state, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/stream/bystudy/".
+      rawurlencode($studyuri)."/".
+      rawurlencode($state)."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function streamSizeByStudyState( $studyuri, $state) {
+    $endpoint = "/hascoapi/api/stream/bystudy/total/".
+      rawurlencode($studyuri)."/".
+      rawurlencode($state);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function streamByStateEmailDeployment($state, $email, $deploymenturi, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/stream/bydeployment/".
       $state."/".
       $email."/".
       rawurlencode($deploymenturi)."/".
@@ -1561,7 +1583,7 @@ class FusekiAPIConnector {
   }
 
   public function streamSizeByStateEmailDeployment($state, $email, $deploymenturi) {
-    $endpoint = "/hascoapi/api/stream/total/".
+    $endpoint = "/hascoapi/api/stream/bydeployment/total/".
       $state."/".
       $email."/".
       rawurlencode($deploymenturi);
@@ -1606,9 +1628,45 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function getTotalStudyDAs($uri) {
-    $endpoint = "/hascoapi/api/study/dataacquisitions/total/".
-      urlencode($uri);
+  // public function getTotalStudyDAs($uri) {
+  //   $endpoint = "/hascoapi/api/study/dataacquisitions/total/".
+  //     urlencode($uri);
+  //   $method = "GET";
+  //   $api_url = $this->getApiUrl();
+  //   $data = $this->getHeader();
+  //   return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  // }
+
+  // GET     /hascoapi/api/dataacquisition/bystream/:uri/:pageSize/:offset
+  public function getStudyDAsByStream($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/dataacquisition/bystream/".rawurlencode($uri)."/".$pageSize."/".$offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/dataacquisition/bystream/total/:uri^
+  public function getTotalStudyDAsByStream($uri) {
+    $endpoint = "/hascoapi/api/dataacquisition/bystream/total/".rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/dataacquisition/bystudy/:uri/:pageSize/:offset
+  public function getStudyDAsByStudy($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/dataacquisition/bystudy/".rawurlencode($uri)."/".$pageSize."/".$offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/dataacquisition/bystudy/total/:uri
+  public function getTotalStudyDAsByStudy($uri) {
+    $endpoint = "/hascoapi/api/dataacquisition/bystudy/total/".rawurlencode($uri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -2148,9 +2206,17 @@ class FusekiAPIConnector {
 
   // GENERATE MT METHODS
   // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:status/:filename
-  // Per status
-  public function generateMTPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri) {
+  // Per status (KGR)
+  public function generateMTKGRPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri) {
     $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // Per status
+  public function generateMTPerStatus($elementtype, $status, $filename) {    
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/_/false";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

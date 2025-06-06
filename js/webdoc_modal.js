@@ -1,123 +1,137 @@
 (function ($, Drupal) {
+  /**
+   * Drupal behavior to open various media files (PDFs, images) in a custom modal.
+   */
   Drupal.behaviors.openModalBehavior = {
     attach: function (context, settings) {
-      // Remove any previous click handlers to avoid duplicates.
-      $(document).off("click", ".view-media-button");
+      // Unbind previous click handlers to avoid duplicates when behaviors re-attach.
+      $(document).off('click', '.view-media-button');
 
-      // Bind the click event on elements with class "view-media-button".
-      $(document).on("click", ".view-media-button", function (e) {
+      // Bind click event to elements with class 'view-media-button'.
+      $(document).on('click', '.view-media-button', function (e) {
         e.preventDefault();
-        console.log("view-media-button clicked");
 
-        // Get the file URL from the data attribute.
-        const modalUrl = $(this).data("view-url");
+        // Retrieve the URL to view from data attribute.
+        var modalUrl = $(this).data('view-url');
         if (!modalUrl) {
-          console.error("data-view-url is undefined.");
+          console.error('data-view-url is undefined.');
           return;
         }
 
-        // Get the native Drupal modal element.
-        const drupalModal = document.getElementById("drupal-modal");
+        // Get the native Drupal modal container.
+        var drupalModal = document.getElementById('drupal-modal');
         if (drupalModal) {
-          // Clear any previous content.
-          drupalModal.innerHTML = "";
+          // Clear any existing content in the modal.
+          drupalModal.innerHTML = '';
         }
 
-        // Configure the PDF.js worker source.
+        // Configure PDF.js worker source.
         pdfjsLib.GlobalWorkerOptions.workerSrc =
-          drupalSettings.webdoc_modal.baseUrl + "/modules/custom/rep/js/pdf.worker.min.js";
+          settings.webdoc_modal.baseUrl + '/modules/custom/rep/js/pdf.worker.min.js';
 
-        // Function to render the PDF using PDF.js.
-        const renderPDF = function (response) {
-          const pdfData = new Uint8Array(response);
-          const loadingTask = pdfjsLib.getDocument({ data: pdfData });
-          loadingTask.promise
-            .then(function (pdf) {
-              // Create a container for PDF pages.
-              const container = document.createElement("div");
-              container.className = "pdf-pages-container";
+        /**
+         * Render a PDF file using PDF.js
+         * @param {ArrayBuffer} response - Binary data of the fetched PDF.
+         */
+        function renderPDF(response) {
+          var pdfData = new Uint8Array(response);
+          var loadingTask = pdfjsLib.getDocument({ data: pdfData });
 
-              // Loop through each page and render it onto a canvas.
-              for (let i = 1; i <= pdf.numPages; i++) {
-                pdf.getPage(i).then(function (page) {
-                  const canvas = document.createElement("canvas");
-                  const ctx = canvas.getContext("2d");
-                  const viewport = page.getViewport({ scale: 1.5 });
-                  canvas.height = viewport.height;
-                  canvas.width = viewport.width;
-                  canvas.style.margin = "0 auto";
-                  page.render({ canvasContext: ctx, viewport: viewport });
-                  container.appendChild(canvas);
-                });
-              }
-              // Insert the PDF container into the element with id "pdf-container".
-              const pdfContainer = document.getElementById("pdf-container");
-              if (pdfContainer) {
-                pdfContainer.innerHTML = "";
-                pdfContainer.appendChild(container);
-              }
-            })
-            .catch(function (error) {
-              console.error("Error loading PDF:", error);
-              const pdfContainer = document.getElementById("pdf-container");
-              if (pdfContainer) {
-                pdfContainer.innerHTML = "<p>Error Loading PDF.</p>";
-              }
-            });
-        };
+          loadingTask.promise.then(function (pdf) {
+            // Create a container for PDF pages.
+            var container = document.createElement('div');
+            container.className = 'pdf-pages-container';
 
-        // Build custom modal markup (the pdf-container goes inside the modal wrapper).
-        const modalMarkup = `
-          <div class="modal-content">
-            <button id="modal-close" class="close-btn" type="button">&times;</button>
-            <div id="pdf-container"></div>
-          </div>
-          <div class="my-modal-backdrop"></div>
-        `;
+            // Render each page onto a canvas.
+            for (var i = 1; i <= pdf.numPages; i++) {
+              pdf.getPage(i).then(function (page) {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+                var viewport = page.getViewport({ scale: 1.5 });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                canvas.style.margin = '0 auto';
 
-        // Inject the custom markup into the native Drupal modal.
+                // Render page into canvas context.
+                page.render({ canvasContext: ctx, viewport: viewport });
+                container.appendChild(canvas);
+              });
+            }
+
+            // Append the pages to the media container.
+            document.getElementById('media-container').appendChild(container);
+          }).catch(function (error) {
+            console.error('Error loading PDF:', error);
+            document.getElementById('media-container').innerHTML = '<p>Error loading PDF.</p>';
+          });
+        }
+
+        // Build the HTML markup for the modal, with backdrop and content wrapper.
+        var modalMarkup = "" +
+          '<div class="my-modal-backdrop"></div>' +
+          '<div class="modal-content">' +
+            '<button id="modal-close" class="close-btn" type="button">&times;</button>' +
+            '<div id="media-container" style="text-align:center; padding:1em;"></div>' +
+          '</div>';
+
+        // Inject the modal markup and display the modal.
         if (drupalModal) {
           drupalModal.innerHTML = modalMarkup;
-          // Torna o modal visível.
-          drupalModal.style.display = "block";
+          drupalModal.style.display = 'block';
+          // Scroll to top to ensure modal is visible.
+          // window.scrollTo(0, 0);
         }
 
-        // Make an AJAX request to fetch the file as binary data.
+        // Perform AJAX request to fetch file as binary data.
         $.ajax({
           url: modalUrl,
-          type: "GET",
-          xhrFields: { responseType: "arraybuffer" },
+          method: 'GET',
+          xhrFields: { responseType: 'arraybuffer' },
           success: function (response, status, xhr) {
-            const contentType = xhr.getResponseHeader("Content-Type");
+            var contentType = xhr.getResponseHeader('Content-Type') || '';
 
-            // Check the Content-Type and call the appropriate render function.
-            if (contentType.includes("pdf")) {
+            if (contentType.indexOf('pdf') !== -1) {
+              // If PDF, render via PDF.js.
               renderPDF(response);
+
+            } else if (contentType.indexOf('image/') === 0) {
+              // If image, create Blob and display via <img>.
+              var blob = new Blob([response], { type: contentType });
+              var imgUrl = URL.createObjectURL(blob);
+              var img = document.createElement('img');
+              img.src = imgUrl;
+              img.style.maxWidth = '100%';
+              img.style.height = 'auto';
+
+              document.getElementById('media-container').appendChild(img);
+
+              // Revoke the object URL when modal closes to free memory.
+              $(document).one('click', '#modal-close, .my-modal-backdrop', function () {
+                URL.revokeObjectURL(imgUrl);
+              });
+
             } else {
-              const pdfContainer = document.getElementById("pdf-container");
-              if (pdfContainer) {
-                pdfContainer.innerHTML = `<p>Unsupported file type: ${contentType}</p>`;
-              }
+              // For unsupported file types, show download link.
+              document.getElementById('media-container').innerHTML =
+                '<p>Unsupported file type: ' + contentType + '</p>';
             }
           },
-          error: function (xhr, status, error) {
-            const pdfContainer = document.getElementById("pdf-container");
-            if (pdfContainer) {
-              pdfContainer.innerHTML = `<p>Error loading file. <a href="${modalUrl}" download>Click here to download</a>.</p>`;
-            }
+          error: function () {
+            // On error, provide a download link as fallback.
+            document.getElementById('media-container').innerHTML =
+              '<p>Error loading file. <a href="' + modalUrl + '" download>Click here to download</a>.</p>';
           }
         });
       });
 
-      // Bind the close event on the close button and the backdrop.
-      $(document)
-        .off("click", "#modal-close, .close-btn, .my-modal-backdrop, .pdf-pages-container")
-        .on("click", "#modal-close, .close-btn, .my-modal-backdrop, .pdf-pages-container", function (e) {
+      // Bind close event on close button and backdrop to hide modal.
+      $(document).off('click', '#modal-close, .my-modal-backdrop')
+        .on('click', '#modal-close, .my-modal-backdrop', function (e) {
           e.preventDefault();
-          const drupalModal = document.getElementById("drupal-modal");
+          var drupalModal = document.getElementById('drupal-modal');
           if (drupalModal) {
-            drupalModal.style.display = "none";
-            drupalModal.innerHTML = "";
+            drupalModal.style.display = 'none';
+            drupalModal.innerHTML = '';
           }
         });
     }

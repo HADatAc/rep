@@ -46,7 +46,9 @@ class TreeForm extends FormBase {
    * ]
    * @param string|null $output_field_selector Ex: '#my-custom-field'
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, $mode = NULL, $elementtype = NULL, array $branches_param = NULL, $output_field_selector = NULL, $silent = false, $prefix = false) {
+
+    $form['#cache']['max-age'] = 0;
 
     // Toggles
     $hide_draft = $form_state->getValue('hide_draft') ?? true;
@@ -104,6 +106,10 @@ class TreeForm extends FormBase {
       'unit' => ["Unit", EntryPoints::UNIT],
       'detectorattribute' => ["Detector Attribute", EntryPoints::DETECTOR_ATTRIBUTE],
       'actuatorattribute' => ["Actuator Attribute", EntryPoints::ACTUATOR_ATTRIBUTE],
+      // 'platforminstance' => ["Platform Instance", EntryPoints::PLATFORM_INSTANCE],
+      // 'instrumentinstance' => ["Instrument Instance", EntryPoints::INSTRUMENT_INSTANCE],
+      // 'detectorinstance' => ["Detector Instance", EntryPoints::DETECTOR_INSTANCE],
+      // 'actuatorinstance' => ["Actuator Instance", EntryPoints::ACTUATOR_INSTANCE]
     ];
 
     $branches_param = [
@@ -211,7 +217,6 @@ class TreeForm extends FormBase {
         'label' => 'Unit',
         'uriNamespace' => EntryPoints::UNIT,
       ],
-
     ];
 
     // Divide string $elementtype into an array
@@ -267,6 +272,13 @@ class TreeForm extends FormBase {
     //dpm($elementtype, 'Debug $elementtype');           // See which string is arriving
     //dpm($branches_param, 'Debug $branches_param');     // See the final array of branches
 
+    // 1) Leia o valor que veio pela URL (se existir)
+    $search_value = \Drupal::request()->query->get('search_value');
+    // Se não vir nada, pode ficar como string vazia:
+    if ($search_value === NULL) {
+      $search_value = '';
+    }
+
     // Retrieve root node
     // dpm($api->getUri($nodeUri), 'Debug $nodeUri'); // See the URI being used
     // dpm($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'), 'Debug $api->parseObjectResponse'); // See the response from the API
@@ -301,7 +313,9 @@ class TreeForm extends FormBase {
       'hideDraft' => $hide_draft,
       'hideDeprecated' => $hide_deprecated,
       'showLabel' => $show_label,
-      'nameSpacesList' => $tables->getNamespaces()
+      'nameSpacesList' => $tables->getNamespaces(),
+      'searchValue' => $search_value,
+      'prefix' => $prefix,
     ];
 
     if ($mode == 'browse')
@@ -457,25 +471,28 @@ class TreeForm extends FormBase {
       // Only add the automatic data-dialog-close if NOT called from the AddTaskForm.
       $auto_close = ($caller !== 'add_task_form');
 
-      $form['select_node'] = [
-        '#type'     => 'inline_template',
-        '#template' => '
-          <div style="margin-bottom: 10px;">
-            <button type="button"
-                    id="select-tree-node"
-                    class="{{ classes|join(" ") }}"
-                    data-field-id="{{ field_id }}"
-                    {% if auto_close %}data-dialog-close="true"{% endif %}>
-              {{ label }}
-            </button>
-          </div>',
-        '#context'  => [
-          'classes'    => $button_classes,
-          'field_id'   => \Drupal::request()->query->get('field_id'),
-          'auto_close' => $auto_close,
-          'label'      => $this->t('Select Node'),
-        ],
-      ];
+      // dpm($silent, 'Debug $silent'); // Check if silent mode is set
+      if ($silent === "false") {
+        $form['select_node'] = [
+          '#type'     => 'inline_template',
+          '#template' => '
+            <div style="margin-bottom: 10px;">
+              <button type="button"
+                      id="select-tree-node"
+                      class="{{ classes|join(" ") }}"
+                      data-field-id="{{ field_id }}"
+                      {% if auto_close %}data-dialog-close="true"{% endif %}>
+                {{ label }}
+              </button>
+            </div>',
+          '#context'  => [
+            'classes'    => $button_classes,
+            'field_id'   => \Drupal::request()->query->get('field_id'),
+            'auto_close' => $auto_close,
+            'label'      => $this->t('Select Node'),
+          ],
+        ];
+      }
     }
 
     return $form;

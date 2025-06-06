@@ -16,7 +16,7 @@ class AssocStream {
   public static function process($element, array &$form, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
     $t = \Drupal::service('string_translation');
-    
+
     /*
      *    STREAM's STUDIES
      */
@@ -62,8 +62,8 @@ class AssocStream {
      *    STREAM's SDDs
      */
 
-     $form = [];
-    return $form;        
+    $form = [];
+    return $form;
   }
 
-}        
+}
