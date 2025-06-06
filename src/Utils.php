@@ -176,6 +176,9 @@ class Utils {
       case "stream":
         $short = Constant::PREFIX_STREAM;
         break;
+      case "streamtopic":
+        $short = Constant::PREFIX_STREAMTOPIC;
+        break;
       case "study":
         $short = Constant::PREFIX_STUDY;
         break;
