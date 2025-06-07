@@ -242,3 +242,56 @@ function rep_file_download($uri) {
 function rep_page_attachments(array &$attachments) {
   $attachments['#attached']['library'][] = 'rep/rep_js_css';
 }
+
+/**
+ * Update hook to expand previous_url and current_url to LONGTEXT
+ * and re-create the PK with a prefix on current_url.
+ */
+function rep_update_8100() {
+  $connection = \Drupal::database();
+  $schema = $connection->schema();
+
+  // 1) Drop the existing PRIMARY KEY.
+  //    Note: MySQL identifies the PK by name "PRIMARY".
+  $connection->query('ALTER TABLE {user_tracking} DROP PRIMARY KEY');
+
+  // 2) Change previous_url to LONGTEXT.
+  if ($schema->fieldExists('user_tracking', 'previous_url')) {
+    $schema->changeField(
+      'user_tracking',
+      'previous_url',
+      'previous_url',
+      [
+        'description' => 'The URL the user was on before the current one.',
+        'type'        => 'text',
+        'size'        => 'big',
+        'not null'    => FALSE,
+      ]
+    );
+  }
+
+  // 3) Change current_url to LONGTEXT.
+  if ($schema->fieldExists('user_tracking', 'current_url')) {
+    $schema->changeField(
+      'user_tracking',
+      'current_url',
+      'current_url',
+      [
+        'description' => 'The URL the user is currently on.',
+        'type'        => 'text',
+        'size'        => 'big',
+        'not null'    => FALSE,
+      ]
+    );
+  }
+
+  // 4) Re-create the PRIMARY KEY on (uid, current_url(191)).
+  //    MySQL requires a prefix length for TEXT columns in an index.
+  $connection->query("
+    ALTER TABLE {user_tracking}
+    ADD PRIMARY KEY (uid, current_url(191))
+  ");
+
+  // 5) Clear Drupal’s schema cache so the new definitions take effect.
+  \Drupal::service('entity.definition_update_manager')->applyUpdates();
+}

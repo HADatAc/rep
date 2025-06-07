@@ -636,6 +636,7 @@ form#add-mt-form h1 {margin-top: 1em!important;}
 
 /* STUDYELEMENTS TABLES AND PAGINATION */
 #json-table-pager,
+#json-table-stream-pager,
 #publication-table-pager,
 #media-table-pager {
   display: flex;
@@ -665,6 +666,7 @@ form#add-mt-form h1 {margin-top: 1em!important;}
 }
 
 div#json-table-pager span.current-page,
+div#json-table-stream-pager span.current-page,
 div#publication-table-pager span.current-page,
 div#media-table-pager span.current-page {
   padding: 5px 10px !important;
@@ -1070,4 +1072,13 @@ span.filename {
 #edit-stream-end-datetime-date,
 #edit-stream-end-datetime-time {
   max-width: 9rem!important;
+}
+
+
+#edit-ajax-cards-container {
+    background-color: #cccccc;
+    border-radius: 25px;
+    margin: 25px;
+    width: 98%;
+    padding-bottom: 15px;
 }

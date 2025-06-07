@@ -57,13 +57,14 @@ class Stream {
 
   public static function generateHeaderTopic()
   {
-
-    $header = [];
-
-    $header['element_name'] = t('Name');
-    $header['element_operations'] = t('Operations');
-
-    return $header;
+    return [
+      // coluna de seleção sem título
+      'element_select'     => ['data' => t(''), 'class' => ['text-center']],
+      'element_name'       => ['data' => t('Name'), 'class' => ['text-center']],
+      'element_deployment' => ['data' => t('Deployment'), 'class' => ['text-center']],
+      'element_sdd'        => ['data' => t('SDD'),        'class' => ['text-center']],
+      'element_operations' => ['data' => t('Operations'), 'class' => ['text-center']],
+    ];
   }
 
   public static function generateOutput($list) {
@@ -282,7 +283,7 @@ class Stream {
     return $output;
   }
 
-  public static function generateOutputTopic(array $list) {
+  public static function generateOutputTopic(array $list, $streamUri) {
     $output   = [];
     // Site base URL, e.g. https://example.com
     $root_url = \Drupal::request()->getBaseUrl();
@@ -314,112 +315,86 @@ class Stream {
       $previousUrl = \Drupal::request()->getRequestUri();
       Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
 
+      $api = \Drupal::service('rep.api_connector');
+      $responseDPL = json_decode($api->getUri($element->deploymentUri));
+      $dpl = $responseDPL->body;
+
       // $deployment = $element->deployment->label ?? '';
       $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
-        'deploymenturi' => base64_encode($element->deployment->uri)
+        'deploymenturi' => base64_encode($element->deploymentUri)
       ])->toString();
 
       $deployment = Markup::create(
         '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
-          t('Deployment: @label', ['@label' => $element->deployment->label]) .
+          t('Deployment: @label', ['@label' => $dpl->label]) .
         '</a>'
       );
 
       // 7) Build the SDD link as plain HTML.
+      $responseSDD = json_decode($api->getUri($element->semanticDataDictionaryUri));
+      $sdd = $responseSDD->body;
 
       $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
         'state' => 'basic',
-        'uri' => base64_encode($element->semanticDataDictionary->uri)
+        'uri' => base64_encode($element->semanticDataDictionaryUri)
       ])->toString();
 
       $sdd = Markup::create(
         '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
-          t('SDD: @label', ['@label' => $element->semanticDataDictionary->label]) .
+          t('SDD: @label', ['@label' => $sdd->label]) .
         '</a>'
       );
-
-      // 8) Dataset pattern or fallback.
-      $pattern = $element->datasetPattern ?? '-';
-
-      // 9) Source description.
-      if ($element->method === 'files') {
-        $source = t('Files');
-      }
-      else {
-        $source = !empty($element->messageProtocol)
-          ? $element->messageProtocol . ' ' . t('messages')
-          : t('Messages');
-        if (!empty($element->messageIP)) {
-          $source .= ' @' . $element->messageIP;
-        }
-        if (!empty($element->messagePort)) {
-          $source .= ':' . $element->messagePort;
-        }
-      }
 
       // 10) Build operation buttons as HTML fragments.
       $ops_html = [];
 
-      // 10a) VIEW button (always allowed).
-      $view_url = Url::fromRoute('rep.describe_element', [
-        'elementuri'   => base64_encode($element->uri),
-        'previousurl'  => base64_encode(Url::fromRoute('std.manage_study_elements', [
-          'studyuri' => base64_encode($element->uri),
-        ])->toString()),
-        'currentroute' => 'rep.describe_element',
-        'currenturl'   => base64_encode(Url::fromRoute('rep.describe_element', [
-          'elementuri' => base64_encode($element->uri),
-        ])->toString()),
-      ])->toString();
+      if (isset($element->hasTopicStatus) && $element->hasTopicStatus === HASCO::INACTIVE) {
+        $record_url = Url::fromRoute('dpl.stream_record', [
+          'streamUri' => base64_encode($streamUri),
+          'topicUri'  => base64_encode($element->uri),
+        ])->toString();
 
-      $ops_html[] = '<a href="' . $view_url . '" target="_new" class="btn btn-sm btn-secondary me-1" alt="Expose Stream" title="Expose Stream">'
-                  . '<i class="fa-solid fa-hexagon-nodes"></i>'
+        $ops_html[] = '<a href="#" data-url="' . $record_url . '" class="btn btn-sm btn-danger me-1 dpl-start-record" title="Start Recording">'
+        . '<i class="fa-solid fa-record-vinyl"></i>'
+        . '</a>';
+
+        $record_ingest_url = Url::fromRoute('dpl.stream_ingest', [
+          'streamUri' => base64_encode($streamUri),
+          'topicUri'  => base64_encode($element->uri),
+        ])->toString();
+        $ops_html[] = '<a href="' . $record_ingest_url . '" alt="Record and Ingest Stream" title="Record and Ingest Stream" class="btn btn-sm btn-warning me-1">'
+                  . '<i class="fa-solid fa-compact-disc"></i>'
                   . '</a>';
-
-      if ($element->method !== 'files') {
-        if (isset($element->hasMessageStatus) && $element->hasMessageStatus === HASCO::SUSPENDED) {
-          $record_url = Url::fromRoute('dpl.stream_record', [
-            'streamUri' => base64_encode($element->uri),
-          ])->toString();
-
-          $ops_html[] = '<a href="#" data-url="' . $record_url . '" class="btn btn-sm btn-danger me-1 dpl-start-record" title="Start Recording">'
-          . '<i class="fa-solid fa-record-vinyl"></i>'
-          . '</a>';
-
-          $record_ingest_url = Url::fromRoute('dpl.stream_ingest', [
-            'streamUri' => base64_encode($element->uri),
-          ])->toString();
-          $ops_html[] = '<a href="' . $record_ingest_url . '" alt="Record and Ingest Stream" title="Record and Ingest Stream" class="btn btn-sm btn-warning me-1">'
-                    . '<i class="fa-solid fa-compact-disc"></i>'
-                    . '</a>';
-        } else if (isset($element->hasMessageStatus) && ($element->hasMessageStatus === HASCO::RECORDING || $element->hasMessageStatus === HASCO::INGESTING)) {
-          $suspend_url = Url::fromRoute('dpl.stream_suspend', [
-            'streamUri' => base64_encode($element->uri),
-          ])->toString();
-          $ops_html[] = '<a href="#" data-url="' . $suspend_url . '" class="btn btn-sm btn-secondary me-1 dpl-suspend-record" title="Suspend Recording">'
-          . '<i class="fa-solid fa-stop"></i>'
-          . '</a>';
-        }
+      } else if (isset($element->hasTopicStatus) && ($element->hasTopicStatus === HASCO::RECORDING || $element->hasTopicStatus === HASCO::INGESTING)) {
+        $suspend_url = Url::fromRoute('dpl.stream_suspend', [
+          'streamUri' => base64_encode($streamUri),
+          'topicUri'  => base64_encode($element->uri),
+        ])->toString();
+        $ops_html[] = '<a href="#" data-url="' . $suspend_url . '" class="btn btn-sm btn-secondary me-1 dpl-suspend-record" title="Suspend Recording">'
+        . '<i class="fa-solid fa-stop"></i>'
+        . '</a>';
       }
+
 
       // 11) Wrap all operations into one Markup object.
       $ops_container = Markup::create(implode('', $ops_html));
 
+      $radio = Markup::create(
+        '<input type="radio" name="topicSelect" ' .
+        'class="topic-radio form-radio form-check-input" ' .
+        'style="padding:5px!important;margin:7px 0 0 0!important;" ' .
+        'value="' . $safe_key . '" />'
+      );
+
       // 12) Assemble and return the row.
       $output[$safe_key] = [
-        'element_uri'        => $uri_link,
-        'element_datetime'   => $datetime,
+        'element_select'     => ['data' => $radio, 'class'=> ['text-center']],
+        'element_name'       => $element->label,
         'element_deployment' => $deployment,
         'element_sdd'        => $sdd,
-        'element_pattern'    => $pattern,
-        'element_source'     => $source,
-        'element_operations' => $ops_container,
-        '#attributes'        => [
-          'data-stream-uri' => $safe_key,
-        ],
+        'element_operations' => $ops_container
       ];
     }
-
     return $output;
   }
 
