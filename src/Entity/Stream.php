@@ -198,7 +198,7 @@ class Stream {
       Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
 
       // $deployment = $element->deployment->label ?? '';
-      if ($element->method === 'Files') {
+      if ($element->method === 'files') {
         $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
           'deploymenturi' => base64_encode($element->deployment->uri)
         ])->toString();
