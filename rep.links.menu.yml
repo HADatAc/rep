@@ -246,6 +246,7 @@ rep.ontologies_root:
   weight: 49
   requirements:
     _permission: 'access content'
+    _role: 'content_editor'
 
 rep.manage_ontologies:
   title: 'Manage Ontologies'
@@ -254,6 +255,9 @@ rep.manage_ontologies:
   parent: rep.ontologies_root
   menu_name: main
   weight: 0
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
 
 rep.map_entry_points:
   title: 'Manage Mappings'
@@ -264,3 +268,4 @@ rep.map_entry_points:
   weight: 1
   requirements:
     _permission: 'access content'
+    _role: 'content_editor'
