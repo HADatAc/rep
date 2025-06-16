@@ -2,6 +2,8 @@
 
   namespace Drupal\rep\Vocabulary;
 
+use Drupal\sir\Entity\Instrument;
+
   class VSTOI {
 
     const VSTOI                           = "http://hadatac.org/ont/vstoi#";

@@ -12,6 +12,7 @@ use Exception;
 use Symfony\Component\HttpFoundation\Response;
 use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 
 class FusekiAPIConnector {
   private $client;
@@ -2213,7 +2214,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
   // Per status
-  public function generateMTPerStatus($elementtype, $status, $filename) {    
+  public function generateMTPerStatus($elementtype, $status, $filename) {
     $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/_/false";
     $method = "GET";
     $api_url = $this->getApiUrl();
@@ -2534,5 +2535,4 @@ class FusekiAPIConnector {
     ]);
     return NULL;
   }
-
 }

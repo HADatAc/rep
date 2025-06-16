@@ -1082,3 +1082,10 @@ span.filename {
     width: 98%;
     padding-bottom: 15px;
 }
+
+
+/* destaca nós mapeados */
+.jstree-anchor.mapped-node {
+  font-weight: bold;
+  color: #0066cc;
+}

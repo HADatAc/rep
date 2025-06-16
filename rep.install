@@ -1,0 +1,68 @@
+<?php
+/**
+ * Update #9001: Change user_tracking URLs to LONGTEXT and rebuild PK.
+ */
+function rep_update_9001() {
+  $db = \Drupal::database();
+  $schema = $db->schema();
+  if ($schema->tableExists('user_tracking')) {
+    if ($schema->keyExists('user_tracking', 'PRIMARY')) {
+      $schema->dropKey('user_tracking', 'PRIMARY');
+    }
+    if ($schema->fieldExists('user_tracking', 'previous_url')) {
+      $schema->changeField('user_tracking', 'previous_url', 'previous_url', [
+        'type' => 'text', 'size' => 'big', 'not null' => FALSE,
+      ]);
+    }
+    if ($schema->fieldExists('user_tracking', 'current_url')) {
+      $schema->changeField('user_tracking', 'current_url', 'current_url', [
+        'type' => 'text', 'size' => 'big', 'not null' => FALSE,
+      ]);
+    }
+    // Raw SQL for the PK with prefix length.
+    $db->query("
+      ALTER TABLE {user_tracking}
+      ADD PRIMARY KEY (uid, current_url(191))
+    ");
+  }
+}
+
+function rep_schema() {
+  $schema['rep_entry_point_mapping'] = [
+    'description' => 'Mapeamento de Entry Points para nós da ontologia.',
+    'fields' => [
+      'id' => [
+        'description' => 'Chave primária.',
+        'type'        => 'serial',
+        'unsigned'    => TRUE,
+        'not null'    => TRUE,
+      ],
+      'entry_point_uri' => [
+        'description' => 'URI do entry point (e.g. http://…/instrument).',
+        'type'        => 'varchar',
+        'length'      => 255,
+        'not null'    => TRUE,
+      ],
+      'node_uri' => [
+        'description' => 'URI completo do nó na ontologia.',
+        'type'        => 'varchar',
+        'length'      => 255,
+        'not null'    => TRUE,
+      ],
+    ],
+    'primary key' => ['id'],
+  ];
+  return $schema;
+}
+
+/**
+ * Update #9003: Create rep_entry_point_mapping is missing.
+ */
+function rep_update_9004() {
+  $schema_def = rep_schema()['rep_entry_point_mapping'];
+  $db = \Drupal::database();
+  $sm = $db->schema();
+  if (! $sm->tableExists('rep_entry_point_mapping')) {
+    $sm->createTable('rep_entry_point_mapping', $schema_def);
+  }
+}

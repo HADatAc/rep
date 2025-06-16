@@ -235,3 +235,32 @@ reviewer.generate_review:
   requirements:
     _permission: 'access content'
     _role: 'content_editor'
+
+# ONTOLOGYs RELATED
+rep.ontologies_root:
+  title: 'Ontologies'
+  description: ''
+  route_name: rep.manage_ontologies
+  parent: rep.top_level
+  menu_name: main
+  weight: 49
+  requirements:
+    _permission: 'access content'
+
+rep.manage_ontologies:
+  title: 'Manage Ontologies'
+  description: ''
+  route_name: rep.manage_ontologies
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 0
+
+rep.map_entry_points:
+  title: 'Manage Mappings'
+  description: 'Map each entry point (Instrument, Sample, etc.) to one or more ontologies.'
+  route_name: rep.map_entry_points
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 1
+  requirements:
+    _permission: 'access content'

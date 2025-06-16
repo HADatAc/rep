@@ -62,3 +62,17 @@ maplibre_cluster:
     https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.js: { type: external, minified: true }
   dependencies:
     - core/jquery
+
+map_entry_points:
+  version: 1.x
+  css:
+    theme:
+      https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css: {}
+  js:
+    https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js: {}
+    js/rep_map.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/drupalSettings
+    - core/drupal.ajax
