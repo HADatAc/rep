@@ -90,7 +90,9 @@
                   };
                 });
                 // merge mapped first, then API
-                callback(mappedNodes.concat(apiNodes));
+                const apiFiltered = apiNodes.filter(n => !toOpen.includes(n.data.realUri));
+                // e então concatena só os novos
+                callback(mappedNodes.concat(apiFiltered));
               })
               .fail(() => {
                 console.error('[repMap] getCoreData AJAX failed for', uri);
@@ -102,29 +104,33 @@
           const parentReal = node.data.realUri;
           let uri = parentReal;
           if (!/^https?:\/\//.test(uri)) {
-            uri = base.replace(/\/$/, '') + '/' + uri;
+            uri = base.replace(/\/$/, '') + '/' + parentReal;
           }
           console.log('[repMap] getCoreData: AJAX fetch children for', uri);
+
           $.getJSON(apiEndpoint, { [childParam]: uri })
-            .done(data => {
-              console.log('[repMap] getCoreData AJAX done, data:', data);
-              const children = data.map(item => {
-                const real = /^https?:\/\//.test(item.uri)
-                  ? item.uri
-                  : base.replace(/\/$/, '') + '/' + item.uri;
-                return {
-                  id:       'node_' + sanitizeForId(parentReal) + '_' + sanitizeForId(real),
-                  text:     item.label || extractLabel(real),
-                  children: true,
-                  data:     { realUri: real }
-                };
-              });
-              callback(children);
-            })
-            .fail(() => {
-              console.error('[repMap] getCoreData AJAX failed for', uri);
-              callback([]);
+          .done(data => {
+            console.log('[repMap] getCoreData AJAX done, data:', data);
+            const children = data.map(item => {
+              // monta o URI absoluto do filho
+              const real = /^https?:\/\//.test(item.uri)
+                ? item.uri
+                : base.replace(/\/$/, '') + '/' + item.uri;
+              // usa sempre o mesmo padrão de ID para esse realUri
+              const nodeId = 'node_' + sanitizeForId(parentReal) + '_' + sanitizeForId(real);
+              return {
+                id:       nodeId,
+                text:     item.label || extractLabel(real),
+                children: true,
+                data:     { realUri: real }
+              };
             });
+            callback(children);
+          })
+          .fail(() => {
+            console.error('[repMap] getCoreData AJAX failed for', uri);
+            callback([]);
+          });
         };
       }
 

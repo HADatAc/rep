@@ -59,6 +59,8 @@ class TreeController extends ControllerBase {
       return strcasecmp($a->label, $b->label);
     });
 
+    dpm($pool);
+
     return new JsonResponse(array_values($pool));
   }
 
