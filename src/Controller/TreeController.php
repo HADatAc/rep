@@ -58,9 +58,6 @@ class TreeController extends ControllerBase {
     usort($items, function($a, $b) {
       return strcasecmp($a->label, $b->label);
     });
-
-    dpm($pool);
-
     return new JsonResponse(array_values($pool));
   }
 
