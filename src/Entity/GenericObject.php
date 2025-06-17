@@ -106,6 +106,7 @@ class GenericObject {
               && GenericObject::isUri($propertyValue)
               && $propertyName !== 'hasIdentifier'
               && $propertyName !== 'hasWebDocument'
+              && $propertyName !== 'hasImageUri'
               && $propertyName !== 'hasStatus'
               && $propertyName !== 'hasStreamStatus'
             ) {

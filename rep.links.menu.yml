@@ -240,9 +240,9 @@ reviewer.generate_review:
 rep.ontologies_root:
   title: 'Ontologies'
   description: ''
-  route_name: rep.manage_ontologies
   parent: rep.top_level
   menu_name: main
+  route_name: '<nolink>'
   weight: 49
   requirements:
     _permission: 'access content'
