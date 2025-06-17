@@ -1089,3 +1089,15 @@ span.filename {
   font-weight: bold;
   color: #0066cc;
 }
+
+/* para todo nó marcado */
+#current-tree .jstree-anchor.mapped-node:after {
+  content: " 🗑";
+  float: right;
+  cursor: pointer;
+}
+/* opcional: hover fica vermelho */
+#current-tree .jstree-anchor.mapped-node:hover:after {
+  color: #c00;
+}
+

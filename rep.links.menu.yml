@@ -247,10 +247,10 @@ rep.ontologies_root:
   requirements:
     _role: 'content_editor'
 
-rep.manage_ontologies:
-  title: 'Manage Ontologies'
+rep.add_ontologies:
+  title: 'Add Ontology'
   description: ''
-  route_name: rep.manage_ontologies
+  route_name: rep.add_ontologies
   parent: rep.ontologies_root
   menu_name: main
   weight: 0

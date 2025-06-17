@@ -390,11 +390,11 @@ rep.form_modal:
     _admin_route: TRUE
 
 # ONTOLOGYs RELATED
-rep.manage_ontologies:
-  path: '/rep/manage-ontologies'
+rep.add_ontologies:
+  path: '/rep/add-ontologies'
   defaults:
-    _form: '\Drupal\rep\Form\ManageOntologiesForm'
-    _title: 'Manage Ontologies'
+    _form: '\Drupal\rep\Form\AddOntologiesForm'
+    _title: 'Add Ontology'
   requirements:
     _role: 'content_editor'
 
