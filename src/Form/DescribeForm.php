@@ -165,7 +165,7 @@
             ];
             $form['document_link']['link'] = [
               '#type' => 'link',
-              '#title' => $this->t('View associated WebDocument'),
+              '#title' => $this->t('View associated resource'),
               '#url' => \Drupal\Core\Url::fromUri($hasWebDocument),
               '#attributes' => [
                 'class' => ['view-media-link', 'btn', 'btn-primary', 'mb-3'],
