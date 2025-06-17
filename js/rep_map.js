@@ -15,7 +15,7 @@
 
       // only run once on full document load
       if (context !== document) return;
-      console.log('[repMap] attach start (full document)');
+      // console.log('[repMap] attach start (full document)');
 
       // 1) load config
       const cfg = drupalSettings.repMap || {};
@@ -26,7 +26,7 @@
         apiEndpoint = '',
         childParam = 'nodeUri'
       } = cfg;
-      console.log('[repMap] cfg', cfg);
+      // console.log('[repMap] cfg', cfg);
 
       const $epSelect = $('.map-entry-point-select');
       const $nsSelect = $('.map-ontology-select');
@@ -46,7 +46,7 @@
           const rootId = 'node_root_' + sanitizeForId(rootUri);
           // ---- root‐of‐all pseudo‐node: show only the one root
           if (node.id === '#') {
-            console.log('[repMap] getCoreData: root node requested →', rootUri);
+            // console.log('[repMap] getCoreData: root node requested →', rootUri);
             return callback([{
               id:       rootId,
               text:     extractLabel(rootUri),
@@ -57,7 +57,7 @@
 
           // ---- special case: expanding the rootUri itself
           if (node.id === rootId) {
-            console.log('[repMap] getCoreData: expanding ROOT, injecting mapped URIs:', toOpen);
+            // console.log('[repMap] getCoreData: expanding ROOT, injecting mapped URIs:', toOpen);
             // build mapped‐nodes array:
             const mappedNodes = (toOpen || []).map(u => ({
               id:       'node_' + sanitizeForId(rootUri) + '_' + sanitizeForId(u),
@@ -72,10 +72,10 @@
             if (!/^https?:\/\//.test(uri)) {
               uri = base.replace(/\/$/, '') + '/' + uri;
             }
-            console.log('[repMap] getCoreData: AJAX fetch children for', uri);
+            // console.log('[repMap] getCoreData: AJAX fetch children for', uri);
             return $.getJSON(apiEndpoint, { [childParam]: uri })
               .done(data => {
-                console.log('[repMap] getCoreData AJAX done, data:', data);
+                // console.log('[repMap] getCoreData AJAX done, data:', data);
                 const apiNodes = $.map(data, item => {
                   let childUri = item.uri;
                   if (!/^https?:\/\//.test(childUri)) {
@@ -106,11 +106,11 @@
           if (!/^https?:\/\//.test(uri)) {
             uri = base.replace(/\/$/, '') + '/' + parentReal;
           }
-          console.log('[repMap] getCoreData: AJAX fetch children for', uri);
+          // console.log('[repMap] getCoreData: AJAX fetch children for', uri);
 
           $.getJSON(apiEndpoint, { [childParam]: uri })
           .done(data => {
-            console.log('[repMap] getCoreData AJAX done, data:', data);
+            // console.log('[repMap] getCoreData AJAX done, data:', data);
             const children = data.map(item => {
               // monta o URI absoluto do filho
               const real = /^https?:\/\//.test(item.uri)
@@ -139,19 +139,22 @@
        * then open any nodes in toOpen[] automatically.
        */
       function drawTree($el, rootUri, toOpen = []) {
-        console.log('[repMap] drawTree →', rootUri, toOpen);
+
+        if ($el === null || $el === '') return;
+
+        // console.log('[repMap] drawTree →', rootUri, toOpen);
         const base = $nsSelect.find(':selected').data('base-uri') || '';
-        console.log('[repMap] drawTree: using baseUri:', base);
+        // console.log('[repMap] drawTree: using baseUri:', base);
 
         // bind our AJAX + mapped loader
         const coreData = getCoreData(base, rootUri, toOpen);
 
         if ($el.data('jstree')) {
-          console.log('[repMap] drawTree: refresh existing jsTree');
+          // console.log('[repMap] drawTree: refresh existing jsTree');
           $el.jstree(true).settings.core.data = coreData;
           $el.jstree(true).refresh();
         } else {
-          console.log('[repMap] drawTree: create new jsTree');
+          // console.log('[repMap] drawTree: create new jsTree');
           $el.jstree({
             core: { data: coreData },
             plugins: ['contextmenu', 'wholerow'],
@@ -175,7 +178,7 @@
         // once ready, open the mapped children
         $el.off('ready.jstree.open')
           .on('ready.jstree.open', () => {
-            console.log('[repMap] ready.jstree.open: opening saved nodes', toOpen);
+            // console.log('[repMap] ready.jstree.open: opening saved nodes', toOpen);
             const inst = $el.jstree(true);
             (toOpen || []).forEach(uri => inst.open_node(uri));
           });
@@ -204,9 +207,9 @@
         const initialKey  = $epSelect.val();
         const initialRoot = $epSelect.find(':selected').data('root-uri');
         const initialOpen = entryMappings[initialKey] || [];
-        console.log('[repMap] initial EP key:', initialKey);
-        console.log('[repMap] initial root URI:', initialRoot);
-        console.log('[repMap] initial mapped URIs:', initialOpen);
+        // console.log('[repMap] initial EP key:', initialKey);
+        // console.log('[repMap] initial root URI:', initialRoot);
+        // console.log('[repMap] initial mapped URIs:', initialOpen);
         drawTree($left, initialRoot, initialOpen);
       }
 
@@ -214,7 +217,7 @@
       .off('select_node.jstree')
       .on('select_node.jstree', (e, data) => {
         const uri = data.node.data.realUri;
-        console.log('[repMap] LEFT select_node →', uri);
+        // console.log('[repMap] LEFT select_node →', uri);
         // 1) atualiza o hidden do entry-point
         $('#edit-selected-entry-point').val(uri);
         // 2) continua atualizando o selected_node pro nó da direita
@@ -227,7 +230,7 @@
         const key     = $epSelect.val();
         const root    = $epSelect.find(':selected').data('root-uri');
         const toOpen  = entryMappings[key] || [];
-        console.log('[repMap] EP changed →', key, root, toOpen);
+        // console.log('[repMap] EP changed →', key, root, toOpen);
         drawTree($left, root, toOpen);
       });
 
@@ -236,7 +239,7 @@
         .off('click')
         .on('click', e => {
           e.preventDefault();
-          console.log('[repMap] Load RIGHT tree');
+          // console.log('[repMap] Load RIGHT tree');
           const base  = $nsSelect.find(':selected').data('base-uri') || '';
           const label = $('#edit-custom-root').val().trim();
           if (!label) {
@@ -258,7 +261,7 @@
           $('#edit-selected-node').val(uri);
         });
 
-      console.log('[repMap] attach end');
+      // console.log('[repMap] attach end');
     },
 
     /**
@@ -267,7 +270,7 @@
     deleteMapping(node) {
       const ep   = $('.map-entry-point-select').val();
       const uri  = encodeURIComponent(node.id);
-      console.log('[repMap] deleteMapping → EP=', ep, ' URI=', node.id);
+      // console.log('[repMap] deleteMapping → EP=', ep, ' URI=', node.id);
       $.ajax({
         method: 'POST',
         url: Drupal.url(`rep/map/delete/${ep}/${uri}`),
@@ -275,7 +278,7 @@
       })
       .done(res => {
         if (res.success) {
-          console.log('[repMap] mapping removed', node.id);
+          // console.log('[repMap] mapping removed', node.id);
           $('#current-tree').jstree(true).delete_node(node);
         }
         else {

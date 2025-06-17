@@ -69,7 +69,8 @@ class MapEntryPointsForm extends FormBase {
       $selected_ep_key = $form_state->getValue('entry_point');
     }
     else {
-      $selected_ep_key = key($entry_options);
+      // $selected_ep_key = key($entry_options);
+      $selected_ep_key = '';
     }
 
     // now derive the constant URI and DB mappings for *that* key
@@ -78,15 +79,16 @@ class MapEntryPointsForm extends FormBase {
 
 
     // debug temporário
-    \Drupal::logger('rep')->debug('Mapped nodes for @ep: <pre>@nodes</pre>', [
-      '@ep'    => $constant_uri,
-      '@nodes' => print_r($mapped_nodes, TRUE),
-    ]);
+    // \Drupal::logger('rep')->debug('Mapped nodes for @ep: <pre>@nodes</pre>', [
+    //   '@ep'    => $constant_uri,
+    //   '@nodes' => print_r($mapped_nodes, TRUE),
+    // ]);
 
     // 3) Namespace dropdown options
     $ns_options  = array_combine(array_keys($namespaces), array_keys($namespaces));
     // preserve current or default to first namespace
-    $selected_ns = $form_state->getValue('namespace') ?: key($ns_options);
+    $selected_ns = $form_state->getValue('namespace') ?: '';
+    // key($ns_options)
 
     // 4) Messages placeholder
     $form['messages'] = ['#type' => 'status_messages'];
