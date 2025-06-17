@@ -396,7 +396,7 @@ rep.manage_ontologies:
     _form: '\Drupal\rep\Form\ManageOntologiesForm'
     _title: 'Manage Ontologies'
   requirements:
-    _permission: 'access content'
+    _role: 'content_editor'
 
 rep.map_entry_points:
   path: '/rep/map-entry-points'
@@ -404,18 +404,18 @@ rep.map_entry_points:
     _form: '\Drupal\rep\Form\MapEntryPointsForm'
     _title: 'Map Entry Points to Ontologies'
   requirements:
-    _permission: 'access content'
+    _role: 'content_editor'
 
 rep.map_delete:
   path: '/rep/map/delete/{entryPoint}/{mappedUri}'
   defaults:
     _controller: '\Drupal\rep\Controller\MapController::deleteMapping'
   requirements:
-    _permission: 'administer site configuration'
+    _role: 'content_editor'
 
 rep.tree.entry_point_mappings:
   path: '/rep/entry-point-mappings'
   defaults:
     _controller: '\Drupal\rep\Controller\TreeController::getEntryPointMappings'
   requirements:
-    _permission: 'access content'
+    _role: 'content_editor'

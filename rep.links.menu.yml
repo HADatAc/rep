@@ -245,7 +245,6 @@ rep.ontologies_root:
   route_name: '<nolink>'
   weight: 49
   requirements:
-    _permission: 'access content'
     _role: 'content_editor'
 
 rep.manage_ontologies:
@@ -256,7 +255,6 @@ rep.manage_ontologies:
   menu_name: main
   weight: 0
   requirements:
-    _permission: 'access content'
     _role: 'content_editor'
 
 rep.map_entry_points:
@@ -267,5 +265,4 @@ rep.map_entry_points:
   menu_name: main
   weight: 1
   requirements:
-    _permission: 'access content'
     _role: 'content_editor'
