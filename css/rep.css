@@ -1101,3 +1101,10 @@ span.filename {
   color: #c00;
 }
 
+body.path-rep .table>tbody,
+body.path-rep table tr th
+{vertical-align: middle!important;}
+
+body.path-rep table tr th {
+  text-align: center;
+}
