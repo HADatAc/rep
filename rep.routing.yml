@@ -242,15 +242,25 @@ rep.admin_ip_settings_custom:
     _admin_route: TRUE
     no_cache: 'TRUE'
 
+# rep.admin_namespace_settings_custom:
+#   path: 'admin/config/rep/namespace'
+#   defaults:
+#     _form: '\Drupal\rep\Form\REPNameSpaceForm'
+#     _title: 'NameSpace Management'
+#   requirements:
+#     _permission: 'administer site NameSpace configuration'
+#   options:
+#     _admin_route: FALSE
+#     no_cache: 'TRUE'
 rep.admin_namespace_settings_custom:
-  path: 'admin/config/rep/namespace'
+  path: 'rep/config/namespace'
   defaults:
     _form: '\Drupal\rep\Form\REPNameSpaceForm'
     _title: 'NameSpace Management'
   requirements:
     _permission: 'administer site NameSpace configuration'
   options:
-    _admin_route: TRUE
+    _admin_route: FALSE
     no_cache: 'TRUE'
 
 rep.update_namespace_settings_custom:
