@@ -257,6 +257,16 @@ rep.add_ontologies:
   requirements:
     _role: 'content_editor'
 
+rep.manage_ontologies:
+  title: 'Manage Namespaces'
+  description: ''
+  route_name: rep.admin_namespace_settings_custom
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 0
+  requirements:
+    _role: 'content_editor'
+
 rep.map_entry_points:
   title: 'Manage Mappings'
   description: 'Map each entry point (Instrument, Sample, etc.) to one or more ontologies.'
