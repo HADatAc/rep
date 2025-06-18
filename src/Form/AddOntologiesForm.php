@@ -170,7 +170,7 @@ class AddOntologiesForm extends FormBase {
       $api = \Drupal::service('rep.api_connector');
       $response = $api->repoCreateNamespace($jsonPayload);
 
-      dpm($response);
+      // dpm($response);
       $obj = json_decode($response);
       if ($obj->isSuccessful === true) {
         $this->messenger()->addStatus($this->t('Ontology submitted successfully.'));

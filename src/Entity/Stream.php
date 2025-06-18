@@ -60,6 +60,7 @@ class Stream {
     return [
       // coluna de seleção sem título
       'element_select'     => ['data' => t(''), 'class' => ['text-center']],
+      'element_uri'        => ['data' => t('URI'), 'class' => ['text-center']],
       'element_name'       => ['data' => t('Name'), 'class' => ['text-center']],
       'element_deployment' => ['data' => t('Deployment'), 'class' => ['text-center']],
       'element_sdd'        => ['data' => t('SDD'),        'class' => ['text-center']],
@@ -389,6 +390,7 @@ class Stream {
       // 12) Assemble and return the row.
       $output[$safe_key] = [
         'element_select'     => ['data' => $radio, 'class'=> ['text-center']],
+        'element_uri'        => ['data' => t('<a target="_blank" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($element->uri).'">'.UTILS::namespaceUri($element->uri).'</a>'), 'class'=> ['text-center']],
         'element_name'       => $element->label,
         'element_deployment' => $deployment,
         'element_sdd'        => $sdd,
