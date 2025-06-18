@@ -253,7 +253,7 @@ rep.admin_ip_settings_custom:
 #     _admin_route: FALSE
 #     no_cache: 'TRUE'
 rep.admin_namespace_settings_custom:
-  path: 'rep/config/namespace'
+  path: 'rep/manage/namespaces'
   defaults:
     _form: '\Drupal\rep\Form\REPNameSpaceForm'
     _title: 'NameSpace Management'
@@ -401,7 +401,7 @@ rep.form_modal:
 
 # ONTOLOGYs RELATED
 rep.add_ontologies:
-  path: '/rep/add-ontologies'
+  path: '/rep/manage/add-ontologies'
   defaults:
     _form: '\Drupal\rep\Form\AddOntologiesForm'
     _title: 'Add Ontology'
@@ -409,7 +409,7 @@ rep.add_ontologies:
     _role: 'content_editor'
 
 rep.map_entry_points:
-  path: '/rep/map-entry-points'
+  path: '/rep/manage/map-entry-points'
   defaults:
     _form: '\Drupal\rep\Form\MapEntryPointsForm'
     _title: 'Map Entry Points to Ontologies'
