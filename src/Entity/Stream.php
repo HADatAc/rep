@@ -394,7 +394,7 @@ class Stream {
         ])->toString();
 
         $ops_html[] = '<a href="#"
-          class="btn btn-sm btn-danger me-1"
+          class="btn btn-sm btn-danger me-1 stream-topic-record"
           data-url="' . $record_url . '"
           data-stream-uri="' . base64_encode($element->streamUri) . '"
           title="Start Recording">'
@@ -410,7 +410,7 @@ class Stream {
         ])->toString();
 
         $ops_html[] = '<a href="#"
-          class="btn btn-sm btn-primary me-1 disabled"
+          class="btn btn-sm btn-primary me-1 stream-topic-ingest disabled"
           data-url="' . $record_ingest_url . '"
           data-stream-uri="' . base64_encode($element->streamUri) . '"
           title="Ingest">'
@@ -426,7 +426,7 @@ class Stream {
         ])->toString();
 
         $ops_html[] = '<a href="#"
-          class="btn btn-sm btn-secondary me-1"
+          class="btn btn-sm btn-secondary me-1 stream-topic-suspend"
           data-url="' . $suspend_url . '"
           data-stream-uri="' . base64_encode($element->streamUri) . '"
           title="Suspend">'
