@@ -6,9 +6,7 @@ function rep_update_9001() {
   $db = \Drupal::database();
   $schema = $db->schema();
   if ($schema->tableExists('user_tracking')) {
-    if ($schema->keyExists('user_tracking', 'PRIMARY')) {
-      $schema->dropKey('user_tracking', 'PRIMARY');
-    }
+    $schema->dropPrimaryKey('user_tracking');
     if ($schema->fieldExists('user_tracking', 'previous_url')) {
       $schema->changeField('user_tracking', 'previous_url', 'previous_url', [
         'type' => 'text', 'size' => 'big', 'not null' => FALSE,
@@ -29,22 +27,22 @@ function rep_update_9001() {
 
 function rep_schema() {
   $schema['rep_entry_point_mapping'] = [
-    'description' => 'Mapeamento de Entry Points para nós da ontologia.',
+    'description' => 'Mapping EntryPoints for Ontology',
     'fields' => [
       'id' => [
-        'description' => 'Chave primária.',
+        'description' => 'Primary Key',
         'type'        => 'serial',
         'unsigned'    => TRUE,
         'not null'    => TRUE,
       ],
       'entry_point_uri' => [
-        'description' => 'URI do entry point (e.g. http://…/instrument).',
+        'description' => 'URI of entry point (e.g. http://…/instrument).',
         'type'        => 'varchar',
         'length'      => 255,
         'not null'    => TRUE,
       ],
       'node_uri' => [
-        'description' => 'URI completo do nó na ontologia.',
+        'description' => 'Complete URI',
         'type'        => 'varchar',
         'length'      => 255,
         'not null'    => TRUE,
@@ -58,7 +56,7 @@ function rep_schema() {
 /**
  * Update #9003: Create rep_entry_point_mapping is missing.
  */
-function rep_update_9004() {
+function rep_update_9003() {
   $schema_def = rep_schema()['rep_entry_point_mapping'];
   $db = \Drupal::database();
   $sm = $db->schema();
