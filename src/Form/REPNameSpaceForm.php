@@ -12,8 +12,9 @@
  use Drupal\Core\Url;
  use Drupal\rep\Entity\Ontology;
  use Drupal\rep\Entity\Tables;
+ use Drupal\rep\Utils;
 
- class repNameSpaceForm extends ConfigFormBase {
+ class repNamespaceForm extends ConfigFormBase {
 
      /**
      * Settings Variable.
@@ -75,7 +76,7 @@
 
         $form['reload_triples_submit'] = [
             '#type' => 'submit',
-            '#value' => $this->t('Reload Triples from All NameSpaces with URL'),
+            '#value' => $this->t('Reload Triples from All Ontologies with URL'),
             '#name' => 'reload',
             '#attributes' => [
               'class' => ['btn', 'btn-primary', 'reload-button'],
@@ -84,16 +85,25 @@
 
         $form['delete_triples_submit'] = [
             '#type' => 'submit',
-            '#value' => $this->t('Delete Triples from All NameSpaces with URL'),
+            '#value' => $this->t('Delete Triples from All Ontologies with URL'),
             '#name' => 'delete',
             '#attributes' => [
               'class' => ['btn', 'btn-primary', 'delete-element-button'],
             ],
         ];
 
+        $form['add_ontology'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Add Ontology'),
+            '#name' => 'add_ontology',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'add-element-button'],
+            ],
+        ];
+
         $form['update_namespace'] = [
             '#type' => 'submit',
-            '#value' => $this->t('Update Selected NameSpaces'),
+            '#value' => $this->t('Update Selected Ontology'),
             '#name' => 'upd_selected',
             '#attributes' => [
               'class' => ['btn', 'btn-primary', 'save-button'],
@@ -102,7 +112,7 @@
 
         $form['delete_namespace'] = [
             '#type' => 'submit',
-            '#value' => $this->t('Delete Selected NameSpaces'),
+            '#value' => $this->t('Delete Selected Ontologies'),
             '#name' => 'del_selected',
             '#attributes' => [
               'class' => ['btn', 'btn-primary', 'delete-element-button'],
@@ -111,7 +121,7 @@
 
         //$form['reset_namespace'] = [
         //    '#type' => 'submit',
-        //    '#value' => $this->t('Reset NameSpaces'),
+        //    '#value' => $this->t('Reset Ontologies'),
         //    '#name' => 'reset',
         //];
 
@@ -125,7 +135,7 @@
             '#header' => $header,
             '#options' => $output,
             '#js_select' => FALSE,
-            '#empty' => t('No NameSpace found'),
+            '#empty' => t('No Ontology found'),
         ];
 
         $form['filler_3'] = [
@@ -205,9 +215,19 @@
           return;
         }
 
+        if ($button_name === 'add_ontology') {
+          $uid = \Drupal::currentUser()->id();
+          $previousUrl = Url::fromRoute('rep.admin_namespace_settings_custom')->toString();
+          Utils::trackingStoreUrls($uid, $previousUrl, 'rep.admin_namespace_settings_custom');
+          $url = Url::fromRoute('rep.add_ontologies');
+          $form_state->setRedirectUrl($url);
+          return;
+
+        }
+
         if ($button_name === 'upd_selected') {
             if (sizeof($rows) != 1) {
-                \Drupal::messenger()->addWarning(t("Select the exact NameSpace to be updated."));
+                \Drupal::messenger()->addWarning(t("Select the exact Ontology to be updated."));
             } else {
                 $firstKey = array_key_first($rows);
                 $abbrev = $rows[$firstKey];
@@ -220,7 +240,7 @@
 
         if ($button_name === 'del_selected') {
             if (sizeof($rows) <= 0) {
-                \Drupal::messenger()->addWarning(t("At least one NameSpace needs to be selected for deletion."));
+                \Drupal::messenger()->addWarning(t("At least one Ontology needs to be selected for deletion."));
             } else {
                 foreach($rows as $abbrev) {
                     if ($form['element_table']['#options'][$abbrev]['ontology_in_memory'] == 'yes') {

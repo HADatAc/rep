@@ -7,6 +7,9 @@ use Drupal\Core\Form\FormStateInterface;
 use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Http\ClientFactory;
+use Drupal\rep\Utils;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Drupal\Core\Url;
 
 /**
  * Provides a form to add ontologies.
@@ -115,22 +118,49 @@ class AddOntologiesForm extends FormBase {
     ];
 
     // Submit button, enabled only when both fields are filled.
-    $form['wrapper']['card']['submit'] = [
+    $form['wrapper']['card']['actions'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['row', 'justify-content-start'],
+      ],
+    ];
+
+    $form['wrapper']['card']['actions']['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Submit'),
       '#button_type' => 'primary',
-      '#attributes' => ['class' => ['col-md-2', 'mt-4']],
+      '#attributes' => [
+        'class' => ['col-md-2', 'mt-4', 'save-button'],
+      ],
       '#states' => [
         'enabled' => [
-          ':input[name="ontology_abbrev"]' => ['filled' => TRUE],
-          ':input[name="ontology_namespace"]' => ['filled' => TRUE],
-          // ':input[name="ontology_source"]' => ['filled' => TRUE],
-          // ':input[name="mimeType"]' => ['!value' => ''],
+          ':input[name="ontology_abbrev"]'   => ['filled' => TRUE],
+          ':input[name="ontology_namespace"]'=> ['filled' => TRUE],
         ],
       ],
     ];
 
+    $form['wrapper']['card']['actions']['cancel'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Cancel'),
+      '#name' => 'cancel',
+      // 1) Não dispara validação de required
+      '#limit_validation_errors' => [],
+      // 2) Handler customizado
+      '#submit' => ['::cancelForm'],
+      // Opcional: adiciona estilo
+      '#attributes' => ['class' => ['col-md-2', 'mt-4', 'ms-2', 'btn', 'btn-secondary', 'cancel-button']],
+    ];
+
+
     return $form;
+  }
+
+  /**
+   * Handler de submit para o botão Cancel.
+   */
+  public function cancelForm(array &$form, FormStateInterface $form_state) {
+   self::backUrl();
   }
 
   /**
@@ -158,6 +188,14 @@ class AddOntologiesForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
+    $triggering_element = $form_state->getTriggeringElement();
+    $button_name = $triggering_element['#name'];
+
+    if ($button_name === 'back') {
+      self::backUrl();
+      return;
+    }
+
     try {
 
       $jsonPayload = '{' .
@@ -181,6 +219,17 @@ class AddOntologiesForm extends FormBase {
     }
     catch (RequestException $e) {
       $this->messenger()->addError($this->t('Connection failed: @message', ['@message' => $e->getMessage()]));
+    }
+  }
+
+  function backUrl()
+  {
+    $uid = \Drupal::currentUser()->id();
+    $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.admin_namespace_settings_custom');
+    if ($previousUrl) {
+      $response = new RedirectResponse($previousUrl);
+      $response->send();
+      return;
     }
   }
 

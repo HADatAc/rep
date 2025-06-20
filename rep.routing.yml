@@ -256,7 +256,7 @@ rep.admin_namespace_settings_custom:
   path: 'rep/manage/namespaces'
   defaults:
     _form: '\Drupal\rep\Form\REPNameSpaceForm'
-    _title: 'Ontology Management'
+    _title: 'Manage Ontologies'
   requirements:
     _permission: 'administer site NameSpace configuration'
   options:
@@ -412,7 +412,7 @@ rep.map_entry_points:
   path: '/rep/manage/map-entry-points'
   defaults:
     _form: '\Drupal\rep\Form\MapEntryPointsForm'
-    _title: 'Map Entry Points to Ontologies'
+    _title: 'Manage Concept Entry Points'
   requirements:
     _role: 'content_editor'
 
