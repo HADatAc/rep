@@ -212,6 +212,7 @@ class AddOntologiesForm extends FormBase {
       $obj = json_decode($response);
       if ($obj->isSuccessful === true) {
         $this->messenger()->addStatus($this->t('Ontology submitted successfully.'));
+        self::backUrl();
       }
       else {
         $this->messenger()->addError($this->t('Submission error: status @code', ['@code' => $obj->body]));
