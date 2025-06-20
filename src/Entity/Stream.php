@@ -408,7 +408,7 @@ class Stream {
         ])->toString();
 
         $ops_html[] = '<a href="#"
-          class="btn btn-sm btn-warning me-1 disabled"
+          class="btn btn-sm btn-primary me-1 disabled"
           data-url="' . $record_ingest_url . '"
           data-stream-uri="' . base64_encode($element->streamUri) . '"
           title="Ingest">'
