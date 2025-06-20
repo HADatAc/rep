@@ -380,7 +380,7 @@ class Stream {
           data-url="' . $unsubscribe_url . '"
           data-stream-uri="' . base64_encode($element->streamUri) . '"
           title="Unsubscribe">'
-        . '<i class="fa-solid fa-gear"></i>'
+        . '<i class="fa-solid fa-ban"></i>'
         . '</a>';
       }
 
