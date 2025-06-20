@@ -1608,7 +1608,6 @@ class FusekiAPIConnector {
   }
   // GET     /hascoapi/api/topic/subscribe/:topicUri org.hascoapi.console.controllers.restapi.StreamTopicAPI.subscribe(topicUri: String)
   public function streamTopicSubscribe($topicuri) {
-    dpm($topicuri);
     $endpoint = "/hascoapi/api/topic/subscribe/".
       rawurlencode($topicuri);
     $method = 'GET';
