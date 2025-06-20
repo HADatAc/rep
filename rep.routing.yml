@@ -256,7 +256,7 @@ rep.admin_namespace_settings_custom:
   path: 'rep/manage/namespaces'
   defaults:
     _form: '\Drupal\rep\Form\REPNameSpaceForm'
-    _title: 'NameSpace Management'
+    _title: 'Ontology Management'
   requirements:
     _permission: 'administer site NameSpace configuration'
   options:
