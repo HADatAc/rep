@@ -1593,6 +1593,49 @@ class FusekiAPIConnector {
   }
 
   /**
+   * STREAM TOPIC
+   */
+
+  // GET     /hascoapi/api/topic/subscribed org.hascoapi.console.controllers.restapi.StreamTopicAPI.findActive()
+  public function streamTopicSubscribed($state, $email) {
+    $endpoint = "/hascoapi/api/topic/subscribed";
+      // $state."/".
+      // $email."/".
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/topic/subscribe/:topicUri org.hascoapi.console.controllers.restapi.StreamTopicAPI.subscribe(topicUri: String)
+  public function streamTopicSubscribe($topicuri) {
+    $endpoint = "/hascoapi/api/topic/subscribe/".
+      $topicuri;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/topic/unsubscribe/:topicUri org.hascoapi.console.controllers.restapi.StreamTopicAPI.unsubscribe(topicUri: String)
+  public function streamTopicunsubscribe($topicuri) {
+    $endpoint = "/hascoapi/api/topic/unsubscribe/".
+      $topicuri;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/topic/setstatus/:topicUri/:status org.hascoapi.console.controllers.restapi.StreamTopicAPI.setStatus(topicUri: String, status: String)
+  public function streamTopicSetStatus($topicuri, $status) {
+    $endpoint = "/hascoapi/api/topic/setstatus/".
+      $topicuri."/".
+      $status;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
    *   STUDY
    */
 
