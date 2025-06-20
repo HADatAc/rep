@@ -384,6 +384,8 @@ class Stream {
         . '</a>';
       }
 
+      $ops_html[] = ' |&nbsp;&nbsp;';
+
       // RECORD
       if (isset($element->hasTopicStatus) && $element->hasTopicStatus === HASCO::SUSPENDED) {
         $record_url = Url::fromRoute('dpl.stream_topic_status', [
