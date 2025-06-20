@@ -316,35 +316,40 @@ class Stream {
       $previousUrl = \Drupal::request()->getRequestUri();
       Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
 
-      $api = \Drupal::service('rep.api_connector');
-      $responseDPL = json_decode($api->getUri($element->deploymentUri));
-      $dpl = $responseDPL->body;
+      if (isset($element->deploymentUri)) {
+        $api = \Drupal::service('rep.api_connector');
+        $responseDPL = json_decode($api->getUri($element->deploymentUri));
+        $dpl = $responseDPL->body;
 
-      // $deployment = $element->deployment->label ?? '';
-      $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
-        'deploymenturi' => base64_encode($element->deploymentUri)
-      ])->toString();
+        // $deployment = $element->deployment->label ?? '';
+        $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
+          'deploymenturi' => base64_encode($element->deploymentUri)
+        ])->toString();
 
-      $deployment = Markup::create(
-        '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
-          t('Deployment: @label', ['@label' => $dpl->label]) .
-        '</a>'
-      );
+        $deployment = Markup::create(
+          '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
+            t('Deployment: @label', ['@label' => $dpl->label]) .
+          '</a>'
+        );
 
-      // 7) Build the SDD link as plain HTML.
-      $responseSDD = json_decode($api->getUri($element->semanticDataDictionaryUri));
-      $sdd = $responseSDD->body;
+      }
 
-      $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
-        'state' => 'basic',
-        'uri' => base64_encode($element->semanticDataDictionaryUri)
-      ])->toString();
+      if (isset($element->semanticDataDictionaryUri)) {
+        // 7) Build the SDD link as plain HTML.
+        $responseSDD = json_decode($api->getUri($element->semanticDataDictionaryUri));
+        $sdd = $responseSDD->body;
 
-      $sdd = Markup::create(
-        '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
-          t('SDD: @label', ['@label' => $sdd->label]) .
-        '</a>'
-      );
+        $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
+          'state' => 'basic',
+          'uri' => base64_encode($element->semanticDataDictionaryUri)
+        ])->toString();
+
+        $sdd = Markup::create(
+          '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
+            t('SDD: @label', ['@label' => $sdd->label]) .
+          '</a>'
+        );
+      }
 
       // 10) Build operation buttons as HTML fragments.
       $ops_html = [];
