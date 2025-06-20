@@ -1610,7 +1610,7 @@ class FusekiAPIConnector {
   public function streamTopicSubscribe($topicuri) {
     dpm($topicuri);
     $endpoint = "/hascoapi/api/topic/subscribe/".
-      rawurlencode(base64_decode($topicuri));
+      rawurlencode($topicuri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1619,7 +1619,7 @@ class FusekiAPIConnector {
   // GET     /hascoapi/api/topic/unsubscribe/:topicUri org.hascoapi.console.controllers.restapi.StreamTopicAPI.unsubscribe(topicUri: String)
   public function streamTopicUnsubscribe($topicuri) {
     $endpoint = "/hascoapi/api/topic/unsubscribe/".
-      rawurlencode(base64_decode($topicuri));
+      rawurlencode($topicuri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1628,8 +1628,8 @@ class FusekiAPIConnector {
   // GET     /hascoapi/api/topic/setstatus/:topicUri/:status org.hascoapi.console.controllers.restapi.StreamTopicAPI.setStatus(topicUri: String, status: String)
   public function streamTopicSetStatus($topicuri, $status) {
     $endpoint = "/hascoapi/api/topic/setstatus/".
-      rawurlencode(base64_decode($topicuri))."/".
-      rawurlencode(base64_decode($status));
+      rawurlencode($topicuri)."/".
+      rawurlencode($status);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
