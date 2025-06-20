@@ -1597,7 +1597,7 @@ class FusekiAPIConnector {
    */
 
   // GET     /hascoapi/api/topic/subscribed org.hascoapi.console.controllers.restapi.StreamTopicAPI.findActive()
-  public function streamTopicSubscribed($state, $email) {
+  public function streamTopicSubscribed() {
     $endpoint = "/hascoapi/api/topic/subscribed";
       // $state."/".
       // $email."/".
@@ -1608,6 +1608,7 @@ class FusekiAPIConnector {
   }
   // GET     /hascoapi/api/topic/subscribe/:topicUri org.hascoapi.console.controllers.restapi.StreamTopicAPI.subscribe(topicUri: String)
   public function streamTopicSubscribe($topicuri) {
+    dpm($topicuri);
     $endpoint = "/hascoapi/api/topic/subscribe/".
       $topicuri;
     $method = 'GET';
@@ -1616,7 +1617,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
   // GET     /hascoapi/api/topic/unsubscribe/:topicUri org.hascoapi.console.controllers.restapi.StreamTopicAPI.unsubscribe(topicUri: String)
-  public function streamTopicunsubscribe($topicuri) {
+  public function streamTopicUnsubscribe($topicuri) {
     $endpoint = "/hascoapi/api/topic/unsubscribe/".
       $topicuri;
     $method = 'GET';

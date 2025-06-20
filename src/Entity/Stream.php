@@ -349,31 +349,66 @@ class Stream {
       // 10) Build operation buttons as HTML fragments.
       $ops_html = [];
 
+      // SUBSCRIBE
       if (isset($element->hasTopicStatus) && $element->hasTopicStatus === HASCO::INACTIVE) {
-        $record_url = Url::fromRoute('dpl.stream_record', [
-          'streamUri' => base64_encode($streamUri),
+        $subscribe_url = Url::fromRoute('dpl.stream_topic_subscribe', [
+          'topicUri' => base64_encode($element->uri),
+        ])->toString();
+
+        $ops_html[] = '<a href="#"
+          class="btn btn-sm btn-green me-1 stream-topic-subscribe"
+          data-url="' . $subscribe_url . '"
+          data-stream-uri="' . base64_encode($element->streamUri) . '"
+          title="Subscribe">'
+        . '<i class="fa-solid fa-gears"></i>'
+        . '</a>';
+      }
+
+      // UNSUBSCRIBE
+      if (isset($element->hasTopicStatus) && $element->hasTopicStatus !== HASCO::INACTIVE) {
+        $unsubscribe_url = Url::fromRoute('dpl.stream_topic_unsubscribe', [
           'topicUri'  => base64_encode($element->uri),
         ])->toString();
 
-        $ops_html[] = '<a href="#" data-url="' . $record_url . '" class="btn btn-sm btn-danger me-1 dpl-start-record" title="Start Recording">'
+        $ops_html[] = '<a href="#" data-url="' . $unsubscribe_url . '" class="btn btn-sm btn-danger me-1 stream-topic-unsubscribe" title="Unsubscribe">'
+        . '<i class="fa-solid fa-gear"></i>'
+        . '</a>';
+      }
+
+      // RECORD
+      if (isset($element->hasTopicStatus) && $element->hasTopicStatus === HASCO::SUSPENDED) {
+        $record_url = Url::fromRoute('dpl.stream_topic_status', [
+          'topicUri'  => base64_encode($element->uri),
+          'status'  => base64_encode(HASCO::RECORDING),
+        ])->toString();
+
+        $ops_html[] = '<a href="#" data-url="' . $record_url . '" class="btn btn-sm btn-danger me-1" title="Start Recording">'
         . '<i class="fa-solid fa-record-vinyl"></i>'
         . '</a>';
+      }
 
-        $record_ingest_url = Url::fromRoute('dpl.stream_ingest', [
-          'streamUri' => base64_encode($streamUri),
+      // INGEST
+      if (isset($element->hasTopicStatus) && $element->hasTopicStatus === HASCO::SUSPENDED) {
+        $record_ingest_url = Url::fromRoute('dpl.stream_topic_status', [
           'topicUri'  => base64_encode($element->uri),
+          'status'  => base64_encode(HASCO::INGESTING),
         ])->toString();
-        $ops_html[] = '<a href="' . $record_ingest_url . '" alt="Record and Ingest Stream" title="Record and Ingest Stream" class="btn btn-sm btn-warning me-1">'
+
+        $ops_html[] = '<a href="' . $record_ingest_url . '" class="btn btn-sm btn-warning me-1" title="Ingest">'
                   . '<i class="fa-solid fa-compact-disc"></i>'
                   . '</a>';
-      } else if (isset($element->hasTopicStatus) && ($element->hasTopicStatus === HASCO::RECORDING || $element->hasTopicStatus === HASCO::INGESTING)) {
-        $suspend_url = Url::fromRoute('dpl.stream_suspend', [
-          'streamUri' => base64_encode($streamUri),
+      }
+
+      // SUSPEND
+      if (isset($element->hasTopicStatus) && ($element->hasTopicStatus === HASCO::RECORDING || $element->hasTopicStatus === HASCO::INGESTING)) {
+        $suspend_url = Url::fromRoute('dpl.stream_topic_status', [
           'topicUri'  => base64_encode($element->uri),
+          'status'  => base64_encode(HASCO::SUSPENDED),
         ])->toString();
-        $ops_html[] = '<a href="#" data-url="' . $suspend_url . '" class="btn btn-sm btn-secondary me-1 dpl-suspend-record" title="Suspend Recording">'
-        . '<i class="fa-solid fa-stop"></i>'
-        . '</a>';
+
+        $ops_html[] = '<a href="#" data-url="' . $suspend_url . '" class="btn btn-sm btn-secondary me-1" title="Suspend">'
+          . '<i class="fa-solid fa-stop"></i>'
+          . '</a>';
       }
 
 
