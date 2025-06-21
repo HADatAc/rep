@@ -1635,6 +1635,16 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // GET /hascoapi/api/topic/latest/$topicUri<[^/]+>org.hascoapi.console.controllers.restapi.StreamTopicAPI.getLatestValue(topicUri:String)
+  public function streamTopicLatestMessage($topicuri) {
+    $endpoint = "/hascoapi/api/topic/latest/".
+      rawurlencode($topicuri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**
    *   STUDY
    */
