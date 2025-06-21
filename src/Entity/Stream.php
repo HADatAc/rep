@@ -452,10 +452,10 @@ class Stream {
       $output[$safe_key] = [
         'element_select'     => ['data' => $radio, 'class'=> ['text-center']],
         'element_uri'        => ['data' => t('<a target="_blank" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($element->uri).'">'.UTILS::namespaceUri($element->uri).'</a>'), 'class'=> ['text-center align-middle']],
-        'element_name'       => ['data' => $element->label, 'class'=> ['text-center align-middle']],
+        'element_name'       => ['data' => $element->label, 'class'=> ['text-center align-middle text-bold']],
         'element_deployment' => $deployment,
         'element_sdd'        => $sdd,
-        'element_status'     => ['data' => UTILS::plainStatus($element->hasTopicStatus), 'class'=> ['text-center align-middle']],
+        'element_status'     => ['data' => UTILS::plainStatus($element->hasTopicStatus), 'class'=> ['text-center align-middle text-bold']],
         'element_operations' => $ops_container
       ];
     }
