@@ -41,167 +41,9 @@
          * 3) returns a jsTree core.data callback bound to our API,
          * merging in any mapped URIs (toOpen) first when opening the root node.
          */
-        // function getCoreData(base, rootUri, toOpen=[]) {
-        //   return function (node, callback) {
-        //     const rootId = 'node_root_' + sanitizeForId(rootUri);
-        //     // ---- root‐of‐all pseudo‐node: show only the one root
-        //     if (node.id === '#') {
-        //       // console.log('[repMap] getCoreData: root node requested →', rootUri);
-        //       return callback([{
-        //         id:       rootId,
-        //         text:     extractLabel(rootUri),
-        //         children: true,
-        //         data:     { realUri: rootUri }
-        //       }]);
-        //     }
-
-        //     // ---- special case: expanding the rootUri itself
-        //     if (node.id === rootId) {
-        //       // console.log('[repMap] getCoreData: expanding ROOT, injecting mapped URIs:', toOpen);
-        //       // build mapped‐nodes array:
-        //       const mappedNodes = (toOpen || []).map(u => {
-        //         const nodeId = 'node_' + sanitizeForId(rootUri) + '_' + sanitizeForId(u);
-        //         const label  = extractLabel(u);
-        //         return {
-        //           id:       nodeId,
-        //           // adiciona um span com classe recycle-bin após o label
-        //           text:     `${label} <span class="recycle-bin" title="Remover mapeamento">🗑</span>`,
-        //           children: true,
-        //           data:     { realUri: u }
-        //         };
-        //       });
-
-        //       // now fetch the API children for the same root
-        //       const parentReal = node.data.realUri;
-        //       let uri = parentReal;
-        //       if (!/^https?:\/\//.test(uri)) {
-        //         uri = base.replace(/\/$/, '') + '/' + uri;
-        //       }
-        //       // console.log('[repMap] getCoreData: AJAX fetch children for', uri);
-        //       return $.getJSON(apiEndpoint, { [childParam]: uri })
-        //         // .done(data => {
-        //         //   // console.log('[repMap] getCoreData AJAX done, data:', data);
-        //         //   const apiNodes = $.map(data, item => {
-        //         //     let childUri = item.uri;
-        //         //     if (!/^https?:\/\//.test(childUri)) {
-        //         //       childUri = base.replace(/\/$/, '') + '/' + childUri;
-        //         //     }
-        //         //     const nodeId = 'node_' + sanitizeForId(rootUri) + '_' + sanitizeForId(childUri);
-        //         //     return {
-        //         //       id:       nodeId,
-        //         //       text:     item.label || extractLabel(childUri),
-        //         //       children: true,
-        //         //       data:     { realUri: childUri }
-        //         //     };
-        //         //   });
-        //         //   // merge mapped first, then API
-        //         //   const apiFiltered = apiNodes.filter(n => !toOpen.includes(n.data.realUri));
-        //         //   // e então concatena só os novos
-        //         //   callback(mappedNodes.concat(apiFiltered));
-        //         // })
-        //         .done(data => {
-        //           const apiNodes = $.map(data, item => {
-        //             // monta o URI absoluto
-        //             let childUri = item.uri;
-        //             if (!/^https?:\/\//.test(childUri)) {
-        //               childUri = base.replace(/\/$/, '') + '/' + childUri;
-        //             }
-        //             const nodeId = 'node_' + sanitizeForId(rootUri) + '_' + sanitizeForId(childUri);
-        //             // label base
-        //             const label = item.label || extractLabel(childUri);
-        //             // veja se já estava mapeado
-        //             const isMapped = toOpen.includes(childUri);
-        //             // injete o caixote quando for mapped
-        //             const text = isMapped
-        //               ? `${label} <span class="recycle-bin" title="Remover mapeamento">🗑</span>`
-        //               : label;
-
-        //             return {
-        //               id:       nodeId,
-        //               text,
-        //               children: true,
-        //               data:     { realUri: childUri }
-        //             };
-        //           });
-
-        //           // filtre só os novos e concatene, como antes
-        //           const apiFiltered = apiNodes.filter(n => !toOpen.includes(n.data.realUri));
-        //           callback(mappedNodes.concat(apiFiltered));
-        //         })
-        //         .fail(() => {
-        //           console.error('[repMap] getCoreData AJAX failed for', uri);
-        //           callback(mappedNodes);  // at least show mapped
-        //         });
-        //     }
-
-        //     // ---- all other nodes: just fetch API children
-        //     const parentReal = node.data.realUri;
-        //     let uri = parentReal;
-        //     if (!/^https?:\/\//.test(uri)) {
-        //       uri = base.replace(/\/$/, '') + '/' + parentReal;
-        //     }
-        //     // console.log('[repMap] getCoreData: AJAX fetch children for', uri);
-
-        //     // $.getJSON(apiEndpoint, { [childParam]: uri })
-        //     // .done(data => {
-        //     //   // console.log('[repMap] getCoreData AJAX done, data:', data);
-        //     //   const children = data.map(item => {
-        //     //     // monta o URI absoluto do filho
-        //     //     const real = /^https?:\/\//.test(item.uri)
-        //     //       ? item.uri
-        //     //       : base.replace(/\/$/, '') + '/' + item.uri;
-        //     //     // usa sempre o mesmo padrão de ID para esse realUri
-        //     //     const nodeId = 'node_' + sanitizeForId(parentReal) + '_' + sanitizeForId(real);
-        //     //     return {
-        //     //       id:       nodeId,
-        //     //       text:     item.label || extractLabel(real),
-        //     //       children: true,
-        //     //       data:     { realUri: real }
-        //     //     };
-        //     //   });
-        //     //   callback(children);
-        //     // })
-        //     // .fail(() => {
-        //     //   console.error('[repMap] getCoreData AJAX failed for', uri);
-        //     //   callback([]);
-        //     // });
-        //     // ---- all other nodes: just fetch API children
-        //     $.getJSON(apiEndpoint, { [childParam]: uri })
-        //       .done(data => {
-        //         const children = data.map(item => {
-        //           // 1) monta o URI absoluto
-        //           const real = /^https?:\/\//.test(item.uri)
-        //             ? item.uri
-        //             : base.replace(/\/$/, '') + '/' + item.uri;
-        //           // 2) monta o ID do nó
-        //           const nodeId = 'node_' + sanitizeForId(parentReal) + '_' + sanitizeForId(real);
-        //           // 3) extrai o label
-        //           const label = item.label || extractLabel(real);
-        //           // 4) verifica se já está mapeado
-        //           const isMapped = toOpen.includes(real);
-        //           // 5) injeta o caixote se for mapped
-        //           const text = isMapped
-        //             ? `${label} <span class="recycle-bin" title="Remover mapeamento">🗑</span>`
-        //             : label;
-
-        //           return {
-        //             id:       nodeId,
-        //             text,
-        //             children: true,
-        //             data:     { realUri: real }
-        //           };
-        //         });
-        //         callback(children);
-        //       })
-        //       .fail(() => {
-        //         console.error('[repMap] getCoreData AJAX failed for', uri);
-        //         callback([]);
-        //       });
-        //   };
-        // }
         function getCoreData(base, rootUri, toOpen = []) {
           return function (node, callback) {
-            console.log('=== toOpen para este EP ===', toOpen);
+            // console.log('=== toOpen para este EP ===', toOpen);
             const rootId = 'node_root_' + sanitizeForId(rootUri);
 
             // 1) nó “ # ” → desenha só o root
@@ -222,7 +64,7 @@
                 const label = extractLabel(u);
                 return {
                   id,
-                  text,               // apenas o label
+                  text: label,               // apenas o label
                   children: true,
                   data: {
                     realUri: u,
@@ -236,18 +78,19 @@
 
               // fetch API children do root
               let uri = node.data.realUri;
-              if (!/^https?:\/\//.test(uri)) {
-                uri = base.replace(/\/$/, '') + '/' + uri;
-              }
+              // if (!/^https?:\/\//.test(uri)) {
+              //   uri = base.replace(/\/$/, '') + '/' + uri;
+              // }
               return $.getJSON(apiEndpoint, { [childParam]: uri })
                 .done(data => {
                   const api = data.map(item => {
-                    let real = /^https?:\/\//.test(item.uri)
-                      ? item.uri
-                      : base.replace(/\/$/, '') + '/' + item.uri;
+                    // let real = /^https?:\/\//.test(item.uri)
+                    //   ? item.uri
+                    //   : base.replace(/\/$/, '') + '/' + item.uri;
+                    let real = item.uri;
                     const id    = 'node_' + sanitizeForId(rootUri) + '_' + sanitizeForId(real);
                     const label = item.label || extractLabel(real);
-                    console.log('comparando', real, 'com', toOpen);
+                    // console.log('comparando', real, 'com', toOpen);
                     const text  = label;
                     const isMapped = toOpen.includes(real);
                     return {
@@ -276,16 +119,18 @@
 
             // 3) todos os outros níveis: só API + icon se for mapped
             const parentReal = node.data.realUri;
-            let uri = /^https?:\/\//.test(parentReal)
-              ? parentReal
-              : base.replace(/\/$/, '') + '/' + parentReal;
+            // let uri = /^https?:\/\//.test(parentReal)
+            //   ? parentReal
+            //   : base.replace(/\/$/, '') + '/' + parentReal;
+            let uri = parentReal;
 
             $.getJSON(apiEndpoint, { [childParam]: uri })
               .done(data => {
                 const children = data.map(item => {
-                  let real = /^https?:\/\//.test(item.uri)
-                    ? item.uri
-                    : base.replace(/\/$/, '') + '/' + item.uri;
+                  // let real = /^https?:\/\//.test(item.uri)
+                  //   ? item.uri
+                  //   : base.replace(/\/$/, '') + '/' + item.uri;
+                  let real = item.uri;
                   const id    = 'node_' + sanitizeForId(parentReal) + '_' + sanitizeForId(real);
                   const label = item.label || extractLabel(real);
                   const isMapped = toOpen.includes(real);
@@ -293,7 +138,7 @@
                     ? `${label} <span class="recycle-bin" title="Remover mapeamento">🗑</span>`
                     : label;
 
-                  console.log('node.text para', real || u, '→', text);
+                  // console.log('node.text para', real || u, '→', text);
                   return { id, text, children: true, data: { realUri: real } };
                 });
                 callback(children);
@@ -314,7 +159,7 @@
           if ($el === null || $el === '') return;
 
           // console.log('[repMap] drawTree →', rootUri, toOpen);
-          const base = $nsSelect.find(':selected').data('base-uri') || '';
+          const base = $nsSelect.val() || '';
           // console.log('[repMap] drawTree: using baseUri:', base);
 
           // bind our AJAX + mapped loader
@@ -365,15 +210,6 @@
           const key = o.value;
           const uri = entryConstants[key] || '';
           $(o).attr('data-root-uri', uri);
-        });
-
-        // 6) annotate ontology <option>s with base URIs
-        $('.map-ontology-select option').each((_, o) => {
-          const key = o.value;
-          if (namespaceBaseUris[key]) {
-            const baseUri = namespaceBaseUris[key].replace(/[#\/]+$/, '') + '/';
-            $(o).attr('data-base-uri', baseUri);
-          }
         });
 
         // 7) initialize LEFT tree once
@@ -429,12 +265,12 @@
           .on('click', e => {
             e.preventDefault();
             // console.log('[repMap] Load RIGHT tree');
-            const base  = $nsSelect.find(':selected').data('base-uri') || '';
+            const base = $nsSelect.val() || '';
             const label = $('#edit-custom-root').val().trim();
             if (!label) {
               return alert(Drupal.t('Please enter a class label, e.g. “Agent”.'));
             }
-            const uri = base.replace(/\/$/, '') + '/' + label;
+            const uri = base + label;
             $('#edit-selected-node').val(uri);
             drawTree($('#ontology-tree'), uri, []);
           });

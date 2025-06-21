@@ -41,6 +41,7 @@ class MapEntryPointsForm extends FormBase {
     // 1) Services & constants
     $tables     = new Tables(\Drupal::database());
     $namespaces = $tables->getNamespaces();
+
     $reflection = new \ReflectionClass(EntryPoints::class);
     $constants  = $reflection->getConstants();
 
@@ -77,6 +78,8 @@ class MapEntryPointsForm extends FormBase {
     $constant_uri    = $constants[strtoupper($selected_ep_key)];
     $mapped_nodes    = $tables->getMappingsForEntryPoint($constant_uri);
 
+    // dpm($mapped_nodes);
+
 
     // debug temporário
     // \Drupal::logger('rep')->debug('Mapped nodes for @ep: <pre>@nodes</pre>', [
@@ -85,7 +88,8 @@ class MapEntryPointsForm extends FormBase {
     // ]);
 
     // 3) Namespace dropdown options
-    $ns_options  = array_combine(array_keys($namespaces), array_keys($namespaces));
+    $ns_options  = array_combine(array_values($namespaces), array_keys($namespaces));
+
     // preserve current or default to first namespace
     $selected_ns = $form_state->getValue('namespace') ?: '';
     // key($ns_options)
@@ -162,15 +166,6 @@ class MapEntryPointsForm extends FormBase {
       '#attributes'         => ['class' => ['map-ontology-select']],
       '#prefix'             => '<div class="col-md-5">',
       '#suffix'             => '</div>',
-      '#options_attributes' => (function () use ($namespaces) {
-        $attrs = [];
-        foreach ($namespaces as $prefix => $base_uri) {
-          $attrs[$prefix] = [
-            'data-base-uri' => rtrim($base_uri, '#/') . '/',
-          ];
-        }
-        return $attrs;
-      })(),
     ];
     // b) Entry-point textfield (3 cols)
     $form['row']['right_col']['custom_root'] = [
