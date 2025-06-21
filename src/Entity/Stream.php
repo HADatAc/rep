@@ -384,7 +384,7 @@ class Stream {
         . '</a>';
       }
 
-      if (isset($element->hasTopicStatus) && $element->hasTopicStatus === HASCO::SUSPENDED) {
+      if (isset($element->hasTopicStatus) && ($element->hasTopicStatus === HASCO::SUSPENDED || $element->hasTopicStatus === HASCO::RECORDING || $element->hasTopicStatus === HASCO::INGESTING)) {
         $ops_html[] = ' |&nbsp;&nbsp;';
       }
 
