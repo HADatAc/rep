@@ -1108,3 +1108,10 @@ body.path-rep table tr th
 body.path-rep table tr th {
   text-align: center;
 }
+
+
+#message-stream-table { display: flex; flex-direction: column; align-items: center;justify-content: center;height: 100%;}
+
+body.path-sem div.details-wrapper {
+  max-width: 95%;
+}
