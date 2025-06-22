@@ -1645,6 +1645,24 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // GET     /hascoapi/api/dataacquisition/bytopic/:uri/:pageSize/:offset                org.hascoapi.console.controllers.restapi.DAAPI.findDAsByStreamTopic(uri: String, pageSize : Integer, offset : Integer)
+  public function getDAsByStreamTopic($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/dataacquisition/bytopic/".rawurlencode($uri)."/".$pageSize."/".$offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/dataacquisition/bytopic/total/:uri                            org.hascoapi.console.controllers.restapi.DAAPI.findTotalDAsByStreamTopic(uri: String)
+  public function getTotalDAsByStreamTopic($uri) {
+    $endpoint = "/hascoapi/api/dataacquisition/bytopic/total/".rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**
    *   STUDY
    */
