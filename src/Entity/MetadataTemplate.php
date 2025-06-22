@@ -93,10 +93,10 @@ class MetadataTemplate
     $header['element_filename'] = t('FileName');
 
     if ($streamType == 'files') {
-      $header['element_messages_total'] = t('Data Points');
+      $header['element_messages_datapoints'] = t('Data Points');
     } else {
-      $header['element_messages_total'] = t('Total Messages');
-      $header['element_messages_ingested'] = t('Ingested Messages');
+      $header['element_messages_recorded_messages'] = t('Recorded Messages');
+      $header['element_messages_data_points'] = t('Data Points');
     }
 
     $header['element_status'] = t('Status');
@@ -608,10 +608,10 @@ class MetadataTemplate
       $output[$element->uri] = [];
       $output[$element->uri]['element_filename'] = t('<span style="display: inline-block; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>');
       if ($streamType == 'files') {
-        $output[$element->uri]['element_messages_total'] = isset($element->numberDataPoints) ? $element->numberDataPoints : 0;
+        $output[$element->uri]['element_messages_datapoints'] = isset($element->hasNumberDataPoints) ? $element->hasNumberDataPoints : 0;
       } else {
-        $output[$element->uri]['element_messages_total'] = isset($element->totalMessages) ? $element->totalMessages : 0;
-        $output[$element->uri]['element_messages_ingested'] = isset($element->ingestedMessages) ? $element->ingestedMessages : 0;
+        $output[$element->uri]['element_messages_recorded_messages'] = isset($element->hasTotalRecordedMessages) ? $element->hasTotalRecordedMessages : 0;
+        $output[$element->uri]['element_messages_data_points'] = isset($element->hasNumberDataPoints ) ? $element->hasNumberDataPoints  : 0;
       }
 
       $output[$element->uri]['element_status'] = t($filestatus);

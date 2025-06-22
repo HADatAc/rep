@@ -51,19 +51,20 @@ class Stream {
       'element_sdd'        => t('SDD'),
       'element_pattern'    => t('Pattern'),
       'element_source'     => t('Source'),
+      'element_data_points'=> t('Data Points'),
       'element_operations' => t('Operations'),
     ];
   }
 
-  public static function generateHeaderTopic()
-  {
+  public static function generateHeaderTopic() {
     return [
       // coluna de seleção sem título
       'element_select'     => ['data' => t(''), 'class' => ['text-center']],
       'element_uri'        => ['data' => t('URI'), 'class' => ['text-center']],
       'element_name'       => ['data' => t('Name'), 'class' => ['text-center']],
       'element_deployment' => ['data' => t('Deployment'), 'class' => ['text-center']],
-      'element_sdd'        => ['data' => t('SDD'),        'class' => ['text-center']],
+      'element_sdd'        => ['data' => t('SDD'), 'class' => ['text-center']],
+      'element_received'   => ['data' => t('Total messages'), 'class' => ['text-center']],
       'element_status'     => ['data' => t('Status'), 'class' => ['text-center']],
       'element_operations' => ['data' => t('Operations'), 'class' => ['text-center']],
     ];
@@ -274,6 +275,7 @@ class Stream {
         'element_sdd'        => $sdd ?? '-',
         'element_pattern'    => $pattern,
         'element_source'     => $source,
+        'element_data_points' => $element->method === 'files' ? ($element->hasNumberDataPoints ?? 0) : '-',
         'element_operations' => $ops_container,
         '#attributes'        => [
           'data-stream-uri' => $safe_key,
@@ -455,6 +457,7 @@ class Stream {
         'element_name'       => ['data' => $element->label, 'class'=> ['text-center align-middle text-bold']],
         'element_deployment' => $deployment,
         'element_sdd'        => $sdd,
+        'element_received'   => ['data' => $element->hasTotalReceivedMessages ?? 0, 'class' => ['text-center']],
         'element_status'     => ['data' => UTILS::plainStatus($element->hasTopicStatus), 'class'=> ['text-center align-middle text-bold']],
         'element_operations' => $ops_container
       ];
