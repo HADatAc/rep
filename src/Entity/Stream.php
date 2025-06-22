@@ -262,7 +262,7 @@ class Stream {
 
       $details = '';
       if ($element->method === 'files') {
-        $details .= $deployment . ' ' . $sdd . ' Pattern: <strong>' . $pattern . '</strong>';
+        $details .= '<p style="margin-bottom:0.5rem;">Pattern: <strong>' . $pattern . '</strong></p>' . $deployment . ' ' . $sdd;
       } else {
         $details .= $source;
       }
