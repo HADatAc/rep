@@ -47,11 +47,8 @@ class Stream {
     return [
       'element_uri'        => t('URI'),
       'element_datetime'   => t('Execution Time'),
-      'element_deployment' => t('Deployment'),
-      'element_sdd'        => t('SDD'),
-      'element_pattern'    => t('Pattern'),
-      'element_source'     => t('Source'),
-      'element_data_points'=> t('Data Points'),
+      'element_type'       => t('Type'),
+      'element_details'    => t('Details'),
       'element_operations' => t('Operations'),
     ];
   }
@@ -64,7 +61,7 @@ class Stream {
       'element_name'       => ['data' => t('Name'), 'class' => ['text-center']],
       'element_deployment' => ['data' => t('Deployment'), 'class' => ['text-center']],
       'element_sdd'        => ['data' => t('SDD'), 'class' => ['text-center']],
-      'element_received'   => ['data' => t('Total messages'), 'class' => ['text-center']],
+      'element_received'   => ['data' => t('Received messages'), 'class' => ['text-center']],
       'element_status'     => ['data' => t('Status'), 'class' => ['text-center']],
       'element_operations' => ['data' => t('Operations'), 'class' => ['text-center']],
     ];
@@ -206,11 +203,9 @@ class Stream {
           'deploymenturi' => base64_encode($element->deployment->uri)
         ])->toString();
 
-        $deployment = Markup::create(
-          '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
+        $deployment = '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
             t('Deployment: @label', ['@label' => $element->deployment->label]) .
-          '</a>'
-        );
+          '</a>';
 
         // 7) Build the SDD link as plain HTML.
 
@@ -219,11 +214,9 @@ class Stream {
           'uri' => base64_encode($element->semanticDataDictionary->uri)
         ])->toString();
 
-        $sdd = Markup::create(
-          '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
+        $sdd = '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
             t('SDD: @label', ['@label' => $element->semanticDataDictionary->label]) .
-          '</a>'
-        );
+          '</a>';
       }
 
       // 8) Dataset pattern or fallback.
@@ -267,15 +260,26 @@ class Stream {
       // 11) Wrap all operations into one Markup object.
       $ops_container = Markup::create(implode('', $ops_html));
 
+      $details = '';
+      if ($element->method === 'files') {
+        $details .= $deployment . ' ' . $sdd . ' Pattern: <strong>' . $pattern . '</strong>';
+      } else {
+        $details .= $source;
+      }
+
+      $details = Markup::create($details);
+
       // 12) Assemble and return the row.
       $output[$safe_key] = [
         'element_uri'        => $uri_link,
         'element_datetime'   => $datetime,
-        'element_deployment' => $deployment ?? '-',
-        'element_sdd'        => $sdd ?? '-',
-        'element_pattern'    => $pattern,
-        'element_source'     => $source,
-        'element_data_points' => $element->method === 'files' ? ($element->hasNumberDataPoints ?? 0) : '-',
+        'element_type'       => ucfirst($element->method),
+        'element_details'    => $details,
+        // 'element_deployment' => $deployment ?? '-',
+        // 'element_sdd'        => $sdd ?? '-',
+        // 'element_pattern'    => $pattern,
+        // 'element_source'     => $source,
+        // 'element_data_points' => $element->method === 'files' ? ($element->hasNumberDataPoints ?? 0) : '-',
         'element_operations' => $ops_container,
         '#attributes'        => [
           'data-stream-uri' => $safe_key,

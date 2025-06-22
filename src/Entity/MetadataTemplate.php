@@ -387,7 +387,20 @@ class MetadataTemplate
       return $output;
     }
 
+    $api = \Drupal::service('rep.api_connector');
     foreach ($list as $element) {
+
+      // IF STREAM MESSAGE no operations can be made if topic is recording
+      $bto_active = true;
+      if (isset($element->hasDataFile->streamTopicUri) && $element->hasDataFile->streamTopicUri !== NULL) {
+        $streamTopic = $api->parseObjectResponse(
+          $api->getUri($element->hasDataFile->streamTopicUri),
+          'getUri'
+        );
+
+        if ($streamTopic !== NULL && $streamTopic->hasTopicStatus === HASCO::RECORDING)
+            $bto_active = false;
+      }
 
       $uri = ' ';
       if ($element->uri != NULL) {
@@ -444,8 +457,6 @@ class MetadataTemplate
           $log = '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm read-button" ' .
             'data-dialog-type="modal" ' .
             'data-dialog-options=\'{"width": 700}\' role="button">Read</a>';
-
-          //$log = '<a href="'.$link.'" class="btn btn-primary btn-sm" role="button">Read</a>';
         }
         $downloadLink = '';
         if ($element->hasDataFile->id != NULL && $element->hasDataFile->id != '') {
@@ -461,7 +472,6 @@ class MetadataTemplate
       // dpm($element->streamUri);
       if ($element->streamUri !== null) {
         $stream = array();
-        $api = \Drupal::service('rep.api_connector');
         $strRawResponse = $api->getUri($element->streamUri);
         $strObj = json_decode($strRawResponse);
         if ($strObj->isSuccessful) {
@@ -545,7 +555,7 @@ class MetadataTemplate
           $view_da
         )->toRenderable();
         $uningest_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
+          'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''), (!$bto_active ? 'disabled' : '')],
         ];
       }
 
@@ -556,7 +566,7 @@ class MetadataTemplate
           <button
             type="button"
             '.($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED ? 'disabled' : '').'
-            class="btn btn-sm btn-secondary ingest-button"
+            class="btn btn-sm btn-secondary ingest-button '.(!$bto_active ? 'disabled' : '').'"
             data-elementuri="' . $encoded . '"
             title="' . t('Ingest the file') . '">
             <i class="fa-solid fa-down-long"></i>
@@ -570,7 +580,7 @@ class MetadataTemplate
           <button
             type="button"
             '.($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : '').'
-            class="btn btn-sm btn-secondary uningest-button"
+            class="btn btn-sm btn-secondary uningest-button '.(!$bto_active ? 'disabled' : '').'"
             data-elementuri="' . $encoded . '"
             title="' . t('Uningest the file') . '">
             <i class="fa-solid fa-up-long"></i>
@@ -583,6 +593,7 @@ class MetadataTemplate
         '#title' => Markup::create('<i class="fa-solid fa-download"></i>'),
         '#url' => Url::fromUserInput('#', [
           'attributes' => [
+            'class' => [(!$bto_active ? 'disabled' : '')],
             'title' => t('Download file'),
             'data-download-url' => $download_da,
           ],
