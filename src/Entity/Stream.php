@@ -412,20 +412,21 @@ class Stream {
       }
 
       // INGEST
-      if (isset($element->hasTopicStatus) && $element->hasTopicStatus === HASCO::SUSPENDED) {
-        $record_ingest_url = Url::fromRoute('dpl.stream_topic_status', [
-          'topicuri'  => base64_encode($element->uri),
-          'status'  => base64_encode(HASCO::INGESTING),
-        ])->toString();
+      // SHOW AFTER PRESENTATION ONLY
+      // if (isset($element->hasTopicStatus) && $element->hasTopicStatus === HASCO::SUSPENDED) {
+      //   $record_ingest_url = Url::fromRoute('dpl.stream_topic_status', [
+      //     'topicuri'  => base64_encode($element->uri),
+      //     'status'  => base64_encode(HASCO::INGESTING),
+      //   ])->toString();
 
-        $ops_html[] = '<a href="#"
-          class="btn btn-sm btn-primary me-1 stream-topic-ingest disabled"
-          data-url="' . $record_ingest_url . '"
-          data-stream-uri="' . base64_encode($element->streamUri) . '"
-          title="Ingest">'
-          . '<i class="fa-solid fa-compact-disc disabled"></i>'
-          . '</a>';
-      }
+      //   $ops_html[] = '<a href="#"
+      //     class="btn btn-sm btn-primary me-1 stream-topic-ingest disabled"
+      //     data-url="' . $record_ingest_url . '"
+      //     data-stream-uri="' . base64_encode($element->streamUri) . '"
+      //     title="Ingest">'
+      //     . '<i class="fa-solid fa-compact-disc disabled"></i>'
+      //     . '</a>';
+      // }
 
       // SUSPEND
       if (isset($element->hasTopicStatus) && ($element->hasTopicStatus === HASCO::RECORDING || $element->hasTopicStatus === HASCO::INGESTING)) {
