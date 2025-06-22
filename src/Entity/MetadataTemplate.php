@@ -616,6 +616,7 @@ class MetadataTemplate
 
 
       // Adicionar todos os links concatenados ao campo `element_operations`
+      // dpm($element);
       $output[$element->uri] = [];
       $output[$element->uri]['element_filename'] = t('<span style="display: inline-block; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>');
       if ($streamType == 'files') {
