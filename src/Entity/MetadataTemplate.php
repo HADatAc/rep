@@ -392,11 +392,11 @@ class MetadataTemplate
 
       // IF STREAM MESSAGE no operations can be made if topic is recording
       $bto_active = true;
-      if (isset($element->hasDataFile->streamTopicUri) && $element->hasDataFile->streamTopicUri !== NULL) {
+      if ($element->method !== 'files' && $element->hasDataFile->streamTopicUri !== NULL && $element->hasDataFile->streamTopicUri !== '') {
         $streamTopic = $api->parseObjectResponse(
           $api->getUri($element->hasDataFile->streamTopicUri),
           'getUri'
-        );
+        ) ?? NULL;
 
         if ($streamTopic !== NULL && $streamTopic->hasTopicStatus === HASCO::RECORDING)
             $bto_active = false;
