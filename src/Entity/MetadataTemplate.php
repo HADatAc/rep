@@ -270,9 +270,6 @@ class MetadataTemplate
           'currenturl' => $previousUrl,
         ]);
 
-        // Criar os links adicionais
-        // Verificar se $view_da, $edit_da, $delete_da, $download_da são URLs válidas
-
         $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<nolink>');
         $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<nolink>');
         $ingest_da = $ingest_da instanceof Url ? $ingest_da : Url::fromRoute('<nolink>');
@@ -298,7 +295,7 @@ class MetadataTemplate
           ];
         }
 
-        // Dete button
+        // Delete button
         $data_url = $delete_da instanceof Url ? $delete_da->toString() : '#';
 
         if ($element->hasSIRManagerEmail === $useremail) {
@@ -350,7 +347,6 @@ class MetadataTemplate
           ],
         ];
 
-        // Concatenar os links como HTML
         $links = [
           // \Drupal::service('renderer')->render($view_bto),
           // \Drupal::service('renderer')->render($edit_bto),
@@ -360,7 +356,6 @@ class MetadataTemplate
           \Drupal::service('renderer')->render($delete_bto),
         ];
 
-        // Adicionar todos os links concatenados ao campo `element_operations`
         $output[$element->uri] = [
           'element_filename' => t('<span style="display: inline-block; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>'),
           // 'element_stream' => t('<span style="display: inline-block; max-width: 30ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">' . (isset($stream) ? $stream->datasetPattern : '-') . '</span>'),
@@ -512,9 +507,6 @@ class MetadataTemplate
         'currenturl' => $previousUrl,
       ]);
 
-      // Criar os links adicionais
-      // Verificar se $view_da, $edit_da, $delete_da, $download_da são URLs válidas
-
       $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<nolink>');
       $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<nolink>');
       $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<nolink>');
@@ -538,7 +530,7 @@ class MetadataTemplate
         ];
       }
 
-      // Dete button
+      // Delete button
       $data_url = $delete_da instanceof Url ? $delete_da->toString() : '#';
 
       if ($element->hasSIRManagerEmail === $useremail) {
@@ -603,8 +595,6 @@ class MetadataTemplate
         ],
       ];
 
-
-      // Concatenar os links como HTML
       $links = [
         // \Drupal::service('renderer')->render($view_bto),
         // \Drupal::service('renderer')->render($edit_bto),
@@ -614,8 +604,6 @@ class MetadataTemplate
         \Drupal::service('renderer')->render($delete_bto),
       ];
 
-
-      // Adicionar todos os links concatenados ao campo `element_operations`
       // dpm($element);
       $output[$element->uri] = [];
       $output[$element->uri]['element_filename'] = t('<span style="display: inline-block; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>');
