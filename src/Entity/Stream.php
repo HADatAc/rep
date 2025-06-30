@@ -63,8 +63,8 @@ class Stream {
     ];
   }
 
-  public static function generateHeaderTopic() {
-    return [
+  public static function generateHeaderTopic($hideOperations = false) {
+    $header = [
       // coluna de seleção sem título
       'element_select'     => ['data' => t(''), 'class' => ['text-center']],
       'element_uri'        => ['data' => t('URI'), 'class' => ['text-center']],
@@ -73,8 +73,13 @@ class Stream {
       'element_sdd'        => ['data' => t('SDD'), 'class' => ['text-center']],
       'element_received'   => ['data' => t('Received messages'), 'class' => ['text-center']],
       'element_status'     => ['data' => t('Status'), 'class' => ['text-center']],
-      'element_operations' => ['data' => t('Operations'), 'class' => ['text-center']],
     ];
+
+    if (!$hideOperations) {
+      $header['element_operations'] = ['data' => t('Operations'), 'class' => ['text-center']];
+    }
+
+    return $header;
   }
 
   public static function generateOutput($list) {
@@ -426,7 +431,7 @@ class Stream {
     return $output;
   }
 
-  public static function generateOutputTopic(array $list, $streamUri) {
+  public static function generateOutputTopic(array $list, $streamUri, $selectType = 'radio', $hideOperations = false) {
     $output   = [];
     // Site base URL, e.g. https://example.com
     $root_url = \Drupal::request()->getBaseUrl();
@@ -594,17 +599,31 @@ class Stream {
         'value="' . $safe_key . '" />'
       );
 
+      $checkbox = Markup::create(
+        '<input'
+        . ' type="checkbox"'
+        . ' name="topicSelect[]"'
+        . ' class="topic-checkbox form-check-input"'
+        . ' value="' . $safe_key . '"'
+        . ' />'
+      );
+
       // 12) Assemble and return the row.
       $output[$safe_key] = [
-        'element_select'     => ['data' => $radio, 'class'=> ['text-center']],
+        'element_select' => $selectType === 'radio'
+          ? ['data' => $radio, 'class' => ['text-center']]
+          : ['data' => $checkbox, 'class' => ['text-center']],
         'element_uri'        => ['data' => t('<a target="_blank" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($element->uri).'">'.UTILS::namespaceUri($element->uri).'</a>'), 'class'=> ['text-center align-middle']],
         'element_name'       => ['data' => $element->label, 'class'=> ['text-center align-middle text-bold']],
         'element_deployment' => $deployment,
         'element_sdd'        => $sdd,
         'element_received'   => ['data' => $element->hasTotalReceivedMessages ?? 0, 'class' => ['text-center']],
         'element_status'     => ['data' => UTILS::plainStatus($element->hasTopicStatus), 'class'=> ['text-center align-middle text-bold']],
-        'element_operations' => $ops_container
       ];
+
+      if (!$hideOperations) {
+        $output[$safe_key]['element_operations'] = $ops_container;
+      }
     }
     return $output;
   }
