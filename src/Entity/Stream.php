@@ -53,6 +53,16 @@ class Stream {
     ];
   }
 
+  public static function generateHeaderOutStream() {
+    return [
+      'element_uri'        => t('URI'),
+      'element_datetime'   => t('Execution Time'),
+      'element_type'       => t('Type'),
+      'element_details'    => t('Details'),
+      'element_operations' => t('Operations'),
+    ];
+  }
+
   public static function generateHeaderTopic() {
     return [
       // coluna de seleção sem título
@@ -168,6 +178,131 @@ class Stream {
   public static function generateOutputStudy(array $list) {
     $output   = [];
     // Site base URL, e.g. https://example.com
+    $root_url = \Drupal::request()->getBaseUrl();
+    // Current user’s email for permission checks.
+    $useremail = \Drupal::currentUser()->getEmail();
+
+    foreach ($list as $element) {
+      // 1) Row key: base64 of the raw URI.
+      $safe_key = base64_encode($element->uri);
+
+      // 2) Namespaced display of the element URI.
+      $display_uri = Utils::namespaceUri($element->uri);
+      // 3) Build the URL string to your describe-page.
+      $describe_path = '/rep/uri/' . base64_encode($element->uri);
+      $describe_url  = $root_url . $describe_path;
+      // 4) Wrap it in a safe <a> tag.
+      $uri_link = Markup::create('<a href="' . $describe_url . '">' . $display_uri . '</a>');
+
+      // 5) Format the execution timestamp, if provided.
+      $datetime = '';
+      if (!empty($element->startedAt)) {
+        $dt = new \DateTime($element->startedAt);
+        // Example: "May 26, 2025 at 3:15 PM"
+        $datetime = $dt->format('F j, Y \a\t g:i A');
+      }
+
+      // 6) Deployment label, or blank.
+      $uid = \Drupal::currentUser()->id();
+      $previousUrl = \Drupal::request()->getRequestUri();
+      Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
+
+      // $deployment = $element->deployment->label ?? '';
+      if ($element->method === 'files') {
+        $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
+          'deploymenturi' => base64_encode($element->deployment->uri)
+        ])->toString();
+
+        $deployment = '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
+            t('Deployment: @label', ['@label' => $element->deployment->label]) .
+          '</a>';
+
+        // 7) Build the SDD link as plain HTML.
+
+        $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
+          'state' => 'basic',
+          'uri' => base64_encode($element->semanticDataDictionary->uri)
+        ])->toString();
+
+        $sdd = '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
+            t('SDD: @label', ['@label' => $element->semanticDataDictionary->label]) .
+          '</a>';
+      }
+
+      // 8) Dataset pattern or fallback.
+      $pattern = $element->datasetPattern ?? '-';
+
+      // 9) Source description.
+      if ($element->method === 'files') {
+        $source = t('Files');
+      }
+      else {
+        $source = !empty($element->messageProtocol)
+          ? $element->messageProtocol . ' ' . t('messages')
+          : t('Messages');
+        if (!empty($element->messageIP)) {
+          $source .= ' @' . $element->messageIP;
+        }
+        if (!empty($element->messagePort)) {
+          $source .= ':' . $element->messagePort;
+        }
+      }
+
+      // 10) Build operation buttons as HTML fragments.
+      $ops_html = [];
+
+      // 10a) VIEW button (always allowed).
+      $view_url = Url::fromRoute('rep.describe_element', [
+        'elementuri'   => base64_encode($element->uri),
+        'previousurl'  => base64_encode(Url::fromRoute('std.manage_study_elements', [
+          'studyuri' => base64_encode($element->uri),
+        ])->toString()),
+        'currentroute' => 'rep.describe_element',
+        'currenturl'   => base64_encode(Url::fromRoute('rep.describe_element', [
+          'elementuri' => base64_encode($element->uri),
+        ])->toString()),
+      ])->toString();
+
+      $ops_html[] = '<a href="' . $view_url . '" target="_new" class="btn btn-sm btn-secondary me-1" alt="Expose Stream" title="Expose Stream">'
+                  . '<i class="fa-solid fa-hexagon-nodes"></i>'
+                  . '</a>';
+
+      // 11) Wrap all operations into one Markup object.
+      $ops_container = Markup::create(implode('', $ops_html));
+
+      $details = '';
+      if ($element->method === 'files') {
+        $details .= '<p style="margin-bottom:0.5rem;">Pattern: <strong>' . $pattern . '</strong></p>' . $deployment . ' ' . $sdd;
+      } else {
+        $details .= $source;
+      }
+
+      $details = Markup::create($details);
+
+      // 12) Assemble and return the row.
+      $output[$safe_key] = [
+        'element_uri'        => $uri_link,
+        'element_datetime'   => $datetime,
+        'element_type'       => ucfirst($element->method),
+        'element_details'    => $details,
+        // 'element_deployment' => $deployment ?? '-',
+        // 'element_sdd'        => $sdd ?? '-',
+        // 'element_pattern'    => $pattern,
+        // 'element_source'     => $source,
+        // 'element_data_points' => $element->method === 'files' ? ($element->hasNumberDataPoints ?? 0) : '-',
+        'element_operations' => $ops_container,
+        '#attributes'        => [
+          'data-stream-uri' => $safe_key,
+        ],
+      ];
+
+    }
+
+    return $output;
+  }
+
+  public static function generateOutputStream(array $list) {
+    $output   = [];
     $root_url = \Drupal::request()->getBaseUrl();
     // Current user’s email for permission checks.
     $useremail = \Drupal::currentUser()->getEmail();
