@@ -506,6 +506,7 @@ class Stream {
           class="btn btn-sm btn-green me-1 stream-topic-subscribe"
           data-url="' . $subscribe_url . '"
           data-stream-uri="' . base64_encode($element->streamUri) . '"
+          data-topic-uri="' . base64_encode($element->uri) . '"
           title="Subscribe">'
         . '<i class="fa-solid fa-gears"></i>'
         . '</a>';
@@ -521,6 +522,7 @@ class Stream {
           class="btn btn-sm btn-danger me-1 stream-topic-unsubscribe"
           data-url="' . $unsubscribe_url . '"
           data-stream-uri="' . base64_encode($element->streamUri) . '"
+          data-topic-uri="' . base64_encode($element->uri) . '"
           title="Unsubscribe">'
         . '<i class="fa-solid fa-ban"></i>'
         . '</a>';
@@ -541,6 +543,7 @@ class Stream {
           class="btn btn-sm btn-danger me-1 stream-topic-record"
           data-url="' . $record_url . '"
           data-stream-uri="' . base64_encode($element->streamUri) . '"
+          data-topic-uri="' . base64_encode($element->uri) . '"
           title="Start Recording">'
           . '<i class="fa-solid fa-record-vinyl"></i>'
           . '</a>';
@@ -574,6 +577,7 @@ class Stream {
           class="btn btn-sm btn-secondary me-1 stream-topic-suspend"
           data-url="' . $suspend_url . '"
           data-stream-uri="' . base64_encode($element->streamUri) . '"
+          data-topic-uri="' . base64_encode($element->uri) . '"
           title="Suspend">'
           . '<i class="fa-solid fa-stop"></i>'
           . '</a>';
