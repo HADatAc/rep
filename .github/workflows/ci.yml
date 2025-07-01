@@ -65,7 +65,7 @@ jobs:
 
       - name: Run Regression Test
         run: |
-          java -cp ".:tests/junit-platform-console-standalone-1.8.2.jar:tests/selenium-java-4.26.0/selenium-java-4.26.0.jar:tests/selenium-java-4.26.0/libs/*:tests" org.junit.platform.console.ConsoleLauncher --select-class "tests.A1.RegressionTEST.java"
+          java -cp ".:tests/junit-platform-console-standalone-1.8.2.jar:tests/selenium-java-4.26.0/selenium-java-4.26.0.jar:tests/selenium-java-4.26.0/libs/*:tests" org.junit.platform.console.ConsoleLauncher --select-class "tests.A1.RegressionTEST"
 
       - name: Notify on failure
         if: failure()
