@@ -21,6 +21,7 @@ public abstract class BaseDelete {
     protected final Map<String, Boolean> selectedRows = new HashMap<>();
     protected static final int MAX_ATTEMPTS = 10;
     protected static final int WAIT_INTERVAL_MS = 10000;
+    String ip = "108.129.120.74";
 
     public BaseDelete() {
         ChromeOptions options = new ChromeOptions();
@@ -39,7 +40,7 @@ public abstract class BaseDelete {
     }
 
     protected void login() {
-        driver.get("http://localhost/user/login");
+        driver.get("http://"+ip+"/user/login");
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
         driver.findElement(By.id("edit-submit")).click();
@@ -48,7 +49,7 @@ public abstract class BaseDelete {
     }
 
     protected void deleteFile(String type, String fileName) throws InterruptedException {
-        driver.get("http://localhost/rep/select/mt/" + type + "/table/1/9/none");
+        driver.get("http://"+ip+"/rep/select/mt/" + type + "/table/1/9/none");
 
         try {
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
@@ -138,7 +139,7 @@ public abstract class BaseDelete {
         assertEquals(false, stillExists, "File '" + fileName + "' was not deleted.");
     }
     protected void deleteAllFiles(String type) throws InterruptedException {
-        driver.get("http://localhost/rep/select/mt/" + type + "/table/1/9/none");
+        driver.get("http://"+ip+"/rep/select/mt/" + type + "/table/1/9/none");
 
         try {
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));

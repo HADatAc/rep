@@ -22,6 +22,7 @@ public abstract class BaseIngest {
     protected final Map<String, Boolean> selectedRows = new HashMap<>();
     protected static final int MAX_ATTEMPTS = 10;
     protected static final int WAIT_INTERVAL_MS = 30000;
+    String ip = "108.129.120.74";
 
     @BeforeAll
     void setup() {
@@ -37,7 +38,7 @@ public abstract class BaseIngest {
         driver.manage().window().maximize();
         wait = new WebDriverWait(driver, Duration.ofSeconds(15));
 
-        driver.get("http://localhost/user/login");
+        driver.get("http://"+ip+"/user/login");
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
         driver.findElement(By.id("edit-submit")).click();
@@ -47,7 +48,7 @@ public abstract class BaseIngest {
     }
 
     protected void ingestFile(String type) throws InterruptedException {
-        driver.get("http://localhost/rep/select/mt/" + type + "/table/1/9/none");
+        driver.get("http://"+ip+"/rep/select/mt/" + type + "/table/1/9/none");
         Thread.sleep(2000); // Wait for UI to update
         System.out.println("Ingesting files of type: " + type);
         try {

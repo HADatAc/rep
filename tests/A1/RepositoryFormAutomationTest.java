@@ -14,7 +14,7 @@ public class RepositoryFormAutomationTest {
 
     WebDriver driver;
     WebDriverWait wait;
-
+    String ip = "108.129.120.74";
     @BeforeEach
     void setup() {
         ChromeOptions options = new ChromeOptions();
@@ -28,7 +28,7 @@ public class RepositoryFormAutomationTest {
         driver.manage().window().maximize();
         wait = new WebDriverWait(driver, Duration.ofSeconds(30));
 
-        driver.get("http://localhost/user/login");
+        driver.get("http://"+ip+"/user/login");
 
         // Wait for the username field to appear before typing
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
@@ -51,7 +51,7 @@ public class RepositoryFormAutomationTest {
 
     @Test
     void testFillRepositoryForm() throws InterruptedException {
-        driver.get("http://localhost/admin/config/rep");
+        driver.get("http://"+ip+"/admin/config/rep");
 
         ensureJwtKeyExists();
 

@@ -16,7 +16,7 @@ public class AdminAuto {
 
     private WebDriver driver;
     private WebDriverWait wait;
-
+    String ip = "108.129.120.74";
     @BeforeAll
     void setup() {
         ChromeOptions options = new ChromeOptions();
@@ -31,7 +31,7 @@ public class AdminAuto {
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
         // Login step
-        driver.get("http://localhost/user/login");
+        driver.get("http://"+ip+"/user/login");
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
         driver.findElement(By.id("edit-submit")).click();
