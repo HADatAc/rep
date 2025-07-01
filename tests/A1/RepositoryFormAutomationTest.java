@@ -24,27 +24,29 @@ public class RepositoryFormAutomationTest {
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
 
-
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         wait = new WebDriverWait(driver, Duration.ofSeconds(30));
 
         driver.get("http://localhost/user/login");
 
+        // Wait for the username field to appear before typing
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
         driver.findElement(By.id("edit-submit")).click();
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.cssSelector("#toolbar-item-user")));
+        // Wait for an element that appears only after login
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 
     @AfterEach
     void teardown() {
         // Uncomment this block to close the browser after each test
-        // if (driver != null) {
-        //     driver.quit();
-        // }
+        if (driver != null) {
+            driver.quit();
+        }
     }
 
     @Test
@@ -61,7 +63,7 @@ public class RepositoryFormAutomationTest {
         wait.until(driver -> findInputByLabel("Repository Short Name (ex. \"ChildFIRST\")") != null);
         WebElement checkbox = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-sagres-conf")));
         ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", checkbox);
-        Thread.sleep(500);  // garante que o scroll terminou
+        Thread.sleep(500);  // ensure that scrolling has finished
 
         if (!checkbox.isSelected()) {
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
@@ -78,7 +80,7 @@ public class RepositoryFormAutomationTest {
         fillInput("Sagres Base URL", "https://52.214.194.214/");
 
         //String ip = "127.0.0.1";
-        String ip = "108.129.120.74"; // IP do servidor de testes
+        String ip = "108.129.120.74"; // IP of the test server
         try {
             ip = InetAddress.getLocalHost().getHostAddress();
             System.out.printf("Local IP detected: %s%n", ip);
@@ -106,7 +108,7 @@ public class RepositoryFormAutomationTest {
                 System.out.println("Final page detected: " + currentUrl);
                 formConfirmed = true;
             } else {
-                // Return to configuration form
+                // Return to the configuration form
                 driver.get("http://localhost/admin/config/rep");
 
                 // Refill Repository Full Name if it's empty
@@ -167,7 +169,7 @@ public class RepositoryFormAutomationTest {
             wait.until(ExpectedConditions.urlContains("/admin/config/system/keys"));
             System.out.println("JWT key created successfully.");
 
-            // Return to configuration form
+            // Return to the configuration form
             driver.get("http://localhost/admin/config/rep");
         } else {
             System.out.println("JWT key 'jwt' already exists.");
