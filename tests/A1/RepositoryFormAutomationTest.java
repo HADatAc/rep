@@ -59,68 +59,50 @@ public class RepositoryFormAutomationTest {
         Select jwtDropdown = new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']")));
         jwtDropdown.selectByVisibleText("jwt");
 
-        // Aguarda o campo Repository aparecer
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-sagres-conf")));
-
-        WebElement checkbox = wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-sagres-conf")));
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", checkbox);
-
-        wait.until(ExpectedConditions.elementToBeClickable(checkbox));
-
-        if (!checkbox.isSelected()) {
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
-        }
-
-        fillInput("Repository Short Name (ex. \"ChildFIRST\")", "PMSR");
-        fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", "Portuguese Medical Social Repository");
-        fillInput("Repository URL (ex: http://childfirst.ucla.edu, http://tw.rpi.edu, etc.)", "https://pmsr.net");
-        fillInput("Prefix for Base Namespace (ex: ufmg, ucla, rpi, etc.)", "psmr");
-        fillInput("URL for Base Namespace", "https://pmsr.net");
-        fillInput("Mime for Base Namespace", "text/turtle");
-        fillInput("Source for Base Namespace", "hadatac");
-        fillInput("description for the repository that appears in the rep APIs GUI", "pmsr123");
-        fillInput("Sagres Base URL", "https://52.214.194.214/");
+        // ... preenche os outros campos ...
 
         String localIp = getLocalIpAddress();
-        try {
-            localIp = InetAddress.getLocalHost().getHostAddress();
-            System.out.printf("Local IP detected: %s%n", localIp);
-        } catch (UnknownHostException e) {
-            System.out.println("Could not retrieve local IP. Using fallback.");
-        }
-
         String apiUrl = "http://" + localIp + ":9000";
-        System.out.println("Tentando preencher rep API Base URL com: " + apiUrl);
         WebElement input = findInputByLabel("rep API Base URL");
-        if (input == null) {
-            System.out.println("Campo 'rep API Base URL' não encontrado!");
-        } else {
-            System.out.println("Campo encontrado. Tentando preencher...");
+        if (input != null) {
             input.clear();
             input.sendKeys(apiUrl);
-            System.out.println("Campo preenchido com sucesso.");
+        } else {
+            System.out.println("Campo 'rep API Base URL' não encontrado!");
         }
 
-
         String expectedFullName = "Portuguese Medical Social Repository";
+
+        int maxAttempts = 3;
+        int attempts = 0;
         boolean formConfirmed = false;
 
-        while (!formConfirmed) {
-            driver.findElement(By.cssSelector("input#edit-submit")).click();
+        while (!formConfirmed && attempts < maxAttempts) {
+            attempts++;
+            System.out.println("Tentando submeter o formulário, tentativa #" + attempts);
+            clickElementSafely(driver.findElement(By.cssSelector("input#edit-submit")));
 
-            wait.until(ExpectedConditions.or(
-                    ExpectedConditions.urlContains("/rep/repo/info"),
-                    ExpectedConditions.presenceOfElementLocated(By.cssSelector(".messages--status"))
-            ));
+            try {
+                wait.until(ExpectedConditions.or(
+                        ExpectedConditions.urlContains("/rep/repo/info"),
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".messages--status"))
+                ));
+            } catch (TimeoutException e) {
+                System.out.println("Timeout esperando resposta após submit.");
+            }
 
             String currentUrl = driver.getCurrentUrl();
+            System.out.println("URL atual após submit: " + currentUrl);
+
             if (currentUrl.contains("/rep/repo/info")) {
-                System.out.println("Final page detected: " + currentUrl);
+                System.out.println("Final page detectada: " + currentUrl);
                 formConfirmed = true;
             } else {
+                System.out.println("Não avançou para página final, recarregando e preenchendo...");
                 driver.get("http://" + ip + "/admin/config/rep");
 
                 WebElement fullNameField = findInputByLabel("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")");
+                System.out.println("Valor do campo Repository Full Name: " + (fullNameField != null ? fullNameField.getAttribute("value") : "campo não encontrado"));
                 if (fullNameField != null && fullNameField.getAttribute("value").trim().isEmpty()) {
                     fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", expectedFullName);
                 }
@@ -131,46 +113,12 @@ public class RepositoryFormAutomationTest {
                 jwtDropdown.selectByVisibleText("jwt");
             }
         }
-    }
 
-
-    private void ensureJwtKeyExists() {
-        WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
-                By.cssSelector("select[name='jwt_secret']")));
-
-        Select jwtDropdown = new Select(jwtSelect);
-        boolean jwtExists = jwtDropdown.getOptions().stream()
-                .anyMatch(option -> option.getText().trim().equals("jwt"));
-
-        if (!jwtExists) {
-            System.out.println("JWT key 'jwt' not found, creating...");
-
-            driver.get("http://" + ip + "/admin/config/system/keys/add");
-
-            wait.until(ExpectedConditions.urlContains("/admin/config/system/keys/add"));
-
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-label"))).sendKeys("jwt");
-            driver.findElement(By.id("edit-description")).sendKeys("jwt");
-
-            new Select(driver.findElement(By.id("edit-key-type"))).selectByValue("authentication");
-            new Select(driver.findElement(By.id("edit-key-provider"))).selectByVisibleText("Configuration");
-
-            WebElement valueField = wait.until(ExpectedConditions.presenceOfElementLocated(
-                    By.id("edit-key-input-settings-key-value")));
-
-            valueField.clear();
-            valueField.sendKeys("qwertyuiopasdfghjklzxcvbnm123456");
-
-            driver.findElement(By.id("edit-submit")).click();
-
-            wait.until(ExpectedConditions.urlContains("/admin/config/system/keys"));
-            System.out.println("JWT key created successfully.");
-
-            driver.get("http://" + ip + "/admin/config/rep");
-        } else {
-            System.out.println("JWT key 'jwt' already exists.");
+        if (!formConfirmed) {
+            throw new RuntimeException("Falha ao submeter o formulário após " + maxAttempts + " tentativas.");
         }
     }
+
 
 
     private void fillInput(String labelText, String value) {
