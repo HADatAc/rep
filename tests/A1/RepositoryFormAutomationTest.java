@@ -49,8 +49,9 @@ public class RepositoryFormAutomationTest {
         }
     }
 
+
     @Test
-    void testFillRepositoryForm() throws InterruptedException {
+    void testFillRepositoryForm() {
         driver.get("http://" + ip + "/admin/config/rep");
 
         ensureJwtKeyExists();
@@ -58,14 +59,16 @@ public class RepositoryFormAutomationTest {
         Select jwtDropdown = new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']")));
         jwtDropdown.selectByVisibleText("jwt");
 
-        waitUntilInputVisible("Repository Short Name (ex. \"ChildFIRST\")");
+        // Aguarda o campo Repository aparecer
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-sagres-conf")));
 
-        WebElement checkbox = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-sagres-conf")));
-        scrollIntoView(checkbox);
-        waitABit(500);
+        WebElement checkbox = wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-sagres-conf")));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", checkbox);
+
+        wait.until(ExpectedConditions.elementToBeClickable(checkbox));
 
         if (!checkbox.isSelected()) {
-            clickElementSafely(checkbox);
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
         }
 
         fillInput("Repository Short Name (ex. \"ChildFIRST\")", "PMSR");
@@ -78,7 +81,12 @@ public class RepositoryFormAutomationTest {
         fillInput("description for the repository that appears in the rep APIs GUI", "pmsr123");
         fillInput("Sagres Base URL", "https://52.214.194.214/");
 
-        //String localIp = getLocalIpAddress();
+        try {
+            ip = InetAddress.getLocalHost().getHostAddress();
+            System.out.printf("Local IP detected: %s%n", ip);
+        } catch (UnknownHostException e) {
+            System.out.println("Could not retrieve local IP. Using fallback.");
+        }
 
         String apiUrl = "http://" + ip + ":9000";
         fillInput("rep API Base URL", apiUrl);
@@ -87,8 +95,7 @@ public class RepositoryFormAutomationTest {
         boolean formConfirmed = false;
 
         while (!formConfirmed) {
-            WebElement saveBtn = driver.findElement(By.cssSelector("input#edit-submit"));
-            clickElementSafely(saveBtn);
+            driver.findElement(By.cssSelector("input#edit-submit")).click();
 
             wait.until(ExpectedConditions.or(
                     ExpectedConditions.urlContains("/rep/repo/info"),
@@ -104,16 +111,17 @@ public class RepositoryFormAutomationTest {
 
                 WebElement fullNameField = findInputByLabel("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")");
                 if (fullNameField != null && fullNameField.getAttribute("value").trim().isEmpty()) {
-                    System.out.println("'Repository Full Name' field was empty after saving. Refilling and retrying...");
                     fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", expectedFullName);
                 }
 
                 WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
                         By.cssSelector("select[name='jwt_secret']")));
-                new Select(jwtSelect).selectByVisibleText("jwt");
+                jwtDropdown = new Select(jwtSelect);
+                jwtDropdown.selectByVisibleText("jwt");
             }
         }
     }
+
 
     private void ensureJwtKeyExists() {
         WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
@@ -130,25 +138,19 @@ public class RepositoryFormAutomationTest {
 
             wait.until(ExpectedConditions.urlContains("/admin/config/system/keys/add"));
 
-            WebElement labelField = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-label")));
-            labelField.sendKeys("jwt");
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-label"))).sendKeys("jwt");
+            driver.findElement(By.id("edit-description")).sendKeys("jwt");
 
-            WebElement descField = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-description")));
-            descField.sendKeys("jwt");
+            new Select(driver.findElement(By.id("edit-key-type"))).selectByValue("authentication");
+            new Select(driver.findElement(By.id("edit-key-provider"))).selectByVisibleText("Configuration");
 
-            new Select(wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-key-type"))))
-                    .selectByValue("authentication");
-
-            new Select(wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-key-provider"))))
-                    .selectByVisibleText("Configuration");
-
-            WebElement valueField = wait.until(ExpectedConditions.visibilityOfElementLocated(
+            WebElement valueField = wait.until(ExpectedConditions.presenceOfElementLocated(
                     By.id("edit-key-input-settings-key-value")));
+
             valueField.clear();
             valueField.sendKeys("qwertyuiopasdfghjklzxcvbnm123456");
 
-            WebElement submitButton = wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
-            clickElementSafely(submitButton);
+            driver.findElement(By.id("edit-submit")).click();
 
             wait.until(ExpectedConditions.urlContains("/admin/config/system/keys"));
             System.out.println("JWT key created successfully.");
@@ -158,6 +160,7 @@ public class RepositoryFormAutomationTest {
             System.out.println("JWT key 'jwt' already exists.");
         }
     }
+
 
     private void fillInput(String labelText, String value) {
         WebElement input = findInputByLabel(labelText);
