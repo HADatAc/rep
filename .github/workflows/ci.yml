@@ -30,23 +30,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y wget
-          # Obtém a versão do Chrome instalada para baixar o ChromeDriver compatível
-          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
-          CHROME_MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d '.' -f 1)
-          echo "Detected Chrome version: $CHROME_VERSION"
-          echo "Chrome major version: $CHROME_MAJOR_VERSION"
           
-          # Busca a última versão do ChromeDriver compatível com a versão do Chrome
-          LATEST=$(curl -sSL https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_MAJOR_VERSION)
-          echo "Latest ChromeDriver for Chrome $CHROME_MAJOR_VERSION: $LATEST"
+          # Baixa a última versão estável do ChromeDriver (não depende da versão do Chrome)
+          LATEST=$(curl -sSL https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
+          echo "Latest ChromeDriver version: $LATEST"
           
-          # Baixa o ChromeDriver zip
+          # Baixa o chromedriver.zip
           curl -L -o chromedriver.zip https://chromedriver.storage.googleapis.com/${LATEST}/chromedriver_linux64.zip
           
-          # Extrai o chromedriver usando o 'jar' do Java (sem unzip)
+          # Extrai usando jar (evita unzip)
           jar xf chromedriver.zip
           
-          # Move e configura permissões
+          # Move e dá permissão
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
 
