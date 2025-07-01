@@ -6,6 +6,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 
 public abstract class BaseTest {
 
@@ -14,7 +15,14 @@ public abstract class BaseTest {
     @BeforeEach
     public void setUp() throws InterruptedException {
         System.setProperty("webdriver.chrome.driver", "drivers/chromedriver"); // ajuste o caminho se necessário
-        driver = new ChromeDriver();
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--disable-gpu");
+        options.setBinary("/usr/bin/google-chrome");
+
+        driver = new ChromeDriver(options);
         driver.manage().window().maximize();
 
         login();
