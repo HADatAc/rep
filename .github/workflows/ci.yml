@@ -19,24 +19,20 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Install Chrome 114
+      - name: Install Chrome 138
         run: |
           sudo apt-get update
           sudo apt-get install -y wget
-          wget https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-stable/google-chrome-stable_114.0.5735.133-1_amd64.deb
-          sudo apt install -y --allow-downgrades ./google-chrome-stable_114.0.5735.133-1_amd64.deb
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
 
-
-
-      - name: Download and Install ChromeDriver for Chrome 114
+      - name: Download and Install ChromeDriver for Chrome 138
         run: |
           sudo apt-get install -y unzip
-          wget https://chromedriver.storage.googleapis.com/114.0.5735.16/chromedriver_linux64.zip
+          wget https://chromedriver.storage.googleapis.com/138.0.7204.93/chromedriver_linux64.zip
           unzip chromedriver_linux64.zip
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
-
-
 
       - name: Install Xvfb
         run: sudo apt-get install -y xvfb
