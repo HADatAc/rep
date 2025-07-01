@@ -34,11 +34,13 @@ public abstract class BaseIngest {
         driver.findElement(By.id("edit-submit")).click();
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
+        System.out.println("Logged in successfully.");
     }
 
     protected void ingestFile(String type) throws InterruptedException {
         driver.get("http://localhost/rep/select/mt/" + type + "/table/1/9/none");
         Thread.sleep(2000); // Wait for UI to update
+        System.out.println("Ingesting files of type: " + type);
         try {
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
         } catch (TimeoutException e) {

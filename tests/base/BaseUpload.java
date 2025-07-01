@@ -29,22 +29,25 @@ public abstract class BaseUpload {
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(
                 By.cssSelector("#toolbar-item-user")));
+        System.out.println("Logged in successfully.");
     }
 
     protected void navigateToUploadPage(String type) {
         String url = "http://localhost/rep/manage/addmt/" + type + "/none/F";
         driver.get(url);
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("form")));
+        System.out.println("Navigated to upload page for type: " + type);
     }
 
     protected void fillInputByLabel(String label, String value) {
         WebElement input = driver.findElement(By.xpath("//label[contains(text(),'" + label + "')]/following::input[1]"));
         input.sendKeys(value);
+        System.out.println("Filled input with label '" + label + "' with value: " + value);
     }
 
     protected void uploadFile(File file) {
         assertTrue(file.exists(), "File does not exist at given path: " + file.getAbsolutePath());
-
+        System.out.println("Uploading file: " + file.getAbsolutePath());
         try {
             WebElement fileInput = driver.findElement(By.cssSelector("input[name='files[mt_filename]']"));
             ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", fileInput);
@@ -73,6 +76,7 @@ public abstract class BaseUpload {
         );
 
         assertTrue(confirmationAppeared, "No confirmation message found after upload.");
+        System.out.println("Form submitted successfully and confirmation message appeared.");
     }
 
     /**
