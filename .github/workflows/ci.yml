@@ -36,10 +36,10 @@ jobs:
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
           
-      - name: Download Selenium Java Client
-        run: |
-          curl -L -o selenium-java-4.26.0.zip https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.26.0/selenium-java-4.26.0.zip
-          unzip selenium-java-4.26.0.zip -d tests/selenium-java-4.26.0
+      #- name: Download Selenium standalone jar
+      #  run: |
+      #    curl -L -o selenium-server.jar https://repo1.maven.org/maven2/org/seleniumhq/selenium/selenium-server/latest/selenium-server-latest.jar
+
 
 
 
