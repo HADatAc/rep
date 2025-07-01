@@ -36,9 +36,9 @@ jobs:
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
           
-      #- name: Download Selenium standalone jar
-      #  run: |
-      #    curl -L -o selenium-server.jar https://repo1.maven.org/maven2/org/seleniumhq/selenium/selenium-server/latest/selenium-server-latest.jar
+      - name: Download Selenium standalone jar
+        run: |
+          curl -L -o selenium-server.jar https://repo1.maven.org/maven2/org/seleniumhq/selenium/selenium-server/latest/selenium-server-latest.jar
 
 
 
