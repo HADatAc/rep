@@ -18,6 +18,7 @@ public abstract class BaseTest {
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
+        options.setBinary("/usr/bin/chromium-browser");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
 

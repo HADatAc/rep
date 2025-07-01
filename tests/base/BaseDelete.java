@@ -25,6 +25,7 @@ public abstract class BaseDelete {
     public BaseDelete() {
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
+        options.setBinary("/usr/bin/chromium-browser");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
