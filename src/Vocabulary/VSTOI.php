@@ -2,6 +2,8 @@
 
   namespace Drupal\rep\Vocabulary;
 
+use Drupal\sir\Entity\Instrument;
+
   class VSTOI {
 
     const VSTOI                           = "http://hadatac.org/ont/vstoi#";
@@ -63,15 +65,24 @@
     const OF_PROCESS                      = VSTOI::VSTOI . "ofProcess";
 
     /*
-     * STATUS
+     * SIR/DPL STATUS
      */
 
-    const DRAFT                           = VSTOI::VSTOI . "Draft";
-    const UNDER_REVIEW                    = VSTOI::VSTOI . "UnderReview";
-    const CURRENT                         = VSTOI::VSTOI . "Current";
-    const DEPRECATED                      = VSTOI::VSTOI . "Deprecated";
+    const DRAFT                           = VSTOI::VSTOI . "Draft";         // Cannot be deployed
+    const UNDER_REVIEW                    = VSTOI::VSTOI . "UnderReview";   // Cannot be deployed
+    const CURRENT                         = VSTOI::VSTOI . "Current";       // Undeployed and can be Deployed, not Damaged
+    const DEPRECATED                      = VSTOI::VSTOI . "Deprecated";    // Cannot be deployed
+    const DAMAGED                         = VSTOI::VSTOI . "Damaged";       // Cannot be deployed
+    const DEPLOYED                        = VSTOI::VSTOI . "Deployed";      // Needs to become current before being deprecated or damaged
 
     /*
+     * PERMISSION
+     */
+
+     const PUBLIC                          = VSTOI::VSTOI . "Public";
+     const PRIVATE                         = VSTOI::VSTOI . "Private";
+
+     /*
      *    POSITIONS
      */
 

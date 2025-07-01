@@ -48,6 +48,23 @@
 
   public function buildForm(array $form, FormStateInterface $form_state, $elementuri=NULL){
 
+    $form['#attached']['html_head'][] = [
+      [
+        '#tag' => 'script',
+        '#attributes' => [],
+        '#value' => <<<EOD
+          (function () {
+            // only set once, on the very first load of this popup
+            if (!window.name.startsWith('initialUrl:')) {
+              window.name = 'initialUrl:' + window.location.href;
+            }
+          })();
+        EOD,
+      ],
+      'assoc_project_popup_init',
+    ];
+
+
     // MODAL
     $form['#attached']['library'][] = 'rep/webdoc_modal';
     $form['#attached']['library'][] = 'core/drupal.dialog';
@@ -108,13 +125,18 @@
 
         $prettyName = DescribeForm::prettyProperty($propertyName);
 
-        if ($propertyName !== 'hasImageUri' && $propertyName !== 'hasWebDocument' && $propertyName !== 'hasStatus') {
+        if ($propertyName !== 'hasImageUri'
+            && $propertyName !== 'hasWebDocument'
+            && $propertyName !== 'hasStatus'
+            && $propertyName !== 'hasStreamStatus'
+            ) {
 
           $form[$propertyName] = [
             '#type' => 'markup',
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
           ];
-        } else if ($propertyName === 'hasStatus') {
+        } else if ($propertyName === 'hasStatus'
+        || $propertyName === 'hasStreamStatus') {
           $form[$propertyName] = [
             '#type' => 'markup',
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . Utils::plainStatus($propertyValue). "<br><br>"),
@@ -143,7 +165,7 @@
             ];
             $form['document_link']['link'] = [
               '#type' => 'link',
-              '#title' => $this->t('View associated WebDocument'),
+              '#title' => $this->t('View associated resource'),
               '#url' => \Drupal\Core\Url::fromUri($hasWebDocument),
               '#attributes' => [
                 'class' => ['view-media-link', 'btn', 'btn-primary', 'mb-3'],
@@ -188,15 +210,42 @@
     //     'class' => ['btn', 'btn-primary', 'back-button'],
     //   ],
     // ];
+    // $form['submit'] = [
+    //   '#type' => 'submit',
+    //   '#value' => $this->t('Back'),
+    //   '#name' => 'back',
+    //   '#attributes' => [
+    //     'class' => ['btn', 'btn-primary', 'back-button'],
+    //     'onclick' => 'if(window.opener){ window.opener.focus(); window.close(); return false; } else { return true; }',
+    //   ],
+    // ];
     $form['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Back'),
       '#name' => 'back',
       '#attributes' => [
         'class' => ['btn', 'btn-primary', 'back-button'],
-        'onclick' => 'if(window.opener){ window.opener.focus(); window.close(); return false; } else { return true; }',
+        'onclick' => <<<EOD
+          if (window.opener) {
+            // Pull our initial URL out of window.name
+            var initial = window.name.replace(/^initialUrl:/, '');
+            if (window.location.href !== initial) {
+              // Not on first page yet?  Go back in history.
+              window.history.back();
+            } else {
+              // On first page: focus opener and close us.
+              window.opener.focus();
+              window.close();
+            }
+            return false;
+          }
+          // No opener?  Let the form submit (redirect).
+          return true;
+        EOD,
       ],
     ];
+
+
 
     $form['space'] = [
       '#type' => 'markup',

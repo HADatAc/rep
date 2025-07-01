@@ -14,6 +14,7 @@ use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\Component\Render\Markup;
+use Drupal\Component\Utility\Html;
 
 class Utils {
 
@@ -174,6 +175,9 @@ class Utils {
         break;
       case "stream":
         $short = Constant::PREFIX_STREAM;
+        break;
+      case "streamtopic":
+        $short = Constant::PREFIX_STREAM_TOPIC;
         break;
       case "study":
         $short = Constant::PREFIX_STUDY;
@@ -404,7 +408,7 @@ class Utils {
   public static function link($label,$uri) {
     $root_url = \Drupal::request()->getBaseUrl();
     $uriFinal = Utils::namespaceUri($uri);
-    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'">' . $label . '</a>';
+    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'" rel="noopener">' . $label . '</a>';
     return $link;
   }
 
@@ -611,6 +615,20 @@ class Utils {
       return 'Current';
     } else if ($status == VSTOI::DEPRECATED) {
       return 'Deprecated';
+    } else if ($status == HASCO::DRAFT) {
+      return 'Draft';
+    } else if ($status == HASCO::ACTIVE) {
+      return 'Active';
+    } else if ($status == HASCO::CLOSED) {
+      return 'Closed';
+    } else if ($status == HASCO::INACTIVE) {
+      return 'Inactive';
+    } else if ($status == HASCO::RECORDING) {
+      return 'Recording';
+    } else if ($status == HASCO::INGESTING) {
+      return 'Ingesting';
+    } else if ($status == HASCO::SUSPENDED) {
+      return 'Suspended';
     }
   }
 

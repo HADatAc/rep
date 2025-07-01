@@ -4,78 +4,99 @@ th {
     font-weight: bold;
   }
 
-
-/* LINKS */
-a.btn-danger {
-  background-color: #dc3545 !important; /* Define o vermelho do Bootstrap */
-  color: white !important; /* Garante que o texto fique visível */
-  border-color: #dc3545 !important; /* Garante que a borda também seja vermelha */
-  text-decoration: none !important; /* Remove o sublinhado de links */
+/* BOOTSTRAP */
+.btn-warning {
+    --bs-btn-color: #fff!important;
+    --bs-btn-bg: #ffc107!important;
+    --bs-btn-border-color: #ffc107!important;
+    --bs-btn-hover-color: #000!important;
+    --bs-btn-hover-bg: #ffca2c!important;
+    --bs-btn-hover-border-color: #ffc720!important;
+    --bs-btn-focus-shadow-rgb: 217, 164, 6;
+    --bs-btn-active-color: #000!important;
+    --bs-btn-active-bg: #ffcd39!important;
+    --bs-btn-active-border-color: #ffc720!important;
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: #000!important;
+    --bs-btn-disabled-bg: #ffc107!important;
+    --bs-btn-disabled-border-color: #ffc107!important;
 }
 
-a.btn-danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
+.btn-danger {
+    --bs-btn-color: #fff!important;
+    --bs-btn-bg: #dc3545!important;
+    --bs-btn-border-color: #dc3545!important;
+    --bs-btn-hover-color: #fff!important;
+    --bs-btn-hover-bg: #bb2d3b!important;
+    --bs-btn-hover-border-color: #b02a37!important;
+    --bs-btn-focus-shadow-rgb: 225, 83, 97;
+    --bs-btn-active-color: #000!important;
+    --bs-btn-active-bg: #b02a37!important;
+    --bs-btn-active-border-color: #a52834!important;
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125)!important;
+    --bs-btn-disabled-color: #fff!important;
+    --bs-btn-disabled-bg: #dc3545!important;
+    --bs-btn-disabled-border-color: #dc3545!important;
 }
 
 /* BUTTONS */
 
 button.add-element-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .add-element-button::before {
-  content: "\f067"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f067";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.edit-element-button {
   position: relative;
-  padding-left: 2.1rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.1rem;
 }
 
 .edit-element-button::before {
-  content: "\f044"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 400; /* Necessário para a versão sólida dos ícones */
+  content: "\f044";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 400;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.delete-element-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .delete-element-button::before {
-  content: "\f2ed"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 400; /* Necessário para a versão sólida dos ícones */
+  content: "\f2ed";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 400;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.back-button {
   position: relative;
-  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.3rem;
 }
 
 .back-button::before {
-  content: "\f100"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f100";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -83,219 +104,219 @@ button.back-button {
 a.search-button,
 button.search-button {
   position: relative;
-  padding-left: 2.6rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.6rem;
 }
 
 .search-button::before {
-  content: "\f002"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f002";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.save-button {
   position: relative;
-  padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.2rem;
 }
 
 .save-button::before {
-  content: "\f0c7"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f0c7";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.cancel-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
   background-color: #dc3545;
   border-color: #dc3545;
 }
 
 button.cancel-button:hover {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
   background-color: #c82333;
   border-color: #bd2130;
 }
 
 .cancel-button::before {
-  content: "\f00d"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f00d";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.back_parent-button {
   position: relative;
-  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.3rem;
 }
 
 .back_parent-button::before {
-  content: "\f0e2"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f0e2";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.derive-button {
   position: relative;
-  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.3rem;
 }
 
 .derive-button::before {
-  content: "\f074"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f074";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%) rotate(-90deg);
 }
 
 button.reset-button {
   position: relative;
-  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.3rem;
 }
 
 .reset-button::before {
-  content: "\f51a"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f51a";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.reload-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .reload-button::before {
-  content: "\f021"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f021";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.manage_slotelements-button {
   position: relative;
-  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.3rem;
 }
 
 .manage_slotelements-button::before {
-  content: "\f802"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f802";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.ingest_mt-button {
   position: relative;
-  padding-left: 2.1rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.1rem;
 }
 
 .ingest_mt-button::before {
-  content: "\f019"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f019";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.uningest_mt-element-button {
   position: relative;
-  padding-left: 2.1rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.1rem;
 }
 
 .uningest_mt-element-button::before {
-  content: "\f093"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f093";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.manage_codebookslots-button {
   position: relative;
-  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.3rem;
 }
 
 .manage_codebookslots-button::before {
-  content: "\f0ae"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f0ae";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.manage_annotations-button {
   position: relative;
-  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.3rem;
 }
 
 .manage_annotations-button::before {
-  content: "\f31c"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f31c";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.manage_annotation_placement {
   position: relative;
-  padding-left: 2.3rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.3rem;
 }
 
 .manage_annotation_placement::before {
-  content: "\f658"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f658";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.bookmark-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .bookmark-button::before {
-  content: "\f02e"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f02e";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -303,22 +324,22 @@ button.bookmark-button {
 a.download-button,
 button.download-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .download-button::before {
-  content: "\f56d"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f56d";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.check-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
   background-color: #28a745;
   border-color: #28a745;
 }
@@ -329,131 +350,131 @@ button.check-button:hover {
 }
 
 .check-button::before {
-  content: "\f00c"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f00c";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.close-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .close-button::before {
-  content: "\f057"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f057";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.play-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .play-button::before {
-  content: "\f04b"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f04b";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.stream-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .stream-button::before {
-  content: "\f550"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f550";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.describe-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .describe-button::before {
-  content: "\f1b3"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f1b3";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.card-view-button {
   position: relative;
-  padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.2rem;
 }
 
 .card-view-button::before {
-  content: "\f2bb"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 400; /* Necessário para a versão sólida dos ícones */
+  content: "\f2bb";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 400;
   position: absolute;
-  left: 0.45rem; /* Ajuste conforme necessário */
+  left: 0.45rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.table-view-button {
   position: relative;
-  padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.2rem;
 }
 
 .table-view-button::before {
-  content: "\f03a"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f03a";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.55rem; /* Ajuste conforme necessário */
+  left: 0.55rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.map-view-button {
   position: relative;
-  padding-left: 1.5rem!important; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 1.5rem!important;
 }
 
 .map-view-button::before {
-  content: "\f279"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f279";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.55rem; /* Ajuste conforme necessário */
+  left: 0.55rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.load-more-button {
   position: relative;
-  padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.2rem;
 }
 
 .load-more-button::before {
-  content: "\f110"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f110";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -461,15 +482,15 @@ button.load-more-button {
 a.read-button,
 button.read-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .read-button::before {
-  content: "\f0c6"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f0c6";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -477,15 +498,15 @@ button.read-button {
 a.more-button,
 button.more-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .more-button::before {
-  content: "\f101"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f101";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -493,22 +514,22 @@ button.more-button {
 a.view-button,
 button.view-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 .view-button::before {
-  content: "\f06e"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f06e";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.aprove-button {
   position: relative;
-  padding-left: 2.2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2.2rem;
   color: #fff;
   background-color: #198754;
   border-color: #198754;
@@ -520,41 +541,56 @@ button.aprove-button:hover {
 }
 
 .aprove-button::before {
-  content: "\f00c"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f00c";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.review-element-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 button.review-element-button::before {
-  content: "\f1d8"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f1d8";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 button.generate-ins-element-button {
   position: relative;
-  padding-left: 2rem; /* Ajuste conforme necessário para dar espaço ao ícone */
+  padding-left: 2rem;
 }
 
 button.generate-ins-element-button::before {
-  content: "\f013"; /* Código Unicode do ícone de "plus" do FontAwesome */
-  font-family: "Font Awesome 6 Free"; /* Certifique-se de que está carregando o FontAwesome */
-  font-weight: 900; /* Necessário para a versão sólida dos ícones */
+  content: "\f013";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
   position: absolute;
-  left: 0.75rem; /* Ajuste conforme necessário */
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+button.expose-button {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.expose-button::before {
+  content: "\e699";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -562,7 +598,7 @@ button.generate-ins-element-button::before {
 
 /* TABS */
 .form-control.nav-link {
-  color: rgb(45, 48, 48) !important; /* Define a cor do texto como preto */
+  color: rgb(45, 48, 48) !important;
   border:2px solid #dddddd !important;
   background-color: #57a7d8 !important;
 }
@@ -604,7 +640,9 @@ button.generate-ins-element-button::before {
   border: 0 !important;
 }
 
-
+ul.vertical-tabs__menu {
+  min-width: 250px!important;
+}
 
 /*others*/
 form#edit-mt-form h1,
@@ -613,6 +651,7 @@ form#add-mt-form h1 {margin-top: 1em!important;}
 
 /* STUDYELEMENTS TABLES AND PAGINATION */
 #json-table-pager,
+#json-table-stream-pager,
 #publication-table-pager,
 #media-table-pager {
   display: flex;
@@ -642,6 +681,7 @@ form#add-mt-form h1 {margin-top: 1em!important;}
 }
 
 div#json-table-pager span.current-page,
+div#json-table-stream-pager span.current-page,
 div#publication-table-pager span.current-page,
 div#media-table-pager span.current-page {
   padding: 5px 10px !important;
@@ -669,6 +709,18 @@ div#media-table-pager span.current-page {
 }
 
 /* MODAL DESCRIPTION*/
+.rep-generic-modal {
+  min-width: 1280px!important;
+  margin: auto;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.rep-generic-modal .ui-dialog-titlebar {
+  margin-bottom: 20px;
+}
+
 .modal-dialog-centered {
   display: flex;
   align-items: center;
@@ -680,12 +732,34 @@ div#media-table-pager span.current-page {
   font-weight: 500;
 }
 
+div.details-wrapper [id^="edit-codes-"] .col,
+div.details-wrapper [id^="edit-variables-"] .col{
+  padding: 0 0.1rem 0 0.1rem!important;
+}
+
+div.details-wrapper [id^="edit-codes-"]  .row,
+div.details-wrapper [id^="edit-variables-"] .row {
+  margin-right: 0!important;
+  margin-left: 0!important;
+  padding-right: 0!important;
+  padding-left: 0!important;
+}
+
+div.details-wrapper [id^="edit-codes-"] .col input,
+div.details-wrapper [id^="edit-variables-"] .col input {
+    padding: .375rem .75rem!important;
+}
+
 div.toast {
   position: fixed;
   bottom: 20px;
   right: 20px;
   width: fit-content!important;
   z-index: 99999;
+}
+
+#toast-container {
+  float: right;
 }
 
 /* TREE */
@@ -784,7 +858,7 @@ div.toast {
 
 .ui-dialog {
   width: calc(100% - 30%) !important;
-  left: 25% !important;
+  /* left: 25% !important; */
   right: 25% !important;
   top: 10% !important;
   transform: none !important;
@@ -817,6 +891,10 @@ body.path-rep div.ui-dialog-titlebar {display:none!important;}
 div.vertical-tabs__panes {
   border-left: 1px solid #ccc !important;
   padding-left: 1.5rem!important;
+}
+
+#sdd-tabbed-form-wrapper div.vertical-tabs__panes {
+  width: 89%!important;
 }
 
 li.vertical-tabs__menu-item.is-selected {
@@ -935,6 +1013,11 @@ button.view-active {
   border-radius: 8px !important;
 }
 
+.path-std .card {
+  min-height: 0!important;
+}
+
+
 /* Garante que o corpo e o rodapé do card ocupem espaço adequadamente */
 .card-body {
   flex-grow: 1 !important;
@@ -977,6 +1060,79 @@ button.view-active {
 
 
 /* DASHBOARD PAGE RELATES */
-body.path-rep .card {
+body.path-rep .card,
+body.path-dpl .card {
   min-height: fit-content!important;
 }
+
+span.filename {
+  display: inline-block;
+  max-width: 20ch;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+
+/* PILLS */
+.nav-link.active-dp2 {
+  background-color: var(--bs-nav-link-color)!important;
+  color: var(--bs-nav-pills-link-active-color)!important;
+}
+
+
+/* DATE field */
+#edit-instance-acquisition-date,
+#edit-deployment-end-datetime-date,
+#edit-deployment-end-datetime-time,
+#edit-deployment-start-datetime-date,
+#edit-deployment-start-datetime-time,
+#edit-stream-start-datetime-date,
+#edit-stream-start-datetime-time,
+#edit-stream-end-datetime-date,
+#edit-stream-end-datetime-time {
+  max-width: 9rem!important;
+}
+
+
+#edit-ajax-cards-container {
+    background-color: #cccccc;
+    border-radius: 25px;
+    margin: 25px;
+    width: 98%;
+    padding-bottom: 15px;
+}
+
+
+/* destaca nós mapeados */
+.jstree-anchor.mapped-node {
+  font-weight: bold;
+  color: #0066cc;
+}
+
+/* para todo nó marcado */
+#current-tree .jstree-anchor.mapped-node:after {
+  content: " 🗑";
+  float: right;
+  cursor: pointer;
+}
+/* opcional: hover fica vermelho */
+#current-tree .jstree-anchor.mapped-node:hover:after {
+  color: #c00;
+}
+
+body.path-rep .table>tbody,
+body.path-rep table tr th
+{vertical-align: middle!important;}
+
+body.path-rep table tr th {
+  text-align: center;
+}
+
+
+#message-stream-table { display: flex; flex-direction: column; align-items: center;justify-content: center;height: 100%;}
+
+body.path-sem div.details-wrapper {
+  max-width: 95%;
+}
+

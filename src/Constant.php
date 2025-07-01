@@ -55,6 +55,7 @@ class Constant {
   const PREFIX_STUDY_ROLE                 = "RLE";
   const PREFIX_STR                        = "STR";
   const PREFIX_STREAM                     = "STM";
+  const PREFIX_STREAM_TOPIC               = "STP";
   const PREFIX_SUBCONTAINER               = "SCT";
   const PREFIX_VIRTUAL_COLUMN             = "VCO";
   const PREFIX_TASK                       = "TSK";
