@@ -121,6 +121,45 @@ public class RepositoryFormAutomationTest {
 
 
 
+    private void ensureJwtKeyExists() {
+        WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
+                By.cssSelector("select[name='jwt_secret']")));
+
+        Select jwtDropdown = new Select(jwtSelect);
+        boolean jwtExists = jwtDropdown.getOptions().stream()
+                .anyMatch(option -> option.getText().trim().equals("jwt"));
+
+        if (!jwtExists) {
+            System.out.println("JWT key 'jwt' not found, creating...");
+
+            driver.get("http://" + ip + "/admin/config/system/keys/add");
+
+            wait.until(ExpectedConditions.urlContains("/admin/config/system/keys/add"));
+
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-label"))).sendKeys("jwt");
+            driver.findElement(By.id("edit-description")).sendKeys("jwt");
+
+            new Select(driver.findElement(By.id("edit-key-type"))).selectByValue("authentication");
+            new Select(driver.findElement(By.id("edit-key-provider"))).selectByVisibleText("Configuration");
+
+            WebElement valueField = wait.until(ExpectedConditions.presenceOfElementLocated(
+                    By.id("edit-key-input-settings-key-value")));
+
+            valueField.clear();
+            valueField.sendKeys("qwertyuiopasdfghjklzxcvbnm123456");
+
+            driver.findElement(By.id("edit-submit")).click();
+
+            wait.until(ExpectedConditions.urlContains("/admin/config/system/keys"));
+            System.out.println("JWT key created successfully.");
+
+            driver.get("http://" + ip + "/admin/config/rep");
+        } else {
+            System.out.println("JWT key 'jwt' already exists.");
+        }
+    }
+
+
     private void fillInput(String labelText, String value) {
         WebElement input = findInputByLabel(labelText);
         if (input != null) {
