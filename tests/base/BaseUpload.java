@@ -24,7 +24,6 @@ public abstract class BaseUpload {
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
-        options.setBinary("/usr/bin/google-chrome");
 
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
