@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - stream_topics
+
 jobs:
   run-selenium-tests:
     runs-on: self-hosted
@@ -24,26 +25,16 @@ jobs:
           sudo apt-get install -y wget
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt install -y --allow-downgrades ./google-chrome-stable_current_amd64.deb
-        
+
       - name: Download and Install ChromeDriver
         run: |
           sudo apt-get update
           sudo apt-get install -y unzip wget
-
-          LATEST=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
-          wget https://chromedriver.storage.googleapis.com/${LATEST}/chromedriver_linux64.zip
-          unzip chromedriver_linux64.zip
+          LATEST=$(curl -sSL https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
+          curl -L -o chromedriver.zip https://chromedriver.storage.googleapis.com/${LATEST}/chromedriver_linux64.zip
+          unzip chromedriver.zip
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
-          
-      - name: Download Selenium Java 4.26.0 jars
-        run: |
-          mkdir -p tests/selenium-java-4.26.0
-          curl -L -o tests/selenium-java-4.26.0/selenium-java-4.26.0.zip https://repo1.maven.org/maven2/org/seleniumhq/selenium/selenium-java/4.26.0/selenium-java-4.26.0.zip
-          unzip tests/selenium-java-4.26.0/selenium-java-4.26.0.zip -d tests/selenium-java-4.26.0
-
-
-
 
       - name: Install Xvfb
         run: sudo apt-get install -y xvfb
@@ -57,10 +48,8 @@ jobs:
       - name: Compile all Java test files
         run: |
           find tests/A1 -name "*.java" > sources.txt
-          
-          LIBS=$(find tests/selenium-java-4.26.0/libs -name "*.jar" | tr '\n' ':')
-          CLASSPATH=".:tests/selenium-java-4.26.0/selenium-java-4.26.0.jar:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar"
-          
+          LIBS=$(find tests/selenium-java-4.26.0 -name "*.jar" | tr '\n' ':')
+          CLASSPATH=".:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar"
           javac -cp "$CLASSPATH" @sources.txt
 
       - name: Wait for hascogui to be ready
@@ -72,9 +61,8 @@ jobs:
 
       - name: Run Regression Test
         run: |
-          LIBS=$(find tests/selenium-java-4.26.0/libs -name "*.jar" | tr '\n' ':')
-          CLASSPATH=".:tests/selenium-java-4.26.0/selenium-java-4.26.0.jar:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar:tests"
-          
+          LIBS=$(find tests/selenium-java-4.26.0 -name "*.jar" | tr '\n' ':')
+          CLASSPATH=".:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar:tests"
           java -cp "$CLASSPATH" org.junit.platform.console.ConsoleLauncher --select-class "tests.A1.RegressionTEST"
 
       - name: Notify on failure
@@ -90,13 +78,14 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: message
-            });
+            })
+
       - name: Notify via Slack on failure
         if: failure()
         run: |
-            curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"❌ The tests for the PR #${{ github.event.pull_request.number }} have failed. Author: @${{ github.event.pull_request.user.login }}. Check the details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"❌ The tests for the PR #${{ github.event.pull_request.number }} have failed. Author: @${{ github.event.pull_request.user.login }}. Check the details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack on success
         if: success()
