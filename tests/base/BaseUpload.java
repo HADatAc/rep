@@ -16,7 +16,7 @@ public abstract class BaseUpload {
 
     protected WebDriver driver;
     protected WebDriverWait wait;
-    String ip = "108.129.120.74";
+    String ip = "54.75.120.47";
 
     @BeforeAll
     void setup() {

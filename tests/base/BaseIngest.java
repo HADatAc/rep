@@ -22,7 +22,7 @@ public abstract class BaseIngest {
     protected final Map<String, Boolean> selectedRows = new HashMap<>();
     protected static final int MAX_ATTEMPTS = 10;
     protected static final int WAIT_INTERVAL_MS = 30000;
-    String ip = "108.129.120.74";
+    String ip = "54.75.120.47";
 
     @BeforeAll
     void setup() {

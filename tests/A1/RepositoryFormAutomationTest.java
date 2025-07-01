@@ -14,7 +14,7 @@ public class RepositoryFormAutomationTest {
 
     WebDriver driver;
     WebDriverWait wait;
-    String ip = "108.129.120.74";
+    String ip = "54.75.120.47";
     @BeforeEach
     void setup() {
         ChromeOptions options = new ChromeOptions();

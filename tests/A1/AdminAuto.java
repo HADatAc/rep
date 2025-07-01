@@ -16,7 +16,7 @@ public class AdminAuto {
 
     private WebDriver driver;
     private WebDriverWait wait;
-    String ip = "108.129.120.74";
+    String ip = "54.75.120.47";
     @BeforeAll
     void setup() {
         ChromeOptions options = new ChromeOptions();
