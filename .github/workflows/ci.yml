@@ -19,20 +19,13 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Install Chromium and matching ChromeDriver
+      - name: Install Chromium and ChromeDriver
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser
-          # Remove chromedriver antigo no PATH
-          sudo rm -f /usr/local/bin/chromedriver
-          # Baixa chromedriver versão 138 (exemplo)
-          wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/138.0.7204.92/linux64/chromedriver-linux64.zip
-          unzip chromedriver-linux64.zip
-          sudo mv chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
-          # Verifica versões
+          sudo apt-get install -y chromium-browser chromium-chromedriver
           chromium-browser --version
           chromedriver --version
+
 
 
       - name: Install Xvfb
