@@ -55,7 +55,11 @@ jobs:
       - name: Compile all Java test files
         run: |
           find tests/A1 -name "*.java" > sources.txt
-          javac -cp ".:tests/selenium-java-4.26.0/selenium-java-4.26.0.jar:tests/selenium-java-4.26.0/libs/*:tests/junit-platform-console-standalone-1.8.2.jar" @sources.txt
+          
+          LIBS=$(find tests/selenium-java-4.26.0/libs -name "*.jar" | tr '\n' ':')
+          CLASSPATH=".:tests/selenium-java-4.26.0/selenium-java-4.26.0.jar:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar"
+          
+          javac -cp "$CLASSPATH" @sources.txt
 
       - name: Wait for hascogui to be ready
         run: |
