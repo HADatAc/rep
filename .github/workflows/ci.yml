@@ -19,14 +19,13 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Install latest Chrome stable
+      - name: Install Chromium and ChromiumDriver
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt install -y ./google-chrome-stable_current_amd64.deb
-
-
+          sudo apt-get install -y chromium-browser chromium-chromedriver
+          # Verifica versões instaladas
+          chromium-browser --version
+          chromedriver --version
 
       - name: Install Xvfb
         run: sudo apt-get install -y xvfb
