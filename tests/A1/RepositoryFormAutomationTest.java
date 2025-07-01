@@ -90,7 +90,17 @@ public class RepositoryFormAutomationTest {
         }
 
         String apiUrl = "http://" + localIp + ":9000";
-        fillInput("rep API Base URL", apiUrl);
+        System.out.println("Tentando preencher rep API Base URL com: " + apiUrl);
+        WebElement input = findInputByLabel("rep API Base URL");
+        if (input == null) {
+            System.out.println("Campo 'rep API Base URL' não encontrado!");
+        } else {
+            System.out.println("Campo encontrado. Tentando preencher...");
+            input.clear();
+            input.sendKeys(apiUrl);
+            System.out.println("Campo preenchido com sucesso.");
+        }
+
 
         String expectedFullName = "Portuguese Medical Social Repository";
         boolean formConfirmed = false;
