@@ -38,8 +38,9 @@ jobs:
           
       - name: Download Selenium Java Client
         run: |
-          wget https://repo1.maven.org/maven2/org/seleniumhq/selenium/selenium-java/4.26.0/selenium-java-4.26.0.zip
+          curl -L -o selenium-java-4.26.0.zip https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.26.0/selenium-java-4.26.0.zip
           unzip selenium-java-4.26.0.zip -d tests/selenium-java-4.26.0
+
 
 
       - name: Install Xvfb
