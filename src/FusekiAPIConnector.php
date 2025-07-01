@@ -994,6 +994,15 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // GET /hascoapi/api/process/deletewithtasks/:processUri org.hascoapi.console.controllers.restapi.ProcessAPI.deleteWithTasks(processUri: String)
+  public function processDeleteWithTasks($processUri) {
+    $endpoint = "/hascoapi/api/process/deletewithtasks/".rawurlencode($processUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**
    *    PROJECTS
    */
