@@ -48,7 +48,6 @@ class DeleteElementController extends ControllerBase {
 
   public function exec($elementtype, $elementuri, $currenturl)
 {
-    // Validação inicial
     if ($elementuri === NULL || $currenturl === NULL) {
         $response = new RedirectResponse(Url::fromRoute('rep.home')->toString());
         $response->send();
@@ -58,31 +57,8 @@ class DeleteElementController extends ControllerBase {
     $uri = base64_decode($elementuri);
     $url = base64_decode($currenturl);
 
-    // Identifica o tipo de elemento
     $elementname = 'element';
-    // if ($elementtype === 'da') {
-    //     $elementname = 'DA';
 
-    //     try {
-    //         // DELETE ELEMENT para tipo DA
-    //         $api = \Drupal::service('rep.api_connector');
-    //         $api->elementDel($elementtype, $uri);
-
-    //         // Retorna resposta JSON para DA
-    //         return new \Symfony\Component\HttpFoundation\JsonResponse([
-    //             'status' => 'success',
-    //             'messages' => ['Selected ' . $elementname . ' has/have been deleted successfully.'],
-    //             'errors' => []
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         // Captura erros e retorna JSON para DA
-    //         return new \Symfony\Component\HttpFoundation\JsonResponse([
-    //             'status' => 'error',
-    //             'messages' => [],
-    //             'errors' => ['An error occurred: ' . $e->getMessage()]
-    //         ]);
-    //     }
-    // }
     if ($elementtype === 'da') {
       $elementname = 'DA';
       $file_system = \Drupal::service('file_system');
@@ -94,6 +70,11 @@ class DeleteElementController extends ControllerBase {
         $file_object = $api->parseObjectResponse($api->getUri($uri), 'getUri');
         // Delete element via API
         $api->elementDel($elementtype, $uri);
+
+        // If the element type is 'process', delete it with tasks
+        if ($elementtype === 'process') {
+          $api->processDeleteWithTasks($uri);
+        }
 
         // If the file object is retrieved and contains file data, proceed with deletion
         if ($file_object && isset($file_object->hasDataFile) && isset($file_object->hasDataFile->filename)) {
