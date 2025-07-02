@@ -57,7 +57,8 @@ public class RepositoryFormAutomationTest {
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
-        clickElementRobust(driver.findElement(By.id("edit-submit")));
+        clickElementRobust(By.xpath("//button[text()='Submit']"));
+
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
@@ -120,7 +121,8 @@ public class RepositoryFormAutomationTest {
                     throw new RuntimeException("Botão de envio está desabilitado.");
                 }
 
-                clickElementRobust(submitButton);
+                clickElementRobust(By.xpath("//button[text()='Submit']"));
+
 
                 try {
                     wait.until(ExpectedConditions.or(
@@ -204,7 +206,8 @@ public class RepositoryFormAutomationTest {
             valueField.clear();
             valueField.sendKeys("qwertyuiopasdfghjklzxcvbnm123456");
 
-            clickElementRobust(driver.findElement(By.id("edit-submit")));
+            clickElementRobust(By.xpath("//button[text()='Submit']"));
+
 
             wait.until(ExpectedConditions.urlContains("/admin/config/system/keys"));
             System.out.println("JWT key created successfully.");
@@ -266,48 +269,47 @@ public class RepositoryFormAutomationTest {
     /**
      * Clique robusto: espera, scrolla até o elemento, e usa JavaScript para clicar.
      */
-    private void clickElementRobust(WebElement element) {
+    private void clickElementRobust(By locator) {
         try {
-            System.out.println("Clicando no elemento: " + element.getTagName() + " com texto: " + element.getText());
-            wait.until(driver -> element.isDisplayed() && element.isEnabled());
-            System.out.println("Elemento está visível e habilitado.");
-            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
-            Thread.sleep(1000); // pequena pausa para garantir que o scroll concluiu
-            System.out.println("Elemento rolado para o centro da tela.");
+            WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+            System.out.println("Tentando clicar no elemento: " + element.getTagName());
 
-            // Verifica se não há sobreposição
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
+            Thread.sleep(500);
+            System.out.println("Elemento visível e pronto para clique: " + element.getTagName());
             Boolean isOverlapped = (Boolean) ((JavascriptExecutor) driver).executeScript(
                     "var elem = arguments[0];" +
                             "var rect = elem.getBoundingClientRect();" +
                             "var elFromPoint = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);" +
-                            "return !(elem === elFromPoint || elem.contains(elFromPoint));", element);
+                            "return !(elem === elFromPoint || elem.contains(elFromPoint));", element
+            );
 
-            System.out.println("Elemento está sobreposto? " + isOverlapped);
             if (isOverlapped) {
-                throw new RuntimeException("Elemento sobreposto por outro elemento.");
+                System.out.println("Elemento sobreposto, tentando clique via JavaScript.");
             }
-            System.out.println("Clicando no elemento via JavaScript.");
+            System.out.println("Elemento está visível e pronto para clique: " + element.getTagName());
             try {
-                // Tenta clique padrão
                 element.click();
                 System.out.println("Clique WebDriver realizado com sucesso.");
             } catch (ElementClickInterceptedException e) {
-                System.out.println("Clique direto falhou. Tentando via JavaScript.");
+                System.out.println("Clique WebDriver falhou. Usando JavaScript.");
                 ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
-                System.out.println("Clique JavaScript realizado.");
+                System.out.println("Clique via JavaScript realizado com sucesso.");
             }
-
-            Thread.sleep(500);
-
-            // Validação final: tenta disparar o evento 'change' forçado, caso aplicável
+            System.out.println("Clique no elemento realizado com sucesso: " + element.getTagName());
             ((JavascriptExecutor) driver).executeScript(
-                    "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
-                    element
+                    "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", element
             );
-            System.out.println("Clique realizado com sucesso.");
+            System.out.println("Evento 'change' disparado no elemento: " + element.getTagName());
+        } catch (StaleElementReferenceException e) {
+            System.out.println("Elemento obsoleto (stale): " + e.getMessage());
+            throw new RuntimeException("Elemento ficou obsoleto (stale): " + e.getMessage(), e);
         } catch (Exception e) {
+            System.out.println("Falha ao clicar no elemento: " + e.getMessage());
             throw new RuntimeException("Falha ao clicar no elemento: " + e.getMessage(), e);
         }
+        System.out.println("Clique robusto realizado com sucesso.");
     }
+
 
 }
