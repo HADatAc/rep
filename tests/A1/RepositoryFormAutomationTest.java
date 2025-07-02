@@ -57,7 +57,7 @@ public class RepositoryFormAutomationTest {
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
-        clickElementRobust(By.xpath("//button[text()='Submit']"));
+        clickElementRobust(By.xpath("//button[text()='Log in']"));
 
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
@@ -73,7 +73,7 @@ public class RepositoryFormAutomationTest {
     @Test
     void testFillRepositoryForm() throws InterruptedException {
         driver.get("http://" + ip + "/admin/config/rep");
-
+        System.out.println("Page source: " + driver.getPageSource());
         ensureJwtKeyExists();
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("select[name='jwt_secret']"))).click();
