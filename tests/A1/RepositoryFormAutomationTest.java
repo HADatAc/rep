@@ -136,7 +136,7 @@ public class RepositoryFormAutomationTest {
                 clickElementRobust(By.id("edit-submit"));
 
                 System.out.println("Formulário submetido, esperando resposta...");
-
+                formConfirmed = true;
                 /*try {
                     wait.until(ExpectedConditions.or(
                             ExpectedConditions.urlContains("/rep/repo/info"),
@@ -148,10 +148,9 @@ public class RepositoryFormAutomationTest {
                 }
 
                  */
-                logCurrentPageState(500);
+                //logCurrentPageState(500);
                 //Thread.sleep(2000);
-                System.out.println("Esperando URL ou mensagem de status...");
-                formConfirmed = true;
+                //System.out.println("Esperando URL ou mensagem de status...");
                 /*String currentUrl = driver.getCurrentUrl();
                 System.out.println("URL atual: " + currentUrl);
                 Assertions.assertNotNull(currentUrl);
