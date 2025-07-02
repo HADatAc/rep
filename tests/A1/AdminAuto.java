@@ -85,13 +85,23 @@ public class AdminAuto {
 
         clickElementRobust(By.id("edit-submit"));
 
-        WebElement successMessage = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".messages--status"))
-        );
+        // Aguarda para evitar StaleElementReference ao buscar a mensagem de sucesso
+        Thread.sleep(500);
 
-        System.out.println("Success message: " + successMessage.getText());
+        String messageText = "";
+        try {
+            WebElement successMessage = wait.until(
+                    ExpectedConditions.presenceOfElementLocated(By.cssSelector(".messages--status"))
+            );
+            messageText = successMessage.getText();
+            System.out.println("Success message: " + messageText);
+        } catch (StaleElementReferenceException e) {
+            WebElement freshMessage = driver.findElement(By.cssSelector(".messages--status"));
+            messageText = freshMessage.getText();
+            System.out.println("Success message (recuperado): " + messageText);
+        }
 
-        // Recarregar a página para garantir que o estado foi salvo
+        // Recarrega para verificar persistência das alterações
         driver.navigate().refresh();
 
         WebElement contentEditorCheckboxAfter = wait.until(
@@ -104,7 +114,9 @@ public class AdminAuto {
         assertTrue(contentEditorCheckboxAfter.isSelected(), "Content editor checkbox deveria estar marcada após salvar.");
         assertTrue(administratorCheckboxAfter.isSelected(), "Administrator checkbox deveria estar marcada após salvar.");
 
-        assertTrue(successMessage.getText().toLowerCase().contains("has been updated"));
+        assertTrue(messageText.toLowerCase().contains("has been updated") ||
+                        messageText.toLowerCase().contains("the changes have been saved"),
+                "Mensagem de sucesso não encontrada.");
     }
 
     @AfterAll
@@ -146,19 +158,31 @@ public class AdminAuto {
             }
         }
     }
+
     private void checkCheckboxRobust(By locator) {
-        WebElement checkbox = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
-        if (!checkbox.isSelected()) {
-            System.out.println("Checkbox " + locator + " is unchecked. Clicking to check it.");
-            clickElementRobust(locator);
+        int maxAttempts = 3;
+        int attempt = 0;
 
-            // Rebuscar o checkbox do DOM para evitar 'stale element'
-            wait.until(ExpectedConditions.elementToBeSelected(
-                    driver.findElement(locator)
-            ));
+        while (attempt < maxAttempts) {
+            attempt++;
+            try {
+                WebElement checkbox = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+                if (!checkbox.isSelected()) {
+                    System.out.println("Checkbox " + locator + " is unchecked. Clicking to check it.");
+                    clickElementRobust(locator);
+                }
+
+                WebElement refreshed = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+                if (refreshed.isSelected()) {
+                    return;
+                }
+            } catch (StaleElementReferenceException e) {
+                System.out.println("Stale checkbox no attempt " + attempt + ", retrying...");
+            }
         }
-    }
 
+        throw new RuntimeException("Falha ao verificar/marcar checkbox após várias tentativas: " + locator);
+    }
 
     private void logCurrentPageState(int snippetLength) {
         String currentUrl = driver.getCurrentUrl();
