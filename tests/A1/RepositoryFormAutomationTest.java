@@ -107,8 +107,8 @@ public class RepositoryFormAutomationTest {
         fillInput("description for the repository that appears in the rep APIs GUI", "pmsr123");
         fillInput("Sagres Base URL", "https://52.214.194.214/");
 
-       // String localIp = getLocalIpAddress();
-        String apiUrl = "http://" + ip + ":9000";
+        String apiip = "108.129.120.740"; // IP da API de testes
+        String apiUrl = "http://" + apiip + ":9000";
         fillInput("rep API Base URL", apiUrl);
 
         //logCurrentPageState(50000);

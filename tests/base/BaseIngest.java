@@ -27,11 +27,14 @@ public abstract class BaseIngest {
     @BeforeAll
     void setup() {
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless");
+
         options.setBinary("/usr/bin/chromium-browser");
+        options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
+        options.setAcceptInsecureCerts(true);
+        options.addArguments("--ignore-certificate-errors");
 
 
         driver = new ChromeDriver(options);
@@ -41,7 +44,7 @@ public abstract class BaseIngest {
         driver.get("http://"+ip+"/user/login");
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
-        driver.findElement(By.id("edit-submit")).click();
+        clickElementRobust(By.id("edit-submit"));
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
         System.out.println("Logged in successfully.");
@@ -239,7 +242,7 @@ public abstract class BaseIngest {
     }
     protected void ingestSpecificSDD(String fileName) throws InterruptedException {
         String type = "sdd";
-        driver.get("http://localhost/rep/select/mt/" + type + "/table/1/9/none");
+        driver.get("http://"+ip+"/rep/select/mt/" + type + "/table/1/9/none");
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 
@@ -331,7 +334,40 @@ public abstract class BaseIngest {
     public String getIngestMode() {
         return ingestMode;
     }
+    private void clickElementRobust(By locator) {
+        int maxAttempts = 5;
+        int attempt = 0;
 
+        System.out.println("Clique robusto iniciado para o elemento: " + locator);
+        while (attempt < maxAttempts) {
+            attempt++;
+            try {
+                WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+
+                try {
+                    element.click();
+                    System.out.println("Clique padrão realizado na tentativa " + attempt);
+                } catch (Exception e) {
+                    System.out.println("Clique padrão falhou, tentando clique via JS na tentativa " + attempt);
+                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+                }
+
+                // Pequena pausa para garantir processamento
+                Thread.sleep(300);
+
+                System.out.println("Clique robusto finalizado na tentativa " + attempt);
+                return; // sucesso
+
+            } catch (StaleElementReferenceException sere) {
+                System.out.println("Elemento stale, retry " + attempt);
+            } catch (Exception e) {
+                System.out.println("Erro na tentativa " + attempt + ": " + e.getMessage());
+                if (attempt == maxAttempts) {
+                    throw new RuntimeException("Falha ao clicar após " + maxAttempts + " tentativas", e);
+                }
+            }
+        }
+    }
     public void setIngestMode(String ingestMode) {
         this.ingestMode = ingestMode;
     }

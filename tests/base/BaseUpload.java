@@ -21,11 +21,14 @@ public abstract class BaseUpload {
     @BeforeAll
     void setup() {
         ChromeOptions options = new ChromeOptions();
+
+        options.setBinary("/usr/bin/chromium-browser");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
-        options.setBinary("/usr/bin/chromium-browser");
+        options.setAcceptInsecureCerts(true);
+        options.addArguments("--ignore-certificate-errors");
 
         driver = new ChromeDriver(options);
 
@@ -35,7 +38,7 @@ public abstract class BaseUpload {
         driver.get("http://"+ip+"/user/login");
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
-        driver.findElement(By.id("edit-submit")).click();
+        clickElementRobust(By.id("edit-submit"));
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(
                 By.cssSelector("#toolbar-item-user")));
@@ -101,7 +104,40 @@ public abstract class BaseUpload {
         System.out.println("URI extracted: " + uri);
         return uri;
     }
+    private void clickElementRobust(By locator) {
+        int maxAttempts = 5;
+        int attempt = 0;
 
+        System.out.println("Clique robusto iniciado para o elemento: " + locator);
+        while (attempt < maxAttempts) {
+            attempt++;
+            try {
+                WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+
+                try {
+                    element.click();
+                    System.out.println("Clique padrão realizado na tentativa " + attempt);
+                } catch (Exception e) {
+                    System.out.println("Clique padrão falhou, tentando clique via JS na tentativa " + attempt);
+                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+                }
+
+                // Pequena pausa para garantir processamento
+                Thread.sleep(300);
+
+                System.out.println("Clique robusto finalizado na tentativa " + attempt);
+                return; // sucesso
+
+            } catch (StaleElementReferenceException sere) {
+                System.out.println("Elemento stale, retry " + attempt);
+            } catch (Exception e) {
+                System.out.println("Erro na tentativa " + attempt + ": " + e.getMessage());
+                if (attempt == maxAttempts) {
+                    throw new RuntimeException("Falha ao clicar após " + maxAttempts + " tentativas", e);
+                }
+            }
+        }
+    }
     @AfterAll
     void teardown() {
         if (driver != null) {
