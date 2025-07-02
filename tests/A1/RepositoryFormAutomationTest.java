@@ -104,7 +104,9 @@ public class RepositoryFormAutomationTest {
         String localIp = getLocalIpAddress();
         String apiUrl = "http://" + localIp + ":9000";
         fillInput("rep API Base URL", apiUrl);
-        System.out.println("Page source after filling inputs: " + driver.getPageSource());
+
+        logCurrentPageState(500);
+
         String expectedFullName = "Portuguese Medical Social Repository";
         int maxAttempts = 3;
         int attempts = 0;
@@ -278,7 +280,7 @@ public class RepositoryFormAutomationTest {
             try {
                 WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
                 System.out.println("Tentando clicar no elemento: " + element.getTagName() + " com texto: " + element.getText());
-                System.out.println("Page source: " + driver.getPageSource());
+                logCurrentPageState(500);
                 ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
                 Thread.sleep(500);
 
