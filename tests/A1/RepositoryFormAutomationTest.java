@@ -284,52 +284,29 @@ public class RepositoryFormAutomationTest {
         while (attempt < maxAttempts) {
             attempt++;
             try {
-                // Espera o elemento estar clicável e pega a referência atualizada
                 WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
 
-                // Scroll para o centro da tela
-                ((JavascriptExecutor) driver).executeScript(
-                        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", element);
-
-                if (!element.isDisplayed() || !element.isEnabled()) {
-                    throw new ElementNotInteractableException("Elemento não está visível/habilitado.");
-                }
-
-                // Tenta clicar o elemento normalmente
                 try {
                     element.click();
-                    System.out.println("Clique WebDriver realizado com sucesso na tentativa " + attempt);
-                } catch (ElementNotInteractableException e) {
-                    System.out.println("Clique padrão falhou, tentando clique via JavaScript. Tentativa " + attempt);
+                    System.out.println("Clique padrão realizado na tentativa " + attempt);
+                } catch (Exception e) {
+                    System.out.println("Clique padrão falhou, tentando clique via JS na tentativa " + attempt);
                     ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
-                    System.out.println("Clique via JavaScript realizado na tentativa " + attempt);
                 }
 
-                // Foca o elemento
-                ((JavascriptExecutor) driver).executeScript("arguments[0].focus();", element);
-
-                // Dispara evento click e change para garantir bindings JS
-                ((JavascriptExecutor) driver).executeScript(
-                        "arguments[0].dispatchEvent(new MouseEvent('click', {bubbles: true}));" +
-                                "arguments[0].dispatchEvent(new Event('change', {bubbles: true}));", element);
-
-                Thread.sleep(500); // pausa curta para processamento
+                // Pequena pausa para garantir processamento
+                Thread.sleep(300);
 
                 System.out.println("Clique robusto finalizado na tentativa " + attempt);
-                return; // clique realizado com sucesso
+                return; // sucesso
 
             } catch (StaleElementReferenceException sere) {
                 System.out.println("Elemento stale, retry " + attempt);
-                // Continua para tentar localizar novamente
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException("Thread interrompida", ie);
             } catch (Exception e) {
-                System.out.println("Falha ao clicar no elemento na tentativa " + attempt + ": " + e.getMessage());
+                System.out.println("Erro na tentativa " + attempt + ": " + e.getMessage());
                 if (attempt == maxAttempts) {
-                    throw new RuntimeException("Falha ao clicar no elemento após " + maxAttempts + " tentativas", e);
+                    throw new RuntimeException("Falha ao clicar após " + maxAttempts + " tentativas", e);
                 }
-                try { Thread.sleep(300); } catch (InterruptedException ignored) {}
             }
         }
     }
