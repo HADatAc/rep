@@ -76,15 +76,9 @@ public class AdminAuto {
 
     @Test
     @DisplayName("Ensure Content editor and Administrator checkboxes are checked and saved")
-    void testEnsureCheckboxesCheckedAndSaved() {
+    void testEnsureCheckboxesCheckedAndSaved() throws InterruptedException {
         driver.get("http://" + ip + "/user/1/edit");
-
-        WebElement contentEditorCheckbox = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-content-editor"))
-        );
-        WebElement administratorCheckbox = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-administrator"))
-        );
+        Thread.sleep(3000); // Espera a página carregar completamente
 
         checkCheckboxRobust(By.id("edit-roles-content-editor"));
         checkCheckboxRobust(By.id("edit-roles-administrator"));
