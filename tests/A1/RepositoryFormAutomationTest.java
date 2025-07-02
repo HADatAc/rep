@@ -26,40 +26,42 @@ public class RepositoryFormAutomationTest {
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
-        options.setAcceptInsecureCerts(true); // Ignora erros de certificado
-        options.addArguments("--ignore-certificate-errors"); // ignora erros de HTTPS
+        options.setAcceptInsecureCerts(true);
+        options.addArguments("--ignore-certificate-errors");
 
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         wait = new WebDriverWait(driver, Duration.ofSeconds(30));
 
+
         driver.get("http://" + ip + "/user/login");
 
-        // Aguarda aparecer a página de erro
         Thread.sleep(2000);
 
-        // Digita 'thisisunsafe' para forçar o Chrome a continuar
+        // Contorna a tela de aviso SSL, se necessário
         Actions actions = new Actions(driver);
         actions.sendKeys("thisisunsafe").perform();
 
-        Thread.sleep(3000); // Espera 3 segundos para o Chrome processar o comando
+        Thread.sleep(2000);
 
         String pageSource = driver.getPageSource();
         if (pageSource.contains("Your connection is not private") || pageSource.contains("NET::ERR_CERT")) {
             throw new RuntimeException("SSL warning page loaded instead of actual app page.");
         }
-
-        //System.out.println("Page source: " + driver.getPageSource());
-        wait.until(ExpectedConditions.or(
-                ExpectedConditions.urlContains("/user/login"),
-                ExpectedConditions.visibilityOfElementLocated(By.id("edit-name"))
-        ));
+        // Espera explícita para página carregar o input
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+
+        // Espera o botão login estar clicável
+        wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
+
+        // Preenche usuário e senha
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
+
+        // Clica no botão de login
         clickElementRobust(By.id("edit-submit"));
 
-
+        // Espera tela pós-login
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 
