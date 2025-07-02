@@ -49,7 +49,7 @@ public class RepositoryFormAutomationTest {
             throw new RuntimeException("SSL warning page loaded instead of actual app page.");
         }
 
-        System.out.println("Page source: " + driver.getPageSource());
+        //System.out.println("Page source: " + driver.getPageSource());
         wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/user/login"),
                 ExpectedConditions.visibilityOfElementLocated(By.id("edit-name"))
@@ -102,7 +102,7 @@ public class RepositoryFormAutomationTest {
         String localIp = getLocalIpAddress();
         String apiUrl = "http://" + localIp + ":9000";
         fillInput("rep API Base URL", apiUrl);
-
+        System.out.println("Page source after filling inputs: " + driver.getPageSource());
         String expectedFullName = "Portuguese Medical Social Repository";
         int maxAttempts = 3;
         int attempts = 0;
@@ -113,7 +113,7 @@ public class RepositoryFormAutomationTest {
             System.out.println("Tentativa de submissão #" + attempts);
 
             try {
-                WebElement submitButton = driver.findElement(By.cssSelector("input#edit-submit"));
+                WebElement submitButton = driver.findElement(By.cssSelector("//button[text()='Log in']"));
                 System.out.println("Botão de envio encontrado: " + submitButton.isDisplayed());
                 wait.until(ExpectedConditions.elementToBeClickable(submitButton));
                 System.out.println("Botão de envio está habilitado: " + submitButton.isEnabled());
