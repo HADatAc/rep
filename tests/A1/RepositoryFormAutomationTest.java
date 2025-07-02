@@ -25,6 +25,7 @@ public class RepositoryFormAutomationTest {
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
+        options.setAcceptInsecureCerts(true); // Ignora erros de certificado
 
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
@@ -32,7 +33,10 @@ public class RepositoryFormAutomationTest {
 
         driver.get("http://" + ip + "/user/login");
         System.out.println("Page source: " + driver.getPageSource());
-
+        wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/user/login"),
+                ExpectedConditions.visibilityOfElementLocated(By.id("edit-name"))
+        ));
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
