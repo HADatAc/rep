@@ -31,6 +31,7 @@ public class RepositoryFormAutomationTest {
         wait = new WebDriverWait(driver, Duration.ofSeconds(30));
 
         driver.get("http://" + ip + "/user/login");
+        System.out.println("Page source: " + driver.getPageSource());
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
         driver.findElement(By.id("edit-name")).sendKeys("admin");
