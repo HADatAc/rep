@@ -270,46 +270,56 @@ public class RepositoryFormAutomationTest {
      * Clique robusto: espera, scrolla até o elemento, e usa JavaScript para clicar.
      */
     private void clickElementRobust(By locator) {
-        try {
-            WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
-            System.out.println("Tentando clicar no elemento: " + element.getTagName());
-
-            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
-            Thread.sleep(500);
-            System.out.println("Elemento visível e pronto para clique: " + element.getTagName());
-            Boolean isOverlapped = (Boolean) ((JavascriptExecutor) driver).executeScript(
-                    "var elem = arguments[0];" +
-                            "var rect = elem.getBoundingClientRect();" +
-                            "var elFromPoint = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);" +
-                            "return !(elem === elFromPoint || elem.contains(elFromPoint));", element
-            );
-
-            if (isOverlapped) {
-                System.out.println("Elemento sobreposto, tentando clique via JavaScript.");
-            }
-            System.out.println("Elemento está visível e pronto para clique: " + element.getTagName());
+        int attempts = 0;
+        while (attempts < 3) {
             try {
-                element.click();
-                System.out.println("Clique WebDriver realizado com sucesso.");
-            } catch (ElementClickInterceptedException e) {
-                System.out.println("Clique WebDriver falhou. Usando JavaScript.");
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
-                System.out.println("Clique via JavaScript realizado com sucesso.");
+                WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+                System.out.println("Tentando clicar no elemento: " + element.getTagName() + " com texto: " + element.getText());
+
+                ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
+                Thread.sleep(500);
+
+                Boolean isOverlapped = (Boolean) ((JavascriptExecutor) driver).executeScript(
+                        "var elem = arguments[0];" +
+                                "var rect = elem.getBoundingClientRect();" +
+                                "var elFromPoint = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);" +
+                                "return !(elem === elFromPoint || elem.contains(elFromPoint));", element);
+
+                if (isOverlapped) {
+                    System.out.println("Elemento sobreposto, tentando clique via JavaScript.");
+                }
+
+                try {
+                    element.click();
+                    System.out.println("Clique WebDriver realizado com sucesso.");
+                } catch (ElementClickInterceptedException e) {
+                    System.out.println("Clique WebDriver falhou. Usando JavaScript.");
+                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+                    System.out.println("Clique via JavaScript realizado com sucesso.");
+                }
+
+                ((JavascriptExecutor) driver).executeScript(
+                        "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", element);
+                System.out.println("Evento 'change' disparado no elemento.");
+
+                System.out.println("Clique robusto realizado com sucesso.");
+                return;  // sucesso
+
+            } catch (StaleElementReferenceException e) {
+                attempts++;
+                System.out.println("Elemento obsoleto (stale), tentativa " + attempts + " de 3. Relocalizando elemento e tentando de novo.");
+                // Continua o loop para tentar de novo
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Thread interrompida: " + ie.getMessage(), ie);
+            } catch (Exception e) {
+                System.out.println("Falha ao clicar no elemento: " + e.getMessage());
+                throw new RuntimeException("Falha ao clicar no elemento: " + e.getMessage(), e);
             }
-            System.out.println("Clique no elemento realizado com sucesso: " + element.getTagName());
-            ((JavascriptExecutor) driver).executeScript(
-                    "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", element
-            );
-            System.out.println("Evento 'change' disparado no elemento: " + element.getTagName());
-        } catch (StaleElementReferenceException e) {
-            System.out.println("Elemento obsoleto (stale): " + e.getMessage());
-            throw new RuntimeException("Elemento ficou obsoleto (stale): " + e.getMessage(), e);
-        } catch (Exception e) {
-            System.out.println("Falha ao clicar no elemento: " + e.getMessage());
-            throw new RuntimeException("Falha ao clicar no elemento: " + e.getMessage(), e);
         }
-        System.out.println("Clique robusto realizado com sucesso.");
+        throw new RuntimeException("Não foi possível clicar no elemento após 3 tentativas por stale element.");
     }
+
 
 
 }
