@@ -4,6 +4,7 @@ import org.junit.jupiter.api.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.*;
 
 import java.net.InetAddress;
@@ -18,7 +19,7 @@ public class RepositoryFormAutomationTest {
     String ip = "54.75.120.47";
 
     @BeforeEach
-    void setup() {
+    void setup() throws InterruptedException {
         ChromeOptions options = new ChromeOptions();
         options.setBinary("/usr/bin/chromium-browser");
         options.addArguments("--headless");
@@ -26,12 +27,28 @@ public class RepositoryFormAutomationTest {
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
         options.setAcceptInsecureCerts(true); // Ignora erros de certificado
+        options.addArguments("--ignore-certificate-errors"); // ignora erros de HTTPS
 
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         wait = new WebDriverWait(driver, Duration.ofSeconds(30));
 
         driver.get("http://" + ip + "/user/login");
+
+        // Aguarda aparecer a página de erro
+        Thread.sleep(2000);
+
+        // Digita 'thisisunsafe' para forçar o Chrome a continuar
+        Actions actions = new Actions(driver);
+        actions.sendKeys("thisisunsafe").perform();
+
+        Thread.sleep(3000); // Espera 3 segundos para o Chrome processar o comando
+
+        String pageSource = driver.getPageSource();
+        if (pageSource.contains("Your connection is not private") || pageSource.contains("NET::ERR_CERT")) {
+            throw new RuntimeException("SSL warning page loaded instead of actual app page.");
+        }
+
         System.out.println("Page source: " + driver.getPageSource());
         wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/user/login"),
