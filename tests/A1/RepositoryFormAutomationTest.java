@@ -48,7 +48,7 @@ public class RepositoryFormAutomationTest {
         if (pageSource.contains("Your connection is not private") || pageSource.contains("NET::ERR_CERT")) {
             throw new RuntimeException("SSL warning page loaded instead of actual app page.");
         }
-        logCurrentPageState(5000);
+        //logCurrentPageState(5000);
         // Espera explícita para página carregar o input
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
 
@@ -91,7 +91,7 @@ public class RepositoryFormAutomationTest {
         if (!checkbox.isSelected()) {
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
         }
-        logCurrentPageState(500);
+        //logCurrentPageState(500);
 
         // Preenchimento dos campos obrigatórios com logs
         fillInput("Repository Short Name (ex. \"ChildFIRST\")", "PMSR");
@@ -108,7 +108,7 @@ public class RepositoryFormAutomationTest {
         String apiUrl = "http://" + localIp + ":9000";
         fillInput("rep API Base URL", apiUrl);
 
-        logCurrentPageState(50000);
+        //logCurrentPageState(50000);
 
         String expectedFullName = "Portuguese Medical Social Repository";
         int maxAttempts = 3;
