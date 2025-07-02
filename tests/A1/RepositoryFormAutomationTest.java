@@ -275,7 +275,7 @@ public class RepositoryFormAutomationTest {
             try {
                 WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
                 System.out.println("Tentando clicar no elemento: " + element.getTagName() + " com texto: " + element.getText());
-
+                System.out.println("Page source: " + driver.getPageSource());
                 ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
                 Thread.sleep(500);
 
