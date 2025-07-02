@@ -159,8 +159,6 @@ public class RepositoryFormAutomationTest {
                     System.out.println("Formulário submetido com sucesso!");
                     formConfirmed = true;
                 }
-
-
                  */
 
                /* List<WebElement> messages = driver.findElements(By.cssSelector(".messages--error, .messages--warning, .form-item--error-message"));
