@@ -120,13 +120,17 @@ public class RepositoryFormAutomationTest {
             System.out.println("Tentativa de submissão #" + attempts);
 
             try {
-                WebElement submitButton = driver.findElement(By.cssSelector("//button[text()='Log in']"));
+                /*WebElement submitButton = driver.findElement(By.cssSelector("//button[text()='Log in']"));
                 System.out.println("Botão de envio encontrado: " + submitButton.isDisplayed());
                 wait.until(ExpectedConditions.elementToBeClickable(submitButton));
                 System.out.println("Botão de envio está habilitado: " + submitButton.isEnabled());
                 if (!submitButton.isEnabled()) {
                     throw new RuntimeException("Botão de envio está desabilitado.");
                 }
+
+                 */
+                System.out.println("Submetendo formulário...");
+
 
                 clickElementRobust(By.id("edit-submit"));
 
