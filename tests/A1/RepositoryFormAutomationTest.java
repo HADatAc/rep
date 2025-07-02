@@ -73,7 +73,8 @@ public class RepositoryFormAutomationTest {
     @Test
     void testFillRepositoryForm() throws InterruptedException {
         driver.get("http://" + ip + "/admin/config/rep");
-        System.out.println("Page source: " + driver.getPageSource());
+        logCurrentPageState(500);
+
         ensureJwtKeyExists();
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("select[name='jwt_secret']"))).click();
@@ -87,6 +88,7 @@ public class RepositoryFormAutomationTest {
         if (!checkbox.isSelected()) {
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
         }
+        logCurrentPageState(500);
 
         // Preenchimento dos campos obrigatórios com logs
         fillInput("Repository Short Name (ex. \"ChildFIRST\")", "PMSR");
@@ -182,6 +184,7 @@ public class RepositoryFormAutomationTest {
     private void ensureJwtKeyExists() {
         WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
                 By.cssSelector("select[name='jwt_secret']")));
+        logCurrentPageState(500);
 
         Select jwtDropdown = new Select(jwtSelect);
         boolean jwtExists = jwtDropdown.getOptions().stream()
@@ -320,6 +323,18 @@ public class RepositoryFormAutomationTest {
         throw new RuntimeException("Não foi possível clicar no elemento após 3 tentativas por stale element.");
     }
 
+    private void logCurrentPageState(int snippetLength) {
+        String currentUrl = driver.getCurrentUrl();
+        System.out.println("========== Current Page State ==========");
+        System.out.println("URL atual: " + currentUrl);
+
+        String pageSource = driver.getPageSource();
+        if (pageSource.length() > snippetLength) {
+            pageSource = pageSource.substring(0, snippetLength) + "...";
+        }
+        System.out.println("Page source snippet: " + pageSource);
+        System.out.println("========================================");
+    }
 
 
 }
