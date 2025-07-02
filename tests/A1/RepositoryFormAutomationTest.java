@@ -135,7 +135,7 @@ public class RepositoryFormAutomationTest {
                 clickElementRobust(By.id("edit-submit"));
 
 
-                try {
+                /*try {
                     wait.until(ExpectedConditions.or(
                             ExpectedConditions.urlContains("/rep/repo/info"),
                             ExpectedConditions.presenceOfElementLocated(By.cssSelector(".messages--status"))
@@ -145,6 +145,8 @@ public class RepositoryFormAutomationTest {
                     System.out.println("Timeout esperando resposta.");
                 }
 
+                 */
+                logCurrentPageState(5000);
                 Thread.sleep(2000);
                 String currentUrl = driver.getCurrentUrl();
                 System.out.println("URL atual: " + currentUrl);
