@@ -59,6 +59,7 @@ public class RepositoryFormAutomationTest {
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
 
+
         // Clica no botão de login
         clickElementRobust(By.id("edit-submit"));
 
