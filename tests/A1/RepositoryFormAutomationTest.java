@@ -134,6 +134,7 @@ public class RepositoryFormAutomationTest {
 
                 clickElementRobust(By.id("edit-submit"));
 
+                System.out.println("Formulário submetido, esperando resposta...");
 
                 /*try {
                     wait.until(ExpectedConditions.or(
