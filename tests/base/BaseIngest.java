@@ -165,7 +165,7 @@ public abstract class BaseIngest {
     }
     protected void ingestSpecificINS(String fileName) throws InterruptedException {
         String type = "ins";
-        driver.get("http://localhost/rep/select/mt/" + type + "/table/1/9/none");
+        driver.get("http://"+ip+"/rep/select/mt/" + type + "/table/1/9/none");
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 

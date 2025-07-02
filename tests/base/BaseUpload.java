@@ -56,7 +56,7 @@ public abstract class BaseUpload {
     }
 
     protected void navigateToUploadPage(String type) {
-        String url = "http://localhost/rep/manage/addmt/" + type + "/none/F";
+        String url = "http://"+ip+"/rep/manage/addmt/" + type + "/none/F";
         driver.get(url);
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("form")));
         System.out.println("Navigated to upload page for type: " + type);
@@ -103,7 +103,7 @@ public abstract class BaseUpload {
     }
 
     protected String extractUriFromSDD() {
-        driver.get("http://localhost/sem/select/semanticdatadictionary/1/9");
+        driver.get("http://"+ip+"/sem/select/semanticdatadictionary/1/9");
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
         WebElement checkbox = driver.findElement(By.cssSelector("input.form-checkbox.form-check-input"));
         String uri = checkbox.getAttribute("value");
