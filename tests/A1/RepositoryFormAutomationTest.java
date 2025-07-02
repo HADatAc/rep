@@ -148,12 +148,12 @@ public class RepositoryFormAutomationTest {
                 }
 
                  */
-                logCurrentPageState(5000);
-                Thread.sleep(2000);
+                //logCurrentPageState(5000);
+                //Thread.sleep(2000);
                 String currentUrl = driver.getCurrentUrl();
                 System.out.println("URL atual: " + currentUrl);
 
-                List<WebElement> messages = driver.findElements(By.cssSelector(".messages--error, .messages--warning, .form-item--error-message"));
+               /* List<WebElement> messages = driver.findElements(By.cssSelector(".messages--error, .messages--warning, .form-item--error-message"));
                 for (WebElement msg : messages) {
                     System.out.println("Mensagem: " + msg.getText());
                 }
@@ -181,6 +181,8 @@ public class RepositoryFormAutomationTest {
                     jwtDropdown.selectByVisibleText("jwt");
                 }
 
+
+                */
             } catch (Exception e) {
                 System.out.println("Erro inesperado: " + e.getMessage());
                 e.printStackTrace();
