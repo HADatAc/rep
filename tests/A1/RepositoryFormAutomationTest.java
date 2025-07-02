@@ -5,6 +5,7 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.*;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
@@ -31,14 +32,11 @@ public class RepositoryFormAutomationTest {
 
         driver.get("http://" + ip + "/user/login");
 
-        // Wait for the username field to appear before typing
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
-
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
-        clickElementSafely(driver.findElement(By.id("edit-submit")));
+        clickElementRobust(driver.findElement(By.id("edit-submit")));
 
-        // Wait for an element that appears only after login
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 
@@ -49,7 +47,6 @@ public class RepositoryFormAutomationTest {
         }
     }
 
-
     @Test
     void testFillRepositoryForm() {
         driver.get("http://" + ip + "/admin/config/rep");
@@ -58,8 +55,6 @@ public class RepositoryFormAutomationTest {
 
         Select jwtDropdown = new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']")));
         jwtDropdown.selectByVisibleText("jwt");
-
-        // ... preenche os outros campos ...
 
         String localIp = getLocalIpAddress();
         String apiUrl = "http://" + localIp + ":9000";
@@ -80,7 +75,7 @@ public class RepositoryFormAutomationTest {
         while (!formConfirmed && attempts < maxAttempts) {
             attempts++;
             System.out.println("Tentando submeter o formulário, tentativa #" + attempts);
-            clickElementSafely(driver.findElement(By.cssSelector("input#edit-submit")));
+            clickElementRobust(driver.findElement(By.cssSelector("input#edit-submit")));
 
             try {
                 wait.until(ExpectedConditions.or(
@@ -119,8 +114,6 @@ public class RepositoryFormAutomationTest {
         }
     }
 
-
-
     private void ensureJwtKeyExists() {
         WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
                 By.cssSelector("select[name='jwt_secret']")));
@@ -148,7 +141,7 @@ public class RepositoryFormAutomationTest {
             valueField.clear();
             valueField.sendKeys("qwertyuiopasdfghjklzxcvbnm123456");
 
-            driver.findElement(By.id("edit-submit")).click();
+            clickElementRobust(driver.findElement(By.id("edit-submit")));
 
             wait.until(ExpectedConditions.urlContains("/admin/config/system/keys"));
             System.out.println("JWT key created successfully.");
@@ -158,7 +151,6 @@ public class RepositoryFormAutomationTest {
             System.out.println("JWT key 'jwt' already exists.");
         }
     }
-
 
     private void fillInput(String labelText, String value) {
         WebElement input = findInputByLabel(labelText);
@@ -196,10 +188,6 @@ public class RepositoryFormAutomationTest {
         }
     }
 
-    private void scrollIntoView(WebElement element) {
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", element);
-    }
-
     private void waitUntilInputVisible(String labelText) {
         wait.until(driver -> findInputByLabel(labelText) != null && findInputByLabel(labelText).isDisplayed());
     }
@@ -211,16 +199,16 @@ public class RepositoryFormAutomationTest {
     }
 
     /**
-     * Tenta clicar no elemento usando Selenium padrão.
-     * Se o clique for interceptado, usa Javascript para clicar.
+     * Clique robusto: espera, scrolla até o elemento, e usa JavaScript para clicar.
      */
-    private void clickElementSafely(WebElement element) {
+    private void clickElementRobust(WebElement element) {
         try {
             wait.until(ExpectedConditions.elementToBeClickable(element));
-            element.click();
-        } catch (ElementClickInterceptedException e) {
-            System.out.println("Click intercepted, trying JS click...");
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", element);
+            Thread.sleep(500); // pequena pausa para garantir visibilidade
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao clicar no elemento: " + e.getMessage(), e);
         }
     }
 }
