@@ -47,7 +47,8 @@ class DeleteElementController extends ControllerBase {
   // }
 
   public function exec($elementtype, $elementuri, $currenturl)
-{
+  {
+
     if ($elementuri === NULL || $currenturl === NULL) {
         $response = new RedirectResponse(Url::fromRoute('rep.home')->toString());
         $response->send();
@@ -59,22 +60,17 @@ class DeleteElementController extends ControllerBase {
 
     $elementname = 'element';
 
+    $api = \Drupal::service('rep.api_connector');
+
     if ($elementtype === 'da') {
       $elementname = 'DA';
       $file_system = \Drupal::service('file_system');
 
       try {
-        $api = \Drupal::service('rep.api_connector');
-
         // Retrieve the file object via API to obtain file data
         $file_object = $api->parseObjectResponse($api->getUri($uri), 'getUri');
         // Delete element via API
         $api->elementDel($elementtype, $uri);
-
-        // If the element type is 'process', delete it with tasks
-        if ($elementtype === 'process') {
-          $api->processDeleteWithTasks($uri);
-        }
 
         // If the file object is retrieved and contains file data, proceed with deletion
         if ($file_object && isset($file_object->hasDataFile) && isset($file_object->hasDataFile->filename)) {
@@ -137,6 +133,18 @@ class DeleteElementController extends ControllerBase {
         $elementname = 'study';
     } elseif ($elementtype === 'process') {
         $elementname = 'process';
+
+        //  We must delete all associated task also
+        try {
+          $api->processDeleteWithTasks($uri);
+        }
+        catch (\Exception $e) {
+          return new \Symfony\Component\HttpFoundation\JsonResponse([
+            'status' => 'error',
+            'messages' => [],
+            'errors' => ['An error occurred: ' . $e->getMessage()],
+          ]);
+        }
     } elseif ($elementtype === 'task') {
         $elementname = 'task';
     } elseif ($elementtype === 'taskstem') {
