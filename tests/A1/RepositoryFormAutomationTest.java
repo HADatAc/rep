@@ -268,9 +268,12 @@ public class RepositoryFormAutomationTest {
      */
     private void clickElementRobust(WebElement element) {
         try {
+            System.out.println("Clicando no elemento: " + element.getTagName() + " com texto: " + element.getText());
             wait.until(driver -> element.isDisplayed() && element.isEnabled());
+            System.out.println("Elemento está visível e habilitado.");
             ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
-            Thread.sleep(500); // pequena pausa para garantir que o scroll concluiu
+            Thread.sleep(1000); // pequena pausa para garantir que o scroll concluiu
+            System.out.println("Elemento rolado para o centro da tela.");
 
             // Verifica se não há sobreposição
             Boolean isOverlapped = (Boolean) ((JavascriptExecutor) driver).executeScript(
@@ -279,10 +282,11 @@ public class RepositoryFormAutomationTest {
                             "var elFromPoint = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);" +
                             "return !(elem === elFromPoint || elem.contains(elFromPoint));", element);
 
+            System.out.println("Elemento está sobreposto? " + isOverlapped);
             if (isOverlapped) {
                 throw new RuntimeException("Elemento sobreposto por outro elemento.");
             }
-
+            System.out.println("Clicando no elemento via JavaScript.");
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
         } catch (Exception e) {
             throw new RuntimeException("Falha ao clicar no elemento: " + e.getMessage(), e);
