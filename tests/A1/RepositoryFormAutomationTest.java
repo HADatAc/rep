@@ -150,6 +150,7 @@ public class RepositoryFormAutomationTest {
                  */
                 //logCurrentPageState(5000);
                 //Thread.sleep(2000);
+                System.out.println("Esperando URL ou mensagem de status...");
                 String currentUrl = driver.getCurrentUrl();
                 System.out.println("URL atual: " + currentUrl);
 
