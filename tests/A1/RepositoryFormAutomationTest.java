@@ -288,6 +288,7 @@ public class RepositoryFormAutomationTest {
             }
             System.out.println("Clicando no elemento via JavaScript.");
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+            System.out.println("Clique realizado com sucesso.");
         } catch (Exception e) {
             throw new RuntimeException("Falha ao clicar no elemento: " + e.getMessage(), e);
         }
