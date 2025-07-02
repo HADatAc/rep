@@ -127,7 +127,6 @@ public class RepositoryFormAutomationTest {
                 if (!submitButton.isEnabled()) {
                     throw new RuntimeException("Botão de envio está desabilitado.");
                 }
-
                  */
                 System.out.println("Submetendo formulário...");
 
