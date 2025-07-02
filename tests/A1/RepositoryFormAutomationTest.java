@@ -121,7 +121,7 @@ public class RepositoryFormAutomationTest {
                     throw new RuntimeException("Botão de envio está desabilitado.");
                 }
 
-                clickElementRobust(By.xpath("//button[text()='Submit']"));
+                clickElementRobust(By.xpath("//button[text()='Log in']"));
 
 
                 try {
@@ -206,7 +206,7 @@ public class RepositoryFormAutomationTest {
             valueField.clear();
             valueField.sendKeys("qwertyuiopasdfghjklzxcvbnm123456");
 
-            clickElementRobust(By.xpath("//button[text()='Submit']"));
+            clickElementRobust(By.xpath("//button[text()='Log in']"));
 
 
             wait.until(ExpectedConditions.urlContains("/admin/config/system/keys"));
