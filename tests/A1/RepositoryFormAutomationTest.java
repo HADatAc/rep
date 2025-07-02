@@ -159,7 +159,6 @@ public class RepositoryFormAutomationTest {
                     formConfirmed = true;
                 }
                  */
-
                /* List<WebElement> messages = driver.findElements(By.cssSelector(".messages--error, .messages--warning, .form-item--error-message"));
                 for (WebElement msg : messages) {
                     System.out.println("Mensagem: " + msg.getText());
