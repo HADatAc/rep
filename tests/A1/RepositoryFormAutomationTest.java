@@ -192,6 +192,7 @@ public class RepositoryFormAutomationTest {
 
 
 
+
     private void ensureJwtKeyExists() {
         WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
                 By.cssSelector("select[name='jwt_secret']")));
