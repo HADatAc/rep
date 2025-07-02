@@ -88,12 +88,14 @@ public class AdminAuto {
 
         if (!contentEditorCheckbox.isSelected()) {
             System.out.println("Content editor is unchecked. Clicking to check it.");
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", contentEditorCheckbox);
+            clickElementRobust(By.id("edit-roles-content-editor"));
+            wait.until(ExpectedConditions.elementToBeSelected(contentEditorCheckbox));
         }
 
         if (!administratorCheckbox.isSelected()) {
             System.out.println("Administrator is unchecked. Clicking to check it.");
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", administratorCheckbox);
+            clickElementRobust(By.id("edit-roles-administrator"));
+            wait.until(ExpectedConditions.elementToBeSelected(administratorCheckbox));
         }
 
         clickElementRobust(By.id("edit-submit"));
@@ -103,6 +105,20 @@ public class AdminAuto {
         );
 
         System.out.println("Success message: " + successMessage.getText());
+
+        // Recarregar a página para garantir que o estado foi salvo
+        driver.navigate().refresh();
+
+        WebElement contentEditorCheckboxAfter = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-content-editor"))
+        );
+        WebElement administratorCheckboxAfter = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-administrator"))
+        );
+
+        assertTrue(contentEditorCheckboxAfter.isSelected(), "Content editor checkbox deveria estar marcada após salvar.");
+        assertTrue(administratorCheckboxAfter.isSelected(), "Administrator checkbox deveria estar marcada após salvar.");
+
         assertTrue(successMessage.getText().toLowerCase().contains("has been updated"));
     }
 
