@@ -288,6 +288,7 @@ public class RepositoryFormAutomationTest {
         int maxAttempts = 5;
         int attempt = 0;
 
+        System.out.println("Clique robusto iniciado para o elemento: " + locator);
         while (attempt < maxAttempts) {
             attempt++;
             try {
