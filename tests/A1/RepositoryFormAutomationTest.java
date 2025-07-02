@@ -70,13 +70,33 @@ public class RepositoryFormAutomationTest {
     }
 
     @Test
-    void testFillRepositoryForm() {
+    void testFillRepositoryForm() throws InterruptedException {
         driver.get("http://" + ip + "/admin/config/rep");
 
         ensureJwtKeyExists();
 
         Select jwtDropdown = new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']")));
         jwtDropdown.selectByVisibleText("jwt");
+
+        // Aguarda o campo Repository aparecer e marca o checkbox se necessário
+        wait.until(driver -> findInputByLabel("Repository Short Name (ex. \"ChildFIRST\")") != null);
+        WebElement checkbox = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-sagres-conf")));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", checkbox);
+        wait.until(ExpectedConditions.elementToBeClickable(checkbox));
+        if (!checkbox.isSelected()) {
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
+        }
+
+        // Preenche todos os campos do formulário
+        fillInput("Repository Short Name (ex. \"ChildFIRST\")", "PMSR");
+        fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", "Portuguese Medical Social Repository");
+        fillInput("Repository URL (ex: http://childfirst.ucla.edu, http://tw.rpi.edu, etc.)", "https://pmsr.net");
+        fillInput("Prefix for Base Namespace (ex: ufmg, ucla, rpi, etc.)", "psmr");
+        fillInput("URL for Base Namespace", "https://pmsr.net");
+        fillInput("Mime for Base Namespace", "text/turtle");
+        fillInput("Source for Base Namespace", "hadatac");
+        fillInput("description for the repository that appears in the rep APIs GUI", "pmsr123");
+        fillInput("Sagres Base URL", "https://52.214.194.214/");
 
         String localIp = getLocalIpAddress();
         String apiUrl = "http://" + localIp + ":9000";
@@ -97,39 +117,56 @@ public class RepositoryFormAutomationTest {
         while (!formConfirmed && attempts < maxAttempts) {
             attempts++;
             System.out.println("Tentando submeter o formulário, tentativa #" + attempts);
-            clickElementRobust(driver.findElement(By.cssSelector("input#edit-submit")));
 
             try {
-                wait.until(ExpectedConditions.or(
-                        ExpectedConditions.urlContains("/rep/repo/info"),
-                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".messages--status"))
-                ));
-            } catch (TimeoutException e) {
-                System.out.println("Timeout esperando resposta após submit.");
-            }
+                clickElementRobust(driver.findElement(By.cssSelector("input#edit-submit")));
 
-            String currentUrl = driver.getCurrentUrl();
-            System.out.println("URL atual após submit: " + currentUrl);
-
-            if (currentUrl.contains("/rep/repo/info")) {
-                System.out.println("Final page detectada: " + currentUrl);
-                formConfirmed = true;
-            } else {
-                System.out.println("Não avançou para página final, recarregando e preenchendo...");
-                driver.get("http://" + ip + "/admin/config/rep");
-
-                WebElement fullNameField = findInputByLabel("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")");
-                System.out.println("Valor do campo Repository Full Name: " + (fullNameField != null ? fullNameField.getAttribute("value") : "campo não encontrado"));
-                if (fullNameField != null && fullNameField.getAttribute("value").trim().isEmpty()) {
-                    fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", expectedFullName);
+                try {
+                    wait.until(ExpectedConditions.or(
+                            ExpectedConditions.urlContains("/rep/repo/info"),
+                            ExpectedConditions.presenceOfElementLocated(By.cssSelector(".messages--status"))
+                    ));
+                } catch (TimeoutException e) {
+                    System.out.println("Timeout esperando resposta após submit.");
                 }
 
+                Thread.sleep(2000); // Tempo para garantir carregamento
 
+                String currentUrl = driver.getCurrentUrl();
+                System.out.println("URL atual após submit: " + currentUrl);
 
-                WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
-                        By.cssSelector("select[name='jwt_secret']")));
-                jwtDropdown = new Select(jwtSelect);
-                jwtDropdown.selectByVisibleText("jwt");
+                List<WebElement> messages = driver.findElements(By.cssSelector(
+                        ".messages--error, .messages--warning, .form-item--error-message"));
+                if (!messages.isEmpty()) {
+                    System.out.println("Mensagens após submit:");
+                    for (WebElement msg : messages) {
+                        System.out.println(" - " + msg.getText());
+                    }
+                }
+
+                if (currentUrl.contains("/rep/repo/info")) {
+                    System.out.println("Página final detectada com sucesso!");
+                    formConfirmed = true;
+                } else {
+                    System.out.println("Formulário não foi enviado corretamente. Recarregando e tentando novamente...");
+                    driver.get("http://" + ip + "/admin/config/rep");
+
+                    // Verifica se campo está vazio e reenvia
+                    WebElement fullNameField = findInputByLabel("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")");
+                    if (fullNameField != null && fullNameField.getAttribute("value").trim().isEmpty()) {
+                        fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", expectedFullName);
+                    }
+
+                    // Garante que JWT está selecionado de novo
+                    WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
+                            By.cssSelector("select[name='jwt_secret']")));
+                    jwtDropdown = new Select(jwtSelect);
+                    jwtDropdown.selectByVisibleText("jwt");
+                }
+
+            } catch (Exception e) {
+                System.out.println("Erro inesperado ao tentar submeter o formulário: " + e.getMessage());
+                e.printStackTrace();
             }
         }
 
@@ -137,6 +174,7 @@ public class RepositoryFormAutomationTest {
             throw new RuntimeException("Falha ao submeter o formulário após " + maxAttempts + " tentativas.");
         }
     }
+
 
     private void ensureJwtKeyExists() {
         WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
