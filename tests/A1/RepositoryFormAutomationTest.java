@@ -52,6 +52,7 @@ public class RepositoryFormAutomationTest {
         // Espera explícita para página carregar o input
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
 
+
         // Espera o botão login estar clicável
         wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
 
