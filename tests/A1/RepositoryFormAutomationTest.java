@@ -113,8 +113,9 @@ public class RepositoryFormAutomationTest {
 
             try {
                 WebElement submitButton = driver.findElement(By.cssSelector("input#edit-submit"));
-
+                System.out.println("Botão de envio encontrado: " + submitButton.isDisplayed());
                 wait.until(ExpectedConditions.elementToBeClickable(submitButton));
+                System.out.println("Botão de envio está habilitado: " + submitButton.isEnabled());
                 if (!submitButton.isEnabled()) {
                     throw new RuntimeException("Botão de envio está desabilitado.");
                 }
@@ -126,6 +127,7 @@ public class RepositoryFormAutomationTest {
                             ExpectedConditions.urlContains("/rep/repo/info"),
                             ExpectedConditions.presenceOfElementLocated(By.cssSelector(".messages--status"))
                     ));
+                    System.out.println("Formulário submetido com sucesso ou mensagem de status encontrada.");
                 } catch (TimeoutException e) {
                     System.out.println("Timeout esperando resposta.");
                 }
