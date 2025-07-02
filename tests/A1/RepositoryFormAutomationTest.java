@@ -287,7 +287,23 @@ public class RepositoryFormAutomationTest {
                 throw new RuntimeException("Elemento sobreposto por outro elemento.");
             }
             System.out.println("Clicando no elemento via JavaScript.");
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+            try {
+                // Tenta clique padrão
+                element.click();
+                System.out.println("Clique WebDriver realizado com sucesso.");
+            } catch (ElementClickInterceptedException e) {
+                System.out.println("Clique direto falhou. Tentando via JavaScript.");
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+                System.out.println("Clique JavaScript realizado.");
+            }
+
+            Thread.sleep(500);
+
+            // Validação final: tenta disparar o evento 'change' forçado, caso aplicável
+            ((JavascriptExecutor) driver).executeScript(
+                    "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
+                    element
+            );
             System.out.println("Clique realizado com sucesso.");
         } catch (Exception e) {
             throw new RuntimeException("Falha ao clicar no elemento: " + e.getMessage(), e);
