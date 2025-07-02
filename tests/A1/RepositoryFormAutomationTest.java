@@ -75,10 +75,10 @@ public class RepositoryFormAutomationTest {
 
         ensureJwtKeyExists();
 
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("select[name='jwt_secret']"))).click();
         Select jwtDropdown = new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']")));
         jwtDropdown.selectByVisibleText("jwt");
 
-        // Aguarda o campo Repository aparecer e marca o checkbox se necessário
         wait.until(driver -> findInputByLabel("Repository Short Name (ex. \"ChildFIRST\")") != null);
         WebElement checkbox = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-sagres-conf")));
         ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", checkbox);
@@ -87,7 +87,7 @@ public class RepositoryFormAutomationTest {
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
         }
 
-        // Preenche todos os campos do formulário
+        // Preenchimento dos campos obrigatórios
         fillInput("Repository Short Name (ex. \"ChildFIRST\")", "PMSR");
         fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", "Portuguese Medical Social Repository");
         fillInput("Repository URL (ex: http://childfirst.ucla.edu, http://tw.rpi.edu, etc.)", "https://pmsr.net");
@@ -100,23 +100,16 @@ public class RepositoryFormAutomationTest {
 
         String localIp = getLocalIpAddress();
         String apiUrl = "http://" + localIp + ":9000";
-        WebElement input = findInputByLabel("rep API Base URL");
-        if (input != null) {
-            input.clear();
-            input.sendKeys(apiUrl);
-        } else {
-            System.out.println("Campo 'rep API Base URL' não encontrado!");
-        }
+        fillInput("rep API Base URL", apiUrl);
 
         String expectedFullName = "Portuguese Medical Social Repository";
-
         int maxAttempts = 3;
         int attempts = 0;
         boolean formConfirmed = false;
 
         while (!formConfirmed && attempts < maxAttempts) {
             attempts++;
-            System.out.println("Tentando submeter o formulário, tentativa #" + attempts);
+            System.out.println("Tentativa de submissão #" + attempts);
 
             try {
                 clickElementRobust(driver.findElement(By.cssSelector("input#edit-submit")));
@@ -127,53 +120,52 @@ public class RepositoryFormAutomationTest {
                             ExpectedConditions.presenceOfElementLocated(By.cssSelector(".messages--status"))
                     ));
                 } catch (TimeoutException e) {
-                    System.out.println("Timeout esperando resposta após submit.");
+                    System.out.println("Timeout esperando resposta.");
                 }
 
-                Thread.sleep(2000); // Tempo para garantir carregamento
-
+                Thread.sleep(2000);
                 String currentUrl = driver.getCurrentUrl();
-                System.out.println("URL atual após submit: " + currentUrl);
+                System.out.println("URL atual: " + currentUrl);
 
-                List<WebElement> messages = driver.findElements(By.cssSelector(
-                        ".messages--error, .messages--warning, .form-item--error-message"));
-                if (!messages.isEmpty()) {
-                    System.out.println("Mensagens após submit:");
-                    for (WebElement msg : messages) {
-                        System.out.println(" - " + msg.getText());
-                    }
+                List<WebElement> messages = driver.findElements(By.cssSelector(".messages--error, .messages--warning, .form-item--error-message"));
+                for (WebElement msg : messages) {
+                    System.out.println("Mensagem: " + msg.getText());
+                }
+
+                List<WebElement> fallbackMessages = driver.findElements(By.cssSelector("[data-drupal-messages-fallback] .messages--error"));
+                for (WebElement msg : fallbackMessages) {
+                    System.out.println("Mensagem (fallback): " + msg.getText());
                 }
 
                 if (currentUrl.contains("/rep/repo/info")) {
-                    System.out.println("Página final detectada com sucesso!");
+                    System.out.println("Formulário submetido com sucesso!");
                     formConfirmed = true;
                 } else {
-                    System.out.println("Formulário não foi enviado corretamente. Recarregando e tentando novamente...");
+                    System.out.println("Recarregando formulário...");
+
                     driver.get("http://" + ip + "/admin/config/rep");
 
-                    // Verifica se campo está vazio e reenvia
                     WebElement fullNameField = findInputByLabel("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")");
                     if (fullNameField != null && fullNameField.getAttribute("value").trim().isEmpty()) {
                         fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", expectedFullName);
                     }
 
-                    // Garante que JWT está selecionado de novo
-                    WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(
-                            By.cssSelector("select[name='jwt_secret']")));
+                    WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("select[name='jwt_secret']")));
                     jwtDropdown = new Select(jwtSelect);
                     jwtDropdown.selectByVisibleText("jwt");
                 }
 
             } catch (Exception e) {
-                System.out.println("Erro inesperado ao tentar submeter o formulário: " + e.getMessage());
+                System.out.println("Erro inesperado: " + e.getMessage());
                 e.printStackTrace();
             }
         }
 
         if (!formConfirmed) {
-            throw new RuntimeException("Falha ao submeter o formulário após " + maxAttempts + " tentativas.");
+            throw new RuntimeException("Falha após " + maxAttempts + " tentativas.");
         }
     }
+
 
 
     private void ensureJwtKeyExists() {
