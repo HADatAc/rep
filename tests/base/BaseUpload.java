@@ -90,17 +90,18 @@ public abstract class BaseUpload {
     }
 
     protected void submitFormAndVerifySuccess() {
-        By saveButtonLocator = By.xpath("//button[contains(text(), 'Save')]");
+        By saveButtonLocator = By.id("edit-submit");  // troque pelo id correto do botão "Save"
         clickElementRobust(saveButtonLocator);
 
         boolean confirmationAppeared = wait.until(driver ->
-                driver.findElements(By.cssSelector(".messages.status, .alert-success")).size() > 0 ||
+                !driver.findElements(By.cssSelector(".messages.status, .alert-success")).isEmpty() ||
                         driver.getPageSource().toLowerCase().contains("successfully")
         );
 
         assertTrue(confirmationAppeared, "No confirmation message found after upload.");
         System.out.println("Form submitted successfully and confirmation message appeared.");
     }
+
 
     protected String extractUriFromSDD() {
         driver.get("http://"+ip+"/sem/select/semanticdatadictionary/1/9");
