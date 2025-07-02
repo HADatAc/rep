@@ -87,7 +87,7 @@ public class RepositoryFormAutomationTest {
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
         }
 
-        // Preenchimento dos campos obrigatórios
+        // Preenchimento dos campos obrigatórios com logs
         fillInput("Repository Short Name (ex. \"ChildFIRST\")", "PMSR");
         fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", "Portuguese Medical Social Repository");
         fillInput("Repository URL (ex: http://childfirst.ucla.edu, http://tw.rpi.edu, etc.)", "https://pmsr.net");
@@ -112,7 +112,14 @@ public class RepositoryFormAutomationTest {
             System.out.println("Tentativa de submissão #" + attempts);
 
             try {
-                clickElementRobust(driver.findElement(By.cssSelector("input#edit-submit")));
+                WebElement submitButton = driver.findElement(By.cssSelector("input#edit-submit"));
+
+                wait.until(ExpectedConditions.elementToBeClickable(submitButton));
+                if (!submitButton.isEnabled()) {
+                    throw new RuntimeException("Botão de envio está desabilitado.");
+                }
+
+                clickElementRobust(submitButton);
 
                 try {
                     wait.until(ExpectedConditions.or(
@@ -206,15 +213,17 @@ public class RepositoryFormAutomationTest {
         }
     }
 
-    private void fillInput(String labelText, String value) {
-        WebElement input = findInputByLabel(labelText);
+    private void fillInput(String label, String value) {
+        WebElement input = findInputByLabel(label);
         if (input != null) {
             input.clear();
             input.sendKeys(value);
+            System.out.printf("Campo \"%s\" preenchido com: %s%n", label, value);
         } else {
-            throw new RuntimeException("Field with label '" + labelText + "' not found.");
+            throw new RuntimeException("Campo com label \"" + label + "\" não encontrado.");
         }
     }
+
 
     private WebElement findInputByLabel(String labelText) {
         List<WebElement> labels = driver.findElements(By.tagName("label"));
@@ -257,12 +266,25 @@ public class RepositoryFormAutomationTest {
      */
     private void clickElementRobust(WebElement element) {
         try {
-            wait.until(ExpectedConditions.elementToBeClickable(element));
-            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", element);
-            Thread.sleep(500); // pequena pausa para garantir visibilidade
+            wait.until(driver -> element.isDisplayed() && element.isEnabled());
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
+            Thread.sleep(500); // pequena pausa para garantir que o scroll concluiu
+
+            // Verifica se não há sobreposição
+            Boolean isOverlapped = (Boolean) ((JavascriptExecutor) driver).executeScript(
+                    "var elem = arguments[0];" +
+                            "var rect = elem.getBoundingClientRect();" +
+                            "var elFromPoint = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);" +
+                            "return !(elem === elFromPoint || elem.contains(elFromPoint));", element);
+
+            if (isOverlapped) {
+                throw new RuntimeException("Elemento sobreposto por outro elemento.");
+            }
+
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
         } catch (Exception e) {
             throw new RuntimeException("Falha ao clicar no elemento: " + e.getMessage(), e);
         }
     }
+
 }
