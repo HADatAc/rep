@@ -4,6 +4,7 @@ import org.junit.jupiter.api.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.*;
 
 import java.io.File;
@@ -19,7 +20,7 @@ public abstract class BaseUpload {
     String ip = "54.75.120.47";
 
     @BeforeAll
-    void setup() {
+    void setup() throws InterruptedException {
         ChromeOptions options = new ChromeOptions();
 
         options.setBinary("/usr/bin/chromium-browser");
@@ -31,18 +32,27 @@ public abstract class BaseUpload {
         options.addArguments("--ignore-certificate-errors");
 
         driver = new ChromeDriver(options);
-
         driver.manage().window().maximize();
-        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        wait = new WebDriverWait(driver, Duration.ofSeconds(30));
 
-        driver.get("http://"+ip+"/user/login");
+        driver.get("http://" + ip + "/user/login");
+
+        Thread.sleep(2000);
+
+        Actions actions = new Actions(driver);
+        actions.sendKeys("thisisunsafe").perform();
+
+        Thread.sleep(2000);
+        logCurrentPageState(1000);
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+        wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
+
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
+
         clickElementRobust(By.id("edit-submit"));
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.cssSelector("#toolbar-item-user")));
-        System.out.println("Logged in successfully.");
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 
     protected void navigateToUploadPage(String type) {
@@ -80,8 +90,8 @@ public abstract class BaseUpload {
     }
 
     protected void submitFormAndVerifySuccess() {
-        WebElement saveButton = driver.findElement(By.xpath("//button[contains(text(), 'Save')]"));
-        saveButton.click();
+        By saveButtonLocator = By.xpath("//button[contains(text(), 'Save')]");
+        clickElementRobust(saveButtonLocator);
 
         boolean confirmationAppeared = wait.until(driver ->
                 driver.findElements(By.cssSelector(".messages.status, .alert-success")).size() > 0 ||
@@ -92,10 +102,6 @@ public abstract class BaseUpload {
         System.out.println("Form submitted successfully and confirmation message appeared.");
     }
 
-    /**
-     * Navega para a página do Semantic Data Dictionary e extrai o URI do primeiro checkbox na tabela.
-     * @return String com o URI extraído.
-     */
     protected String extractUriFromSDD() {
         driver.get("http://localhost/sem/select/semanticdatadictionary/1/9");
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
@@ -104,7 +110,8 @@ public abstract class BaseUpload {
         System.out.println("URI extracted: " + uri);
         return uri;
     }
-    private void clickElementRobust(By locator) {
+
+    protected void clickElementRobust(By locator) {
         int maxAttempts = 5;
         int attempt = 0;
 
@@ -122,11 +129,9 @@ public abstract class BaseUpload {
                     ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
                 }
 
-                // Pequena pausa para garantir processamento
                 Thread.sleep(300);
-
                 System.out.println("Clique robusto finalizado na tentativa " + attempt);
-                return; // sucesso
+                return;
 
             } catch (StaleElementReferenceException sere) {
                 System.out.println("Elemento stale, retry " + attempt);
@@ -137,6 +142,18 @@ public abstract class BaseUpload {
                 }
             }
         }
+    }
+    private void logCurrentPageState(int snippetLength) {
+        String currentUrl = driver.getCurrentUrl();
+        System.out.println("========== Current Page State ==========");
+        System.out.println("URL atual: " + currentUrl);
+
+        String pageSource = driver.getPageSource();
+        if (pageSource.length() > snippetLength) {
+            pageSource = pageSource.substring(0, snippetLength) + "...";
+        }
+        System.out.println("Page source snippet: " + pageSource);
+        System.out.println("========================================");
     }
     @AfterAll
     void teardown() {

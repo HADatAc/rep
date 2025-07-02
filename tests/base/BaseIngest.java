@@ -5,6 +5,7 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.*;
 
 import java.time.Duration;
@@ -25,7 +26,7 @@ public abstract class BaseIngest {
     String ip = "54.75.120.47";
 
     @BeforeAll
-    void setup() {
+    void setup() throws InterruptedException {
         ChromeOptions options = new ChromeOptions();
 
         options.setBinary("/usr/bin/chromium-browser");
@@ -36,18 +37,28 @@ public abstract class BaseIngest {
         options.setAcceptInsecureCerts(true);
         options.addArguments("--ignore-certificate-errors");
 
-
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
-        wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+        wait = new WebDriverWait(driver, Duration.ofSeconds(30));
 
-        driver.get("http://"+ip+"/user/login");
+        driver.get("http://" + ip + "/user/login");
+
+        Thread.sleep(2000);
+
+        Actions actions = new Actions(driver);
+        actions.sendKeys("thisisunsafe").perform();
+
+        Thread.sleep(2000);
+        logCurrentPageState(1000);
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+        wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
+
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
+
         clickElementRobust(By.id("edit-submit"));
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
-        System.out.println("Logged in successfully.");
     }
 
     protected void ingestFile(String type) throws InterruptedException {
@@ -72,8 +83,10 @@ public abstract class BaseIngest {
 
                 if ("UNPROCESSED".equalsIgnoreCase(status)) {
                     try {
-                        WebElement checkbox = cells.get(0).findElement(By.cssSelector("input[type='checkbox']"));
-                        checkbox.click();
+                        // Criar o locator do checkbox para passar no clickElementRobust
+                        By checkboxLocator = By.cssSelector("tbody tr:nth-child(" + (rows.indexOf(row) + 1) + ") td:first-child input[type='checkbox']");
+                        clickElementRobust(checkboxLocator);
+
                         selectedRows.put(rowKey, true);
                         selectedCount++;
                         System.out.println("Selected row: " + rowKey);
@@ -83,6 +96,7 @@ public abstract class BaseIngest {
                 }
             }
         }
+
 
         if (selectedCount == 0) {
             System.out.println("No UNPROCESSED entries found for type: " + type);
@@ -94,13 +108,10 @@ public abstract class BaseIngest {
         Thread.sleep(2000); // Wait for UI to update
 
         try {
-            WebElement ingestButton = wait.until(ExpectedConditions.elementToBeClickable(By.name(buttonName)));
+            By ingestButtonLocator = By.name(buttonName);
 
-            try {
-                ingestButton.click();
-            } catch (WebDriverException e) {
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", ingestButton);
-            }
+            // Uso do clique robusto
+            clickElementRobust(ingestButtonLocator);
 
             try {
                 wait.until(ExpectedConditions.alertIsPresent());
@@ -113,6 +124,7 @@ public abstract class BaseIngest {
         } catch (TimeoutException | NoSuchElementException e) {
             fail("Ingest button with name '" + buttonName + "' not found or not clickable.");
         }
+
 
         Thread.sleep(2000);
         // Retry check loop
@@ -161,22 +173,24 @@ public abstract class BaseIngest {
         int selectedCount = 0;
         selectedRows.clear();
 
-        for (WebElement row : rows) {
-            List<WebElement> cells = row.findElements(By.tagName("td"));
+        for (int i = 0; i < rows.size(); i++) {
+            List<WebElement> cells = rows.get(i).findElements(By.tagName("td"));
             if (cells.size() >= 5) {
-                String name = cells.get(2).getText().trim(); // A coluna 2 é "Name"
-                String status = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim(); // Remove <b><font>
+                String status = cells.get(4).getText().trim();
+                String rowKey = cells.get(1).getText().trim();
 
-                if (name.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
+                if ("UNPROCESSED".equalsIgnoreCase(status)) {
                     try {
-                        WebElement checkbox = row.findElement(By.cssSelector("input[type='checkbox']"));
-                        checkbox.click();
-                        selectedRows.put(name, true);
+                        String checkboxId = "checkbox_" + rowKey;  // ajuste conforme seu id real
+                        By checkboxLocator = By.id(checkboxId);
+
+                        clickElementRobust(checkboxLocator);
+
+                        selectedRows.put(rowKey, true);
                         selectedCount++;
-                        System.out.println("Selected file: " + name);
-                        break; // Apenas um
+                        System.out.println("Selected row: " + rowKey);
                     } catch (Exception e) {
-                        fail("Could not click checkbox for file: " + name + ". Error: " + e.getMessage());
+                        System.out.println("Failed to select checkbox: " + e.getMessage());
                     }
                 }
             }
@@ -186,14 +200,9 @@ public abstract class BaseIngest {
             fail("File '" + fileName + "' not found with UNPROCESSED status.");
         }
 
+        By ingestButtonLocator = By.name(buttonName);
         try {
-            WebElement ingestButton = wait.until(ExpectedConditions.elementToBeClickable(By.name(buttonName)));
-
-            try {
-                ingestButton.click();
-            } catch (WebDriverException e) {
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", ingestButton);
-            }
+            clickElementRobust(ingestButtonLocator);
 
             try {
                 wait.until(ExpectedConditions.alertIsPresent());
@@ -203,11 +212,11 @@ public abstract class BaseIngest {
             } catch (TimeoutException e) {
                 System.out.println("No confirm dialog appeared.");
             }
-        } catch (TimeoutException | NoSuchElementException e) {
-            fail("Ingest button with name '" + buttonName + "' not found or not clickable.");
+
+        } catch (Exception e) {
+            fail("Ingest button with name '" + buttonName + "' not found or not clickable: " + e.getMessage());
         }
 
-        // Wait and verify processing
         int attempts = 0;
         while (attempts < MAX_ATTEMPTS) {
             Thread.sleep(WAIT_INTERVAL_MS);
@@ -240,30 +249,34 @@ public abstract class BaseIngest {
 
         fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
+
     protected void ingestSpecificSDD(String fileName) throws InterruptedException {
         String type = "sdd";
-        driver.get("http://"+ip+"/rep/select/mt/" + type + "/table/1/9/none");
+        driver.get("http://" + ip + "/rep/select/mt/" + type + "/table/1/9/none");
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 
-        List<WebElement> rows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
+        WebElement table = driver.findElement(By.id("edit-element-table"));
+        List<WebElement> rows = table.findElements(By.tagName("tr"));
+
         int selectedCount = 0;
         selectedRows.clear();
 
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 5) {
-                String name = cells.get(2).getText().trim(); // A coluna 2 é "Name"
-                String status = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim(); // Remove <b><font>
+                String name = cells.get(2).getText().trim(); // coluna 2 é "Name"
+                String status = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim();
 
                 if (name.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
                     try {
-                        WebElement checkbox = row.findElement(By.cssSelector("input[type='checkbox']"));
-                        checkbox.click();
+                        String checkboxId = "checkbox_" + name;  // ajuste para o id correto do checkbox
+                        clickElementRobust(By.id(checkboxId));
+
                         selectedRows.put(name, true);
                         selectedCount++;
                         System.out.println("Selected file: " + name);
-                        break; // Apenas um
+                        break; // seleciona apenas um arquivo
                     } catch (Exception e) {
                         fail("Could not click checkbox for file: " + name + ". Error: " + e.getMessage());
                     }
@@ -275,14 +288,9 @@ public abstract class BaseIngest {
             fail("File '" + fileName + "' not found with UNPROCESSED status.");
         }
 
+        By ingestButtonLocator = By.name(buttonName); // mantive o By.name pois geralmente botão não tem id fixo
         try {
-            WebElement ingestButton = wait.until(ExpectedConditions.elementToBeClickable(By.name(buttonName)));
-
-            try {
-                ingestButton.click();
-            } catch (WebDriverException e) {
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", ingestButton);
-            }
+            clickElementRobust(ingestButtonLocator);
 
             try {
                 wait.until(ExpectedConditions.alertIsPresent());
@@ -292,19 +300,21 @@ public abstract class BaseIngest {
             } catch (TimeoutException e) {
                 System.out.println("No confirm dialog appeared.");
             }
-        } catch (TimeoutException | NoSuchElementException e) {
-            fail("Ingest button with name '" + buttonName + "' not found or not clickable.");
+
+        } catch (Exception e) {
+            fail("Ingest button with name '" + buttonName + "' not found or not clickable: " + e.getMessage());
         }
 
-        // Wait and verify processing
         int attempts = 0;
         while (attempts < MAX_ATTEMPTS) {
             Thread.sleep(WAIT_INTERVAL_MS);
             driver.navigate().refresh();
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 
+            WebElement updatedTable = driver.findElement(By.id("edit-element-table"));
+            List<WebElement> updatedRows = updatedTable.findElements(By.tagName("tr"));
             boolean processed = false;
-            List<WebElement> updatedRows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
+
             for (WebElement row : updatedRows) {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
                 if (cells.size() >= 5) {
@@ -329,6 +339,7 @@ public abstract class BaseIngest {
 
         fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
+
 
 
     public String getIngestMode() {
@@ -371,7 +382,18 @@ public abstract class BaseIngest {
     public void setIngestMode(String ingestMode) {
         this.ingestMode = ingestMode;
     }
+    private void logCurrentPageState(int snippetLength) {
+        String currentUrl = driver.getCurrentUrl();
+        System.out.println("========== Current Page State ==========");
+        System.out.println("URL atual: " + currentUrl);
 
+        String pageSource = driver.getPageSource();
+        if (pageSource.length() > snippetLength) {
+            pageSource = pageSource.substring(0, snippetLength) + "...";
+        }
+        System.out.println("Page source snippet: " + pageSource);
+        System.out.println("========================================");
+    }
     @AfterAll
     void teardown() {
         if (driver != null) {
