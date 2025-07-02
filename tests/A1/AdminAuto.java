@@ -86,17 +86,8 @@ public class AdminAuto {
                 ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-administrator"))
         );
 
-        if (!contentEditorCheckbox.isSelected()) {
-            System.out.println("Content editor is unchecked. Clicking to check it.");
-            clickElementRobust(By.id("edit-roles-content-editor"));
-            wait.until(ExpectedConditions.elementToBeSelected(contentEditorCheckbox));
-        }
-
-        if (!administratorCheckbox.isSelected()) {
-            System.out.println("Administrator is unchecked. Clicking to check it.");
-            clickElementRobust(By.id("edit-roles-administrator"));
-            wait.until(ExpectedConditions.elementToBeSelected(administratorCheckbox));
-        }
+        checkCheckboxRobust(By.id("edit-roles-content-editor"));
+        checkCheckboxRobust(By.id("edit-roles-administrator"));
 
         clickElementRobust(By.id("edit-submit"));
 
@@ -161,6 +152,19 @@ public class AdminAuto {
             }
         }
     }
+    private void checkCheckboxRobust(By locator) {
+        WebElement checkbox = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+        if (!checkbox.isSelected()) {
+            System.out.println("Checkbox " + locator + " is unchecked. Clicking to check it.");
+            clickElementRobust(locator);
+
+            // Rebuscar o checkbox do DOM para evitar 'stale element'
+            wait.until(ExpectedConditions.elementToBeSelected(
+                    driver.findElement(locator)
+            ));
+        }
+    }
+
 
     private void logCurrentPageState(int snippetLength) {
         String currentUrl = driver.getCurrentUrl();
