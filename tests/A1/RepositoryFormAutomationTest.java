@@ -48,6 +48,7 @@ public class RepositoryFormAutomationTest {
         if (pageSource.contains("Your connection is not private") || pageSource.contains("NET::ERR_CERT")) {
             throw new RuntimeException("SSL warning page loaded instead of actual app page.");
         }
+        logCurrentPageState(5000);
         // Espera explícita para página carregar o input
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
 
@@ -107,7 +108,7 @@ public class RepositoryFormAutomationTest {
         String apiUrl = "http://" + localIp + ":9000";
         fillInput("rep API Base URL", apiUrl);
 
-        logCurrentPageState(500);
+        logCurrentPageState(5000);
 
         String expectedFullName = "Portuguese Medical Social Repository";
         int maxAttempts = 3;
