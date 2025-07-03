@@ -100,7 +100,7 @@ public class RepositoryFormAutomationTest {
         fillInput("Repository Short Name (ex. \"ChildFIRST\")", "PMSR");
         fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", "Portuguese Medical Social Repository");
         fillInput("Repository URL (ex: http://childfirst.ucla.edu, http://tw.rpi.edu, etc.)", "https://pmsr.net");
-        fillInput("Prefix for Base Namespace (ex: ufmg, ucla, rpi, etc.)", "psmr");
+        fillInput("Prefix for Base Namespace (ex: ufmg, ucla, rpi, etc.)", "pmsr");
         fillInput("URL for Base Namespace", "https://pmsr.net");
         fillInput("Mime for Base Namespace", "text/turtle");
         fillInput("Source for Base Namespace", "hadatac");
