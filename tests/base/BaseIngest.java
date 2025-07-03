@@ -181,11 +181,13 @@ public abstract class BaseIngest {
                 String status = cells.get(4).getText().trim();   // Coluna 5 = Status
                 System.out.println("I passed here: " + uri + " - " + status);
                 if (uri.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
+                    System.out.println("Entrei no IF: " + uri + " - " + status);
                     try {
                         // Importante: colocar https na frente do URI conforme seu padrão
+                        System.out.println("Entrei no TRY");
                         String checkboxId = "edit-element-table-https" + uri;
                         By checkboxLocator = By.id(checkboxId);
-
+                        System.out.println("Antes do checkCheckboxRobust: " + checkboxLocator);
                         checkCheckboxRobust(checkboxLocator);
 
                         selectedRows.put(uri, true);
@@ -358,9 +360,12 @@ public abstract class BaseIngest {
         int attempt = 0;
 
         while (attempt < maxAttempts) {
+            System.out.println("Entrei no checkCheckboxRobust: " + locator);
             attempt++;
             try {
+                System.out.println("Entrei no try do checkCheckboxRobust antes do maldito wait: " + locator);
                 WebElement checkbox = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+                System.out.println("Passei do wait: " + locator);
                 if (!checkbox.isSelected()) {
                     System.out.println("Checkbox " + locator + " is unchecked. Clicking to check it.");
                     clickElementRobust(locator);
