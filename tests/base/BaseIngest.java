@@ -271,8 +271,8 @@ public abstract class BaseIngest {
 
                 if (name.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
                     try {
-                        String checkboxId = "checkbox_" + name;  // ajuste para o id correto do checkbox
-                        checkCheckboxRobust(By.id(checkboxId));
+                        // ajuste para o id correto do checkbox
+                        checkCheckboxRobust(By.id(name));
 
                         selectedRows.put(name, true);
                         selectedCount++;
