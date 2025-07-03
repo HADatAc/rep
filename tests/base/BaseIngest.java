@@ -180,26 +180,28 @@ public abstract class BaseIngest {
                 String uri = cells.get(1).getText().trim();      // Column 2 = URI
                 String status = cells.get(4).getText().trim();   // Column 5 = Status
                 System.out.println("I passed here: " + uri + " - " + status);
-
+                Thread.sleep(1000);
                 if (status.equalsIgnoreCase("UNPROCESSED")) {
                     System.out.println("Entered IF for URI: " + uri + " - Status: " + status);
                     try {
                         // Normalize URI to form checkbox id
                         String normalizedUri = uri.replaceAll("[:/\\.]", "").toLowerCase();
-
+                        Thread.sleep(1000);
                         // Insert 'net' between 'psmr' and 'inf' if pattern matches
                         if (normalizedUri.contains("psmr") && normalizedUri.contains("inf")) {
                             normalizedUri = normalizedUri.replaceFirst("psmr(?=inf)", "psmrnet");
                         }
-
+                        Thread.sleep(1000);
                         String checkboxId = "edit-element-table-https" + normalizedUri;
                         By checkboxLocator = By.id(checkboxId);
                         System.out.println("Before checkCheckboxRobust: " + checkboxLocator);
+                        Thread.sleep(1000);
                         checkCheckboxRobust(checkboxLocator);
-
+                        Thread.sleep(1000);
                         selectedRows.put(uri, true);
                         selectedCount++;
                         System.out.println("Selected row with URI: " + uri);
+                        Thread.sleep(1000);
                     } catch (Exception e) {
                         System.out.println("Failed to select checkbox for URI " + uri + ": " + e.getMessage());
                     }
@@ -267,7 +269,6 @@ public abstract class BaseIngest {
 
         assertEquals(selectedCount, processedCount, "Not all selected entries were processed.");
     }
-
 
 
 
