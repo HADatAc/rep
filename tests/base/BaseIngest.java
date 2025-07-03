@@ -193,6 +193,10 @@ public abstract class BaseIngest {
                                 .replace("http://", "")
                                 .replaceAll("[:/.]", ""); // remove ':', '/', '.'
 
+                        if (normalizedUri.contains("pmsr") && normalizedUri.contains("inf")) {
+                            normalizedUri = normalizedUri.replaceFirst("pmsr(?=inf)", "pmsrnet");
+                        }
+                        System.out.println("Normalized URI: " + normalizedUri);
                         // Adiciona o prefixo fixo do id do checkbox
                         String checkboxId = "edit-element-table-https" + normalizedUri;
 
@@ -274,7 +278,6 @@ public abstract class BaseIngest {
 
         assertEquals(selectedCount, processedCount, "Nem todos os arquivos selecionados foram processados.");
     }
-
 
 
 
