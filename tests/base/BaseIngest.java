@@ -181,12 +181,14 @@ public abstract class BaseIngest {
                 String status = cells.get(4).getText().trim();   // Column 5 = Status
                 System.out.println("I passed here: " + uri + " - " + status);
 
-                // Select only rows with status UNPROCESSED regardless of filename
                 if (status.equalsIgnoreCase("UNPROCESSED")) {
                     System.out.println("Entered IF for URI: " + uri + " - Status: " + status);
                     try {
-                        // Add https prefix to URI as per your pattern
-                        String checkboxId = "edit-element-table-https" + uri;
+                        // Normalize URI to form checkbox id: remove characters like :, /, ., etc.
+                        String normalizedUri = uri.replaceAll("[:/\\.]", "").toLowerCase();
+
+                        // Example: id = edit-element-table-https + normalizedUri
+                        String checkboxId = "edit-element-table-https" + normalizedUri;
                         By checkboxLocator = By.id(checkboxId);
                         System.out.println("Before checkCheckboxRobust: " + checkboxLocator);
                         checkCheckboxRobust(checkboxLocator);
@@ -261,6 +263,7 @@ public abstract class BaseIngest {
 
         assertEquals(selectedCount, processedCount, "Not all selected entries were processed.");
     }
+
 
 
 
