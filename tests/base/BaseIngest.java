@@ -181,8 +181,8 @@ public abstract class BaseIngest {
 
                 try {
                     // Monta o ID da checkbox com base no rowKey
-                    String checkboxId = "edit-element-table-" + rowKey;
-                    By checkboxLocator = By.id(checkboxId);
+                    // String checkboxId = "edit-element-table-" + rowKey;
+                    By checkboxLocator = By.id(rowKey);
 
                     checkCheckboxRobust(checkboxLocator);  // usa o By.id agora
 
@@ -271,8 +271,8 @@ public abstract class BaseIngest {
 
                 if (name.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
                     try {
-                        // ajuste para o id correto do checkbox
-                        checkCheckboxRobust(By.id(name));
+                        String checkboxId = "checkbox_" + name;  // ajuste para o id correto do checkbox
+                        checkCheckboxRobust(By.id(checkboxId));
 
                         selectedRows.put(name, true);
                         selectedCount++;
