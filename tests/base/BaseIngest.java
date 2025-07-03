@@ -203,12 +203,16 @@ public abstract class BaseIngest {
                         selectedCount++;
                         System.out.println("Selected checkbox for URI: " + uri);
                         Thread.sleep(500);
+
+                        break;  // PARA AQUI, selecionou um checkbox só
+
                     } catch (Exception e) {
                         System.out.println("Erro ao selecionar checkbox para URI '" + uri + "': " + e.getMessage());
                     }
                 }
             }
         }
+
 
         if (selectedCount == 0) {
             fail("Nenhum arquivo UNPROCESSED encontrado para o tipo INS e arquivo " + fileName);
@@ -235,40 +239,42 @@ public abstract class BaseIngest {
 
         Thread.sleep(2000);
 
+        Thread.sleep(2000);
+        // Retry check loop
         int attempts = 0;
         int processedCount = 0;
 
         while (attempts < MAX_ATTEMPTS) {
             Thread.sleep(WAIT_INTERVAL_MS);
             driver.navigate().refresh();
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
 
-            List<WebElement> updatedRows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
+            List<WebElement> updatedRows = driver.findElements(By.xpath("//table//tbody//tr"));
             processedCount = 0;
 
             for (WebElement row : updatedRows) {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
                 if (cells.size() >= 5) {
-                    String uri = cells.get(1).getText().trim();
-                    String newStatus = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim();
+                    String rowKey = cells.get(1).getText().trim();
+                    String newStatus = cells.get(4).getText().trim();
 
-                    if (selectedRows.containsKey(uri) && "PROCESSED".equalsIgnoreCase(newStatus)) {
+                    if (selectedRows.containsKey(rowKey) && "PROCESSED".equalsIgnoreCase(newStatus)) {
                         processedCount++;
                     }
                 }
             }
 
-            System.out.println("Tentativa " + (attempts + 1) + ": Processados " + processedCount + " de " + selectedCount);
+            System.out.println("Attempt " + (attempts + 1) + ": Processed " + processedCount + " of " + selectedCount);
 
             if (processedCount == selectedCount) {
-                System.out.println("Todos os arquivos selecionados foram processados com sucesso.");
                 break;
             }
 
             attempts++;
         }
 
-        assertEquals(selectedCount, processedCount, "Nem todos os arquivos selecionados foram processados.");
+        assertEquals(selectedCount, processedCount,
+                "Not all selected entries were processed.");
     }
 
 
