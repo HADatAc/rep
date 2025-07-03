@@ -176,23 +176,24 @@ public abstract class BaseIngest {
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 5) {
-                String status = cells.get(4).getText().trim();
-                String rowKey = cells.get(1).getText().trim();
+                String uri = cells.get(1).getText().trim();      // Coluna 2 = URI
+                String status = cells.get(4).getText().trim();   // Coluna 5 = Status
 
-                try {
-                    // Monta o ID da checkbox com base no rowKey
-                    // String checkboxId = "edit-element-table-" + rowKey;
-                    By checkboxLocator = By.id(rowKey);
+                if (uri.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
+                    try {
+                        // O ID segue o padrão: edit-element-table-<uri>
+                        String checkboxId = "edit-element-table-https" + uri;
+                        By checkboxLocator = By.id(checkboxId);
 
-                    checkCheckboxRobust(checkboxLocator);  // usa o By.id agora
+                        checkCheckboxRobust(checkboxLocator);
 
-                    selectedRows.put(rowKey, true);
-                    selectedCount++;
-                    System.out.println("Selected row: " + rowKey);
-                } catch (Exception e) {
-                    System.out.println("Failed to select checkbox for rowKey " + rowKey + ": " + e.getMessage());
+                        selectedRows.put(uri, true);
+                        selectedCount++;
+                        System.out.println("Selected row with URI: " + uri);
+                    } catch (Exception e) {
+                        System.out.println("Failed to select checkbox for URI " + uri + ": " + e.getMessage());
+                    }
                 }
-
             }
         }
 
@@ -202,7 +203,7 @@ public abstract class BaseIngest {
 
         By ingestButtonLocator = By.name(buttonName);
         try {
-            clickElementRobust(ingestButtonLocator);  // clique robusto
+            clickElementRobust(ingestButtonLocator);
 
             try {
                 wait.until(ExpectedConditions.alertIsPresent());
@@ -228,10 +229,10 @@ public abstract class BaseIngest {
             for (WebElement row : updatedRows) {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
                 if (cells.size() >= 5) {
-                    String name = cells.get(2).getText().trim();
+                    String uri = cells.get(1).getText().trim();
                     String newStatus = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim();
 
-                    if (name.equalsIgnoreCase(fileName) && newStatus.equalsIgnoreCase("PROCESSED")) {
+                    if (uri.equalsIgnoreCase(fileName) && newStatus.equalsIgnoreCase("PROCESSED")) {
                         processed = true;
                         break;
                     }
@@ -249,6 +250,7 @@ public abstract class BaseIngest {
 
         fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
+
 
 
     protected void ingestSpecificSDD(String fileName) throws InterruptedException {
