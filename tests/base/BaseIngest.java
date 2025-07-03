@@ -366,38 +366,42 @@ public abstract class BaseIngest {
         fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
 
-    private void checkCheckboxRobust(By locator) throws InterruptedException {
+    private void checkCheckboxRobust(By fallbackLocator) throws InterruptedException {
         int maxAttempts = 5;
         int attempt = 0;
+
+        String idFragment = fallbackLocator.toString().replaceAll(".*\\=", "").replaceAll("]", "").trim();
 
         while (attempt < maxAttempts) {
             attempt++;
             try {
                 Thread.sleep(1000);
 
-                List<WebElement> foundElements = driver.findElements(locator);
+                List<WebElement> checkboxes = driver.findElements(By.cssSelector("input[type='checkbox']"));
 
-                if (foundElements.isEmpty()) {
-                    System.out.println("Checkbox not found on attempt " + attempt);
-                    continue;
+                for (WebElement checkbox : checkboxes) {
+                    String id = checkbox.getAttribute("id");
+
+                    if (id != null && id.contains(idFragment)) {
+                        System.out.println("Matching checkbox found with ID: " + id);
+
+                        Boolean isSelected = (Boolean) ((JavascriptExecutor) driver)
+                                .executeScript("return arguments[0].checked;", checkbox);
+
+                        if (isSelected == null || !isSelected) {
+                            System.out.println("Checkbox not selected, clicking via JS");
+                            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
+                            Thread.sleep(1000);
+                        } else {
+                            System.out.println("Checkbox already selected");
+                        }
+
+                        return;
+                    }
                 }
 
-                WebElement checkbox = foundElements.get(0);
+                System.out.println("No checkbox containing fragment '" + idFragment + "' found on attempt " + attempt);
 
-                Boolean isSelected = (Boolean) ((JavascriptExecutor) driver)
-                        .executeScript("return arguments[0].checked;", checkbox);
-
-                if (isSelected == null || !isSelected) {
-                    System.out.println("Checkbox not selected, clicking via JS");
-                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
-                    Thread.sleep(2000);
-                } else {
-                    System.out.println("Checkbox already selected");
-                    return;
-                }
-
-            } catch (StaleElementReferenceException e) {
-                System.out.println("Stale element on attempt " + attempt + ": " + e.getMessage());
             } catch (Exception e) {
                 System.out.println("Unexpected error on attempt " + attempt + ": " + e.getMessage());
             }
@@ -405,7 +409,7 @@ public abstract class BaseIngest {
             Thread.sleep(1000);
         }
 
-        throw new RuntimeException("Failed to check/select checkbox after " + maxAttempts + " attempts: " + locator);
+        throw new RuntimeException("Failed to find and select checkbox containing ID fragment: " + idFragment);
     }
 
 
