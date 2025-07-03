@@ -363,35 +363,42 @@ public abstract class BaseIngest {
         int maxAttempts = 5;
         int attempt = 0;
 
-        String jsCheckSelected = "return document.querySelector('#" + locator.toString().replace("By.id: ", "") + "').checked;";
-        String jsClick = "document.querySelector('#" + locator.toString().replace("By.id: ", "") + "').click();";
-
         while (attempt < maxAttempts) {
-            System.out.println("Attempt " + (attempt + 1) + " to check checkbox: " + locator);
             attempt++;
-
             try {
                 Thread.sleep(1000);
 
-                Boolean isSelected = (Boolean) ((JavascriptExecutor) driver).executeScript(jsCheckSelected);
+                // Try to find the checkbox element directly
+                WebElement checkbox = driver.findElement(locator);
 
-                if (isSelected == null) {
-                    System.out.println("Checkbox element not found in DOM");
-                } else if (!isSelected) {
-                    System.out.println("Checkbox unchecked, clicking via JS");
-                    ((JavascriptExecutor) driver).executeScript(jsClick);
-                    Thread.sleep(2000); // wait a bit for UI to update
+                // Check if the checkbox is already selected using JavaScript
+                Boolean isSelected = (Boolean) ((JavascriptExecutor) driver)
+                        .executeScript("return arguments[0]?.checked;", checkbox);
+
+                if (isSelected == null || !isSelected) {
+                    System.out.println("Checkbox not selected or null, clicking via JS");
+                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
+                    Thread.sleep(2000); // wait for UI to reflect change
                 } else {
-                    System.out.println("Checkbox is already checked");
+                    System.out.println("Checkbox already selected");
                     return;
                 }
+
+            } catch (NoSuchElementException e) {
+                System.out.println("Checkbox not found on attempt " + attempt + ": " + e.getMessage());
+            } catch (StaleElementReferenceException e) {
+                System.out.println("Stale element on attempt " + attempt + ": " + e.getMessage());
             } catch (Exception e) {
-                System.out.println("Error in JS execution: " + e.getMessage());
+                System.out.println("Unexpected error on attempt " + attempt + ": " + e.getMessage());
             }
+
+            Thread.sleep(500); // small delay before next attempt
         }
 
-        throw new RuntimeException("Failed to check/select checkbox after multiple attempts: " + locator);
+        throw new RuntimeException("Failed to check/select checkbox after " + maxAttempts + " attempts: " + locator);
     }
+
+
 
 
 
