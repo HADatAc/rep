@@ -181,7 +181,7 @@ public abstract class BaseIngest {
 
                 if (uri.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
                     try {
-                        // O ID segue o padrão: edit-element-table-<uri>
+                        // Importante: colocar https na frente do URI conforme seu padrão
                         String checkboxId = "edit-element-table-https" + uri;
                         By checkboxLocator = By.id(checkboxId);
 
@@ -201,6 +201,8 @@ public abstract class BaseIngest {
             fail("File '" + fileName + "' not found with UNPROCESSED status.");
         }
 
+        System.out.println("Total selected entries: " + selectedCount);
+
         By ingestButtonLocator = By.name(buttonName);
         try {
             clickElementRobust(ingestButtonLocator);
@@ -218,38 +220,45 @@ public abstract class BaseIngest {
             fail("Ingest button with name '" + buttonName + "' not found or not clickable: " + e.getMessage());
         }
 
+        Thread.sleep(2000); // esperar UI atualizar
+
         int attempts = 0;
+        int processedCount = 0;
+
         while (attempts < MAX_ATTEMPTS) {
             Thread.sleep(WAIT_INTERVAL_MS);
             driver.navigate().refresh();
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 
-            boolean processed = false;
             List<WebElement> updatedRows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
+            processedCount = 0;
+
             for (WebElement row : updatedRows) {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
                 if (cells.size() >= 5) {
                     String uri = cells.get(1).getText().trim();
                     String newStatus = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim();
 
-                    if (uri.equalsIgnoreCase(fileName) && newStatus.equalsIgnoreCase("PROCESSED")) {
-                        processed = true;
-                        break;
+                    if (selectedRows.containsKey(uri) && newStatus.equalsIgnoreCase("PROCESSED")) {
+                        processedCount++;
                     }
                 }
             }
 
-            if (processed) {
-                System.out.println("File '" + fileName + "' was successfully processed.");
-                return;
+            System.out.println("Attempt " + (attempts + 1) + ": Processed " + processedCount + " of " + selectedCount);
+
+            if (processedCount == selectedCount) {
+                System.out.println("All selected files were processed successfully.");
+                break;
             }
 
             attempts++;
-            System.out.println("Attempt " + attempts + " - still waiting...");
         }
 
-        fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
+        assertEquals(selectedCount, processedCount,
+                "Not all selected entries were processed.");
     }
+
 
 
 
