@@ -356,33 +356,37 @@ public abstract class BaseIngest {
         fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
 
-    private void checkCheckboxRobust(By locator) {
+    private void checkCheckboxRobust(By locator) throws InterruptedException {
         int maxAttempts = 3;
         int attempt = 0;
 
         while (attempt < maxAttempts) {
-            System.out.println("Entrei no checkCheckboxRobust: " + locator);
+            System.out.println("Entered checkCheckboxRobust: " + locator);
             attempt++;
             try {
-                System.out.println("Entrei no try do checkCheckboxRobust antes do maldito wait: " + locator);
-                WebElement checkbox = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
-                System.out.println("Passei do wait: " + locator);
+                System.out.println("Before sleep in checkCheckboxRobust try block: " + locator);
+                Thread.sleep(3000);  // Wait for element to be visible
+
+                WebElement checkbox = driver.findElement(locator);
+                System.out.println("Passed sleep, found checkbox: " + locator);
                 if (!checkbox.isSelected()) {
                     System.out.println("Checkbox " + locator + " is unchecked. Clicking to check it.");
                     clickElementRobust(locator);
                 }
 
-                WebElement refreshed = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+                Thread.sleep(500); // Wait shortly after click
+                WebElement refreshed = driver.findElement(locator);
                 if (refreshed.isSelected()) {
                     return;
                 }
             } catch (StaleElementReferenceException e) {
-                System.out.println("Stale checkbox no attempt " + attempt + ", retrying...");
+                System.out.println("Stale checkbox on attempt " + attempt + ", retrying...");
             }
         }
 
-        throw new RuntimeException("Falha ao verificar/marcar checkbox após várias tentativas: " + locator);
+        throw new RuntimeException("Failed to check/select checkbox after multiple attempts: " + locator);
     }
+
 
     public String getIngestMode() {
         return ingestMode;
