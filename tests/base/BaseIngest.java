@@ -167,54 +167,57 @@ public abstract class BaseIngest {
         String type = "ins";
         driver.get("http://" + ip + "/rep/select/mt/" + type + "/table/1/9/none");
 
-        Thread.sleep(3000); // wait for UI to update
-        System.out.println("Ingesting specific INS file: " + fileName);
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
+
         List<WebElement> rows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
         int selectedCount = 0;
         selectedRows.clear();
 
         System.out.println("Total table rows found: " + rows.size());
+
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 5) {
-                String uri = cells.get(1).getText().trim();      // Column 2 = URI
-                String status = cells.get(4).getText().trim();   // Column 5 = Status
-                System.out.println("I passed here: " + uri + " - " + status);
-                Thread.sleep(1000);
-                if (status.equalsIgnoreCase("UNPROCESSED")) {
-                    System.out.println("Entered IF for URI: " + uri + " - Status: " + status);
+                String uri = cells.get(1).getText().trim();      // Coluna URI
+                String status = cells.get(4).getText().trim();   // Coluna Status
+
+                System.out.println("Checking row URI: " + uri + " with status: " + status);
+                Thread.sleep(500); // pequena pausa para evitar problemas de sincronização
+
+                if ("UNPROCESSED".equalsIgnoreCase(status)) {
                     try {
-                        // Normalize URI to form checkbox id
-                        String normalizedUri = uri.replaceAll("[:/\\.]", "").toLowerCase();
+                        // Normalizar URI para montar o id do checkbox, igual ao HTML
+                        // Exemplo do seu HTML: id="edit-element-table-httpspmsrnetinf1751543786842831"
+                        String normalizedUri = uri.toLowerCase()
+                                .replace("https://", "")
+                                .replace("http://", "")
+                                .replaceAll("[:/.]", ""); // remove ':', '/', '.'
 
-                        if (normalizedUri.contains("pmsr") && normalizedUri.contains("inf")) {
-                            normalizedUri = normalizedUri.replaceFirst("pmsr(?=inf)", "pmsrnet");
-                        }
-
+                        // Adiciona o prefixo fixo do id do checkbox
                         String checkboxId = "edit-element-table-https" + normalizedUri;
-                        System.out.println("Before checkCheckboxRobust: " + checkboxId);
-                        //logCurrentPageState(50000);
-                        // Use XPath instead of By.id to avoid selector issues with dashes
-                        By checkboxLocator = By.xpath("//*[@id='" + checkboxId + "']");
+
+                        System.out.println("Attempting to select checkbox with id: " + checkboxId);
+
+                        By checkboxLocator = By.id(checkboxId);
+
                         checkCheckboxRobust(checkboxLocator);
 
-                        Thread.sleep(1000);
                         selectedRows.put(uri, true);
                         selectedCount++;
-                        System.out.println("Selected row with URI: " + uri);
-                        Thread.sleep(1000);
+                        System.out.println("Selected checkbox for URI: " + uri);
+                        Thread.sleep(500);
                     } catch (Exception e) {
-                        System.out.println("Failed to select checkbox for URI " + uri + ": " + e.getMessage());
+                        System.out.println("Erro ao selecionar checkbox para URI '" + uri + "': " + e.getMessage());
                     }
                 }
             }
         }
 
         if (selectedCount == 0) {
-            fail("No files found with UNPROCESSED status for '" + fileName + "'");
+            fail("Nenhum arquivo UNPROCESSED encontrado para o tipo INS e arquivo " + fileName);
         }
 
-        System.out.println("Total selected entries: " + selectedCount);
+        System.out.println("Total checkboxes selecionados: " + selectedCount);
 
         By ingestButtonLocator = By.name(buttonName);
         try {
@@ -223,17 +226,17 @@ public abstract class BaseIngest {
             try {
                 wait.until(ExpectedConditions.alertIsPresent());
                 Alert alert = driver.switchTo().alert();
-                System.out.println("Ingest confirmation: " + alert.getText());
+                System.out.println("Confirmação do ingest: " + alert.getText());
                 alert.accept();
             } catch (TimeoutException e) {
-                System.out.println("No confirm dialog appeared.");
+                System.out.println("Nenhum diálogo de confirmação apareceu.");
             }
 
         } catch (Exception e) {
-            fail("Ingest button with name '" + buttonName + "' not found or not clickable: " + e.getMessage());
+            fail("Botão de ingest com nome '" + buttonName + "' não encontrado ou não clicável: " + e.getMessage());
         }
 
-        Thread.sleep(2000); // wait for UI to update
+        Thread.sleep(2000);
 
         int attempts = 0;
         int processedCount = 0;
@@ -241,7 +244,7 @@ public abstract class BaseIngest {
         while (attempts < MAX_ATTEMPTS) {
             Thread.sleep(WAIT_INTERVAL_MS);
             driver.navigate().refresh();
-            Thread.sleep(WAIT_INTERVAL_MS);
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 
             List<WebElement> updatedRows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
             processedCount = 0;
@@ -250,26 +253,28 @@ public abstract class BaseIngest {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
                 if (cells.size() >= 5) {
                     String uri = cells.get(1).getText().trim();
+                    // Limpa tags HTML se houver, pode acontecer em alguns sites
                     String newStatus = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim();
 
-                    if (selectedRows.containsKey(uri) && newStatus.equalsIgnoreCase("PROCESSED")) {
+                    if (selectedRows.containsKey(uri) && "PROCESSED".equalsIgnoreCase(newStatus)) {
                         processedCount++;
                     }
                 }
             }
 
-            System.out.println("Attempt " + (attempts + 1) + ": Processed " + processedCount + " of " + selectedCount);
+            System.out.println("Tentativa " + (attempts + 1) + ": Processados " + processedCount + " de " + selectedCount);
 
             if (processedCount == selectedCount) {
-                System.out.println("All selected files were processed successfully.");
+                System.out.println("Todos os arquivos selecionados foram processados com sucesso.");
                 break;
             }
 
             attempts++;
         }
 
-        assertEquals(selectedCount, processedCount, "Not all selected entries were processed.");
+        assertEquals(selectedCount, processedCount, "Nem todos os arquivos selecionados foram processados.");
     }
+
 
 
 
