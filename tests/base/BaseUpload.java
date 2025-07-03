@@ -58,6 +58,7 @@ public abstract class BaseUpload {
     protected void navigateToUploadPage(String type) {
         String url = "http://"+ip+"/rep/manage/addmt/" + type + "/none/F";
         driver.get(url);
+
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("form")));
         System.out.println("Navigated to upload page for type: " + type);
     }
