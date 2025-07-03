@@ -186,23 +186,18 @@ public abstract class BaseIngest {
                     try {
                         // Normalize URI to form checkbox id
                         String normalizedUri = uri.replaceAll("[:/\\.]", "").toLowerCase();
-                        Thread.sleep(1000);
-                        // Insert 'net' between 'psmr' and 'inf' if pattern matches
+
                         if (normalizedUri.contains("psmr") && normalizedUri.contains("inf")) {
                             normalizedUri = normalizedUri.replaceFirst("psmr(?=inf)", "psmrnet");
                         }
-                        Thread.sleep(1000);
-                        List<WebElement> checkboxes = driver.findElements(By.cssSelector("input[type='checkbox']"));
-                        for (WebElement cb : checkboxes) {
-                            System.out.println("Found checkbox with ID: " + cb.getAttribute("id"));
-                        }
 
-                        Thread.sleep(1000);
                         String checkboxId = "edit-element-table-https" + normalizedUri;
-                        By checkboxLocator = By.id(checkboxId);
-                        System.out.println("Before checkCheckboxRobust: " + checkboxLocator);
-                        Thread.sleep(1000);
+                        System.out.println("Before checkCheckboxRobust: " + checkboxId);
+
+                        // Use XPath instead of By.id to avoid selector issues with dashes
+                        By checkboxLocator = By.xpath("//*[@id='" + checkboxId + "']");
                         checkCheckboxRobust(checkboxLocator);
+
                         Thread.sleep(1000);
                         selectedRows.put(uri, true);
                         selectedCount++;
