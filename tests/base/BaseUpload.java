@@ -95,11 +95,14 @@ public abstract class BaseUpload {
         try {
             String fileName = file.getName();
             String type = inferTypeFromFileName(fileName); // Infer type based on file name
-
+            System.out.println("Verifying upload for file: " + fileName + " of type: " + type);
             driver.get("http://" + ip + "/rep/select/mt/" + type + "/table/1/9/none");
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
+            System.out.println("Waiting for the upload listing page to load...");
+            Thread.sleep(2000);
+            //wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
 
             List<WebElement> rows = driver.findElements(By.xpath("//table//tbody//tr"));
+            System.out.println("Found " + rows.size() + " rows in the listing table.");
             boolean fileFound = false;
 
             for (WebElement row : rows) {
