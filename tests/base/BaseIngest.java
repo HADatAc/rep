@@ -229,7 +229,7 @@ public abstract class BaseIngest {
                 Alert alert = driver.switchTo().alert();
                 System.out.println("Confirmação do ingest: " + alert.getText());
                 alert.accept();
-                Thread.sleep(500); // espera fechar o alerta
+                Thread.sleep(1000); // espera fechar o alerta
             } catch (TimeoutException e) {
                 System.out.println("Nenhum diálogo de confirmação apareceu.");
             }
