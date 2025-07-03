@@ -49,7 +49,7 @@ public abstract class BaseIngest {
         actions.sendKeys("thisisunsafe").perform();
 
         Thread.sleep(2000);
-        logCurrentPageState(1000);
+        //logCurrentPageState(1000);
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
         wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
 
@@ -184,10 +184,14 @@ public abstract class BaseIngest {
                 if (status.equalsIgnoreCase("UNPROCESSED")) {
                     System.out.println("Entered IF for URI: " + uri + " - Status: " + status);
                     try {
-                        // Normalize URI to form checkbox id: remove characters like :, /, ., etc.
+                        // Normalize URI to form checkbox id
                         String normalizedUri = uri.replaceAll("[:/\\.]", "").toLowerCase();
 
-                        // Example: id = edit-element-table-https + normalizedUri
+                        // Insert 'net' between 'psmr' and 'inf' if pattern matches
+                        if (normalizedUri.contains("psmr") && normalizedUri.contains("inf")) {
+                            normalizedUri = normalizedUri.replaceFirst("psmr(?=inf)", "psmrnet");
+                        }
+
                         String checkboxId = "edit-element-table-https" + normalizedUri;
                         By checkboxLocator = By.id(checkboxId);
                         System.out.println("Before checkCheckboxRobust: " + checkboxLocator);
@@ -263,6 +267,7 @@ public abstract class BaseIngest {
 
         assertEquals(selectedCount, processedCount, "Not all selected entries were processed.");
     }
+
 
 
 

@@ -44,7 +44,7 @@ public abstract class BaseUpload {
         actions.sendKeys("thisisunsafe").perform();
 
         Thread.sleep(2000);
-        logCurrentPageState(1000);
+        //logCurrentPageState(1000);
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
         wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
 
