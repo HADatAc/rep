@@ -167,7 +167,7 @@ public abstract class BaseIngest {
         String type = "ins";
         driver.get("http://" + ip + "/rep/select/mt/" + type + "/table/1/9/none");
 
-        Thread.sleep(3000); // esperar UI atualizar
+        Thread.sleep(3000); // wait for UI to update
         System.out.println("Ingesting specific INS file: " + fileName);
         List<WebElement> rows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
         int selectedCount = 0;
@@ -177,17 +177,18 @@ public abstract class BaseIngest {
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 5) {
-                String uri = cells.get(1).getText().trim();      // Coluna 2 = URI
-                String status = cells.get(4).getText().trim();   // Coluna 5 = Status
+                String uri = cells.get(1).getText().trim();      // Column 2 = URI
+                String status = cells.get(4).getText().trim();   // Column 5 = Status
                 System.out.println("I passed here: " + uri + " - " + status);
-                if (uri.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
-                    System.out.println("Entrei no IF: " + uri + " - " + status);
+
+                // Select only rows with status UNPROCESSED regardless of filename
+                if (status.equalsIgnoreCase("UNPROCESSED")) {
+                    System.out.println("Entered IF for URI: " + uri + " - Status: " + status);
                     try {
-                        // Importante: colocar https na frente do URI conforme seu padrão
-                        System.out.println("Entrei no TRY");
+                        // Add https prefix to URI as per your pattern
                         String checkboxId = "edit-element-table-https" + uri;
                         By checkboxLocator = By.id(checkboxId);
-                        System.out.println("Antes do checkCheckboxRobust: " + checkboxLocator);
+                        System.out.println("Before checkCheckboxRobust: " + checkboxLocator);
                         checkCheckboxRobust(checkboxLocator);
 
                         selectedRows.put(uri, true);
@@ -201,7 +202,7 @@ public abstract class BaseIngest {
         }
 
         if (selectedCount == 0) {
-            fail("File '" + fileName + "' not found with UNPROCESSED status.");
+            fail("No files found with UNPROCESSED status for '" + fileName + "'");
         }
 
         System.out.println("Total selected entries: " + selectedCount);
@@ -223,7 +224,7 @@ public abstract class BaseIngest {
             fail("Ingest button with name '" + buttonName + "' not found or not clickable: " + e.getMessage());
         }
 
-        Thread.sleep(2000); // esperar UI atualizar
+        Thread.sleep(2000); // wait for UI to update
 
         int attempts = 0;
         int processedCount = 0;
@@ -258,9 +259,9 @@ public abstract class BaseIngest {
             attempts++;
         }
 
-        assertEquals(selectedCount, processedCount,
-                "Not all selected entries were processed.");
+        assertEquals(selectedCount, processedCount, "Not all selected entries were processed.");
     }
+
 
 
 
