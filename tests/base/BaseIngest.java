@@ -165,7 +165,7 @@ public abstract class BaseIngest {
     }
     protected void ingestSpecificINS(String fileName) throws InterruptedException {
         String type = "ins";
-        driver.get("http://"+ip+"/rep/select/mt/" + type + "/table/1/9/none");
+        driver.get("http://" + ip + "/rep/select/mt/" + type + "/table/1/9/none");
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 
@@ -173,26 +173,26 @@ public abstract class BaseIngest {
         int selectedCount = 0;
         selectedRows.clear();
 
-        for (int i = 0; i < rows.size(); i++) {
-            List<WebElement> cells = rows.get(i).findElements(By.tagName("td"));
+        for (WebElement row : rows) {
+            List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 5) {
                 String status = cells.get(4).getText().trim();
                 String rowKey = cells.get(1).getText().trim();
 
-                if ("UNPROCESSED".equalsIgnoreCase(status)) {
-                    try {
-                        String checkboxId = "checkbox_" + rowKey;  // ajuste conforme seu id real
-                        By checkboxLocator = By.id(checkboxId);
+                try {
+                    // Monta o ID da checkbox com base no rowKey
+                    String checkboxId = "edit-element-table-" + rowKey;
+                    By checkboxLocator = By.id(checkboxId);
 
-                        checkCheckboxRobust(checkboxLocator);
+                    checkCheckboxRobust(checkboxLocator);  // usa o By.id agora
 
-                        selectedRows.put(rowKey, true);
-                        selectedCount++;
-                        System.out.println("Selected row: " + rowKey);
-                    } catch (Exception e) {
-                        System.out.println("Failed to select checkbox: " + e.getMessage());
-                    }
+                    selectedRows.put(rowKey, true);
+                    selectedCount++;
+                    System.out.println("Selected row: " + rowKey);
+                } catch (Exception e) {
+                    System.out.println("Failed to select checkbox for rowKey " + rowKey + ": " + e.getMessage());
                 }
+
             }
         }
 
@@ -202,7 +202,7 @@ public abstract class BaseIngest {
 
         By ingestButtonLocator = By.name(buttonName);
         try {
-            clickElementRobust(ingestButtonLocator);
+            clickElementRobust(ingestButtonLocator);  // clique robusto
 
             try {
                 wait.until(ExpectedConditions.alertIsPresent());
@@ -249,6 +249,7 @@ public abstract class BaseIngest {
 
         fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
+
 
     protected void ingestSpecificSDD(String fileName) throws InterruptedException {
         String type = "sdd";
