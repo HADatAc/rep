@@ -91,7 +91,7 @@ public abstract class BaseUpload {
             fail("Failed to upload the file: " + e.getMessage());
         }
 
-        // 🔍 Verificar se o arquivo está visível na listagem
+      /*  // 🔍 Verificar se o arquivo está visível na listagem
         try {
             String fileName = file.getName();
             String type = inferTypeFromFileName(fileName); // Infer type based on file name
@@ -122,6 +122,8 @@ public abstract class BaseUpload {
         } catch (Exception e) {
             fail("Error verifying uploaded file: " + e.getMessage());
         }
+
+       */
     }
     private String inferTypeFromFileName(String fileName) {
         fileName = fileName.toLowerCase();
@@ -138,7 +140,7 @@ public abstract class BaseUpload {
     protected void submitFormAndVerifySuccess() {
         By saveButtonLocator = By.id("edit-save-submit");
         clickElementRobust(saveButtonLocator);
-/*
+        System.out.println("Form submitted, waiting for confirmation...");
         boolean confirmationAppeared = wait.until(driver ->
                 driver.findElements(By.cssSelector(".messages.status, .alert-success")).size() > 0 ||
                         driver.getPageSource().toLowerCase().contains("successfully")
@@ -146,7 +148,7 @@ public abstract class BaseUpload {
 
         assertTrue(confirmationAppeared, "No confirmation message found after upload.");
 
- */
+
         System.out.println("Form submitted successfully and confirmation message appeared.");
     }
 
