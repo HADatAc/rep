@@ -187,8 +187,8 @@ public abstract class BaseIngest {
                         // Normalize URI to form checkbox id
                         String normalizedUri = uri.replaceAll("[:/\\.]", "").toLowerCase();
 
-                        if (normalizedUri.contains("psmr") && normalizedUri.contains("inf")) {
-                            normalizedUri = normalizedUri.replaceFirst("psmr(?=inf)", "psmrnet");
+                        if (normalizedUri.contains("pmsr") && normalizedUri.contains("inf")) {
+                            normalizedUri = normalizedUri.replaceFirst("pmsr(?=inf)", "pmsrnet");
                         }
 
                         String checkboxId = "edit-element-table-https" + normalizedUri;
