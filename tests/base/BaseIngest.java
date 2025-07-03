@@ -193,7 +193,7 @@ public abstract class BaseIngest {
 
                         String checkboxId = "edit-element-table-https" + normalizedUri;
                         System.out.println("Before checkCheckboxRobust: " + checkboxId);
-
+                        logCurrentPageState(50000);
                         // Use XPath instead of By.id to avoid selector issues with dashes
                         By checkboxLocator = By.xpath("//*[@id='" + checkboxId + "']");
                         checkCheckboxRobust(checkboxLocator);
@@ -296,7 +296,6 @@ public abstract class BaseIngest {
 
                 if (name.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
                     try {
-                        logCurrentPageState(50000);
                         String checkboxId = "checkbox_" + name;  // ajuste para o id correto do checkbox
                         checkCheckboxRobust(By.id(checkboxId));
 
