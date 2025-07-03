@@ -186,23 +186,15 @@ public abstract class BaseIngest {
 
                 if ("UNPROCESSED".equalsIgnoreCase(status)) {
                     try {
-                        // Normalizar URI para montar o id do checkbox, igual ao HTML
-                        // Exemplo do seu HTML: id="edit-element-table-httpspmsrnetinf1751543786842831"
-                        String normalizedUri = uri.toLowerCase()
-                                .replace("https://", "")
-                                .replace("http://", "")
-                                .replaceAll("[:/.]", ""); // remove ':', '/', '.'
+                        // Transformar a URI para o formato usado no atributo name do checkbox:
+                        // Exemplo: "pmsr:/INF1751544534527541" vira "https://pmsr.net/INF1751544534527541"
+                        String normalizedUriForName = uri.replaceFirst("^pmsr:/", "https://pmsr.net/");
 
-                        if (normalizedUri.contains("pmsr") && normalizedUri.contains("inf")) {
-                            normalizedUri = normalizedUri.replaceFirst("pmsr(?=inf)", "pmsrnet");
-                        }
-                        System.out.println("Normalized URI: " + normalizedUri);
-                        // Adiciona o prefixo fixo do id do checkbox
-                        String checkboxId = "edit-element-table-https" + normalizedUri;
+                        String checkboxName = "element_table[" + normalizedUriForName + "]";
 
-                        System.out.println("Attempting to select checkbox with id: " + checkboxId);
+                        System.out.println("Attempting to select checkbox with name: " + checkboxName);
 
-                        By checkboxLocator = By.id(checkboxId);
+                        By checkboxLocator = By.name(checkboxName);
 
                         checkCheckboxRobust(checkboxLocator);
 
@@ -257,7 +249,6 @@ public abstract class BaseIngest {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
                 if (cells.size() >= 5) {
                     String uri = cells.get(1).getText().trim();
-                    // Limpa tags HTML se houver, pode acontecer em alguns sites
                     String newStatus = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim();
 
                     if (selectedRows.containsKey(uri) && "PROCESSED".equalsIgnoreCase(newStatus)) {
@@ -278,6 +269,7 @@ public abstract class BaseIngest {
 
         assertEquals(selectedCount, processedCount, "Nem todos os arquivos selecionados foram processados.");
     }
+
 
 
 
