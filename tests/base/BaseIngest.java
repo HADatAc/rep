@@ -191,6 +191,7 @@ public abstract class BaseIngest {
                         String normalizedUriForName = uri.replaceFirst("^pmsr:/", "https://pmsr.net/");
 
                         String checkboxName = "element_table[" + normalizedUriForName + "]";
+                        System.out.println("Normalized URI for checkbox: " + normalizedUriForName);
 
                         System.out.println("Attempting to select checkbox with name: " + checkboxName);
 
@@ -370,20 +371,55 @@ public abstract class BaseIngest {
         int maxAttempts = 5;
         int attempt = 0;
 
-        String idFragment = fallbackLocator.toString().replaceAll(".*\\=", "").replaceAll("]", "").trim();
-
         while (attempt < maxAttempts) {
             attempt++;
             try {
                 Thread.sleep(1000);
 
-                List<WebElement> checkboxes = driver.findElements(By.cssSelector("input[type='checkbox']"));
+                // Detectar se é By.id ou By.name
+                String locatorString = fallbackLocator.toString();
 
-                for (WebElement checkbox : checkboxes) {
-                    String id = checkbox.getAttribute("id");
+                if (locatorString.startsWith("By.id: ")) {
+                    // Extrair o id completo para busca por fragmento
+                    String idFragment = locatorString.replace("By.id: ", "").trim();
 
-                    if (id != null && id.contains(idFragment)) {
-                        System.out.println("Matching checkbox found with ID: " + id);
+                    List<WebElement> checkboxes = driver.findElements(By.cssSelector("input[type='checkbox']"));
+
+                    for (WebElement checkbox : checkboxes) {
+                        String id = checkbox.getAttribute("id");
+
+                        if (id != null && id.contains(idFragment)) {
+                            System.out.println("Matching checkbox found with ID: " + id);
+
+                            Boolean isSelected = (Boolean) ((JavascriptExecutor) driver)
+                                    .executeScript("return arguments[0].checked;", checkbox);
+
+                            if (isSelected == null || !isSelected) {
+                                System.out.println("Checkbox not selected, clicking via JS");
+                                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
+                                Thread.sleep(1000);
+                            } else {
+                                System.out.println("Checkbox already selected");
+                            }
+
+                            return;
+                        }
+                    }
+
+                    System.out.println("No checkbox containing fragment '" + idFragment + "' found on attempt " + attempt);
+
+                } else if (locatorString.startsWith("By.name: ")) {
+                    // Extrair o name completo para busca direta
+                    String nameValue = locatorString.replace("By.name: ", "").trim();
+
+                    // Busca checkbox pelo name
+                    List<WebElement> checkboxes = driver.findElements(By.cssSelector("input[type='checkbox'][name='" + nameValue + "']"));
+
+                    if (checkboxes.isEmpty()) {
+                        System.out.println("No checkbox found with name '" + nameValue + "' on attempt " + attempt);
+                    } else {
+                        WebElement checkbox = checkboxes.get(0);
+                        System.out.println("Matching checkbox found with name: " + nameValue);
 
                         Boolean isSelected = (Boolean) ((JavascriptExecutor) driver)
                                 .executeScript("return arguments[0].checked;", checkbox);
@@ -398,9 +434,24 @@ public abstract class BaseIngest {
 
                         return;
                     }
-                }
 
-                System.out.println("No checkbox containing fragment '" + idFragment + "' found on attempt " + attempt);
+                } else {
+                    // Para outros tipos de By, tentar localizar direto
+                    WebElement checkbox = driver.findElement(fallbackLocator);
+
+                    Boolean isSelected = (Boolean) ((JavascriptExecutor) driver)
+                            .executeScript("return arguments[0].checked;", checkbox);
+
+                    if (isSelected == null || !isSelected) {
+                        System.out.println("Checkbox not selected, clicking via JS");
+                        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
+                        Thread.sleep(1000);
+                    } else {
+                        System.out.println("Checkbox already selected");
+                    }
+
+                    return;
+                }
 
             } catch (Exception e) {
                 System.out.println("Unexpected error on attempt " + attempt + ": " + e.getMessage());
@@ -409,7 +460,7 @@ public abstract class BaseIngest {
             Thread.sleep(1000);
         }
 
-        throw new RuntimeException("Failed to find and select checkbox containing ID fragment: " + idFragment);
+        throw new RuntimeException("Failed to find and select checkbox using locator: " + fallbackLocator.toString());
     }
 
 
