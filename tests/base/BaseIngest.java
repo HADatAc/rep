@@ -374,35 +374,39 @@ public abstract class BaseIngest {
             try {
                 Thread.sleep(1000);
 
-                // Try to find the checkbox element directly
-                WebElement checkbox = driver.findElement(locator);
+                List<WebElement> foundElements = driver.findElements(locator);
 
-                // Check if the checkbox is already selected using JavaScript
+                if (foundElements.isEmpty()) {
+                    System.out.println("Checkbox not found on attempt " + attempt);
+                    continue;
+                }
+
+                WebElement checkbox = foundElements.get(0);
+
                 Boolean isSelected = (Boolean) ((JavascriptExecutor) driver)
-                        .executeScript("return arguments[0]?.checked;", checkbox);
+                        .executeScript("return arguments[0].checked;", checkbox);
 
                 if (isSelected == null || !isSelected) {
-                    System.out.println("Checkbox not selected or null, clicking via JS");
+                    System.out.println("Checkbox not selected, clicking via JS");
                     ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
-                    Thread.sleep(2000); // wait for UI to reflect change
+                    Thread.sleep(2000);
                 } else {
                     System.out.println("Checkbox already selected");
                     return;
                 }
 
-            } catch (NoSuchElementException e) {
-                System.out.println("Checkbox not found on attempt " + attempt + ": " + e.getMessage());
             } catch (StaleElementReferenceException e) {
                 System.out.println("Stale element on attempt " + attempt + ": " + e.getMessage());
             } catch (Exception e) {
                 System.out.println("Unexpected error on attempt " + attempt + ": " + e.getMessage());
             }
 
-            Thread.sleep(500); // small delay before next attempt
+            Thread.sleep(1000);
         }
 
         throw new RuntimeException("Failed to check/select checkbox after " + maxAttempts + " attempts: " + locator);
     }
+
 
 
 
