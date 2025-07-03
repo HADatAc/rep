@@ -85,7 +85,7 @@ public abstract class BaseIngest {
                     try {
                         // Criar o locator do checkbox para passar no clickElementRobust
                         By checkboxLocator = By.cssSelector("tbody tr:nth-child(" + (rows.indexOf(row) + 1) + ") td:first-child input[type='checkbox']");
-                        clickElementRobust(checkboxLocator);
+                        checkCheckboxRobust(checkboxLocator);
 
                         selectedRows.put(rowKey, true);
                         selectedCount++;
@@ -184,7 +184,7 @@ public abstract class BaseIngest {
                         String checkboxId = "checkbox_" + rowKey;  // ajuste conforme seu id real
                         By checkboxLocator = By.id(checkboxId);
 
-                        clickElementRobust(checkboxLocator);
+                        checkCheckboxRobust(checkboxLocator);
 
                         selectedRows.put(rowKey, true);
                         selectedCount++;
@@ -271,7 +271,7 @@ public abstract class BaseIngest {
                 if (name.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
                     try {
                         String checkboxId = "checkbox_" + name;  // ajuste para o id correto do checkbox
-                        clickElementRobust(By.id(checkboxId));
+                        checkCheckboxRobust(By.id(checkboxId));
 
                         selectedRows.put(name, true);
                         selectedCount++;
@@ -340,7 +340,30 @@ public abstract class BaseIngest {
         fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
 
+    private void checkCheckboxRobust(By locator) {
+        int maxAttempts = 3;
+        int attempt = 0;
 
+        while (attempt < maxAttempts) {
+            attempt++;
+            try {
+                WebElement checkbox = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+                if (!checkbox.isSelected()) {
+                    System.out.println("Checkbox " + locator + " is unchecked. Clicking to check it.");
+                    clickElementRobust(locator);
+                }
+
+                WebElement refreshed = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+                if (refreshed.isSelected()) {
+                    return;
+                }
+            } catch (StaleElementReferenceException e) {
+                System.out.println("Stale checkbox no attempt " + attempt + ", retrying...");
+            }
+        }
+
+        throw new RuntimeException("Falha ao verificar/marcar checkbox após várias tentativas: " + locator);
+    }
 
     public String getIngestMode() {
         return ingestMode;
