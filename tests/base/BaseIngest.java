@@ -167,18 +167,19 @@ public abstract class BaseIngest {
         String type = "ins";
         driver.get("http://" + ip + "/rep/select/mt/" + type + "/table/1/9/none");
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
-
+        Thread.sleep(3000); // esperar UI atualizar
+        System.out.println("Ingesting specific INS file: " + fileName);
         List<WebElement> rows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
         int selectedCount = 0;
         selectedRows.clear();
 
+        System.out.println("Total table rows found: " + rows.size());
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 5) {
                 String uri = cells.get(1).getText().trim();      // Coluna 2 = URI
                 String status = cells.get(4).getText().trim();   // Coluna 5 = Status
-
+                System.out.println("I passed here: " + uri + " - " + status);
                 if (uri.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
                     try {
                         // Importante: colocar https na frente do URI conforme seu padrão
@@ -228,7 +229,7 @@ public abstract class BaseIngest {
         while (attempts < MAX_ATTEMPTS) {
             Thread.sleep(WAIT_INTERVAL_MS);
             driver.navigate().refresh();
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
+            Thread.sleep(WAIT_INTERVAL_MS);
 
             List<WebElement> updatedRows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
             processedCount = 0;
