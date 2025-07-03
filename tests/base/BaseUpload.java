@@ -9,6 +9,7 @@ import org.openqa.selenium.support.ui.*;
 
 import java.io.File;
 import java.time.Duration;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -72,6 +73,7 @@ public abstract class BaseUpload {
     protected void uploadFile(File file) {
         assertTrue(file.exists(), "File does not exist at given path: " + file.getAbsolutePath());
         System.out.println("Uploading file: " + file.getAbsolutePath());
+
         try {
             WebElement fileInput = driver.findElement(By.cssSelector("input[name='files[mt_filename]']"));
             ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", fileInput);
@@ -82,13 +84,53 @@ public abstract class BaseUpload {
             ((JavascriptExecutor) driver).executeScript(
                     "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", fileInput);
 
-            Thread.sleep(1000);
+            Thread.sleep(1000); // leve espera para garantir envio
             System.out.println("File uploaded: " + file.getAbsolutePath());
 
         } catch (Exception e) {
             fail("Failed to upload the file: " + e.getMessage());
         }
+
+        // 🔍 Verificar se o arquivo está visível na listagem
+        try {
+            String fileName = file.getName();
+            String type = inferTypeFromFileName(fileName); // Infer type based on file name
+
+            driver.get("http://" + ip + "/rep/select/mt/" + type + "/table/1/9/none");
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
+
+            List<WebElement> rows = driver.findElements(By.xpath("//table//tbody//tr"));
+            boolean fileFound = false;
+
+            for (WebElement row : rows) {
+                List<WebElement> cells = row.findElements(By.tagName("td"));
+                if (cells.size() >= 3) {
+                    String name = cells.get(2).getText().trim();
+                    if (name.equals(fileName)) {
+                        fileFound = true;
+                        break;
+                    }
+                }
+            }
+
+            assertTrue(fileFound, "Uploaded file '" + fileName + "' not found in listing page.");
+            System.out.println("Upload verified: file '" + fileName + "' found in the listing.");
+
+        } catch (Exception e) {
+            fail("Error verifying uploaded file: " + e.getMessage());
+        }
     }
+    private String inferTypeFromFileName(String fileName) {
+        fileName = fileName.toLowerCase();
+        if (fileName.contains("ins")) return "INS";
+        if (fileName.contains("dp2")) return "DP2";
+        if (fileName.contains("dsg")) return "DSG";
+        if (fileName.contains("sdd")) return "SDD";
+        if (fileName.contains("str")) return "STR";
+        return "INS"; // padrão caso não identifique
+    }
+
+
 
     protected void submitFormAndVerifySuccess() {
         By saveButtonLocator = By.id("edit-save-submit");
