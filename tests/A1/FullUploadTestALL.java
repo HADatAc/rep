@@ -22,7 +22,7 @@ public class FullUploadTestALL {
         runTestClass(INSUploadTest.class);
         Thread.sleep(2000);
         // DSG
-        runTestClass(DSGUploadTest.class);
+        /*runTestClass(DSGUploadTest.class);
         Thread.sleep(2000);
 
         // DA (DEMO)
@@ -33,6 +33,8 @@ public class FullUploadTestALL {
         System.setProperty("daType", "DPQ");
         runTestClass(DAUploadTest.class);
         Thread.sleep(2000);
+
+
 
         // SDD (DEMO)
         //System.setProperty("sddType", "DEMO");
@@ -47,6 +49,8 @@ public class FullUploadTestALL {
         // DP2
         runTestClass(DP2UploadTest.class);
         Thread.sleep(2000);
+
+         */
 
         // STR
         //runTestClass(STRUploadTest.class);

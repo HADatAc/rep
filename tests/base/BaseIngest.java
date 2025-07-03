@@ -192,6 +192,12 @@ public abstract class BaseIngest {
                             normalizedUri = normalizedUri.replaceFirst("psmr(?=inf)", "psmrnet");
                         }
                         Thread.sleep(1000);
+                        List<WebElement> checkboxes = driver.findElements(By.cssSelector("input[type='checkbox']"));
+                        for (WebElement cb : checkboxes) {
+                            System.out.println("Found checkbox with ID: " + cb.getAttribute("id"));
+                        }
+
+                        Thread.sleep(1000);
                         String checkboxId = "edit-element-table-https" + normalizedUri;
                         By checkboxLocator = By.id(checkboxId);
                         System.out.println("Before checkCheckboxRobust: " + checkboxLocator);
