@@ -103,6 +103,8 @@ class TreeForm extends FormBase {
       'questionnaire' => ["Questionnaire", EntryPoints::QUESTIONNAIRE],
       'responseoption' => ["Response Option", EntryPoints::RESPONSE_OPTION],
       'study' => ["Study", EntryPoints::STUDY],
+      'tasktype' => ["Task Type", EntryPoints::TASK_TYPE],
+      'tasktemporaldependency' => ["Task Temporal Dependency", EntryPoints::TASK_TEMPORAL_DEPENDENCY],
       'unit' => ["Unit", EntryPoints::UNIT],
       'detectorattribute' => ["Detector Attribute", EntryPoints::DETECTOR_ATTRIBUTE],
       'actuatorattribute' => ["Actuator Attribute", EntryPoints::ACTUATOR_ATTRIBUTE],
@@ -210,6 +212,18 @@ class TreeForm extends FormBase {
         'uri' => EntryPoints::STUDY,
         'label' => 'Study',
         'uriNamespace' => EntryPoints::STUDY,
+      ],
+      [
+        'id' => 'tasktype',
+        'uri' => EntryPoints::TASK_TYPE,
+        'label' => 'Task Type',
+        'uriNamespace' => EntryPoints::TASK_TYPE,
+      ],
+      [
+        'id' => 'tasktemporaldependency',
+        'uri' => EntryPoints::TASK_TEMPORAL_DEPENDENCY,
+        'label' => 'Task Temporal Dependency',
+        'uriNamespace' => EntryPoints::TASK_TEMPORAL_DEPENDENCY,
       ],
       [
         'id' => 'unit',
