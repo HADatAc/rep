@@ -25,6 +25,7 @@ public abstract class BaseDelete {
     protected static final int MAX_ATTEMPTS = 10;
     protected static final int WAIT_INTERVAL_MS = 10000;
     String ip = "54.75.120.47";
+    //String ip = "localhost";
 
     @BeforeAll
     public void setup() throws InterruptedException {

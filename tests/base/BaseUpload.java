@@ -19,6 +19,7 @@ public abstract class BaseUpload {
     protected WebDriver driver;
     protected WebDriverWait wait;
     String ip = "54.75.120.47";
+    //String ip = "localhost";
 
     @BeforeAll
     void setup() throws InterruptedException {
