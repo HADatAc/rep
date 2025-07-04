@@ -24,7 +24,7 @@ public abstract class BaseIngest {
     protected static final int MAX_ATTEMPTS = 10;
     protected static final int WAIT_INTERVAL_MS = 30000;
     String ip = "54.75.120.47";
-
+    //String ip = "localhost";
     @BeforeAll
     void setup() throws InterruptedException {
         ChromeOptions options = new ChromeOptions();
@@ -221,21 +221,28 @@ public abstract class BaseIngest {
         System.out.println("Total checkboxes selecionados: " + selectedCount);
 
         By ingestButtonLocator = By.name(buttonName);
+        System.out.println("Ingest button locator: " + ingestButtonLocator);
         try {
             clickElementRobust(ingestButtonLocator);
+            System.out.println("Ingest button clicked successfully.");
 
+            WebDriverWait waitAlert = new WebDriverWait(driver, Duration.ofSeconds(20));
             try {
-                wait.until(ExpectedConditions.alertIsPresent());
+                waitAlert.until(ExpectedConditions.alertIsPresent());
                 Alert alert = driver.switchTo().alert();
                 System.out.println("Confirmação do ingest: " + alert.getText());
                 alert.accept();
+                Thread.sleep(1000);
             } catch (TimeoutException e) {
                 System.out.println("Nenhum diálogo de confirmação apareceu.");
             }
 
+
         } catch (Exception e) {
             fail("Botão de ingest com nome '" + buttonName + "' não encontrado ou não clicável: " + e.getMessage());
         }
+
+
 
         Thread.sleep(2000);
 
