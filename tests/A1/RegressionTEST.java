@@ -14,10 +14,10 @@ public class RegressionTEST {
 
     @Test
     void runsetupanddeletetests() throws InterruptedException {
-        runTestClass(RepositoryFormAutomationTest.class);
+        runTestClass(AdminAuto.class);
         Thread.sleep(2000);
 
-        runTestClass(AdminAuto.class);
+        runTestClass(RepositoryFormAutomationTest.class);
         Thread.sleep(2000);
 
         runTestClass(FullUploadTestALL.class);
