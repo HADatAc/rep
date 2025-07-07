@@ -31,6 +31,7 @@ public class AdminAuto {
         options.setAcceptInsecureCerts(true);
         options.addArguments("--ignore-certificate-errors");
         options.addArguments("--single-process"); // reduz uso de múltiplos processos
+        options.addArguments("--disable-software-rasterizer");
 
 
         driver = new ChromeDriver(options);
