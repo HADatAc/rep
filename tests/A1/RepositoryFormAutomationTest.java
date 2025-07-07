@@ -111,6 +111,7 @@ public class RepositoryFormAutomationTest {
         String apiUrl = "http://" + apiip + ":9000";
         fillInput("rep API Base URL", apiUrl);
 
+
         //logCurrentPageState(50000);
 
         String expectedFullName = "Portuguese Medical Social Repository";
