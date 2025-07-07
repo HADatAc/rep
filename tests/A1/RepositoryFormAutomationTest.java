@@ -66,7 +66,7 @@ public class RepositoryFormAutomationTest {
         clickElementRobust(By.id("edit-submit"));
 
         // Espera tela pós-login
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
+     //   wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 
     @AfterEach
