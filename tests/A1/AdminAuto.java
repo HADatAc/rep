@@ -33,6 +33,7 @@ public class AdminAuto {
         options.addArguments("--disable-software-rasterizer");
 
 
+
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         wait = new WebDriverWait(driver, Duration.ofSeconds(30));
