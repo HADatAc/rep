@@ -1,0 +1,24 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - rep
+    - system
+  theme:
+    - hasco_barrio
+id: searchbasiccriteria
+theme: hasco_barrio
+region: sidebar_first
+weight: 0
+provider: null
+plugin: rep_search_block
+settings:
+  id: rep_search_block
+  label: 'Search Basic Criteria'
+  label_display: visible
+  provider: rep
+visibility:
+  request_path:
+    id: request_path
+    negate: false
+    pages: "/rep/list/*\r\n/rep/list"

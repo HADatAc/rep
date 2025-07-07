@@ -1,0 +1,278 @@
+#
+# KNOWLEDGE GRAPH
+#
+
+rep.kg:
+  title: Knowledge Graph
+  description: Knowledge graph's search and exploration
+  route_name: rep.home
+  menu_name: main
+  weight: 10
+  requirements:
+    _permission: 'access content'
+
+rep.dashboard:
+  title: Dashboard
+  description: Knowledge graph's dashboad
+  route_name: rep.home
+  parent: rep.kg
+  menu_name: main
+  weight: 10
+  requirements:
+    _permission: 'access content'
+
+rep.uri_describe:
+  title: Describe URI
+  description: Use URI to retrieve descriptions of knowledge graph's elements
+  route_name: rep.element_uri
+  parent: rep.kg
+  menu_name: main
+  weight: 100
+  requirements:
+    _permission: 'access content'
+
+
+#
+# REPOSITORY
+#
+
+rep.top_level:
+  title: Repository
+  description: Manage Repository
+  route_name: rep.home
+  menu_name: main
+  weight: 200
+  requirements:
+    _permission: 'access content'
+
+rep.manage_datafile:
+  title: Manage Data Files
+  description: Manage Data Files
+  route_name: rep.select_element
+  route_parameters:
+    elementtype: 'datafile'
+    page: '1'
+    pagesize: '10'
+  parent: rep.top_level
+  menu_name: main
+  weight: 3
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+#rep.browse_attributes:
+#  title: Browse Attributes
+#  description: Browse Attributes
+#  route_name: rep.browse_tree
+#  route_parameters:
+#    mode: 'browse'
+#    elementtype: 'attribute'
+#  parent: rep.top_level
+#  menu_name: main
+#  weight: 7
+#  requirements:
+#    _permission: 'access content'
+#    _role: 'authenticated'
+
+#rep.select_instruments:
+#  title: Select Instruments
+#  description: Select Instruments
+#  route_name: rep.browse_tree
+#  route_parameters:
+#    mode: 'select'
+#    elementtype: 'instrument'
+#  parent: rep.top_level
+#  menu_name: main
+#  weight: 7
+#  requirements:
+#    _permission: 'access content'
+#    _role: 'authenticated'
+
+#rep.browse_instruments:
+#  title: Browse Instruments
+#  description: Browse Instruments
+#  route_name: rep.browse_tree
+#  route_parameters:
+#    mode: 'browse'
+#    elementtype: 'instrument'
+#  parent: rep.top_level
+#  menu_name: main
+#  weight: 7
+#  requirements:
+#    _permission: 'access content'
+#    _role: 'authenticated'
+
+rep.about:
+  title: About
+  description: About
+  route_name: rep.about
+  parent: rep.top_level
+  menu_name: main
+  weight: 6
+  requirements:
+    _permission: 'access content'
+
+rep.admin_settings_link:
+  title: Configuration
+  description: Semantic Repository Settings
+  menu_name: main
+  route_name: rep.admin_settings_custom
+  parent: rep.top_level
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.sagres:
+  title: Sagres
+  description: Sagres
+  parent: rep.top_level
+  route_name: rep.sagres.status_form
+  menu_name: main
+  weight: 7
+  requirements:
+    _permission: 'access content'
+
+rep.sagres_config:
+  title: Sagres Conection Config
+  description: Sagres Connection Settings
+  menu_name: main
+  route_name: rep.sagres.config_form
+  parent: rep.sagres
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.sagres_status:
+  title: Sagres Conection Status
+  description: Sagres Connection Status
+  menu_name: main
+  route_name: rep.sagres.status_form
+  parent: rep.sagres
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.socialkg:
+  title: Social KG
+  description: Social KG
+  parent: rep.top_level
+  route_name: '<nolink>'
+  menu_name: main
+  weight: 7
+  requirements:
+    _permission: 'access content'
+
+rep.social_config:
+  title: Social KG Conection Config
+  description: Social KG Connection Settings
+  menu_name: main
+  route_name: social.config_form
+  parent: rep.socialkg
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.social_status:
+  title: Social KG Conection Status
+  description: Social KG Connection Status
+  menu_name: main
+  route_name: social.status_form
+  parent: rep.socialkg
+  weight: 7
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+
+rep.socialm_manageConsumer:
+  title: Social KG Manage Consumer Organization
+  description: Social KG Manage Consumer Organization
+  route_name: socialm.select_consumer_element
+  route_parameters:
+    elementtype: 'consumer'
+    page: '1'
+    pagesize: '9'
+  parent: rep.socialkg
+  menu_name: main
+  weight: 25
+  requirements:
+    _permission: 'access content'
+    _role: 'authenticated'
+#
+# REVIEWER
+#
+
+reviewer.top_level:
+  title: Reviewer Operations
+  description: Manage Reviews
+  route_name: '<nolink>'
+  menu_name: main
+  weight: 100
+  requirements:
+    _role: 'content_editor'
+
+reviewer.uploadingest_review:
+  title: Manage MTs
+  description: ''
+  menu_name: main
+  route_name: '<nolink>'
+  parent: reviewer.top_level
+  weight: 20
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+
+reviewer.generate_review:
+  title: Generate MTs
+  description: ''
+  menu_name: main
+  route_name: '<nolink>'
+  parent: reviewer.top_level
+  weight: 30
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+
+# ONTOLOGYs RELATED
+rep.ontologies_root:
+  title: 'Ontologies'
+  description: ''
+  parent: rep.top_level
+  menu_name: main
+  route_name: '<nolink>'
+  weight: 49
+  requirements:
+    _role: 'content_editor'
+
+# rep.add_ontologies:
+#   title: 'Add Ontology'
+#   description: ''
+#   route_name: rep.add_ontologies
+#   parent: rep.ontologies_root
+#   menu_name: main
+#   weight: 0
+#   requirements:
+#     _role: 'content_editor'
+
+rep.manage_ontologies:
+  title: 'Manage Ontologies'
+  description: ''
+  route_name: rep.admin_namespace_settings_custom
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 0
+  requirements:
+    _role: 'content_editor'
+
+rep.map_entry_points:
+  title: 'Manage Concept Entry Points'
+  description: 'Map each entry point (Instrument, Sample, etc.) to one or more ontologies.'
+  route_name: rep.map_entry_points
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 1
+  requirements:
+    _role: 'content_editor'

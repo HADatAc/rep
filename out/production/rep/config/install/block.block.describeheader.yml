@@ -1,0 +1,24 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - rep
+    - system
+  theme:
+    - hasco_barrio
+id: describeheader
+theme: hasco_barrio
+region: sidebar_first
+weight: 0
+provider: null
+plugin: describe_header_block
+settings:
+  id: describe_header_block
+  label: 'Describe Header'
+  label_display: '0'
+  provider: rep
+visibility:
+  request_path:
+    id: request_path
+    negate: false
+    pages: '/rep/uri/*'

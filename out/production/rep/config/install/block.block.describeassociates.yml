@@ -1,0 +1,24 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - rep
+    - system
+  theme:
+    - hasco_barrio
+id: describeassociates
+theme: hasco_barrio
+region: content
+weight: 0
+provider: null
+plugin: describe_associates_block
+settings:
+  id: describe_associates_block
+  label: 'Describe Associates'
+  label_display: '0'
+  provider: rep
+visibility:
+  request_path:
+    id: request_path
+    negate: false
+    pages: '/rep/uri/*'

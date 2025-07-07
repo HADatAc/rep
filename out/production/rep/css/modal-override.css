@@ -1,0 +1,4 @@
+/* Sobrescreve position fixed do Drupal modal */
+#drupal-modal {
+  position: absolute !important;
+}
