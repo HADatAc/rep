@@ -65,7 +65,7 @@ public class RepositoryFormAutomationTest {
         Thread.sleep(3000);
 
         WebElement jwtSelect = wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-jwt-secret")));
-        jwtSelect.click();
+        clickElementRobust(By.id("edit-jwt-secret"));
         new Select(jwtSelect).selectByVisibleText("jwt");
         ;
 
