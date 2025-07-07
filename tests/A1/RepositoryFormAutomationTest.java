@@ -66,7 +66,10 @@ public class RepositoryFormAutomationTest {
         clickElementRobust(By.id("edit-submit"));
 
         // Espera tela pós-login
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
+        new WebDriverWait(driver, Duration.ofSeconds(15)).until(driver ->
+                ((JavascriptExecutor) driver).executeScript("return document.querySelector('#toolbar-item-user') !== null && document.querySelector('#toolbar-item-user').offsetParent !== null;").equals(true)
+        );
+
     }
 
     @AfterEach
