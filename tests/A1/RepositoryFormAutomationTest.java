@@ -111,16 +111,18 @@ public class RepositoryFormAutomationTest {
 
     private void ensureJwtKeyExists() throws InterruptedException {
         System.out.println("Verifying if JWT key 'jwt' exists...");
-
+        System.out.println("Current URL: " + driver.getCurrentUrl());
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
         WebElement jwtDropdown = null;
-
+        System.out.println("Current URL: " + driver.getCurrentUrl());
         try {
             Thread.sleep(2000);
+            System.out.println("Current URL: " + driver.getCurrentUrl());
             jwtDropdown = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-jwt-secret")));
         } catch (TimeoutException e) {
             System.out.println("Dropdown JWT não encontrado, recarregando página...");
+            System.out.println("Current URL: " + driver.getCurrentUrl());
             driver.navigate().refresh();
             Thread.sleep(2000);
             try {
