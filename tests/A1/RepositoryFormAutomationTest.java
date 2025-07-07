@@ -63,7 +63,7 @@ public class RepositoryFormAutomationTest {
         System.out.println("Current URL: " + driver.getCurrentUrl());
         ensureJwtKeyExists();
         Thread.sleep(3000);
-
+        System.out.println("Parando aqui");
         WebElement jwtSelect = driver.findElement(By.id("edit-jwt-secret"));;
         clickElementRobust(By.id("edit-jwt-secret"));
         new Select(jwtSelect).selectByVisibleText("jwt");
@@ -112,8 +112,20 @@ public class RepositoryFormAutomationTest {
     private void ensureJwtKeyExists() throws InterruptedException {
         Thread.sleep(2000);
         System.out.println("Verifying if JWT key 'jwt' exists...");
-        boolean jwtExists = new Select(driver.findElement(By.id("edit-jwt-secret")))
-                .getOptions().stream()
+
+        List<WebElement> dropdowns = driver.findElements(By.id("edit-jwt-secret"));
+        if (dropdowns.isEmpty()) {
+            System.out.println("Dropdown JWT não encontrado, recarregando página...");
+            driver.navigate().refresh();
+            Thread.sleep(2000);
+            dropdowns = driver.findElements(By.id("edit-jwt-secret"));
+            if (dropdowns.isEmpty()) {
+                throw new RuntimeException("Dropdown JWT ainda não encontrado após reload.");
+            }
+        }
+
+        Select select = new Select(dropdowns.get(0));
+        boolean jwtExists = select.getOptions().stream()
                 .anyMatch(option -> option.getText().trim().equals("jwt"));
 
         if (!jwtExists) {
@@ -141,6 +153,7 @@ public class RepositoryFormAutomationTest {
             System.out.println("JWT key 'jwt' already exists.");
         }
     }
+
 
     private void fillInput(String label, String value) throws InterruptedException {
         WebElement input = findInputByLabel(label);
