@@ -216,14 +216,14 @@ public class RepositoryFormAutomationTest {
 
         try {
             String script = """
-            var select = document.getElementById('edit-jwt-secret');
-            if (!select) return 'NOT_FOUND';
-            for (var i = 0; i < select.options.length; i++) {
-                if (select.options[i].value.trim() === 'jwt') {
-                    return 'FOUND';
-                }
+        var select = document.getElementById('edit-jwt-secret');
+        if (!select) return 'NOT_FOUND';
+        for (var i = 0; i < select.options.length; i++) {
+            if (select.options[i].value.trim() === 'jwt') {
+                return 'FOUND';
             }
-            return 'NOT_FOUND';
+        }
+        return 'NOT_FOUND';
         """;
             String result = (String) ((JavascriptExecutor) driver).executeScript(script);
             System.out.println("JWT key check result: " + result);
@@ -233,16 +233,17 @@ public class RepositoryFormAutomationTest {
             } else {
                 System.out.println("JWT key 'jwt' not found, creating...");
             }
-
         } catch (Exception e) {
             System.out.println("Error while checking JWT key: " + e.getMessage());
             System.out.println("Proceeding with JWT key creation just in case...");
         }
+
         Thread.sleep(3000);
-        // Cria a chave JWT
+        // Go to JWT key creation page
         driver.get("http://" + ip + "/admin/config/system/keys/add");
-        Thread.sleep(3000);
+
         System.out.println("Waiting for JWT key creation form to load...");
+        waitUntilUrlContains("/admin/config/system/keys/add", 15);
         waitUntilElementExistsById("edit-label", 15);
 
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-label').value = 'jwt';");
@@ -260,9 +261,6 @@ public class RepositoryFormAutomationTest {
         driver.get("http://" + ip + "/admin/config/rep");
         Thread.sleep(3000);
     }
-
-
-
 
     private void fillInput(String label, String value) {
         WebElement input = findInputByLabel(label);
@@ -306,6 +304,11 @@ public class RepositoryFormAutomationTest {
         wait.until(driver -> findInputByLabel(labelText) != null && findInputByLabel(labelText).isDisplayed());
     }
 
+
+    private void waitUntilUrlContains(String fragment, int timeoutSeconds) {
+        new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds))
+                .until(ExpectedConditions.urlContains(fragment));
+    }
     private void waitABit(long millis) {
         try {
             Thread.sleep(millis);
