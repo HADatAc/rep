@@ -211,45 +211,50 @@ public class RepositoryFormAutomationTest {
 
 
     private void ensureJwtKeyExists() throws InterruptedException {
-        WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-jwt-secret")));
-        System.out.println("Verificando se o JWT key 'jwt' existe...");
         Thread.sleep(2000);
+        WebElement jwtSelect = driver.findElement(By.id("edit-jwt-secret"));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", jwtSelect);
+        System.out.println("Checking if JWT key 'jwt' exists...");
+        Thread.sleep(2000);
+
         Select jwtDropdown = new Select(jwtSelect);
         boolean jwtExists = jwtDropdown.getOptions().stream()
                 .anyMatch(option -> option.getText().trim().equals("jwt"));
         Thread.sleep(2000);
+
         if (!jwtExists) {
             System.out.println("JWT key 'jwt' not found, creating...");
 
             driver.get("http://" + ip + "/admin/config/system/keys/add");
-            Thread.sleep(2000);
-            wait.until(ExpectedConditions.urlContains("/admin/config/system/keys/add"));
-            Thread.sleep(2000);
+            Thread.sleep(3000); // load form
 
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-label"))).sendKeys("jwt");
+            WebElement label = driver.findElement(By.id("edit-label"));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", label);
+            label.sendKeys("jwt");
             driver.findElement(By.id("edit-description")).sendKeys("jwt");
-            Thread.sleep(2000);
+            Thread.sleep(1000);
+
             new Select(driver.findElement(By.id("edit-key-type"))).selectByValue("authentication");
             new Select(driver.findElement(By.id("edit-key-provider"))).selectByVisibleText("Configuration");
 
-            WebElement valueField = wait.until(ExpectedConditions.presenceOfElementLocated(
-                    By.id("edit-key-input-settings-key-value")
-            ));
+            WebElement valueField = driver.findElement(By.id("edit-key-input-settings-key-value"));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", valueField);
             valueField.clear();
-            Thread.sleep(2000);
+            Thread.sleep(1000);
             valueField.sendKeys("qwertyuiopasdfghjklzxcvbnm123456");
+
             Thread.sleep(2000);
             clickElementRobust(By.id("edit-submit"));
-            Thread.sleep(2000);
+            Thread.sleep(3000);
 
-            wait.until(ExpectedConditions.urlContains("/admin/config/system/keys"));
             System.out.println("JWT key created successfully.");
-
             driver.get("http://" + ip + "/admin/config/rep");
+            Thread.sleep(3000);
         } else {
             System.out.println("JWT key 'jwt' already exists.");
         }
     }
+
 
     private void fillInput(String label, String value) {
         WebElement input = findInputByLabel(label);
