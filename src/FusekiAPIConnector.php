@@ -1004,6 +1004,14 @@ class FusekiAPIConnector {
   }
 
   /**
+   *    TASKS
+   */
+
+  // TODOPP
+  // End-Point da API para salvar os instrumentos nas tasks
+
+
+  /**
    *    PROJECTS
    */
 
