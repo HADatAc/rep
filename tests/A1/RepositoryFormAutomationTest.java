@@ -51,11 +51,14 @@ public class RepositoryFormAutomationTest {
         }
         //logCurrentPageState(5000);
         // Espera explícita para página carregar o input
+        System.out.println("Waiting for login input to be visible...");
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
 
-
+        System.out.println("Waiting for login button to be clickable...");
         // Espera o botão login estar clicável
         wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
+
+        System.out.println("Preenchendo campos de login...");
 
         // Preenche usuário e senha
         driver.findElement(By.id("edit-name")).sendKeys("admin");
@@ -64,6 +67,7 @@ public class RepositoryFormAutomationTest {
 
         // Clica no botão de login
         clickElementRobust(By.id("edit-submit"));
+        System.out.println("Login submitted");
 
         // Espera tela pós-login
      //   wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
@@ -80,7 +84,8 @@ public class RepositoryFormAutomationTest {
     void testFillRepositoryForm() throws InterruptedException {
         driver.get("http://" + ip + "/admin/config/rep");
         //logCurrentPageState(20000);
-
+        System.out.println("Waiting for repository form to load...");
+        Thread.sleep(2000);
         ensureJwtKeyExists();
 
         WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-jwt-secret")));
@@ -205,23 +210,25 @@ public class RepositoryFormAutomationTest {
 
 
 
-    private void ensureJwtKeyExists() {
+    private void ensureJwtKeyExists() throws InterruptedException {
         WebElement jwtSelect = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-jwt-secret")));
         System.out.println("Verificando se o JWT key 'jwt' existe...");
+        Thread.sleep(2000);
         Select jwtDropdown = new Select(jwtSelect);
         boolean jwtExists = jwtDropdown.getOptions().stream()
                 .anyMatch(option -> option.getText().trim().equals("jwt"));
-
+        Thread.sleep(2000);
         if (!jwtExists) {
             System.out.println("JWT key 'jwt' not found, creating...");
 
             driver.get("http://" + ip + "/admin/config/system/keys/add");
-
+            Thread.sleep(2000);
             wait.until(ExpectedConditions.urlContains("/admin/config/system/keys/add"));
+            Thread.sleep(2000);
 
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-label"))).sendKeys("jwt");
             driver.findElement(By.id("edit-description")).sendKeys("jwt");
-
+            Thread.sleep(2000);
             new Select(driver.findElement(By.id("edit-key-type"))).selectByValue("authentication");
             new Select(driver.findElement(By.id("edit-key-provider"))).selectByVisibleText("Configuration");
 
@@ -229,10 +236,11 @@ public class RepositoryFormAutomationTest {
                     By.id("edit-key-input-settings-key-value")
             ));
             valueField.clear();
+            Thread.sleep(2000);
             valueField.sendKeys("qwertyuiopasdfghjklzxcvbnm123456");
-
+            Thread.sleep(2000);
             clickElementRobust(By.id("edit-submit"));
-
+            Thread.sleep(2000);
 
             wait.until(ExpectedConditions.urlContains("/admin/config/system/keys"));
             System.out.println("JWT key created successfully.");
