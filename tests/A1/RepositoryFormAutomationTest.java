@@ -226,7 +226,7 @@ public class RepositoryFormAutomationTest {
             return 'NOT_FOUND';
         """;
             String result = (String) ((JavascriptExecutor) driver).executeScript(script);
-
+            System.out.println("JWT key check result: " + result);
             if ("FOUND".equals(result)) {
                 System.out.println("JWT key 'jwt' already exists.");
                 return;
@@ -238,9 +238,11 @@ public class RepositoryFormAutomationTest {
             System.out.println("Error while checking JWT key: " + e.getMessage());
             System.out.println("Proceeding with JWT key creation just in case...");
         }
-
+        Thread.sleep(3000);
         // Cria a chave JWT
         driver.get("http://" + ip + "/admin/config/system/keys/add");
+        Thread.sleep(3000);
+        System.out.println("Waiting for JWT key creation form to load...");
         waitUntilElementExistsById("edit-label", 15);
 
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-label').value = 'jwt';");
