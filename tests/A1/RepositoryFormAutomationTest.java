@@ -64,8 +64,10 @@ public class RepositoryFormAutomationTest {
         ensureJwtKeyExists();
         Thread.sleep(3000);
 
-        driver.findElement(By.cssSelector("select[name='jwt_secret']")).click();
-        new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']"))).selectByVisibleText("jwt");
+        WebElement jwtSelect = wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-jwt-secret")));
+        jwtSelect.click();
+        new Select(jwtSelect).selectByVisibleText("jwt");
+        ;
 
         Thread.sleep(1000);
         WebElement checkbox = driver.findElement(By.id("edit-sagres-conf"));
@@ -110,7 +112,7 @@ public class RepositoryFormAutomationTest {
     private void ensureJwtKeyExists() throws InterruptedException {
         Thread.sleep(2000);
         System.out.println("Verifying if JWT key 'jwt' exists...");
-        boolean jwtExists = new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']")))
+        boolean jwtExists = new Select(driver.findElement(By.id("edit-jwt-secret")))
                 .getOptions().stream()
                 .anyMatch(option -> option.getText().trim().equals("jwt"));
 
