@@ -245,7 +245,8 @@ public class RepositoryFormAutomationTest {
 
         System.out.println("Waiting for JWT key creation form to load...");
         waitUntilUrlContains("/admin/config/system/keys/add", 15);
-        waitUntilElementExistsById("edit-label", 15);
+        System.out.println("Filling JWT key creation form...");
+       // waitUntilElementExistsById("edit-label", 15);
 
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-label').value = 'jwt';");
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-description').value = 'jwt';");
