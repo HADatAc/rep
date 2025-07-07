@@ -211,50 +211,53 @@ public class RepositoryFormAutomationTest {
 
 
     private void ensureJwtKeyExists() throws InterruptedException {
-        Thread.sleep(2000);
+        Thread.sleep(3000);
         System.out.println("Verifying if JWT key 'jwt' exists...");
-        WebElement jwtSelect = driver.findElement(By.id("edit-jwt-secret"));
-        System.out.println("Scrolling to JWT select element...");
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", jwtSelect);
-        System.out.println("Checking if JWT key 'jwt' exists...");
-        Thread.sleep(2000);
-        System.out.println("Fetching JWT dropdown options...");
-        Select jwtDropdown = new Select(jwtSelect);
-        boolean jwtExists = jwtDropdown.getOptions().stream()
-                .anyMatch(option -> option.getText().trim().equals("jwt"));
-        Thread.sleep(2000);
 
-        if (!jwtExists) {
-            System.out.println("JWT key 'jwt' not found, creating...");
+        try {
+            // Use JavaScript to find the select and check if 'jwt' is one of the options
+            String script = """
+            var select = document.getElementById('edit-jwt-secret');
+            if (!select) return 'NOT_FOUND';
+            for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].text.trim() === 'jwt') {
+                    return 'FOUND';
+                }
+            }
+            return 'NOT_FOUND';
+        """;
+            String result = (String) ((JavascriptExecutor) driver).executeScript(script);
 
-            driver.get("http://" + ip + "/admin/config/system/keys/add");
-            Thread.sleep(3000); // load form
+            if ("FOUND".equals(result)) {
+                System.out.println("JWT key 'jwt' already exists.");
+                return;
+            } else {
+                System.out.println("JWT key 'jwt' not found, creating...");
+            }
 
-            WebElement label = driver.findElement(By.id("edit-label"));
-            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", label);
-            label.sendKeys("jwt");
-            driver.findElement(By.id("edit-description")).sendKeys("jwt");
-            Thread.sleep(1000);
-
-            new Select(driver.findElement(By.id("edit-key-type"))).selectByValue("authentication");
-            new Select(driver.findElement(By.id("edit-key-provider"))).selectByVisibleText("Configuration");
-
-            WebElement valueField = driver.findElement(By.id("edit-key-input-settings-key-value"));
-            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", valueField);
-            valueField.clear();
-            Thread.sleep(1000);
-            valueField.sendKeys("qwertyuiopasdfghjklzxcvbnm123456");
-
-            Thread.sleep(2000);
-            clickElementRobust(By.id("edit-submit"));
-            Thread.sleep(3000);
-
-            System.out.println("JWT key created successfully.");
-            driver.get("http://" + ip + "/admin/config/rep");
-            Thread.sleep(3000);
-        } else {
-            System.out.println("JWT key 'jwt' already exists.");
+        } catch (Exception e) {
+            System.out.println("Error while checking JWT key: " + e.getMessage());
+            System.out.println("Proceeding with JWT key creation just in case...");
         }
+
+        // Create JWT key
+        driver.get("http://" + ip + "/admin/config/system/keys/add");
+        Thread.sleep(3000);
+
+        ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-label').value = 'jwt';");
+        ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-description').value = 'jwt';");
+        ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-key-input-settings-key-value').value = 'qwertyuiopasdfghjklzxcvbnm123456';");
+
+        new Select(driver.findElement(By.id("edit-key-type"))).selectByValue("authentication");
+        new Select(driver.findElement(By.id("edit-key-provider"))).selectByVisibleText("Configuration");
+
+        Thread.sleep(2000);
+        clickElementRobust(By.id("edit-submit"));
+        Thread.sleep(3000);
+
+        System.out.println("JWT key created successfully.");
+        driver.get("http://" + ip + "/admin/config/rep");
+        Thread.sleep(3000);
     }
 
 
