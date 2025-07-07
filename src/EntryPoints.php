@@ -30,7 +30,7 @@ use Drupal\sir\Entity\Task;
     const QUESTIONNAIRE             = VSTOI::QUESTIONNAIRE;
     const RESPONSE_OPTION           = VSTOI::RESPONSE_OPTION;
     const STUDY                     = HASCO::STUDY;
-    const TASK_TYPE                 = VSTOI::TASK_TYPE;
+    const TASK                      = VSTOI::TASK;
     const TASK_TEMPORAL_DEPENDENCY  = VSTOI::TASK_TEMPORAL_DEPENDENCY;
     const UNIT                      = SIO::UNIT;
 
