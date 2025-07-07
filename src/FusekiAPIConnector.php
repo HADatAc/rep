@@ -947,7 +947,7 @@ class FusekiAPIConnector {
   }
 
   public function processInstrumentUpdate(array $processData) {
-    $endpoint = "/hascoapi/api/process/instrumentation";
+    $endpoint = "/hascoapi/api/process/instrument";
     $method = "POST";
     $api_url = $this->getApiUrl();
 
