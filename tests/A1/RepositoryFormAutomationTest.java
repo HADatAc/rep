@@ -65,6 +65,8 @@ public class RepositoryFormAutomationTest {
         // Clica no botão de login
         clickElementRobust(By.id("edit-submit"));
 
+        System.out.println("Login realizado, esperando tela de administração...");
+        logCurrentPageState(1000);
         /* // Espera tela pós-login
         new WebDriverWait(driver, Duration.ofSeconds(15)).until(driver ->
                 ((JavascriptExecutor) driver).executeScript("return document.querySelector('#toolbar-item-user') !== null && document.querySelector('#toolbar-item-user').offsetParent !== null;").equals(true)
@@ -84,10 +86,10 @@ public class RepositoryFormAutomationTest {
     @Test
     void testFillRepositoryForm() throws InterruptedException {
         driver.get("http://" + ip + "/admin/config/rep");
-        //logCurrentPageState(20000);
+        logCurrentPageState(20000);
 
         ensureJwtKeyExists();
-
+        logCurrentPageState(500);
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("select[name='jwt_secret']"))).click();
         Select jwtDropdown = new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']")));
         jwtDropdown.selectByVisibleText("jwt");
