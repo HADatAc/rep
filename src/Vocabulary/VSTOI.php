@@ -106,4 +106,12 @@ use Drupal\sir\Entity\Instrument;
     const PAGE_BOTTOM_RIGHT               = VSTOI::VSTOI . "PageBottomRight";
 
 
+    /*
+    *    TASK TYPES
+    */
+    const ABSTRACT_TASK                  = VSTOI::VSTOI . "AbstractTask";
+    const APPLICATION_TASK               = VSTOI::VSTOI . "ApplicationTask";
+    const INTERACTION_TASK               = VSTOI::VSTOI . "InteractionTask";
+    const USER_TASK                      = VSTOI::VSTOI . "UserTask";
+
   }
