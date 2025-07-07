@@ -42,19 +42,22 @@ public class AdminAuto {
 
         Thread.sleep(2000);
 
+
         Actions actions = new Actions(driver);
         actions.sendKeys("thisisunsafe").perform();
 
         Thread.sleep(2000);
-       // logCurrentPageState(1000);
+        logCurrentPageState(2000);
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+        System.out.println("Waiting for login form to be clickable...");
         wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
-
+        System.out.println("Login form is clickable, proceeding with login...");
         driver.findElement(By.id("edit-name")).sendKeys("admin");
+        System.out.println("Username entered, now entering password...");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
-
+        System.out.println();
         clickElementRobust(By.id("edit-submit"));
-
+        System.out.println("Login button clicked, waiting for user toolbar to appear...");
        // wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 /*
@@ -157,6 +160,7 @@ public class AdminAuto {
 
                 Thread.sleep(300);
                 System.out.println("Clique robusto finalizado na tentativa " + attempt);
+                System.out.println("Elemento " + locator + " clicado com sucesso.");
                 return;
 
             } catch (StaleElementReferenceException sere) {
