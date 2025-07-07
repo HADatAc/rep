@@ -45,7 +45,7 @@ public class AdminAuto {
         actions.sendKeys("thisisunsafe").perform();
 
         Thread.sleep(2000);
-        logCurrentPageState(1000);
+       // logCurrentPageState(1000);
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
         wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
 
@@ -59,15 +59,19 @@ public class AdminAuto {
 
     @Test
     @DisplayName("Verify Content editor and Administrator checkboxes are loaded and visible")
-    void testCheckboxesLoaded() {
+    void testCheckboxesLoaded() throws InterruptedException {
         driver.get("http://" + ip + "/user/1/edit");
-        logCurrentPageState(5000);
+       // logCurrentPageState(5000);
+        Thread.sleep(2000);
+        System.out.println("Verifying checkboxes are loaded and visible...");
+
         WebElement contentEditorCheckbox = wait.until(
                 ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-content-editor"))
         );
         WebElement administratorCheckbox = wait.until(
                 ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-administrator"))
         );
+
 
         System.out.println("Content editor checkbox found: " + contentEditorCheckbox.isDisplayed());
         System.out.println("Administrator checkbox found: " + administratorCheckbox.isDisplayed());
