@@ -30,6 +30,8 @@ public class AdminAuto {
         options.addArguments("--disable-gpu");
         options.setAcceptInsecureCerts(true);
         options.addArguments("--ignore-certificate-errors");
+        options.addArguments("--single-process"); // reduz uso de múltiplos processos
+
 
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
