@@ -28,6 +28,7 @@ public class RepositoryFormAutomationTest {
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         wait = new WebDriverWait(driver, Duration.ofSeconds(30));
+        System.out.println("Starting driver with IP: " + ip);
 
         driver.get("http://" + ip + "/user/login");
         Thread.sleep(2000);
@@ -41,9 +42,11 @@ public class RepositoryFormAutomationTest {
         }
 
         Thread.sleep(2000);
+        System.out.println("Starting login process...");
         driver.findElement(By.id("edit-name")).sendKeys("admin");
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
         clickElementRobust(By.id("edit-submit"));
+        System.out.println("Login process completed.");
         Thread.sleep(3000);
     }
 
@@ -55,8 +58,9 @@ public class RepositoryFormAutomationTest {
     @Test
     void testFillRepositoryForm() throws InterruptedException {
         driver.get("http://" + ip + "/admin/config/rep");
+        System.out.println("Navigating to repository configuration page...");
         Thread.sleep(3000);
-
+        System.out.println("Current URL: " + driver.getCurrentUrl());
         ensureJwtKeyExists();
         Thread.sleep(3000);
 
@@ -104,7 +108,8 @@ public class RepositoryFormAutomationTest {
     }
 
     private void ensureJwtKeyExists() throws InterruptedException {
-        Thread.sleep(1000);
+        Thread.sleep(2000);
+        System.out.println("Verifying if JWT key 'jwt' exists...");
         boolean jwtExists = new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']")))
                 .getOptions().stream()
                 .anyMatch(option -> option.getText().trim().equals("jwt"));
