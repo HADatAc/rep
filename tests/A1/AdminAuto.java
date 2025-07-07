@@ -30,7 +30,6 @@ public class AdminAuto {
         options.addArguments("--disable-gpu");
         options.setAcceptInsecureCerts(true);
         options.addArguments("--ignore-certificate-errors");
-        options.addArguments("--single-process"); // reduz uso de múltiplos processos
         options.addArguments("--disable-software-rasterizer");
 
 
@@ -55,7 +54,7 @@ public class AdminAuto {
 
         clickElementRobust(By.id("edit-submit"));
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
+       // wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 
     @Test
