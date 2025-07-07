@@ -16,7 +16,7 @@ public class RepositoryFormAutomationTest {
 
     WebDriver driver;
     WebDriverWait wait;
-    String ip = "54.75.120.47";
+    String ip = "54.154.41.233";
 
     @BeforeEach
     void setup() throws InterruptedException {
@@ -107,7 +107,7 @@ public class RepositoryFormAutomationTest {
         fillInput("description for the repository that appears in the rep APIs GUI", "pmsr123");
         fillInput("Sagres Base URL", "https://52.214.194.214/");
 
-        String apiip = "108.129.120.74"; // IP da API de testes
+        String apiip = "54.154.41.233"; // IP da API de testes
         String apiUrl = "http://" + apiip + ":9000";
         fillInput("rep API Base URL", apiUrl);
 
