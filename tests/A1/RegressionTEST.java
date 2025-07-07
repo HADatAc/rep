@@ -17,6 +17,8 @@ public class RegressionTEST {
         runTestClass(RepositoryFormAutomationTest.class);
         Thread.sleep(2000);
 
+
+
         //runTestClass(AdminAuto.class);
         //Thread.sleep(2000);
 

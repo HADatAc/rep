@@ -16,7 +16,7 @@ public class RepositoryFormAutomationTest {
 
     WebDriver driver;
     WebDriverWait wait;
-    String ip = "54.154.41.233";
+    String ip = "54.75.120.47";
 
     @BeforeEach
     void setup() throws InterruptedException {

@@ -36,6 +36,7 @@ use Drupal\sir\Entity\Instrument;
     const PROCESS_STEM                    = VSTOI::VSTOI . "ProcessStem";
     const PROCESS                         = VSTOI::VSTOI . "Process";
     const TASK                            = VSTOI::VSTOI . "Task";
+    const TASK_TEMPORAL_DEPENDENCY        = VSTOI::VSTOI . "TemporalDependency";
 
 
     /*
