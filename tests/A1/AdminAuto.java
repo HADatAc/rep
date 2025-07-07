@@ -24,7 +24,7 @@ public class AdminAuto {
         ChromeOptions options = new ChromeOptions();
 
         options.setBinary("/usr/bin/chromium-browser");
-        options.addArguments("--headless");
+        //options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
@@ -88,6 +88,8 @@ public class AdminAuto {
         driver.get("http://" + ip + "/user/1/edit");
         Thread.sleep(3000); // Espera a página carregar completamente
 
+
+        logCurrentPageState(50000);
         checkCheckboxRobust(By.id("edit-roles-content-editor"));
         checkCheckboxRobust(By.id("edit-roles-administrator"));
 
