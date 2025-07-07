@@ -1,8 +1,0 @@
-/* Map container styling */
-#mapid {
-  height: 800px;
-  width: 100%;
-  border: 2px solid #007bff;
-  border-radius: 4px;
-  margin-bottom: 2rem;
-}
