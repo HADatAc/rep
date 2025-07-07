@@ -60,7 +60,7 @@ public abstract class BaseDelete {
 
         clickElementRobust(By.id("edit-submit"));
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
+       // wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 
 

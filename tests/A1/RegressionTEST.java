@@ -19,8 +19,8 @@ public class RegressionTEST {
 
 
 
-        //runTestClass(AdminAuto.class);
-        //Thread.sleep(2000);
+        runTestClass(AdminAuto.class);
+        Thread.sleep(2000);
 
         runTestClass(FullUploadTestALL.class);
         Thread.sleep(2000);

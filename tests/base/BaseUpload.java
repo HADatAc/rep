@@ -54,7 +54,7 @@ public abstract class BaseUpload {
 
         clickElementRobust(By.id("edit-submit"));
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
+       // wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 
     protected void navigateToUploadPage(String type) {

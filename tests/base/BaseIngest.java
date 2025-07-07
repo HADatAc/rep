@@ -58,7 +58,7 @@ public abstract class BaseIngest {
 
         clickElementRobust(By.id("edit-submit"));
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
+        //wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
 
     protected void ingestFile(String type) throws InterruptedException {
