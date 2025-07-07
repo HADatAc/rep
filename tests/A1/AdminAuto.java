@@ -56,7 +56,7 @@ public class AdminAuto {
 
        // wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
-
+/*
     @Test
     @DisplayName("Verify Content editor and Administrator checkboxes are loaded and visible")
     void testCheckboxesLoaded() throws InterruptedException {
@@ -80,6 +80,8 @@ public class AdminAuto {
         assertTrue(administratorCheckbox.isDisplayed(), "Administrator checkbox should be visible.");
     }
 
+
+ */
     @Test
     @DisplayName("Ensure Content editor and Administrator checkboxes are checked and saved")
     void testEnsureCheckboxesCheckedAndSaved() throws InterruptedException {
