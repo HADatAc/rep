@@ -23,7 +23,7 @@ public class AdminAuto {
     void setup() throws InterruptedException {
         ChromeOptions options = new ChromeOptions();
 
-        //options.setBinary("/var/data/chromium-browser");
+        options.setBinary("/var/data/chromium-browser");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
@@ -61,7 +61,7 @@ public class AdminAuto {
     @DisplayName("Verify Content editor and Administrator checkboxes are loaded and visible")
     void testCheckboxesLoaded() {
         driver.get("http://" + ip + "/user/1/edit");
-
+        logCurrentPageState(5000);
         WebElement contentEditorCheckbox = wait.until(
                 ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-content-editor"))
         );
