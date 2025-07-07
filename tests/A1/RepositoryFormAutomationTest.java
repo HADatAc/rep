@@ -219,7 +219,7 @@ public class RepositoryFormAutomationTest {
             var select = document.getElementById('edit-jwt-secret');
             if (!select) return 'NOT_FOUND';
             for (var i = 0; i < select.options.length; i++) {
-                if (select.options[i].text.trim() === 'jwt') {
+                if (select.options[i].value.trim() === 'jwt') {
                     return 'FOUND';
                 }
             }
@@ -239,16 +239,14 @@ public class RepositoryFormAutomationTest {
             System.out.println("Proceeding with JWT key creation just in case...");
         }
 
-        // Load creation form
+        // Cria a chave JWT
         driver.get("http://" + ip + "/admin/config/system/keys/add");
         waitUntilElementExistsById("edit-label", 15);
 
-        // Fill form with JavaScript (safe now)
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-label').value = 'jwt';");
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-description').value = 'jwt';");
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-key-input-settings-key-value').value = 'qwertyuiopasdfghjklzxcvbnm123456';");
 
-        // Dropdowns still require Selenium because they're <select>
         new Select(driver.findElement(By.id("edit-key-type"))).selectByValue("authentication");
         new Select(driver.findElement(By.id("edit-key-provider"))).selectByVisibleText("Configuration");
 
@@ -260,6 +258,7 @@ public class RepositoryFormAutomationTest {
         driver.get("http://" + ip + "/admin/config/rep");
         Thread.sleep(3000);
     }
+
 
 
 
