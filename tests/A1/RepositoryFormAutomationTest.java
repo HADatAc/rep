@@ -212,11 +212,13 @@ public class RepositoryFormAutomationTest {
 
     private void ensureJwtKeyExists() throws InterruptedException {
         Thread.sleep(2000);
+        System.out.println("Verifying if JWT key 'jwt' exists...");
         WebElement jwtSelect = driver.findElement(By.id("edit-jwt-secret"));
+        System.out.println("Scrolling to JWT select element...");
         ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", jwtSelect);
         System.out.println("Checking if JWT key 'jwt' exists...");
         Thread.sleep(2000);
-
+        System.out.println("Fetching JWT dropdown options...");
         Select jwtDropdown = new Select(jwtSelect);
         boolean jwtExists = jwtDropdown.getOptions().stream()
                 .anyMatch(option -> option.getText().trim().equals("jwt"));
