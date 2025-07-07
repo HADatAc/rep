@@ -215,7 +215,6 @@ public class RepositoryFormAutomationTest {
         System.out.println("Verifying if JWT key 'jwt' exists...");
 
         try {
-            // Use JavaScript to find the select and check if 'jwt' is one of the options
             String script = """
             var select = document.getElementById('edit-jwt-secret');
             if (!select) return 'NOT_FOUND';
@@ -240,14 +239,16 @@ public class RepositoryFormAutomationTest {
             System.out.println("Proceeding with JWT key creation just in case...");
         }
 
-        // Create JWT key
+        // Load creation form
         driver.get("http://" + ip + "/admin/config/system/keys/add");
-        Thread.sleep(3000);
+        waitUntilElementExistsById("edit-label", 15);
 
+        // Fill form with JavaScript (safe now)
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-label').value = 'jwt';");
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-description').value = 'jwt';");
         ((JavascriptExecutor) driver).executeScript("document.getElementById('edit-key-input-settings-key-value').value = 'qwertyuiopasdfghjklzxcvbnm123456';");
 
+        // Dropdowns still require Selenium because they're <select>
         new Select(driver.findElement(By.id("edit-key-type"))).selectByValue("authentication");
         new Select(driver.findElement(By.id("edit-key-provider"))).selectByVisibleText("Configuration");
 
@@ -259,6 +260,7 @@ public class RepositoryFormAutomationTest {
         driver.get("http://" + ip + "/admin/config/rep");
         Thread.sleep(3000);
     }
+
 
 
     private void fillInput(String label, String value) {
@@ -307,6 +309,17 @@ public class RepositoryFormAutomationTest {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException ignored) {}
+    }
+    private void waitUntilElementExistsById(String id, int timeoutSeconds) throws InterruptedException {
+        int waited = 0;
+        while (waited < timeoutSeconds) {
+            Boolean exists = (Boolean) ((JavascriptExecutor) driver).executeScript(
+                    "return document.getElementById('" + id + "') !== null;");
+            if (exists) return;
+            Thread.sleep(1000);
+            waited++;
+        }
+        throw new RuntimeException("Element with ID '" + id + "' not found after " + timeoutSeconds + " seconds.");
     }
 
     /**
