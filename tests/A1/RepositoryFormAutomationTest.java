@@ -64,7 +64,7 @@ public class RepositoryFormAutomationTest {
         ensureJwtKeyExists();
         Thread.sleep(3000);
 
-        WebElement jwtSelect = wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-jwt-secret")));
+        WebElement jwtSelect = driver.findElement(By.id("edit-jwt-secret"));;
         clickElementRobust(By.id("edit-jwt-secret"));
         new Select(jwtSelect).selectByVisibleText("jwt");
         ;
