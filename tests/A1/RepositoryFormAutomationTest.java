@@ -111,22 +111,30 @@ public class RepositoryFormAutomationTest {
 
     private void ensureJwtKeyExists() throws InterruptedException {
         System.out.println("Verifying if JWT key 'jwt' exists...");
-        System.out.println("Current URL: " + driver.getCurrentUrl());
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
-        WebElement jwtDropdown = null;
-        System.out.println("Current URL: " + driver.getCurrentUrl());
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        WebElement jwtDropdown;
+
         try {
             Thread.sleep(2000);
-            System.out.println("Current URL: " + driver.getCurrentUrl());
             jwtDropdown = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-jwt-secret")));
+
+            // Scroll para garantir visibilidade
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", jwtDropdown);
+            Thread.sleep(500); // Pequena pausa para scroll suave
+
         } catch (TimeoutException e) {
             System.out.println("Dropdown JWT não encontrado, recarregando página...");
-            System.out.println("Current URL: " + driver.getCurrentUrl());
             driver.navigate().refresh();
             Thread.sleep(2000);
+
             try {
                 jwtDropdown = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("edit-jwt-secret")));
+
+                // Scroll novamente após reload
+                ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", jwtDropdown);
+                Thread.sleep(500);
+
             } catch (TimeoutException ex) {
                 throw new RuntimeException("Dropdown JWT ainda não encontrado após reload.");
             }
