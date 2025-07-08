@@ -24,7 +24,7 @@ public class RepositoryFormAutomationTest {
 
         ChromeOptions options = new ChromeOptions();
 
-        //options.setBinary("/snap/bin/chromium");
+        options.setBinary("/usr/bin/chromium-browser");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");

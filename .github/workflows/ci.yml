@@ -19,21 +19,31 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Install Chromium + ChromeDriver into /var/data
+      - name: Remove snap and install Chromium + ChromeDriver in /var/data
         run: |
+          # Remove o Snap se estiver instalado
+          sudo snap remove chromium || true
+          sudo apt-get purge -y snapd || true
+          sudo rm -rf ~/snap /snap /var/snap /var/lib/snapd
+          
+          # Atualiza repositórios e instala dependências
           sudo apt-get update
-          sudo apt-get install -y chromium-browser wget unzip
+          sudo apt-get install -y wget unzip libu2f-udev
           
-          # Criar diretório para o chromedriver
+          # Instala Chromium (versão deb) a partir de repositório alternativo
+          sudo apt-get install -y chromium-browser
+          
+          # Cria pasta para o ChromeDriver
           sudo mkdir -p /var/data/chromedriver
-          
-          # Baixar ChromeDriver fixo (versão compatível com Chromium 125)
           cd /var/data/chromedriver
-          sudo wget -q https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.141/linux64/chromedriver-linux64.zip
-          sudo unzip -o chromedriver-linux64.zip
-          sudo mv chromedriver-linux64/chromedriver ./
-          sudo chmod +x chromedriver
-          sudo rm -rf chromedriver-linux64 chromedriver-linux64.zip
+          
+          # Baixa versão compatível com Chromium 125 (ajuste se necessário)
+          wget -q https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.141/linux64/chromedriver-linux64.zip
+          unzip -o chromedriver-linux64.zip
+          mv chromedriver-linux64/chromedriver ./
+          chmod +x chromedriver
+          rm -rf chromedriver-linux64 chromedriver-linux64.zip
+
 
 
 
