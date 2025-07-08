@@ -114,4 +114,15 @@ use Drupal\sir\Entity\Instrument;
     const INTERACTION_TASK               = VSTOI::VSTOI . "InteractionTask";
     const USER_TASK                      = VSTOI::VSTOI . "UserTask";
 
+    /*
+    *    TASK TEMPORAL DEPENDENCY
+    */
+    const CHOICEOPERATOR                  = VSTOI::VSTOI . "ChoiceOperator";
+    const CONCURRENCYOPERATOR             = VSTOI::VSTOI . "ConcurrencyOperator";
+    const ENABLINGOPERATOR                = VSTOI::VSTOI . "EnablingOperator";
+    const ENABLINGINFORMATIONOPERATOR     = VSTOI::VSTOI . "EnablingInformationOperator";
+    const ITERATIONOPERATOR               = VSTOI::VSTOI . "IterationOperator";
+    const ORDERINDEPENDENTOPERATOR        = VSTOI::VSTOI . "OrderIndependentOperator";
+    const SUSPENDRESUMEOPERATOR           = VSTOI::VSTOI . "SuspendResumeOperator";
+
   }
