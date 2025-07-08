@@ -25,7 +25,7 @@ public abstract class BaseUpload {
     void setup() throws InterruptedException {
         ChromeOptions options = new ChromeOptions();
 
-        options.setBinary("/home/ubuntu/snap/chromium");
+        options.setBinary("/snap/bin/chromium");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
