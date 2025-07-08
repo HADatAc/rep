@@ -23,7 +23,7 @@ public class AdminAuto {
     void setup() throws InterruptedException {
         ChromeOptions options = new ChromeOptions();
 
-        options.setBinary("/usr/bin/chromium-browser");
+       // options.setBinary("/usr/bin/chromium-browser");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
@@ -57,6 +57,7 @@ public class AdminAuto {
         driver.findElement(By.id("edit-pass")).sendKeys("admin");
         System.out.println();
         clickElementRobust(By.id("edit-submit"));
+        logCurrentPageState(2000);
         System.out.println("Login button clicked, waiting for user toolbar to appear...");
        // wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
