@@ -31,7 +31,7 @@ public abstract class BaseDelete {
     public void setup() throws InterruptedException {
         ChromeOptions options = new ChromeOptions();
 
-        options.setBinary("/var/data/chromium-browser");
+        options.setBinary("/home/ubuntu/snap/chromium");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
