@@ -67,12 +67,14 @@ public class RepositoryFormAutomationTest {
 
         System.out.println("Login realizado, esperando tela de administração...");
         logCurrentPageState(1000);
-        /* // Espera tela pós-login
+        wait.until(ExpectedConditions.urlContains("/user/1?check_logged_in=1"));
+        System.out.println("Tela de perfil carregada, esperando toolbar do usuário...");
+         // Espera tela pós-login
         new WebDriverWait(driver, Duration.ofSeconds(15)).until(driver ->
                 ((JavascriptExecutor) driver).executeScript("return document.querySelector('#toolbar-item-user') !== null && document.querySelector('#toolbar-item-user').offsetParent !== null;").equals(true)
         );
 
-         */
+
 
     }
 
