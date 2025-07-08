@@ -633,33 +633,41 @@ class Utils {
   }
 
   /**
-   * Recursively checks if an element has a superUri that is of type VSTOI::QUESTIONAIRE.
+   * Plain Value of Task Type.
    */
-  // public static function hasQuestionnaireAncestor($uri) {
-  //   $api = \Drupal::service('rep.api_connector');
-  //   $rawResponse = $api->getUri($uri);
-  //   $obj = json_decode($rawResponse);
+  public static function plainTaskType($type) {
+    if ($type == VSTOI::ABSTRACT_TASK) {
+      return 'Abstract Task';
+    } else if ($type == VSTOI::APPLICATION_TASK) {
+      return 'Application Task';
+    } else if ($type == VSTOI::INTERACTION_TASK) {
+      return 'Interaction Task';
+    } else if ($type == VSTOI::USER_TASK) {
+      return 'User Task';
+    }
+  }
 
-  //   // Check if the response is valid and contains a body
-  //   if (!$obj || !isset($obj->body)) {
-  //       return false;
-  //   }
+  /**
+   * Plain Value of Task Temporal Dependency.
+   */
+  public static function plainTaskTemporalDependency($ttd) {
+    if ($ttd == VSTOI::CHOICEOPERATOR_TASK_DEP) {
+      return 'Choice Operator';
+    } else if ($ttd == VSTOI::CONCURRENCYOPERATOR_TASK_DEP) {
+      return 'Concurrency Operator';
+    } else if ($ttd == VSTOI::ENABLINGOPERATOR_TASK_DEP) {
+      return 'Enabling Operator';
+    } else if ($ttd == VSTOI::ENABLINGINFORMATIONOPERATOR_TASK_DEP) {
+      return 'Enabling Information Operator';
+    } else if ($ttd == VSTOI::ITERATIONOPERATOR_TASK_DEP) {
+      return 'Iteration Operator';
+    } else if ($ttd == VSTOI::ORDERINDEPENDENTOPERATOR_TASK_DEP) {
+      return 'Order Independent Operator';
+    } else if ($ttd == VSTOI::SUSPENDRESUMEOPERATOR_TASK_DEP) {
+      return 'Suspend/Resume Operator';
+    }
+  }
 
-  //   $result = $obj->body;
-
-  //   // If the current element is of type QUESTIONAIRE, return true
-  //   if (isset($result->superUri) && $result->superUri === VSTOI::QUESTIONNAIRE) {
-  //       return true;
-  //   }
-
-  //   // If there is a superUri, call the function recursively
-  //   if (!empty($result->superUri)) {
-  //       return self::hasQuestionnaireAncestor($result->superUri);
-  //   }
-
-  //   // If no QUESTIONAIRE was found in the hierarchy, return false
-  //   return false;
-  // }
   public static function hasQuestionnaireAncestor($uri) {
     /** @var \Drupal\rep\ApiConnectorInterface $api */
     $api = \Drupal::service('rep.api_connector');
