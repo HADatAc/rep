@@ -19,30 +19,23 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Remove snap and install Chromium + ChromeDriver in /var/data
+      - name: Setup ChromeDriver in /var/data
         run: |
-          # Remove o Snap se estiver instalado
-          sudo snap remove chromium || true
-          sudo apt-get purge -y snapd || true
-          sudo rm -rf ~/snap /snap /var/snap /var/lib/snapd
-          
-          # Atualiza repositórios e instala dependências
-          sudo apt-get update
-          sudo apt-get install -y wget unzip libu2f-udev
-          
-          # Instala Chromium (versão deb) a partir de repositório alternativo
-          sudo apt-get install -y chromium-browser
-          
-          # Cria pasta para o ChromeDriver
+          # Cria o diretório de destino
           sudo mkdir -p /var/data/chromedriver
           cd /var/data/chromedriver
           
-          # Baixa versão compatível com Chromium 125 (ajuste se necessário)
+          # Baixa ChromeDriver (versão compatível com Chromium Snap, ex: 125)
           wget -q https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.141/linux64/chromedriver-linux64.zip
-          unzip -o chromedriver-linux64.zip
+          
+          # Extrai diretamente no destino
+          unzip -q chromedriver-linux64.zip
           mv chromedriver-linux64/chromedriver ./
           chmod +x chromedriver
-          rm -rf chromedriver-linux64 chromedriver-linux64.zip
+          
+          # Limpa arquivos temporários
+          rm -rf chromedriver-linux64.zip chromedriver-linux64
+
 
 
 
