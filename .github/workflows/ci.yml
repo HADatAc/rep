@@ -39,15 +39,6 @@ jobs:
       - name: Add chromedriver to PATH
         run: echo "/var/data/chromedriver" >> $GITHUB_PATH
 
-
-
-
-
-
-
-
-
-
       - name: Install Xvfb
         run: sudo apt-get install -y xvfb
 
