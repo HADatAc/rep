@@ -22,7 +22,7 @@ public class RepositoryFormAutomationTest {
     void setup() throws InterruptedException {
         ChromeOptions options = new ChromeOptions();
 
-        options.setBinary("/var/data/chromium-browser");
+        options.setBinary("/usr/bin/google-chrome");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
