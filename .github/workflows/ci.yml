@@ -22,15 +22,13 @@ jobs:
       - name: Install unzip
         run: sudo apt-get install -y unzip
 
-      - name: Setup ChromeDriver in /var/data with debug
+      - name: Prepare /var/data permissions and download chromedriver
         run: |
           sudo mkdir -p /var/data/chromedriver
+          sudo chown -R $(whoami):$(whoami) /var/data
+          
           cd /var/data/chromedriver
-          
           wget --no-verbose --show-progress https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.141/linux64/chromedriver-linux64.zip
-          
-          ls -l chromedriver-linux64.zip
-          file chromedriver-linux64.zip
           
           unzip -q chromedriver-linux64.zip || (echo "Unzip failed!" && exit 3)
           
@@ -38,6 +36,7 @@ jobs:
           chmod +x chromedriver
           
           rm -rf chromedriver-linux64.zip chromedriver-linux64
+
 
 
 
