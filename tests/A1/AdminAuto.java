@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AdminAuto {
 
 
+
     private WebDriver driver;
     private WebDriverWait wait;
     String ip = "54.75.120.47";
