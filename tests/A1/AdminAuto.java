@@ -15,14 +15,15 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class AdminAuto {
 
+
     private WebDriver driver;
     private WebDriverWait wait;
     String ip = "54.75.120.47";
 
     @BeforeAll
     void setup() throws InterruptedException {
+        System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
         ChromeOptions options = new ChromeOptions();
-        options.setBinary("/snap/bin/chromium");
 
 
         options.addArguments("--headless");

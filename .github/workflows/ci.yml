@@ -19,10 +19,20 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Install Chromium and ChromeDriver
+      - name: Install Chromium and ChromeDriver to /var/data
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser chromium-chromedriver
+          
+          # Cria o diretório destino se não existir
+          sudo mkdir -p /var/data/chromedriver
+          
+          # Move o chromedriver para o diretório desejado
+          sudo mv /usr/lib/chromium-browser/chromedriver /var/data/chromedriver/
+          
+          # Dá permissão de execução
+          sudo chmod +x /var/data/chromedriver/chromedriver
+
 
 
       - name: Install Xvfb
