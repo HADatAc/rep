@@ -22,16 +22,25 @@ jobs:
       - name: Install Chromium and ChromeDriver to /var/data
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser chromium-chromedriver
+          sudo apt-get install -y wget unzip
           
-          # Cria o diretório destino se não existir
+
+          sudo apt-get install -y chromium-browser
+          
+         
+          CHROME_VERSION=$(chromium-browser --version | grep -oP '\d+\.\d+\.\d+')
+          DRIVER_VERSION=$(wget -qO- "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json" | jq -r --arg ver "$CHROME_VERSION" '.channels.Stable.downloads.chromedriver[] | select(.platform == "linux64") | .url')
+          
+          
           sudo mkdir -p /var/data/chromedriver
+          cd /var/data/chromedriver
           
-          # Move o chromedriver para o diretório desejado
-          sudo mv /usr/lib/chromium-browser/chromedriver /var/data/chromedriver/
-          
-          # Dá permissão de execução
-          sudo chmod +x /var/data/chromedriver/chromedriver
+         
+          sudo wget -q "$DRIVER_VERSION" -O chromedriver.zip
+          sudo unzip -o chromedriver.zip
+          sudo mv chromedriver-linux64/chromedriver ./
+          sudo chmod +x chromedriver
+          sudo rm -rf chromedriver-linux64 chromedriver.zip
 
 
 
