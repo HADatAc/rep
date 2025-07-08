@@ -117,12 +117,12 @@ use Drupal\sir\Entity\Instrument;
     /*
     *    TASK TEMPORAL DEPENDENCY
     */
-    const CHOICEOPERATOR                  = VSTOI::VSTOI . "ChoiceOperator";
-    const CONCURRENCYOPERATOR             = VSTOI::VSTOI . "ConcurrencyOperator";
-    const ENABLINGOPERATOR                = VSTOI::VSTOI . "EnablingOperator";
-    const ENABLINGINFORMATIONOPERATOR     = VSTOI::VSTOI . "EnablingInformationOperator";
-    const ITERATIONOPERATOR               = VSTOI::VSTOI . "IterationOperator";
-    const ORDERINDEPENDENTOPERATOR        = VSTOI::VSTOI . "OrderIndependentOperator";
-    const SUSPENDRESUMEOPERATOR           = VSTOI::VSTOI . "SuspendResumeOperator";
+    const CHOICEOPERATOR_TASK_DEP                  = VSTOI::VSTOI . "ChoiceOperator";
+    const CONCURRENCYOPERATOR_TASK_DEP             = VSTOI::VSTOI . "ConcurrencyOperator";
+    const ENABLINGOPERATOR_TASK_DEP                = VSTOI::VSTOI . "EnablingOperator";
+    const ENABLINGINFORMATIONOPERATOR_TASK_DEP     = VSTOI::VSTOI . "EnablingInformationOperator";
+    const ITERATIONOPERATOR_TASK_DEP               = VSTOI::VSTOI . "IterationOperator";
+    const ORDERINDEPENDENTOPERATOR_TASK_DEP        = VSTOI::VSTOI . "OrderIndependentOperator";
+    const SUSPENDRESUMEOPERATOR_TASK_DEP           = VSTOI::VSTOI . "SuspendResumeOperator";
 
   }
