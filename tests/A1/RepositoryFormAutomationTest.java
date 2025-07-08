@@ -64,6 +64,7 @@ public class RepositoryFormAutomationTest {
 
         // Clica no botão de login
         clickElementRobust(By.id("edit-submit"));
+        logCurrentPageState(1000);
 
         System.out.println("Login realizado, esperando tela de administração...");
         logCurrentPageState(1000);
