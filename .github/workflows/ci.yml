@@ -19,28 +19,22 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Install Chromium and ChromeDriver to /var/data
+      - name: Install Chromium + ChromeDriver into /var/data
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip
+          sudo apt-get install -y chromium-browser wget unzip
           
-
-          sudo apt-get install -y chromium-browser
-          
-         
-          CHROME_VERSION=$(chromium-browser --version | grep -oP '\d+\.\d+\.\d+')
-          DRIVER_VERSION=$(wget -qO- "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json" | jq -r --arg ver "$CHROME_VERSION" '.channels.Stable.downloads.chromedriver[] | select(.platform == "linux64") | .url')
-          
-          
+          # Criar diretório para o chromedriver
           sudo mkdir -p /var/data/chromedriver
-          cd /var/data/chromedriver
           
-         
-          sudo wget -q "$DRIVER_VERSION" -O chromedriver.zip
-          sudo unzip -o chromedriver.zip
+          # Baixar ChromeDriver fixo (versão compatível com Chromium 125)
+          cd /var/data/chromedriver
+          sudo wget -q https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.141/linux64/chromedriver-linux64.zip
+          sudo unzip -o chromedriver-linux64.zip
           sudo mv chromedriver-linux64/chromedriver ./
           sudo chmod +x chromedriver
-          sudo rm -rf chromedriver-linux64 chromedriver.zip
+          sudo rm -rf chromedriver-linux64 chromedriver-linux64.zip
+
 
 
 
