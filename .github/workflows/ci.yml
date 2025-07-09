@@ -3,7 +3,7 @@ name: Run Selenium Tests
 on:
   push:
     branches:
-      - stream_topics
+      - test_process_kael
 
 jobs:
   run-selenium-tests:
