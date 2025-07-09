@@ -23,7 +23,8 @@ public class AdminAuto {
 
     @BeforeAll
     void setup() throws InterruptedException {
-        //System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
+        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver");
+
         ChromeOptions options = new ChromeOptions();
 
         options.setBinary("/usr/bin/google-chrome");

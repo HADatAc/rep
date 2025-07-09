@@ -20,7 +20,8 @@ public class RepositoryFormAutomationTest {
 
     @BeforeEach
     void setup() throws InterruptedException {
-        //System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
+        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver");
+
 
         ChromeOptions options = new ChromeOptions();
 

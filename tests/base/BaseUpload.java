@@ -23,6 +23,7 @@ public abstract class BaseUpload {
 
     @BeforeAll
     void setup() throws InterruptedException {
+        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver");
 
         ChromeOptions options = new ChromeOptions();
 
