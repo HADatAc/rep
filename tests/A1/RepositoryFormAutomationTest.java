@@ -57,23 +57,32 @@ public class RepositoryFormAutomationTest {
             throw new RuntimeException("SSL warning page loaded instead of actual app page.");
         }
         //logCurrentPageState(5000);
-        // Espera explícita para página carregar o input
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+        // Espera visibilidade e limpa campos antes de preencher
+        WebElement userInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+        userInput.clear();
+        userInput.sendKeys("admin");
 
+        WebElement passInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-pass")));
+        passInput.clear();
+        passInput.sendKeys("admin");
 
-        // Espera o botão login estar clicável
-        wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
-
-        // Preenche usuário e senha
-        driver.findElement(By.id("edit-name")).sendKeys("admin");
-        driver.findElement(By.id("edit-pass")).sendKeys("admin");
-
-
-        // Clica no botão de login
         clickElementRobust(By.id("edit-submit"));
-        logCurrentPageState(50000);
 
-        System.out.println("Login realizado, esperando tela de administração...");
+// Espera a URL geral que indica login
+        wait.until(ExpectedConditions.urlContains("/user/"));
+
+// Opcional: valida se há erro na página
+        if (pageSource.contains("Unrecognized username or password")) {
+            throw new RuntimeException("Falha no login: usuário ou senha incorretos.");
+        }
+
+// Espera toolbar aparecer
+        wait.until(driver -> ((JavascriptExecutor) driver).executeScript(
+            "return document.querySelector('#toolbar-item-user') !== null && document.querySelector('#toolbar-item-user').offsetParent !== null;"
+        ).equals(true));
+
+        System.out.println("Login OK.");
+
         logCurrentPageState(50000);
         wait.until(ExpectedConditions.urlContains("/user/1?check_logged_in=1"));
         System.out.println("Tela de perfil carregada, esperando toolbar do usuário...");
