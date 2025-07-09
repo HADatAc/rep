@@ -19,7 +19,7 @@ public class AdminAuto {
 
     private WebDriver driver;
     private WebDriverWait wait;
-    String ip = "54.75.120.47";
+    String ip = "18.203.69.17";
 
     @BeforeAll
     void setup() throws InterruptedException {

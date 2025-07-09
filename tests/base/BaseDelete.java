@@ -24,7 +24,7 @@ public abstract class BaseDelete {
     protected final Map<String, Boolean> selectedRows = new HashMap<>();
     protected static final int MAX_ATTEMPTS = 10;
     protected static final int WAIT_INTERVAL_MS = 10000;
-    String ip = "54.75.120.47";
+    String ip = "18.203.69.17";
     //String ip = "localhost";
 
     @BeforeAll
