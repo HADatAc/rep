@@ -25,8 +25,11 @@ jobs:
         run: |
           wget -q https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.141/linux64/chrome-linux64.zip
           unzip -q chrome-linux64.zip
-          sudo mv chrome-linux64 /opt/chrome
-          sudo ln -sf /opt/chrome/chrome /usr/bin/google-chrome
+          sudo rm -rf /opt/chrome/chrome-linux64
+          sudo mkdir -p /opt/chrome
+          sudo mv chrome-linux64 /opt/chrome/chrome-linux64
+          sudo ln -sf /opt/chrome/chrome-linux64/chrome /usr/bin/google-chrome
+
 
 
       - name: Install ChromeDriver manually into /usr/bin
