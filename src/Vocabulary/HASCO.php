@@ -30,6 +30,7 @@ use PHPUnit\Event\Application\Started;
     const STD                           = HASCO::HASCO . "STD";
     const STR                           = HASCO::HASCO . "STR";
     const STREAM                        = HASCO::HASCO . "Stream";
+    const STREAMTOPIC                   = HASCO::HASCO . 'StreamTopic';
     const STUDY                         = HASCO::HASCO . "Study";
     const STUDY_OBJECT                  = HASCO::HASCO . "StudyObject";
     const STUDY_OBJECT_COLLECTION       = HASCO::HASCO . "StudyObjectCollection";

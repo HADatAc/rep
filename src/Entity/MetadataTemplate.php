@@ -93,10 +93,10 @@ class MetadataTemplate
     $header['element_filename'] = t('FileName');
 
     if ($streamType == 'files') {
-      $header['element_messages_total'] = t('Data Points');
+      $header['element_messages_datapoints'] = t('Data Points');
     } else {
-      $header['element_messages_total'] = t('Total Messages');
-      $header['element_messages_ingested'] = t('Ingested Messages');
+      $header['element_messages_recorded_messages'] = t('Recorded Messages');
+      $header['element_messages_data_points'] = t('Data Points');
     }
 
     $header['element_status'] = t('Status');
@@ -270,9 +270,6 @@ class MetadataTemplate
           'currenturl' => $previousUrl,
         ]);
 
-        // Criar os links adicionais
-        // Verificar se $view_da, $edit_da, $delete_da, $download_da são URLs válidas
-
         $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<nolink>');
         $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<nolink>');
         $ingest_da = $ingest_da instanceof Url ? $ingest_da : Url::fromRoute('<nolink>');
@@ -298,7 +295,7 @@ class MetadataTemplate
           ];
         }
 
-        // Dete button
+        // Delete button
         $data_url = $delete_da instanceof Url ? $delete_da->toString() : '#';
 
         if ($element->hasSIRManagerEmail === $useremail) {
@@ -350,7 +347,6 @@ class MetadataTemplate
           ],
         ];
 
-        // Concatenar os links como HTML
         $links = [
           // \Drupal::service('renderer')->render($view_bto),
           // \Drupal::service('renderer')->render($edit_bto),
@@ -360,7 +356,6 @@ class MetadataTemplate
           \Drupal::service('renderer')->render($delete_bto),
         ];
 
-        // Adicionar todos os links concatenados ao campo `element_operations`
         $output[$element->uri] = [
           'element_filename' => t('<span style="display: inline-block; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>'),
           // 'element_stream' => t('<span style="display: inline-block; max-width: 30ch; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">' . (isset($stream) ? $stream->datasetPattern : '-') . '</span>'),
@@ -387,7 +382,20 @@ class MetadataTemplate
       return $output;
     }
 
+    $api = \Drupal::service('rep.api_connector');
     foreach ($list as $element) {
+
+      // IF STREAM MESSAGE no operations can be made if topic is recording
+      $bto_active = true;
+      if ($element->method !== 'files' && $element->hasDataFile->streamTopicUri !== NULL && $element->hasDataFile->streamTopicUri !== '') {
+        $streamTopic = $api->parseObjectResponse(
+          $api->getUri($element->hasDataFile->streamTopicUri),
+          'getUri'
+        ) ?? NULL;
+
+        if ($streamTopic !== NULL && $streamTopic->hasTopicStatus === HASCO::RECORDING)
+            $bto_active = false;
+      }
 
       $uri = ' ';
       if ($element->uri != NULL) {
@@ -444,8 +452,6 @@ class MetadataTemplate
           $log = '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm read-button" ' .
             'data-dialog-type="modal" ' .
             'data-dialog-options=\'{"width": 700}\' role="button">Read</a>';
-
-          //$log = '<a href="'.$link.'" class="btn btn-primary btn-sm" role="button">Read</a>';
         }
         $downloadLink = '';
         if ($element->hasDataFile->id != NULL && $element->hasDataFile->id != '') {
@@ -461,7 +467,6 @@ class MetadataTemplate
       // dpm($element->streamUri);
       if ($element->streamUri !== null) {
         $stream = array();
-        $api = \Drupal::service('rep.api_connector');
         $strRawResponse = $api->getUri($element->streamUri);
         $strObj = json_decode($strRawResponse);
         if ($strObj->isSuccessful) {
@@ -502,9 +507,6 @@ class MetadataTemplate
         'currenturl' => $previousUrl,
       ]);
 
-      // Criar os links adicionais
-      // Verificar se $view_da, $edit_da, $delete_da, $download_da são URLs válidas
-
       $view_da = $view_da instanceof Url ? $view_da : Url::fromRoute('<nolink>');
       $edit_da = $edit_da instanceof Url ? $edit_da : Url::fromRoute('<nolink>');
       $delete_da = $delete_da instanceof Url ? $delete_da : Url::fromRoute('<nolink>');
@@ -528,7 +530,7 @@ class MetadataTemplate
         ];
       }
 
-      // Dete button
+      // Delete button
       $data_url = $delete_da instanceof Url ? $delete_da->toString() : '#';
 
       if ($element->hasSIRManagerEmail === $useremail) {
@@ -545,7 +547,7 @@ class MetadataTemplate
           $view_da
         )->toRenderable();
         $uningest_bto['#attributes'] = [
-          'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', $element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''],
+          'class' => ['btn', 'btn-sm', 'me-1', 'btn-secondary', ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : ''), (!$bto_active ? 'disabled' : '')],
         ];
       }
 
@@ -556,7 +558,7 @@ class MetadataTemplate
           <button
             type="button"
             '.($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED ? 'disabled' : '').'
-            class="btn btn-sm btn-secondary ingest-button"
+            class="btn btn-sm btn-secondary ingest-button '.(!$bto_active ? 'disabled' : '').'"
             data-elementuri="' . $encoded . '"
             title="' . t('Ingest the file') . '">
             <i class="fa-solid fa-down-long"></i>
@@ -570,7 +572,7 @@ class MetadataTemplate
           <button
             type="button"
             '.($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED ? 'disabled' : '').'
-            class="btn btn-sm btn-secondary uningest-button"
+            class="btn btn-sm btn-secondary uningest-button '.(!$bto_active ? 'disabled' : '').'"
             data-elementuri="' . $encoded . '"
             title="' . t('Uningest the file') . '">
             <i class="fa-solid fa-up-long"></i>
@@ -583,6 +585,7 @@ class MetadataTemplate
         '#title' => Markup::create('<i class="fa-solid fa-download"></i>'),
         '#url' => Url::fromUserInput('#', [
           'attributes' => [
+            'class' => [(!$bto_active ? 'disabled' : '')],
             'title' => t('Download file'),
             'data-download-url' => $download_da,
           ],
@@ -592,8 +595,6 @@ class MetadataTemplate
         ],
       ];
 
-
-      // Concatenar os links como HTML
       $links = [
         // \Drupal::service('renderer')->render($view_bto),
         // \Drupal::service('renderer')->render($edit_bto),
@@ -602,16 +603,15 @@ class MetadataTemplate
         \Drupal::service('renderer')->render($download_bto),
         \Drupal::service('renderer')->render($delete_bto),
       ];
-      
 
-      // Adicionar todos os links concatenados ao campo `element_operations`
+      // dpm($element);
       $output[$element->uri] = [];
       $output[$element->uri]['element_filename'] = t('<span style="display: inline-block; white-space: normal; overflow-wrap: anywhere; word-break: break-all;">'.$filename.'</span>');
       if ($streamType == 'files') {
-        $output[$element->uri]['element_messages_total'] = isset($element->numberDataPoints) ? $element->numberDataPoints : 0;
+        $output[$element->uri]['element_messages_datapoints'] = isset($element->hasNumberDataPoints) ? $element->hasNumberDataPoints : 0;
       } else {
-        $output[$element->uri]['element_messages_total'] = isset($element->totalMessages) ? $element->totalMessages : 0;
-        $output[$element->uri]['element_messages_ingested'] = isset($element->ingestedMessages) ? $element->ingestedMessages : 0;
+        $output[$element->uri]['element_messages_recorded_messages'] = isset($element->hasTotalRecordedMessages) ? $element->hasTotalRecordedMessages : 0;
+        $output[$element->uri]['element_messages_data_points'] = isset($element->hasNumberDataPoints ) ? $element->hasNumberDataPoints  : 0;
       }
 
       $output[$element->uri]['element_status'] = t($filestatus);

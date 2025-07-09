@@ -861,6 +861,15 @@
                             skip: false
                           };
 
+                          // monta um ID único combinando pai + filho
+                          var parentIdSafe = sanitizeForId(node.id);
+                          var childIdSafe  = sanitizeForId(item.uri);
+                          nodeObj.id = 'node_' + parentIdSafe + '_' + childIdSafe;
+
+                          // preserve a URI real em data
+                          nodeObj.data = nodeObj.data || {};
+                          nodeObj.data.realUri = item.uri;
+
                           var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
                           var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
                           var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
@@ -923,7 +932,12 @@
                 }
               }
             },
-            plugins: ['search', 'wholerow'],
+            plugins: ['search', 'wholerow', 'sort'],
+            sort: function (a, b) {
+              var ta = this.get_node(a).text.toLowerCase();
+              var tb = this.get_node(b).text.toLowerCase();
+              return ta > tb ? 1 : (ta < tb ? -1 : 0);
+            },
             search: {
               case_sensitive: false,
               show_only_matches: true,
@@ -1117,8 +1131,10 @@
                         if (!seen.has(normalizedUri)) {
                           seen.add(normalizedUri);
                           var prefixed = namespacePrefixUri(item.uri);
+                          var parentIdSafe = sanitizeForId(node.id);
+                          var childIdSafe  = sanitizeForId(item.uri);
                           var nodeObj = {
-                            id: 'node_' + sanitizeForId(item.uri),
+                            id: 'node_' + parentIdSafe + '_' + childIdSafe,
                             text: setNodeText(item),
                             label: item.label,
                             uri: item.uri,
@@ -1189,6 +1205,9 @@
                             }
                           }
 
+                          nodeObj.data = nodeObj.data || {};
+                          nodeObj.data.realUri = item.uri;
+
                           if (!nodeObj.skip) {
                             temp.push(nodeObj);
                           }
@@ -1205,7 +1224,12 @@
                 }
               }
             },
-            plugins: ['search', 'wholerow'],
+            plugins: ['search', 'wholerow', 'sort'],
+            sort: function (a, b) {
+              var ta = this.get_node(a).text.toLowerCase();
+              var tb = this.get_node(b).text.toLowerCase();
+              return ta > tb ? 1 : (ta < tb ? -1 : 0);
+            },
             search: {
               case_sensitive: false,
               show_only_matches: true,

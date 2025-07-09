@@ -129,7 +129,6 @@
             && $propertyName !== 'hasWebDocument'
             && $propertyName !== 'hasStatus'
             && $propertyName !== 'hasStreamStatus'
-            && $propertyName !== 'hasMessageStatus'
             ) {
 
           $form[$propertyName] = [
@@ -137,8 +136,7 @@
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . $propertyValue. "<br><br>"),
           ];
         } else if ($propertyName === 'hasStatus'
-        || $propertyName === 'hasStreamStatus'
-        || $propertyName === 'hasMessageStatus') {
+        || $propertyName === 'hasStreamStatus') {
           $form[$propertyName] = [
             '#type' => 'markup',
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . Utils::plainStatus($propertyValue). "<br><br>"),
@@ -167,7 +165,7 @@
             ];
             $form['document_link']['link'] = [
               '#type' => 'link',
-              '#title' => $this->t('View associated WebDocument'),
+              '#title' => $this->t('View associated resource'),
               '#url' => \Drupal\Core\Url::fromUri($hasWebDocument),
               '#attributes' => [
                 'class' => ['view-media-link', 'btn', 'btn-primary', 'mb-3'],

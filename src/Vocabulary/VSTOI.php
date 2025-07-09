@@ -2,6 +2,8 @@
 
   namespace Drupal\rep\Vocabulary;
 
+use Drupal\sir\Entity\Instrument;
+
   class VSTOI {
 
     const VSTOI                           = "http://hadatac.org/ont/vstoi#";
@@ -34,6 +36,7 @@
     const PROCESS_STEM                    = VSTOI::VSTOI . "ProcessStem";
     const PROCESS                         = VSTOI::VSTOI . "Process";
     const TASK                            = VSTOI::VSTOI . "Task";
+    const TASK_TEMPORAL_DEPENDENCY        = VSTOI::VSTOI . "TemporalDependency";
 
 
     /*
@@ -102,5 +105,24 @@
     const PAGE_BOTTOM_CENTER              = VSTOI::VSTOI . "PageBottomCenter";
     const PAGE_BOTTOM_RIGHT               = VSTOI::VSTOI . "PageBottomRight";
 
+
+    /*
+    *    TASK TYPES
+    */
+    const ABSTRACT_TASK                  = VSTOI::VSTOI . "AbstractTask";
+    const APPLICATION_TASK               = VSTOI::VSTOI . "ApplicationTask";
+    const INTERACTION_TASK               = VSTOI::VSTOI . "InteractionTask";
+    const USER_TASK                      = VSTOI::VSTOI . "UserTask";
+
+    /*
+    *    TASK TEMPORAL DEPENDENCY
+    */
+    const CHOICEOPERATOR_TASK_DEP                  = VSTOI::VSTOI . "ChoiceOperator";
+    const CONCURRENCYOPERATOR_TASK_DEP             = VSTOI::VSTOI . "ConcurrencyOperator";
+    const ENABLINGOPERATOR_TASK_DEP                = VSTOI::VSTOI . "EnablingOperator";
+    const ENABLINGINFORMATIONOPERATOR_TASK_DEP     = VSTOI::VSTOI . "EnablingInformationOperator";
+    const ITERATIONOPERATOR_TASK_DEP               = VSTOI::VSTOI . "IterationOperator";
+    const ORDERINDEPENDENTOPERATOR_TASK_DEP        = VSTOI::VSTOI . "OrderIndependentOperator";
+    const SUSPENDRESUMEOPERATOR_TASK_DEP           = VSTOI::VSTOI . "SuspendResumeOperator";
 
   }

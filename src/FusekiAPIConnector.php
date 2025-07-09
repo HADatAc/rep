@@ -12,6 +12,7 @@ use Exception;
 use Symfony\Component\HttpFoundation\Response;
 use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 
 class FusekiAPIConnector {
   private $client;
@@ -946,7 +947,7 @@ class FusekiAPIConnector {
   }
 
   public function processInstrumentUpdate(array $processData) {
-    $endpoint = "/hascoapi/api/process/instrumentation";
+    $endpoint = "/hascoapi/api/process/instrument";
     $method = "POST";
     $api_url = $this->getApiUrl();
 
@@ -992,6 +993,23 @@ class FusekiAPIConnector {
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
+
+  // GET /hascoapi/api/process/deletewithtasks/:processUri org.hascoapi.console.controllers.restapi.ProcessAPI.deleteWithTasks(processUri: String)
+  public function processDeleteWithTasks($processUri) {
+    $endpoint = "/hascoapi/api/process/deletewithtasks/".rawurlencode($processUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
+   *    TASKS
+   */
+
+  // TODOPP
+  // End-Point da API para salvar os instrumentos nas tasks
+
 
   /**
    *    PROJECTS
@@ -1569,11 +1587,10 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function streamByStateEmailDeployment($state, $email, $deploymenturi, $pageSize, $offset) {
-    $endpoint = "/hascoapi/api/stream/bydeployment/".
+  public function streamByStateEmail($state, $email, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/stream/bystateemail/".
       $state."/".
       $email."/".
-      rawurlencode($deploymenturi)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
@@ -1582,12 +1599,82 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function streamSizeByStateEmailDeployment($state, $email, $deploymenturi) {
-    $endpoint = "/hascoapi/api/stream/bydeployment/total/".
+  public function streamSizeByStateEmail($state, $email) {
+    $endpoint = "/hascoapi/api/stream/bystateemail/total/".
       $state."/".
       $email."/".
-      rawurlencode($deploymenturi);
     $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
+   * STREAM TOPIC
+   */
+
+  // GET     /hascoapi/api/topic/subscribed org.hascoapi.console.controllers.restapi.StreamTopicAPI.findActive()
+  public function streamTopicSubscribed() {
+    $endpoint = "/hascoapi/api/topic/subscribed";
+      // $state."/".
+      // $email."/".
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/topic/subscribe/:topicUri org.hascoapi.console.controllers.restapi.StreamTopicAPI.subscribe(topicUri: String)
+  public function streamTopicSubscribe($topicuri) {
+    $endpoint = "/hascoapi/api/topic/subscribe/".
+      rawurlencode($topicuri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/topic/unsubscribe/:topicUri org.hascoapi.console.controllers.restapi.StreamTopicAPI.unsubscribe(topicUri: String)
+  public function streamTopicUnsubscribe($topicuri) {
+    $endpoint = "/hascoapi/api/topic/unsubscribe/".
+      rawurlencode($topicuri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/topic/setstatus/:topicUri/:status org.hascoapi.console.controllers.restapi.StreamTopicAPI.setStatus(topicUri: String, status: String)
+  public function streamTopicSetStatus($topicuri, $status) {
+    $endpoint = "/hascoapi/api/topic/setstatus/".
+      rawurlencode($topicuri)."/".
+      rawurlencode($status);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET /hascoapi/api/topic/latest/$topicUri<[^/]+>org.hascoapi.console.controllers.restapi.StreamTopicAPI.getLatestValue(topicUri:String)
+  public function streamTopicLatestMessage($topicuri) {
+    $endpoint = "/hascoapi/api/topic/latest/".
+      rawurlencode($topicuri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/dataacquisition/bytopic/:uri/:pageSize/:offset                org.hascoapi.console.controllers.restapi.DAAPI.findDAsByStreamTopic(uri: String, pageSize : Integer, offset : Integer)
+  public function getDAsByStreamTopic($uri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/dataacquisition/bytopic/".rawurlencode($uri)."/".$pageSize."/".$offset;
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/dataacquisition/bytopic/total/:uri                            org.hascoapi.console.controllers.restapi.DAAPI.findTotalDAsByStreamTopic(uri: String)
+  public function getTotalDAsByStreamTopic($uri) {
+    $endpoint = "/hascoapi/api/dataacquisition/bytopic/total/".rawurlencode($uri);
+    $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -2215,7 +2302,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
   // Per status
-  public function generateMTPerStatus($elementtype, $status, $filename) {    
+  public function generateMTPerStatus($elementtype, $status, $filename) {
     $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/_/false";
     $method = "GET";
     $api_url = $this->getApiUrl();
@@ -2536,5 +2623,4 @@ class FusekiAPIConnector {
     ]);
     return NULL;
   }
-
 }
