@@ -1009,7 +1009,33 @@ class FusekiAPIConnector {
 
   // TODOPP
   // End-Point da API para salvar os instrumentos nas tasks
+  public function taskSetRequiredInstruments(array $instruments) {
+    $endpoint = "/hascoapi/api/task/instruments";
+    $method = "POST";
+    $api_url = $this->getApiUrl();
 
+    if ($this->bearer == NULL) {
+        $this->bearer = "Bearer " . JWT::jwt();
+    }
+
+    $payload = json_encode($instruments, JSON_UNESCAPED_SLASHES);
+
+    $data = [
+        'headers' => [
+            'Content-Type' => 'application/json',
+            'Authorization' => $this->bearer
+        ],
+        'body' => $payload
+    ];
+
+    \Drupal::logger('rep')->notice('Payload sent to API: @payload', [
+        '@payload' => $payload
+    ]);
+
+    $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
+
+    return $response;
+  }
 
   /**
    *    PROJECTS
