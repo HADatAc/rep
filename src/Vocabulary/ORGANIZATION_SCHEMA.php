@@ -12,6 +12,8 @@ class ORGANIZATION_SCHEMA {
   const GovernmentOrganization                  = SCHEMA::SCHEMA . "GovernmentOrganization";
   const MedicalOrganization                     = SCHEMA::SCHEMA . "MedicalOrganization";
   const ResearchOrganization                    = SCHEMA::SCHEMA . "ResearchOrganization";
+  const Corporation                             = SCHEMA::SCHEMA . "Corporation";
+  const Consortium                              = SCHEMA::SCHEMA . "Consortium";
 
   public static function getOptions(): array {
     // IF WANTED schema:City UNCOMMENT
@@ -24,11 +26,13 @@ class ORGANIZATION_SCHEMA {
     // ];
 
     return [
-      self::CollegeOrUniversity                   => 'College or University',
-      self::CollegeOrUniversityOrFacultyOrSchool  => 'College or University’s Faculty, School',
-      self::GovernmentOrganization                => 'Governament Organization',
-      self::MedicalOrganization                   => 'Medical Organization',
-      self::ResearchOrganization                  => 'Research Organization',
+      self::CollegeOrUniversity                  => 'College or University',
+      self::CollegeOrUniversityOrFacultyOrSchool => 'College or University’s Faculty, School',
+      self::Consortium                           => 'Consortium',
+      self::Corporation                          => 'Corporation',
+      self::GovernmentOrganization               => 'Governament Organization',
+      self::MedicalOrganization                  => 'Medical Organization',
+      self::ResearchOrganization                 => 'Research Organization',
     ];
   }
 }

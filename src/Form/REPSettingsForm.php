@@ -49,14 +49,14 @@
             $home = $config->get("rep_home");
         }
 
-        $form['namespace_submit'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Manage NameSpaces'),
-            '#name' => 'namespace',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'manage_codebookslots'],
-            ],
-        ];
+        // $form['namespace_submit'] = [
+        //     '#type' => 'submit',
+        //     '#value' => $this->t('Manage NameSpaces'),
+        //     '#name' => 'namespace',
+        //     '#attributes' => [
+        //       'class' => ['btn', 'btn-primary', 'manage_codebookslots'],
+        //     ],
+        // ];
 
         $form['preferred_names_submit'] = [
             '#type' => 'submit',
@@ -189,7 +189,7 @@
             '#default_value' => $config->get("sagres_base_url") ?? 'https://52.214.194.214',
             '#description' => 'Sagres Base URL for Users Synchronization.',
         ];
-        
+
         $form['api_url'] = [
             '#type' => 'textfield',
             '#title' => 'rep API Base URL',
@@ -210,7 +210,7 @@
             '#title' => 'JWT Secret',
             '#key_filters' => ['type' => 'authentication'],
             '#default_value' => $config->get("jwt_secret"),
-        ];       
+        ];
 
         $form['filler_1'] = [
             '#type' => 'item',
@@ -282,7 +282,7 @@
             $messenger = \Drupal::service('messenger');
             $messenger->addMessage($this->t('User synchronization with Sagres completed!'));
             return;
-        }        
+        }
 
           $config = $this->config(static::CONFIGNAME);
 
@@ -302,7 +302,7 @@
         $config->set("api_url", $form_state->getValue('api_url'));
         $config->set("jwt_secret", $form_state->getValue('jwt_secret'));
         $config->save();
- 
+
         //site name
         $configdrupal = \Drupal::service('config.factory')->getEditable('system.site');
         $configdrupal->set('name', $form_state->getValue('site_name'));
@@ -361,7 +361,7 @@
         $config = $this->config(static::CONFIGNAME);
         $sagres_base_url = $config->get("sagres_base_url");
         $sagres_token = \Drupal::service('request_stack')->getCurrentRequest()->getSession()->get('oauth_access_token');
-    
+
         if (!$sagres_token) {
             \Drupal::logger('rep')->error("Token não encontrado na sessão.");
             return;
@@ -386,19 +386,19 @@
             \Drupal::logger('rep')->error("Erro ao obter lista de utilizadores do sguser: " . $e->getMessage());
             return;
         }
-    
+
         // Criar um mapa de usuários do sguser para facilitar a comparação
         $sguser_map = [];
         foreach ($sguser_users as $user) {
             $key = $user['acc_repo_instance'] . ':' . $user['acc_id'];
             $sguser_map[$key] = $user;
         }
-    
+
         $users_created = 0;
         $users_updated = 0;
-        
+
         $users = \Drupal::entityTypeManager()->getStorage('user')->loadMultiple();
-    
+
         foreach ($users as $user) {
 
             if ($user->id() == 0 || $user->isBlocked()) {
@@ -408,7 +408,7 @@
 
             \Drupal::logger('rep')->notice("Processando utilizador: " . $user->getEmail());
 
-            
+
             $user_data = [
                 'acc_id' => $user->id(),
                 'acc_repo_instance' => $repo_instance,
@@ -425,7 +425,7 @@
             if (isset($sguser_map[$user_key])) {
                 // Usuário já existe no sguser, verificar necessidade de atualização
                 $existing_user = $sguser_map[$user_key];
-    
+
                 if ($existing_user['acc_name'] !== $user_data['acc_name'] || $existing_user['acc_email'] !== $user_data['acc_email'] || $existing_user['acc_cellphone'] !== $user_data['acc_cellphone']) {
                     try {
                         $response = \Drupal::httpClient()->patch("{$sagres_base_url}/sguser/account/update", [
@@ -435,17 +435,17 @@
                                 'Authorization' => "Bearer {$sagres_token}"
                             ],
                         ]);
-        
+
                         if ($response->getStatusCode() === 200) {
                             $users_updated++;
                         } else {
                             \Drupal::logger('rep')->error("Erro ao atualizar utilizador {$user->id()}. Status: " . $response->getStatusCode());
                         }
-        
+
                     } catch (\Exception $e) {
                         \Drupal::logger('rep')->error("Erro ao atualizar utilizador {$user->id()}: " . $e->getMessage());
                     }
-                }            
+                }
             } else {
 
                 try {
@@ -468,7 +468,7 @@
                 }
             }
         }
-    
+
         \Drupal::messenger()->addMessage("Sincronização concluída: $users_created utilizadores criados, $users_updated atualizados.");
     }
 }

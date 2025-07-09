@@ -14,6 +14,7 @@ use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\Component\Render\Markup;
+use Drupal\Component\Utility\Html;
 
 class Utils {
 
@@ -174,6 +175,9 @@ class Utils {
         break;
       case "stream":
         $short = Constant::PREFIX_STREAM;
+        break;
+      case "streamtopic":
+        $short = Constant::PREFIX_STREAM_TOPIC;
         break;
       case "study":
         $short = Constant::PREFIX_STUDY;
@@ -404,7 +408,7 @@ class Utils {
   public static function link($label,$uri) {
     $root_url = \Drupal::request()->getBaseUrl();
     $uriFinal = Utils::namespaceUri($uri);
-    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'">' . $label . '</a>';
+    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'" rel="noopener">' . $label . '</a>';
     return $link;
   }
 
@@ -611,37 +615,59 @@ class Utils {
       return 'Current';
     } else if ($status == VSTOI::DEPRECATED) {
       return 'Deprecated';
+    } else if ($status == HASCO::DRAFT) {
+      return 'Draft';
+    } else if ($status == HASCO::ACTIVE) {
+      return 'Active';
+    } else if ($status == HASCO::CLOSED) {
+      return 'Closed';
+    } else if ($status == HASCO::INACTIVE) {
+      return 'Inactive';
+    } else if ($status == HASCO::RECORDING) {
+      return 'Recording';
+    } else if ($status == HASCO::INGESTING) {
+      return 'Ingesting';
+    } else if ($status == HASCO::SUSPENDED) {
+      return 'Suspended';
     }
   }
 
   /**
-   * Recursively checks if an element has a superUri that is of type VSTOI::QUESTIONAIRE.
+   * Plain Value of Task Type.
    */
-  // public static function hasQuestionnaireAncestor($uri) {
-  //   $api = \Drupal::service('rep.api_connector');
-  //   $rawResponse = $api->getUri($uri);
-  //   $obj = json_decode($rawResponse);
+  public static function plainTaskType($type) {
+    if ($type == VSTOI::ABSTRACT_TASK) {
+      return 'Abstract Task';
+    } else if ($type == VSTOI::APPLICATION_TASK) {
+      return 'Application Task';
+    } else if ($type == VSTOI::INTERACTION_TASK) {
+      return 'Interaction Task';
+    } else if ($type == VSTOI::USER_TASK) {
+      return 'User Task';
+    }
+  }
 
-  //   // Check if the response is valid and contains a body
-  //   if (!$obj || !isset($obj->body)) {
-  //       return false;
-  //   }
+  /**
+   * Plain Value of Task Temporal Dependency.
+   */
+  public static function plainTaskTemporalDependency($ttd) {
+    if ($ttd == VSTOI::CHOICEOPERATOR_TASK_DEP) {
+      return 'Choice Operator';
+    } else if ($ttd == VSTOI::CONCURRENCYOPERATOR_TASK_DEP) {
+      return 'Concurrency Operator';
+    } else if ($ttd == VSTOI::ENABLINGOPERATOR_TASK_DEP) {
+      return 'Enabling Operator';
+    } else if ($ttd == VSTOI::ENABLINGINFORMATIONOPERATOR_TASK_DEP) {
+      return 'Enabling Information Operator';
+    } else if ($ttd == VSTOI::ITERATIONOPERATOR_TASK_DEP) {
+      return 'Iteration Operator';
+    } else if ($ttd == VSTOI::ORDERINDEPENDENTOPERATOR_TASK_DEP) {
+      return 'Order Independent Operator';
+    } else if ($ttd == VSTOI::SUSPENDRESUMEOPERATOR_TASK_DEP) {
+      return 'Suspend/Resume Operator';
+    }
+  }
 
-  //   $result = $obj->body;
-
-  //   // If the current element is of type QUESTIONAIRE, return true
-  //   if (isset($result->superUri) && $result->superUri === VSTOI::QUESTIONNAIRE) {
-  //       return true;
-  //   }
-
-  //   // If there is a superUri, call the function recursively
-  //   if (!empty($result->superUri)) {
-  //       return self::hasQuestionnaireAncestor($result->superUri);
-  //   }
-
-  //   // If no QUESTIONAIRE was found in the hierarchy, return false
-  //   return false;
-  // }
   public static function hasQuestionnaireAncestor($uri) {
     /** @var \Drupal\rep\ApiConnectorInterface $api */
     $api = \Drupal::service('rep.api_connector');

@@ -3,7 +3,8 @@ name: Run Selenium Tests
 on:
   push:
     branches:
-      - workflow
+      - stream_topics
+
 jobs:
   run-selenium-tests:
     runs-on: self-hosted
@@ -15,34 +16,26 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v2
         with:
-          java-version: '11'
+          java-version: '21'
           distribution: 'temurin'
 
-      - name: Install Chrome
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget
-          wget https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_131.0.6778.69-1_amd64.deb
-          sudo apt install -y --allow-downgrades ./google-chrome-stable_131.0.6778.69-1_amd64.deb
-        
-      - name: Download and Install ChromeDriver
-        run: |
-          DRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/131.0.6778.69/linux64/chromedriver-linux64.zip"
-    
-          curl -L -o chromedriver.zip "$DRIVER_URL"
-          
-          mkdir -p $HOME/chromedriver
-          unzip -o chromedriver.zip -d $HOME/chromedriver/
-          rm chromedriver.zip
+      - name: Install unzip
+        run: sudo apt-get install -y unzip
 
-          mv $HOME/chromedriver/chromedriver-linux64/chromedriver $HOME/chromedriver/chromedriver
-          chmod +x $HOME/chromedriver/chromedriver
-
-          echo "$HOME/chromedriver" >> $GITHUB_PATH
-          
-      - name: Download Selenium standalone jar
+      - name: Prepare /var/data permissions and download chromedriver
         run: |
-          curl -L -o selenium-server.jar https://repo1.maven.org/maven2/org/seleniumhq/selenium/selenium-server/latest/selenium-server-latest.jar
+          sudo mkdir -p /var/data/chromedriver
+          sudo chown -R $(whoami):$(whoami) /var/data
+
+          cd /var/data/chromedriver
+          wget --no-verbose --show-progress https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.141/linux64/chromedriver-linux64.zip
+
+          unzip -q chromedriver-linux64.zip || (echo "Unzip failed!" && exit 3)
+
+          mv chromedriver-linux64/chromedriver ./
+          chmod +x chromedriver
+
+          rm -rf chromedriver-linux64.zip chromedriver-linux64
 
       - name: Install Xvfb
         run: sudo apt-get install -y xvfb
@@ -51,26 +44,27 @@ jobs:
         run: |
           Xvfb :99 -screen 0 1920x1080x24 &
           export DISPLAY=:99
+          sleep 3
 
-      - name: Compile BaseTest.java
+      - name: Compile all Java test files
         run: |
-          javac -cp ".:tests/selenium-java-4.26.0/selenium-java-4.26.0.jar:tests/selenium-java-4.26.0/libs/*:tests/junit-platform-console-standalone-1.8.2.jar" tests/BaseTest.java
-
-      - name: Compile REP.java
-        run: |
-          javac -cp ".:tests/selenium-java-4.26.0/selenium-java-4.26.0.jar:tests/selenium-java-4.26.0/libs/*:tests/junit-platform-console-standalone-1.8.2.jar" tests/REP.java
+          find tests/A1 -name "*.java" > sources.txt
+          LIBS=$(find tests/selenium-java-4.26.0 -name "*.jar" | tr '\n' ':')
+          CLASSPATH=".:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar"
+          javac -cp "$CLASSPATH" @sources.txt
 
       - name: Wait for hascogui to be ready
         run: |
-          until curl -s http://localhost:8081/ > /dev/null; do
+          until curl -s http://54.75.120.47:80/ > /dev/null; do
             echo "Waiting for hascogui environment to start..."
             sleep 5
           done
 
-      - name: Run REP Test
+      - name: Run Regression Test
         run: |
-          java -Dfile="/metadata/NHANES-2017-2018/INSs/INS-NHANES.xlsx" -Dins-title="Microphone" -Dins-card-title="Patient Health Questionnaire (PHQ-9)" -cp ".:tests/junit-platform-console-standalone-1.8.2.jar:tests/selenium-java-4.26.0/selenium-java-4.26.0.jar:tests/selenium-java-4.26.0/libs/*:tests" org.junit.platform.console.ConsoleLauncher --select-class "tests.REP"
-
+          LIBS=$(find tests/selenium-java-4.26.0 -name "*.jar" | tr '\n' ':')
+          CLASSPATH=".:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar:tests"
+          java -cp "$CLASSPATH" org.junit.platform.console.ConsoleLauncher --select-class "tests.A1.RegressionTEST"
 
       - name: Notify on failure
         if: failure()
@@ -85,13 +79,14 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: message
-            });
+            })
+
       - name: Notify via Slack on failure
         if: failure()
         run: |
-            curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"❌ The tests for the PR #${{ github.event.pull_request.number }} have failed. Author: @${{ github.event.pull_request.user.login }}. Check the details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"❌ The tests for the PR #${{ github.event.pull_request.number }} have failed. Author: @${{ github.event.pull_request.user.login }}. Check the details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack on success
         if: success()

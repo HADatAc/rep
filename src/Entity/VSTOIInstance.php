@@ -13,7 +13,7 @@ class VSTOIInstance {
       'element_uri' => t('URI'),
       'element_label' => t('Label'),
       'element_type' => t('Type'),
-      'element_serial' => t('Serial Number'),
+      'element_serial' => t('ID Number'),
     ];
 
   }
@@ -31,7 +31,7 @@ class VSTOIInstance {
     foreach ($list as $element) {
       if ($element != null) {
         $uri = ' ';
-        if (isset($element->uri) && 
+        if (isset($element->uri) &&
             $element->uri != NULL) {
           $uri = $element->uri;
         }
@@ -54,7 +54,7 @@ class VSTOIInstance {
           $serial = $element->hasSerialNumber;
         }
         $output[$element->uri] = [
-          'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),     
+          'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
           'element_label' => $label,
           'element_type' => $typeLabel,
           'element_serial' => $serial,

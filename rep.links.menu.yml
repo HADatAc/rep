@@ -235,3 +235,44 @@ reviewer.generate_review:
   requirements:
     _permission: 'access content'
     _role: 'content_editor'
+
+# ONTOLOGYs RELATED
+rep.ontologies_root:
+  title: 'Ontologies'
+  description: ''
+  parent: rep.top_level
+  menu_name: main
+  route_name: '<nolink>'
+  weight: 49
+  requirements:
+    _role: 'content_editor'
+
+# rep.add_ontologies:
+#   title: 'Add Ontology'
+#   description: ''
+#   route_name: rep.add_ontologies
+#   parent: rep.ontologies_root
+#   menu_name: main
+#   weight: 0
+#   requirements:
+#     _role: 'content_editor'
+
+rep.manage_ontologies:
+  title: 'Manage Ontologies'
+  description: ''
+  route_name: rep.admin_namespace_settings_custom
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 0
+  requirements:
+    _role: 'content_editor'
+
+rep.map_entry_points:
+  title: 'Manage Concept Entry Points'
+  description: 'Map each entry point (Instrument, Sample, etc.) to one or more ontologies.'
+  route_name: rep.map_entry_points
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 1
+  requirements:
+    _role: 'content_editor'

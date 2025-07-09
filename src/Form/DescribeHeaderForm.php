@@ -131,10 +131,11 @@
 
           $typeUri = $this->getElement()->typeUri;
 
-          $form['element_type'] = [
-            '#type' => 'markup',
-            '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . "<br><br>"),
-          ];
+          if ($typeUri)
+            $form['element_type'] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . "<br><br>"),
+            ];
 
           if (isset($this->getElement()->title)) {
             $form['element_title'] = [

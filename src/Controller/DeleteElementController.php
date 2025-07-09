@@ -47,8 +47,8 @@ class DeleteElementController extends ControllerBase {
   // }
 
   public function exec($elementtype, $elementuri, $currenturl)
-{
-    // Validação inicial
+  {
+
     if ($elementuri === NULL || $currenturl === NULL) {
         $response = new RedirectResponse(Url::fromRoute('rep.home')->toString());
         $response->send();
@@ -58,38 +58,15 @@ class DeleteElementController extends ControllerBase {
     $uri = base64_decode($elementuri);
     $url = base64_decode($currenturl);
 
-    // Identifica o tipo de elemento
     $elementname = 'element';
-    // if ($elementtype === 'da') {
-    //     $elementname = 'DA';
 
-    //     try {
-    //         // DELETE ELEMENT para tipo DA
-    //         $api = \Drupal::service('rep.api_connector');
-    //         $api->elementDel($elementtype, $uri);
+    $api = \Drupal::service('rep.api_connector');
 
-    //         // Retorna resposta JSON para DA
-    //         return new \Symfony\Component\HttpFoundation\JsonResponse([
-    //             'status' => 'success',
-    //             'messages' => ['Selected ' . $elementname . ' has/have been deleted successfully.'],
-    //             'errors' => []
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         // Captura erros e retorna JSON para DA
-    //         return new \Symfony\Component\HttpFoundation\JsonResponse([
-    //             'status' => 'error',
-    //             'messages' => [],
-    //             'errors' => ['An error occurred: ' . $e->getMessage()]
-    //         ]);
-    //     }
-    // }
     if ($elementtype === 'da') {
       $elementname = 'DA';
       $file_system = \Drupal::service('file_system');
 
       try {
-        $api = \Drupal::service('rep.api_connector');
-
         // Retrieve the file object via API to obtain file data
         $file_object = $api->parseObjectResponse($api->getUri($uri), 'getUri');
         // Delete element via API
@@ -156,6 +133,18 @@ class DeleteElementController extends ControllerBase {
         $elementname = 'study';
     } elseif ($elementtype === 'process') {
         $elementname = 'process';
+
+        //  We must delete all associated task also
+        try {
+          $api->processDeleteWithTasks($uri);
+        }
+        catch (\Exception $e) {
+          return new \Symfony\Component\HttpFoundation\JsonResponse([
+            'status' => 'error',
+            'messages' => [],
+            'errors' => ['An error occurred: ' . $e->getMessage()],
+          ]);
+        }
     } elseif ($elementtype === 'task') {
         $elementname = 'task';
     } elseif ($elementtype === 'taskstem') {
