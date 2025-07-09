@@ -21,6 +21,12 @@ jobs:
 
       - name: Install unzip
         run: sudo apt-get install -y unzip
+      - name: Install Chrome 125 manually
+        run: |
+          wget -q https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.141/linux64/chrome-linux64.zip
+          unzip -q chrome-linux64.zip
+          sudo mv chrome-linux64 /opt/chrome
+          sudo ln -s /opt/chrome/chrome /usr/bin/google-chrome
 
       - name: Install ChromeDriver manually into /usr/bin
         run: |
@@ -30,6 +36,8 @@ jobs:
           sudo chmod +x /usr/bin/chromedriver
           rm -rf chromedriver-linux64.zip chromedriver-linux64
         shell: bash
+      - name: Set DISPLAY variable
+        run: echo "DISPLAY=:99" >> $GITHUB_ENV
 
       - name: Install Xvfb
         run: sudo apt-get install -y xvfb

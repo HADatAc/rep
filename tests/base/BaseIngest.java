@@ -30,6 +30,7 @@ public abstract class BaseIngest {
         // System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
         ChromeOptions options = new ChromeOptions();
 
+        options.setBinary("/usr/bin/google-chrome");
 
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
