@@ -24,7 +24,7 @@ public class RepositoryFormAutomationTest {
 
 
         ChromeOptions options = new ChromeOptions();
-        options.setBinary("/opt/chrome/chrome-linux64/chrome");
+        options.setBinary("/usr/bin/google-chrome");
         options.addArguments(
             "--headless=new",
             "--no-sandbox",

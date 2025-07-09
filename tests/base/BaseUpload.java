@@ -26,7 +26,7 @@ public abstract class BaseUpload {
         System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver");
 
         ChromeOptions options = new ChromeOptions();
-        options.setBinary("/opt/chrome/chrome-linux64/chrome");
+        options.setBinary("/usr/bin/google-chrome");
         options.addArguments(
             "--headless=new",
             "--no-sandbox",
