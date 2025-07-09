@@ -27,6 +27,7 @@ public class FullRegressionTest {
         runTestClass(DSGRegressionTest.class);
         Thread.sleep(2000);
 
+
         // DA
         /* Waiting DA Ingest Implementation
         runTestClass(DARegressionTest.class);
