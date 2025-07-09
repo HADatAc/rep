@@ -20,7 +20,7 @@ public class RepositoryFormAutomationTest {
 
     @BeforeEach
     void setup() throws InterruptedException {
-        System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
+        //System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
 
         ChromeOptions options = new ChromeOptions();
 
@@ -109,14 +109,14 @@ public class RepositoryFormAutomationTest {
         //logCurrentPageState(500);
 
         // Preenchimento dos campos obrigatórios com logs
-        fillInput("Repository Short Name (ex. \"ChildFIRST\")", "PMSR");
-        fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", "Portuguese Medical Social Repository");
-        fillInput("Repository URL (ex: http://childfirst.ucla.edu, http://tw.rpi.edu, etc.)", "https://pmsr.net");
-        fillInput("Prefix for Base Namespace (ex: ufmg, ucla, rpi, etc.)", "pmsr");
-        fillInput("URL for Base Namespace", "https://pmsr.net");
-        fillInput("Mime for Base Namespace", "text/turtle");
-        fillInput("Source for Base Namespace", "hadatac");
-        fillInput("description for the repository that appears in the rep APIs GUI", "pmsr123");
+        fillInput("Repository Short Name (ex. \"ChildFIRST\")", "HADATAC");
+        fillInput("Repository Full Name (ex. \"ChildFIRST: Focus on Innovation\")", "HADATAC");
+        fillInput("Repository URL (ex: http://childfirst.ucla.edu, http://tw.rpi.edu, etc.)", "https://hadatac.org");
+        fillInput("Prefix for Base Namespace (ex: ufmg, ucla, rpi, etc.)", "hadatac");
+        fillInput("URL for Base Namespace", "https://hadatac.org/ont/hadatac#");
+        fillInput("Mime for Base Namespace", "");
+        fillInput("Source for Base Namespace", "");
+        fillInput("description for the repository that appears in the rep APIs GUI", "HADATAC");
         fillInput("Sagres Base URL", "https://52.214.194.214/");
 
         String apiip = "54.154.41.233"; // IP da API de testes
@@ -126,7 +126,7 @@ public class RepositoryFormAutomationTest {
 
         //logCurrentPageState(50000);
 
-        String expectedFullName = "Portuguese Medical Social Repository";
+        String expectedFullName = "HADATAC";
         int maxAttempts = 3;
         int attempts = 0;
         boolean formConfirmed = false;
