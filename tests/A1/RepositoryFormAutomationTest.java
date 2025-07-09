@@ -71,10 +71,10 @@ public class RepositoryFormAutomationTest {
 
         // Clica no botão de login
         clickElementRobust(By.id("edit-submit"));
-        logCurrentPageState(5000);
+        logCurrentPageState(50000);
 
         System.out.println("Login realizado, esperando tela de administração...");
-        logCurrentPageState(5000);
+        logCurrentPageState(50000);
         wait.until(ExpectedConditions.urlContains("/user/1?check_logged_in=1"));
         System.out.println("Tela de perfil carregada, esperando toolbar do usuário...");
          // Espera tela pós-login
