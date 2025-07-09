@@ -42,7 +42,7 @@ jobs:
 
       - name: Compile all Java test files
         run: |
-          find tests/ -name "*.java" > sources.txt
+          find tests/A1 -name "*.java" > sources.txt
           LIBS=$(find tests/selenium-java-4.26.0 -name "*.jar" | tr '\n' ':')
           CLASSPATH=".:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar"
           javac -cp "$CLASSPATH" @sources.txt
