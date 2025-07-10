@@ -206,7 +206,7 @@ public abstract class BaseIngest {
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 7) {
-                String status = cells.get(1).getText().trim();           // Coluna Status
+                String status = cells.get(4).getText().trim();           // Coluna Status
                 String currentFileName = cells.get(3).getText().trim();  // Coluna FileName
 
                 System.out.println("Linha: FileName=" + currentFileName + ", Status=" + status);
