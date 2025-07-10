@@ -61,6 +61,11 @@ button.edit-element-button {
   padding-left: 2.1rem;
 }
 
+a.edit-element-button {
+  position: relative;
+  padding-left: 2.1rem;
+}
+
 .edit-element-button::before {
   content: "\f044";
   font-family: "Font Awesome 6 Free";
@@ -89,6 +94,11 @@ button.edit-element-button.top-icon::before {
   font-size: 1.2em;
   display: block;
   line-height: 1;
+}
+
+a.delete-element-button {
+  position: relative;
+  padding-left: 2rem;
 }
 
 button.delete-element-button {
