@@ -9,6 +9,6 @@ public class INSIngestHierarchyTest extends BaseIngest {
     @Test
     @DisplayName("Ingest INS file: testeINSHIERARCHY")
     void shouldIngestTesteHierarchy() throws InterruptedException {
-        ingestSpecificINS("testeINSHIERARCHY");
+        ingestSpecificINS("INS-NHANES-2017-2018.xlsx");
     }
 }

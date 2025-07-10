@@ -116,7 +116,7 @@ public class AdminAuto {
         Thread.sleep(3000); // Espera a página carregar completamente
 
 
-        logCurrentPageState(50000);
+
         checkCheckboxRobust(By.id("edit-roles-content-editor"));
         checkCheckboxRobust(By.id("edit-roles-administrator"));
 

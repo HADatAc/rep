@@ -97,10 +97,10 @@ public class RepositoryFormAutomationTest {
     @Test
     void testFillRepositoryForm() throws InterruptedException {
         driver.get("http://" + ip + "/admin/config/rep");
-        logCurrentPageState(20000);
+
 
         ensureJwtKeyExists();
-        logCurrentPageState(500);
+
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("select[name='jwt_secret']"))).click();
         Select jwtDropdown = new Select(driver.findElement(By.cssSelector("select[name='jwt_secret']")));
         jwtDropdown.selectByVisibleText("jwt");
