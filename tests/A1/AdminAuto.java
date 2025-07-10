@@ -51,21 +51,33 @@ public class AdminAuto {
         Actions actions = new Actions(driver);
         actions.sendKeys("thisisunsafe").perform();
 
-        Thread.sleep(2000);
-        logCurrentPageState(2000);
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
-        System.out.println("Waiting for login form to be clickable...");
-        wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
-        System.out.println("Login form is clickable, proceeding with login...");
-        driver.findElement(By.id("edit-name")).sendKeys("admin");
-        System.out.println("Username entered, now entering password...");
-        driver.findElement(By.id("edit-pass")).sendKeys("admin");
-        System.out.println();
+// Espera visibilidade e limpa campos antes de preencher
+        WebElement userInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+        userInput.clear();
+        userInput.sendKeys("admin");
+
+        WebElement passInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-pass")));
+        passInput.clear();
+        passInput.sendKeys("admin");
+
         clickElementRobust(By.id("edit-submit"));
-        logCurrentPageState(2000);
-        System.out.println("Login button clicked, waiting for user toolbar to appear...");
-       // wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
-    }
+
+// Espera a URL geral que indica login
+        wait.until(ExpectedConditions.urlContains("/user/"));
+
+// Opcional: valida se há erro na página
+        String pageSource = driver.getPageSource();
+        if (pageSource.contains("Unrecognized username or password")) {
+            throw new RuntimeException("Falha no login: usuário ou senha incorretos.");
+        }
+
+// Espera toolbar aparecer
+        wait.until(driver -> ((JavascriptExecutor) driver).executeScript(
+                "return document.querySelector('#toolbar-item-user') !== null && document.querySelector('#toolbar-item-user').offsetParent !== null;"
+        ).equals(true));
+
+        System.out.println("Login OK.");
+}
 /*
     @Test
     @DisplayName("Verify Content editor and Administrator checkboxes are loaded and visible")
