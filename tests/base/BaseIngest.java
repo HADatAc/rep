@@ -442,9 +442,9 @@ public abstract class BaseIngest {
 
                     System.out.println("No checkbox containing fragment '" + idFragment + "' found on attempt " + attempt);
 
-                } else if (locatorString.startsWith("By.name: ")) {
+                } else if (locatorString.startsWith("By.FileName: ")) {
                     // Extrair o name completo para busca direta
-                    String nameValue = locatorString.replace("By.name: ", "").trim();
+                    String nameValue = locatorString.replace("By.FileName: ", "").trim();
 
                     // Busca checkbox pelo name
                     List<WebElement> checkboxes = driver.findElements(By.cssSelector("input[type='checkbox'][name='" + nameValue + "']"));
