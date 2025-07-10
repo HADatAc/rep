@@ -216,9 +216,9 @@ public abstract class BaseIngest {
                     if ("UNPROCESSED".equalsIgnoreCase(status)) {
                         System.out.println("Arquivo encontrado: " + fileName + " com status UNPROCESSED");
                         try {
-                            String checkboxName = "element_table[" + fileName + "]";
-                            By checkboxLocator = By.name(checkboxName);
-                            checkCheckboxRobust(checkboxLocator);
+                            WebElement checkboxCell = row.findElement(By.xpath("td[1]"));
+                            WebElement checkbox = checkboxCell.findElement(By.cssSelector("input[type='checkbox']"));
+                            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
 
                             selectedRows.put(fileName, true);
                             selectedCount++;
@@ -227,8 +227,9 @@ public abstract class BaseIngest {
                             break;
 
                         } catch (Exception e) {
-                            System.out.println("Erro ao selecionar checkbox para '" + fileName + "': " + e.getMessage());
+                            System.out.println("Erro ao clicar no checkbox da linha para '" + fileName + "': " + e.getMessage());
                         }
+
                     } else {
                         System.out.println("Arquivo '" + fileName + "' já está processado ou tem status diferente: " + status);
                     }
@@ -280,7 +281,7 @@ public abstract class BaseIngest {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
                 if (cells.size() >= 7) {
                     String updatedFileName = cells.get(3).getText().trim();
-                    String newStatus = cells.get(1).getText().trim();
+                    String newStatus = cells.get(4).getText().trim();
 
                     if (fileName.equals(updatedFileName) && "PROCESSED".equalsIgnoreCase(newStatus)) {
                         processedCount++;
@@ -442,9 +443,9 @@ public abstract class BaseIngest {
 
                     System.out.println("No checkbox containing fragment '" + idFragment + "' found on attempt " + attempt);
 
-                } else if (locatorString.startsWith("By.FileName: ")) {
+                } else if (locatorString.startsWith("By.name: ")) {
                     // Extrair o name completo para busca direta
-                    String nameValue = locatorString.replace("By.FileName: ", "").trim();
+                    String nameValue = locatorString.replace("By.name: ", "").trim();
 
                     // Busca checkbox pelo name
                     List<WebElement> checkboxes = driver.findElements(By.cssSelector("input[type='checkbox'][name='" + nameValue + "']"));
