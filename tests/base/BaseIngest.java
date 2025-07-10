@@ -194,7 +194,7 @@ public abstract class BaseIngest {
                     try {
                         // Transformar a URI para o formato usado no atributo name do checkbox:
                         // Exemplo: "pmsr:/INF1751544534527541" vira "https://pmsr.net/INF1751544534527541"
-                        String normalizedUriForName = uri.replaceFirst("^pmsr:/", "https://pmsr.net/");
+                        String normalizedUriForName = uri.replaceFirst("^hadatac:/", "https://hadatac.org/");
 
                         String checkboxName = "element_table[" + normalizedUriForName + "]";
                         System.out.println("Normalized URI for checkbox: " + normalizedUriForName);
