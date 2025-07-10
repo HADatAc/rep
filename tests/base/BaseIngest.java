@@ -203,6 +203,7 @@ public abstract class BaseIngest {
         System.out.println("Procurando pelo FileName: " + fileName);
         System.out.println("Total de linhas na tabela: " + rows.size());
 
+
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 7) {
@@ -210,10 +211,12 @@ public abstract class BaseIngest {
                 String currentFileName = cells.get(3).getText().trim(); // Coluna FileName
 
                 System.out.println("Linha: FileName=" + currentFileName + ", Status=" + status);
-                Thread.sleep(500);
+                Thread.sleep(1000);
 
                 if (fileName.equals(currentFileName) && "UNPROCESSED".equalsIgnoreCase(status)) {
+                    System.out.println("Arquivo encontrado: " + fileName + " com status UNPROCESSED");
                     try {
+                        System.out.println("Selecionando checkbox para o arquivo: " + fileName);
                         String checkboxName = "element_table[" + fileName + "]";
                         System.out.println("Selecionando checkbox: " + checkboxName);
 
@@ -223,7 +226,7 @@ public abstract class BaseIngest {
                         selectedRows.put(fileName, true);
                         selectedCount++;
                         System.out.println("Selecionado para ingestão: " + fileName);
-                        Thread.sleep(500);
+                        Thread.sleep(1000);
                         break;
 
                     } catch (Exception e) {
