@@ -52,6 +52,7 @@ public class AdminAuto {
         actions.sendKeys("thisisunsafe").perform();
 
         Thread.sleep(2000);
+
         String pageSource = driver.getPageSource();
         if (pageSource.contains("Your connection is not private") || pageSource.contains("NET::ERR_CERT")) {
             throw new RuntimeException("SSL warning page loaded instead of actual app page.");
@@ -68,24 +69,46 @@ public class AdminAuto {
 
         clickElementRobust(By.id("edit-submit"));
 
-// Espera a URL geral que indica login
+
         wait.until(ExpectedConditions.urlContains("/user/"));
 
-// Opcional: valida se há erro na página
+
         if (pageSource.contains("Unrecognized username or password")) {
             throw new RuntimeException("Falha no login: usuário ou senha incorretos.");
         }
 
-// Espera toolbar aparecer
         wait.until(driver -> ((JavascriptExecutor) driver).executeScript(
             "return document.querySelector('#toolbar-item-user') !== null && document.querySelector('#toolbar-item-user').offsetParent !== null;"
         ).equals(true));
 
-        System.out.println("Login OK.");
+        System.out.println("Login OK.");;
+    }
+
+    @Test
+    @DisplayName("Verify Content editor and Administrator checkboxes are loaded and visible")
+    void testCheckboxesLoaded() throws InterruptedException {
+        driver.get("http://" + ip + "/user/1/edit");
+       // logCurrentPageState(5000);
+        Thread.sleep(2000);
+        System.out.println("Verifying checkboxes are loaded and visible...");
+
+        WebElement contentEditorCheckbox = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-content-editor"))
+        );
+        WebElement administratorCheckbox = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(By.id("edit-roles-administrator"))
+        );
+
+
+        System.out.println("Content editor checkbox found: " + contentEditorCheckbox.isDisplayed());
+        System.out.println("Administrator checkbox found: " + administratorCheckbox.isDisplayed());
+
+        assertTrue(contentEditorCheckbox.isDisplayed(), "Content editor checkbox should be visible.");
+        assertTrue(administratorCheckbox.isDisplayed(), "Administrator checkbox should be visible.");
     }
 
 
- 
+
     @Test
     @DisplayName("Ensure Content editor and Administrator checkboxes are checked and saved")
     void testEnsureCheckboxesCheckedAndSaved() throws InterruptedException {

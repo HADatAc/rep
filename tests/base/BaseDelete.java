@@ -57,16 +57,33 @@ public abstract class BaseDelete {
         actions.sendKeys("thisisunsafe").perform();
 
         Thread.sleep(2000);
-        logCurrentPageState(1000);
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
-        wait.until(ExpectedConditions.elementToBeClickable(By.id("edit-submit")));
 
-        driver.findElement(By.id("edit-name")).sendKeys("admin");
-        driver.findElement(By.id("edit-pass")).sendKeys("admin");
+        // Espera visibilidade e limpa campos antes de preencher
+        WebElement userInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+        userInput.clear();
+        userInput.sendKeys("admin");
+
+        WebElement passInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-pass")));
+        passInput.clear();
+        passInput.sendKeys("admin");
 
         clickElementRobust(By.id("edit-submit"));
 
-       // wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
+// Espera a URL geral que indica login
+        wait.until(ExpectedConditions.urlContains("/user/"));
+
+// Opcional: valida se há erro na página
+        String pageSource = driver.getPageSource();
+        if (pageSource.contains("Unrecognized username or password")) {
+            throw new RuntimeException("Falha no login: usuário ou senha incorretos.");
+        }
+
+// Espera toolbar aparecer
+        wait.until(driver -> ((JavascriptExecutor) driver).executeScript(
+                "return document.querySelector('#toolbar-item-user') !== null && document.querySelector('#toolbar-item-user').offsetParent !== null;"
+        ).equals(true));
+
+        System.out.println("Login OK.");
     }
 
 
