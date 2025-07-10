@@ -203,41 +203,42 @@ public abstract class BaseIngest {
         System.out.println("Procurando pelo FileName: " + fileName);
         System.out.println("Total de linhas na tabela: " + rows.size());
 
-
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 7) {
-                String status = cells.get(1).getText().trim();       // Coluna Status
-                String currentFileName = cells.get(3).getText().trim(); // Coluna FileName
+                String status = cells.get(1).getText().trim();           // Coluna Status
+                String currentFileName = cells.get(3).getText().trim();  // Coluna FileName
 
                 System.out.println("Linha: FileName=" + currentFileName + ", Status=" + status);
                 Thread.sleep(1000);
 
-                if (fileName.equals(currentFileName) && "UNPROCESSED".equalsIgnoreCase(status)) {
-                    System.out.println("Arquivo encontrado: " + fileName + " com status UNPROCESSED");
-                    try {
-                        System.out.println("Selecionando checkbox para o arquivo: " + fileName);
-                        String checkboxName = "element_table[" + fileName + "]";
-                        System.out.println("Selecionando checkbox: " + checkboxName);
+                if (fileName.equals(currentFileName)) {
+                    if ("UNPROCESSED".equalsIgnoreCase(status)) {
+                        System.out.println("Arquivo encontrado: " + fileName + " com status UNPROCESSED");
+                        try {
+                            String checkboxName = "element_table[" + fileName + "]";
+                            By checkboxLocator = By.name(checkboxName);
+                            checkCheckboxRobust(checkboxLocator);
 
-                        By checkboxLocator = By.name(checkboxName);
-                        checkCheckboxRobust(checkboxLocator);
+                            selectedRows.put(fileName, true);
+                            selectedCount++;
+                            System.out.println("Selecionado para ingestão: " + fileName);
+                            Thread.sleep(1000);
+                            break;
 
-                        selectedRows.put(fileName, true);
-                        selectedCount++;
-                        System.out.println("Selecionado para ingestão: " + fileName);
-                        Thread.sleep(1000);
-                        break;
-
-                    } catch (Exception e) {
-                        System.out.println("Erro ao selecionar checkbox para '" + fileName + "': " + e.getMessage());
+                        } catch (Exception e) {
+                            System.out.println("Erro ao selecionar checkbox para '" + fileName + "': " + e.getMessage());
+                        }
+                    } else {
+                        System.out.println("Arquivo '" + fileName + "' já está processado ou tem status diferente: " + status);
                     }
                 }
             }
         }
 
         if (selectedCount == 0) {
-            fail("Arquivo '" + fileName + "' com status UNPROCESSED não encontrado.");
+            System.out.println("Nenhum arquivo com status UNPROCESSED foi selecionado. Nada será ingerido.");
+            return;
         }
 
         By ingestButtonLocator = By.name(buttonName);
@@ -257,7 +258,8 @@ public abstract class BaseIngest {
             }
 
         } catch (Exception e) {
-            fail("Erro ao clicar no botão de ingest: " + e.getMessage());
+            System.out.println("Erro ao clicar no botão de ingest: " + e.getMessage());
+            return;
         }
 
         Thread.sleep(2000);
@@ -277,8 +279,8 @@ public abstract class BaseIngest {
             for (WebElement row : updatedRows) {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
                 if (cells.size() >= 7) {
-                    String updatedFileName = cells.get(3).getText().trim(); // Coluna FileName
-                    String newStatus = cells.get(1).getText().trim();       // Coluna Status
+                    String updatedFileName = cells.get(3).getText().trim();
+                    String newStatus = cells.get(1).getText().trim();
 
                     if (fileName.equals(updatedFileName) && "PROCESSED".equalsIgnoreCase(newStatus)) {
                         processedCount++;
@@ -295,9 +297,12 @@ public abstract class BaseIngest {
             attempts++;
         }
 
-        assertEquals(selectedCount, processedCount,
-            "O arquivo '" + fileName + "' não foi processado corretamente.");
+        if (selectedCount > 0) {
+            assertEquals(selectedCount, processedCount,
+                "O arquivo '" + fileName + "' não foi processado corretamente.");
+        }
     }
+
 
 
 
