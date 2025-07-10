@@ -200,58 +200,47 @@ public abstract class BaseIngest {
         int selectedCount = 0;
         selectedRows.clear();
 
-        System.out.println("Total table rows found: " + rows.size());
+        System.out.println("Procurando pelo FileName: " + fileName);
+        System.out.println("Total de linhas na tabela: " + rows.size());
 
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
-            if (cells.size() >= 5) {
-                String uri = cells.get(1).getText().trim();      // Coluna URI
-                String status = cells.get(4).getText().trim();   // Coluna Status
+            if (cells.size() >= 7) {
+                String status = cells.get(1).getText().trim();       // Coluna Status
+                String currentFileName = cells.get(3).getText().trim(); // Coluna FileName
 
-                System.out.println("Checking row URI: " + uri + " with status: " + status);
-                Thread.sleep(500); // pequena pausa para evitar problemas de sincronização
+                System.out.println("Linha: FileName=" + currentFileName + ", Status=" + status);
+                Thread.sleep(500);
 
-                if ("UNPROCESSED".equalsIgnoreCase(status)) {
+                if (fileName.equals(currentFileName) && "UNPROCESSED".equalsIgnoreCase(status)) {
                     try {
-                        // Transformar a URI para o formato usado no atributo name do checkbox:
-                        // Exemplo: "pmsr:/INF1751544534527541" vira "https://pmsr.net/INF1751544534527541"
-                        String normalizedUriForName = uri.replaceFirst("^hadatac:/", "https://hadatac.org/");
-
-                        String checkboxName = "element_table[" + normalizedUriForName + "]";
-                        System.out.println("Normalized URI for checkbox: " + normalizedUriForName);
-
-                        System.out.println("Attempting to select checkbox with name: " + checkboxName);
+                        String checkboxName = "element_table[" + fileName + "]";
+                        System.out.println("Selecionando checkbox: " + checkboxName);
 
                         By checkboxLocator = By.name(checkboxName);
-
                         checkCheckboxRobust(checkboxLocator);
 
-                        selectedRows.put(uri, true);
+                        selectedRows.put(fileName, true);
                         selectedCount++;
-                        System.out.println("Selected checkbox for URI: " + uri);
+                        System.out.println("Selecionado para ingestão: " + fileName);
                         Thread.sleep(500);
-
-                        break;  // PARA AQUI, selecionou um checkbox só
+                        break;
 
                     } catch (Exception e) {
-                        System.out.println("Erro ao selecionar checkbox para URI '" + uri + "': " + e.getMessage());
+                        System.out.println("Erro ao selecionar checkbox para '" + fileName + "': " + e.getMessage());
                     }
                 }
             }
         }
 
-
         if (selectedCount == 0) {
-            fail("Nenhum arquivo UNPROCESSED encontrado para o tipo INS e arquivo " + fileName);
+            fail("Arquivo '" + fileName + "' com status UNPROCESSED não encontrado.");
         }
 
-        System.out.println("Total checkboxes selecionados: " + selectedCount);
-
         By ingestButtonLocator = By.name(buttonName);
-        System.out.println("Ingest button locator: " + ingestButtonLocator);
         try {
             clickElementRobust(ingestButtonLocator);
-            System.out.println("Ingest button clicked successfully.");
+            System.out.println("Botão de ingestão clicado.");
 
             WebDriverWait waitAlert = new WebDriverWait(driver, Duration.ofSeconds(20));
             try {
@@ -261,44 +250,40 @@ public abstract class BaseIngest {
                 alert.accept();
                 Thread.sleep(1000);
             } catch (TimeoutException e) {
-                System.out.println("Nenhum diálogo de confirmação apareceu.");
+                System.out.println("Nenhuma confirmação apareceu.");
             }
 
-
         } catch (Exception e) {
-            fail("Botão de ingest com nome '" + buttonName + "' não encontrado ou não clicável: " + e.getMessage());
+            fail("Erro ao clicar no botão de ingest: " + e.getMessage());
         }
 
-
-
         Thread.sleep(2000);
 
-        Thread.sleep(2000);
-        // Retry check loop
+        // Retry para verificar se foi processado
         int attempts = 0;
         int processedCount = 0;
 
         while (attempts < MAX_ATTEMPTS) {
             Thread.sleep(WAIT_INTERVAL_MS);
             driver.navigate().refresh();
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 
-            List<WebElement> updatedRows = driver.findElements(By.xpath("//table//tbody//tr"));
+            List<WebElement> updatedRows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
             processedCount = 0;
 
             for (WebElement row : updatedRows) {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
-                if (cells.size() >= 5) {
-                    String rowKey = cells.get(1).getText().trim();
-                    String newStatus = cells.get(4).getText().trim();
+                if (cells.size() >= 7) {
+                    String updatedFileName = cells.get(3).getText().trim(); // Coluna FileName
+                    String newStatus = cells.get(1).getText().trim();       // Coluna Status
 
-                    if (selectedRows.containsKey(rowKey) && "PROCESSED".equalsIgnoreCase(newStatus)) {
+                    if (fileName.equals(updatedFileName) && "PROCESSED".equalsIgnoreCase(newStatus)) {
                         processedCount++;
                     }
                 }
             }
 
-            System.out.println("Attempt " + (attempts + 1) + ": Processed " + processedCount + " of " + selectedCount);
+            System.out.println("Tentativa " + (attempts + 1) + ": Arquivos processados = " + processedCount);
 
             if (processedCount == selectedCount) {
                 break;
@@ -308,8 +293,9 @@ public abstract class BaseIngest {
         }
 
         assertEquals(selectedCount, processedCount,
-                "Not all selected entries were processed.");
+            "O arquivo '" + fileName + "' não foi processado corretamente.");
     }
+
 
 
 
