@@ -96,6 +96,7 @@ public abstract class BaseDelete {
             fail("Table for type '" + type + "' not found.");
         }
 
+
         WebElement table = driver.findElement(By.id("edit-element-table"));
         List<WebElement> rows = table.findElements(By.tagName("tr"));
 
