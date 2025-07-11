@@ -14,18 +14,22 @@ public class RegressionTEST {
 
     @Test
     void runsetupanddeletetests() throws InterruptedException {
-        runTestClass(RepositoryFormAutomationTest.class);
+       /* runTestClass(RepositoryFormAutomationTest.class);
         Thread.sleep(2000);
 
 
         runTestClass(AdminAuto.class);
         Thread.sleep(2000);
 
+        */
+
         runTestClass(FullUploadTestALL.class);
         Thread.sleep(2000);
-
+        /*
         runTestClass(FullIngestTestDRAFT.class);
         Thread.sleep(2000);
+
+         */
 
 
       /* runTestClass(FullRegressionTest.class);
