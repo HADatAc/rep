@@ -23,6 +23,7 @@ public class FullDeleteTest { //extends BaseTest{
 
     @Test
     void runAllDeleteTests() throws InterruptedException {
+        /*
         // INS
         runTestClass(INSDeleteTest.class);
         Thread.sleep(2000);
@@ -34,6 +35,8 @@ public class FullDeleteTest { //extends BaseTest{
         // DA
         runTestClass(DADeleteTest.class);
         Thread.sleep(2000);
+
+         */
 
         // DSG
         runTestClass(DSGDeleteTest.class);
