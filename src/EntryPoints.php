@@ -19,6 +19,8 @@ use Drupal\sir\Entity\Task;
     const DETECTOR_ATTRIBUTE        = "http://purl.obolibrary.org/obo/UBERON_0000061";
     const DETECTOR_STEM             = VSTOI::DETECTOR_STEM;
     const ACTUATOR_STEM             = VSTOI::ACTUATOR_STEM;
+    const COMPONENT_STEM            = VSTOI::COMPONENT_STEM;
+    const COMPONENT                 = VSTOI::COMPONENT;
     const ENTITY                    = SIO::ENTITY;
     const GROUP                     = FOAF::GROUP;
     const INSTRUMENT                = VSTOI::INSTRUMENT;
