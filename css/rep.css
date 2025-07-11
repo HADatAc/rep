@@ -1205,3 +1205,10 @@ body.path-sem div.details-wrapper {
   max-width: 95%;
 }
 
+/* Table for Instruments and Components */
+.component-subcontainer-inner {
+  margin-left: 2em;
+  border-left: 2px solid #ccc;
+  padding-left: 1em;
+}
+

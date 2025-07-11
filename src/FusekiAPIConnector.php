@@ -1057,6 +1057,15 @@ class FusekiAPIConnector {
     }
   }
 
+  // POST /hascoapi/api/task/deletewithtasks/$taskUri<[^/]+> org.hascoapi.console.controllers.restapi.TaskAPI.deleteWithTasks(taskUri:String)
+  public function taskDeleteWithTasks($taskUri) {
+    $endpoint = "/hascoapi/api/task/deletewithtasks/".rawurlencode($taskUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**
    *    PROJECTS
    */
