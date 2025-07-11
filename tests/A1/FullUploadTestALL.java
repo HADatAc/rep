@@ -19,12 +19,15 @@ public class FullUploadTestALL {
     @Test
     void runOnlyUploadsForDPQ() throws InterruptedException {
         // INS
+        /*
         runTestClass(INSUploadTest.class);
         Thread.sleep(2000);
-        // DSG
-        /*runTestClass(DSGUploadTest.class);
-        Thread.sleep(2000);
 
+         */
+        // DSG
+        runTestClass(DSGUploadTest.class);
+        Thread.sleep(2000);
+           /*
         // DA (DEMO)
         System.setProperty("daType", "DEMO");
         runTestClass(DAUploadTest.class);

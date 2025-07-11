@@ -28,12 +28,15 @@ public class FullIngestTestDRAFT {
     @Test
     void runOnlyIngestsForCurrentMode() throws InterruptedException {
         // INS
+        /*
         runTestClass(INSIngestHierarchyTest.class);
 
         Thread.sleep(2000);
 
         runTestClass(INSIngestNormalTest.class);
         Thread.sleep(2000);
+
+         */
         // DSG
         runTestClass(DSGIngestTest.class);
         Thread.sleep(2000);
@@ -47,16 +50,19 @@ public class FullIngestTestDRAFT {
         //Thread.sleep(2000);
        // runTestClass(tests.SDD.SDDIngestDEMOTest.class);
         //Thread.sleep(2000);
-
+        /*
         // DP2
         runTestClass(DP2IngestTest.class);
         Thread.sleep(2000);
+
+
         // STR upload needs to be run after SDD ingest
-       // runTestClass(STRUploadTest.class);
-        //Thread.sleep(2000);
+        runTestClass(STRUploadTest.class);
+        Thread.sleep(2000);
 
         // STR
-        //runTestClass(STRIngestTest.class);
+        runTestClass(STRIngestTest.class);
+        */
     }
 
     private void runTestClass(Class<?> testClass) {

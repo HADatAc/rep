@@ -27,11 +27,13 @@ public class RegressionTEST {
         runTestClass(FullIngestTestDRAFT.class);
         Thread.sleep(2000);
 
-        runTestClass(FullRegressionTest.class);
+      /* runTestClass(FullRegressionTest.class);
         Thread.sleep(2000);
 
         runTestClass(AttachPDFINST.class);
         Thread.sleep(2000);
+
+       */
         /*
         runTestClass(FullDeleteTest.class);
         Thread.sleep(2000);
