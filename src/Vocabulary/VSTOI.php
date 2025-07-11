@@ -19,6 +19,8 @@ use Drupal\sir\Entity\Instrument;
     const CODEBOOK                        = VSTOI::VSTOI . "Codebook";
     const CONTAINER                       = VSTOI::VSTOI . "Container";
     const CONTAINER_SLOT                  = VSTOI::VSTOI . "ContainerSlot";
+    const COMPONENT                       = VSTOI::VSTOI . "Component";
+    const COMPONENT_STEM                  = VSTOI::VSTOI . "ComponentStem";
     const DEPLOYMENT                      = VSTOI::VSTOI . "Deployment";
     const DETECTOR                        = VSTOI::VSTOI . "Detector";
     const DETECTOR_INSTANCE               = VSTOI::VSTOI . "DetectorInstance";
