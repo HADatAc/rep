@@ -1007,9 +1007,64 @@ class FusekiAPIConnector {
    *    TASKS
    */
 
-  // TODOPP
-  // End-Point da API para salvar os instrumentos nas tasks
+  public function taskSetRequiredInstruments(array $payload) {
+    $endpoint = "/hascoapi/api/task/instruments";
+    $method   = "POST";
+    $api_url = $this->getApiUrl();
 
+    if ($this->bearer === NULL) {
+        $this->bearer = "Bearer " . JWT::jwt();
+    }
+
+    $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
+
+    $data = [
+        'headers' => [
+            'Content-Type'  => 'application/json',
+            'Authorization' => $this->bearer,
+        ],
+        'body'    => $json,
+    ];
+
+    try {
+        // $ch = curl_init($url);
+        // curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        // curl_setopt($ch, CURLOPT_HTTPHEADER, array_map(
+        //     fn($k, $v) => "$k: $v",
+        //     array_keys($options['headers']),
+        //     $options['headers']
+        // ));
+        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        // curl_setopt($ch, CURLOPT_POSTFIELDS, $options['body']);
+
+        // $resp     = curl_exec($ch);
+        // $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        // $curlErr  = curl_error($ch);
+        // curl_close($ch);
+
+        // $decoded = json_decode($resp, true);
+
+        // return $decoded;
+        $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
+
+        return $response;
+    }
+    catch (\Exception $e) {
+        \Drupal::logger('rep')->error('Exception em taskSetRequiredInstruments(): @msg', [
+          '@msg' => $e->getMessage()
+        ]);
+        throw $e;
+    }
+  }
+
+  // POST /hascoapi/api/task/deletewithtasks/$taskUri<[^/]+> org.hascoapi.console.controllers.restapi.TaskAPI.deleteWithTasks(taskUri:String)
+  public function taskDeleteWithTasks($taskUri) {
+    $endpoint = "/hascoapi/api/task/deletewithtasks/".rawurlencode($taskUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
 
   /**
    *    PROJECTS

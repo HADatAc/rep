@@ -61,6 +61,11 @@ button.edit-element-button {
   padding-left: 2.1rem;
 }
 
+a.edit-element-button {
+  position: relative;
+  padding-left: 2.1rem;
+}
+
 .edit-element-button::before {
   content: "\f044";
   font-family: "Font Awesome 6 Free";
@@ -69,6 +74,31 @@ button.edit-element-button {
   left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
+}
+
+button.edit-element-button.top-icon {
+  padding-top: 2.5rem;
+  padding-bottom: 0.5rem;
+  text-align: center;
+  padding-left: 12px;
+}
+
+button.edit-element-button.top-icon::before {
+  content: "\f044";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2em;
+  display: block;
+  line-height: 1;
+}
+
+a.delete-element-button {
+  position: relative;
+  padding-left: 2rem;
 }
 
 button.delete-element-button {
@@ -359,6 +389,25 @@ button.check-button:hover {
   transform: translateY(-50%);
 }
 
+button.check-button.top-icon {
+  padding-top: 2.5rem;
+  padding-bottom: 0.5rem;
+  text-align: center;
+  padding-left: 12px;
+}
+button.check-button.top-icon::before {
+  content: "\f00c";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2em;
+  display: block;
+  line-height: 1;
+}
+
 button.close-button {
   position: relative;
   padding-left: 2rem;
@@ -593,6 +642,26 @@ button.expose-button {
   left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
+}
+
+button.execute-button {
+  position: relative;
+  padding-top: 2.5rem;   /* espaço pro ícone em cima */
+  padding-bottom: 0.5rem;
+  text-align: center;
+}
+
+button.execute-button::before {
+  content: "\f013";                /* código da gear no FontAwesome */
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  display: block;                  /* faz o ícone ficar em sua própria linha */
+  position: absolute;
+  top: 1rem;                     /* distancia do topo do botão */
+  left: 50%;                       /* centraliza horizontal */
+  transform: translateX(-50%);     /* centraliza exatamente */
+  font-size: 1.2em;                /* opcional: aumenta/reduz o ícone */
+  line-height: 1;
 }
 
 
@@ -1134,5 +1203,12 @@ body.path-rep table tr th {
 
 body.path-sem div.details-wrapper {
   max-width: 95%;
+}
+
+/* Table for Instruments and Components */
+.component-subcontainer-inner {
+  margin-left: 2em;
+  border-left: 2px solid #ccc;
+  padding-left: 1em;
 }
 
