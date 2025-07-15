@@ -25,11 +25,11 @@ public class RegressionTEST {
 
         runTestClass(FullUploadTestALL.class);
         Thread.sleep(2000);
-        /*
+
+
         runTestClass(FullIngestTestDRAFT.class);
         Thread.sleep(2000);
 
-         */
 
 
       /* runTestClass(FullRegressionTest.class);
