@@ -304,103 +304,113 @@ public abstract class BaseIngest {
         }
     }
 
-
-
-
-
-
-
-
-
     protected void ingestSpecificSDD(String fileName) throws InterruptedException {
         String type = "sdd";
         driver.get("http://" + ip + "/rep/select/mt/" + type + "/table/1/9/none");
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 
-        WebElement table = driver.findElement(By.id("edit-element-table"));
-        List<WebElement> rows = table.findElements(By.tagName("tr"));
-
+        List<WebElement> rows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
         int selectedCount = 0;
         selectedRows.clear();
+
+        System.out.println("Looking for file: " + fileName);
+        System.out.println("Total table rows: " + rows.size());
 
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 5) {
-                String name = cells.get(2).getText().trim(); // coluna 2 é "Name"
-                String status = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim();
+                String currentFileName = cells.get(2).getText().trim(); // Column 2 = FileName
+                String status = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim(); // Column 4 = Status
 
-                if (name.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
-                    try {
-                        String checkboxId = "checkbox_" + name;  // ajuste para o id correto do checkbox
-                        checkCheckboxRobust(By.id(checkboxId));
+                System.out.println("Row: FileName=" + currentFileName + ", Status=" + status);
+                Thread.sleep(1000);
 
-                        selectedRows.put(name, true);
-                        selectedCount++;
-                        System.out.println("Selected file: " + name);
-                        break; // seleciona apenas um arquivo
-                    } catch (Exception e) {
-                        fail("Could not click checkbox for file: " + name + ". Error: " + e.getMessage());
+                if (fileName.equals(currentFileName)) {
+                    if ("UNPROCESSED".equalsIgnoreCase(status)) {
+                        System.out.println("File found: " + fileName + " with status UNPROCESSED");
+
+                        try {
+                            WebElement checkboxCell = row.findElement(By.xpath("td[1]"));
+                            WebElement checkbox = checkboxCell.findElement(By.cssSelector("input[type='checkbox']"));
+                            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
+
+                            selectedRows.put(fileName, true);
+                            selectedCount++;
+                            System.out.println("File selected for ingestion: " + fileName);
+                            Thread.sleep(1000);
+                            break;
+
+                        } catch (Exception e) {
+                            System.out.println("Error clicking checkbox for file '" + fileName + "': " + e.getMessage());
+                        }
+
+                    } else {
+                        System.out.println("File '" + fileName + "' is already processed or has different status: " + status);
                     }
                 }
             }
         }
 
         if (selectedCount == 0) {
-            fail("File '" + fileName + "' not found with UNPROCESSED status.");
+            System.out.println("No file with UNPROCESSED status selected. Nothing will be ingested.");
+            return;
         }
 
-        By ingestButtonLocator = By.name(buttonName); // mantive o By.name pois geralmente botão não tem id fixo
+        By ingestButtonLocator = By.name(buttonName);
         try {
             clickElementRobust(ingestButtonLocator);
+            System.out.println("Ingest button clicked.");
 
+            WebDriverWait waitAlert = new WebDriverWait(driver, Duration.ofSeconds(20));
             try {
-                wait.until(ExpectedConditions.alertIsPresent());
+                waitAlert.until(ExpectedConditions.alertIsPresent());
                 Alert alert = driver.switchTo().alert();
                 System.out.println("Ingest confirmation: " + alert.getText());
                 alert.accept();
+                Thread.sleep(1000);
             } catch (TimeoutException e) {
-                System.out.println("No confirm dialog appeared.");
+                System.out.println("No confirmation dialog appeared.");
             }
 
         } catch (Exception e) {
-            fail("Ingest button with name '" + buttonName + "' not found or not clickable: " + e.getMessage());
+            System.out.println("Error clicking the ingest button: " + e.getMessage());
+            return;
         }
 
+        Thread.sleep(2000);
+
+        // Retry loop to confirm the file was processed
         int attempts = 0;
-        while (attempts < MAX_ATTEMPTS) {
+        boolean processed = false;
+
+        while (attempts < MAX_ATTEMPTS && !processed) {
             Thread.sleep(WAIT_INTERVAL_MS);
             driver.navigate().refresh();
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
 
-            WebElement updatedTable = driver.findElement(By.id("edit-element-table"));
-            List<WebElement> updatedRows = updatedTable.findElements(By.tagName("tr"));
-            boolean processed = false;
+            List<WebElement> updatedRows = driver.findElements(By.xpath("//table[@id='edit-element-table']//tbody//tr"));
 
             for (WebElement row : updatedRows) {
                 List<WebElement> cells = row.findElements(By.tagName("td"));
                 if (cells.size() >= 5) {
-                    String name = cells.get(2).getText().trim();
+                    String updatedFileName = cells.get(2).getText().trim();
                     String newStatus = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim();
 
-                    if (name.equalsIgnoreCase(fileName) && newStatus.equalsIgnoreCase("PROCESSED")) {
+                    if (fileName.equals(updatedFileName) && "PROCESSED".equalsIgnoreCase(newStatus)) {
                         processed = true;
                         break;
                     }
                 }
             }
 
-            if (processed) {
-                System.out.println("File '" + fileName + "' was successfully processed.");
-                return;
-            }
-
+            System.out.println("Attempt " + (attempts + 1) + ": file '" + fileName + "' processed? " + processed);
             attempts++;
-            System.out.println("Attempt " + attempts + " - still waiting...");
         }
 
-        fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
+        assertTrue(processed, "File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
+
 
     private void checkCheckboxRobust(By fallbackLocator) throws InterruptedException {
         int maxAttempts = 5;

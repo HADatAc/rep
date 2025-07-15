@@ -14,8 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
+
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class BaseDelete {
 
@@ -96,13 +96,14 @@ public abstract class BaseDelete {
             fail("Table for type '" + type + "' not found.");
         }
 
+
         WebElement table = driver.findElement(By.id("edit-element-table"));
         List<WebElement> rows = table.findElements(By.tagName("tr"));
 
         int selectedCount = 0;
         System.out.println("Total table rows found: " + rows.size());
 
-        selectedRows.clear(); // limpar mapa antes
+        selectedRows.clear();
 
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
@@ -111,23 +112,26 @@ public abstract class BaseDelete {
 
                 if (name.equals(fileName)) {
                     try {
-                        // supondo que o checkbox tem id "checkbox_" + fileName, ajuste se necessário
-                        String checkboxId = "checkbox_" + name;
-                        checkCheckboxRobust(By.id(checkboxId));
+                        // ✅ Acessar a célula do checkbox e clicar via JavaScript
+                        WebElement checkboxCell = row.findElement(By.xpath("td[1]"));
+                        WebElement checkbox = checkboxCell.findElement(By.cssSelector("input[type='checkbox']"));
+                        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
+
                         selectedRows.put(name, true);
                         selectedCount++;
-                        System.out.println("Selected checkbox for file: " + name);
+                        System.out.println("Checkbox selecionado para deletar: " + name);
                         break;
+
                     } catch (Exception e) {
-                        System.out.println("Failed to select checkbox: " + e.getMessage());
-                        fail("Failed to select checkbox for file: " + fileName);
+                        System.out.println("Erro ao selecionar checkbox da linha para '" + fileName + "': " + e.getMessage());
+                        fail("Falha ao selecionar checkbox para deletar: " + fileName);
                     }
                 }
             }
         }
 
         if (selectedCount == 0) {
-            System.out.println("File '" + fileName + "' not found or could not be selected.");
+            System.out.println("Arquivo '" + fileName + "' não encontrado ou já foi deletado.");
             return;
         }
 
@@ -137,14 +141,16 @@ public abstract class BaseDelete {
 
             wait.until(ExpectedConditions.alertIsPresent());
             Alert alert = driver.switchTo().alert();
-            System.out.println("Delete confirmation alert: " + alert.getText());
+            System.out.println("Confirmação de deleção: " + alert.getText());
             alert.accept();
+
         } catch (NoSuchElementException e) {
-            fail("Delete button not found for type: " + type);
+            fail("Botão de deletar não encontrado para o tipo: " + type);
         } catch (NoAlertPresentException e) {
-            fail("Expected confirmation alert not shown.");
+            fail("Alerta de confirmação de deleção não apareceu.");
         }
 
+        // Esperar a deleção ser efetivada
         int attempts = 0;
         boolean stillExists = true;
 
@@ -169,13 +175,13 @@ public abstract class BaseDelete {
                 }
             }
 
-            System.out.println("Attempt " + (attempts + 1) + ": File still exists? " + stillExists);
-
+            System.out.println("Tentativa " + (attempts + 1) + ": arquivo ainda existe? " + stillExists);
             attempts++;
         }
 
-        assertEquals(false, stillExists, "File '" + fileName + "' was not deleted.");
+        assertFalse(stillExists, "Arquivo '" + fileName + "' não foi deletado.");
     }
+
 
     protected void deleteAllFiles(String type) throws InterruptedException {
         driver.get("http://" + ip + "/rep/select/mt/" + type + "/table/1/9/none");
