@@ -83,7 +83,7 @@
 
           if ( isset($this->getElement()->hasImageUri) ) {
             // hascoTypeLabel
-            $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/'.strtolower($type).'_placeholder.png';
+            $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/'.strtolower($type).'_placeholder.png';
             $hasImageUri = (isset($this->getElement()->hasImageUri) && !empty($this->getElement()->hasImageUri))
                             ? Utils::getAPIImage($this->getElement()->uri, $this->getElement()->hasImageUri, $placeholder_image)
                             : $placeholder_image;

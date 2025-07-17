@@ -2346,6 +2346,15 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // Return List of Component Containerslots to fill the Process Tasks
+  public function containersListFromInstrument($instrumentUri) {
+    $endpoint = "/hascoapi/api/instrument/containerslots/".rawurlencode($instrumentUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   // GENERATE MT METHODS
   // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:status/:filename
   // Per status (KGR)
