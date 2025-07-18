@@ -1215,3 +1215,7 @@ body.path-sem div.details-wrapper {
 .w-80 {
   width: 80%!important;
 }
+
+.describe-header-wb {
+  word-break: break-all;
+}
