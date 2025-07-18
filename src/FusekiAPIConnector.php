@@ -2014,6 +2014,20 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function repoReloadSelectedNamespaceTriples(array $namespaces) {
+    $endpoint = '/hascoapi/api/repo/ont/reload';
+    $url      = $this->getApiUrl() . $endpoint;
+
+    $jsonBody = ['namespaceUris' => $namespaces];
+    $headers = $this->getHeader();
+    $options = [
+      'headers' => $headers,
+      'json'    => $jsonBody,
+    ];
+
+    return $this->perform_http_request('POST', $url, $options);
+  }
+
   public function repoDeleteSelectedNamespace($abbreviation) {
     $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($abbreviation);
     $method = "GET";
