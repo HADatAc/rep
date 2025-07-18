@@ -136,19 +136,19 @@
           // kint($this->getElement(), 'Element Details: ' . $this->getElement()->label);
           $typeUri = $this->getElement()->typeUri;
 
-          if ($typeUri)
+          if ($typeUri && $this->getElement()->typeLabel)
             $form['element_type'] = [
               '#type' => 'markup',
               '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($this->getElement()->typeLabel,$typeUri) . "<br><br>"),
             ];
 
-          if (!$typeUri && $this->getElement()->hascoTypeUri)
+          if (!$typeUri && $this->getElement()->hascoTypeUri && $this->getElement()->hascoTypeLabel)
             $form['element_hascoType'] = [
               '#type' => 'markup',
               '#markup' => $this->t("<b>HascoType URI</b>: " . Utils::link($this->getElement()->hascoTypeLabel,$this->getElement()->hascoTypeUri) . "<br><br>"),
             ];
 
-          if ($this->getElement()->superUri)
+          if ($this->getElement()->superUri && $this->getElement()->superClassLabel)
             $form['element_super'] = [
               '#type' => 'markup',
               '#markup' => $this->t("<b>Super URI</b>: " . Utils::link($this->getElement()->superClassLabel,$this->getElement()->superUri) . "<br><br>"),
