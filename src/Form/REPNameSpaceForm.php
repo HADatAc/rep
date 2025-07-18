@@ -218,10 +218,17 @@ use Drupal\rep\Entity\Ontology;
           }
           else {
             $api = \Drupal::service('rep.api_connector');
-            kint($namespaces);
-            // TODONS
-            $response = $api->reloadSelectedNamespaceTriples($namespaces);
-            // \Drupal::messenger()->addMessage($this->t($response));
+            // kint($namespaces);
+            $response = $api->repoReloadSelectedNamespaceTriples($namespaces);
+            if (!empty($message)) {
+              \Drupal::messenger()->addMessage(
+                $this->t('@msg', ['@msg' => $message])
+              );
+            }
+            else {
+              \Drupal::messenger()
+                ->addWarning($this->t('No response received from the API.'));
+            }
             $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
           }
           return;
