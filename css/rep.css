@@ -646,22 +646,37 @@ button.expose-button {
 
 button.execute-button {
   position: relative;
-  padding-top: 2.5rem;   /* espaço pro ícone em cima */
+  padding-top: 2.5rem;
   padding-bottom: 0.5rem;
   text-align: center;
 }
 
 button.execute-button::before {
-  content: "\f013";                /* código da gear no FontAwesome */
+  content: "\f013";
   font-family: "Font Awesome 6 Free";
   font-weight: 900;
-  display: block;                  /* faz o ícone ficar em sua própria linha */
+  display: block;
   position: absolute;
-  top: 1rem;                     /* distancia do topo do botão */
-  left: 50%;                       /* centraliza horizontal */
-  transform: translateX(-50%);     /* centraliza exatamente */
-  font-size: 1.2em;                /* opcional: aumenta/reduz o ícone */
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2em;
   line-height: 1;
+}
+
+button.arrow-button {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.arrow-button::before {
+  content: "\e4c1";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 
@@ -1212,3 +1227,10 @@ body.path-sem div.details-wrapper {
   padding-left: 1em;
 }
 
+.w-80 {
+  width: 80%!important;
+}
+
+.describe-header-wb {
+  word-break: break-all;
+}

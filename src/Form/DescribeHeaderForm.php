@@ -83,7 +83,11 @@
 
           if ( isset($this->getElement()->hasImageUri) ) {
             // hascoTypeLabel
-            $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/'.strtolower($type).'_placeholder.png';
+            if ($this->getElement()->typeLabel)
+              $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->typeLabel));
+            else
+              $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->hascoTypeLabel));
+            $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/'.$elementPlaceholder.'_placeholder.png';
             $hasImageUri = (isset($this->getElement()->hasImageUri) && !empty($this->getElement()->hasImageUri))
                             ? Utils::getAPIImage($this->getElement()->uri, $this->getElement()->hasImageUri, $placeholder_image)
                             : $placeholder_image;
@@ -126,15 +130,28 @@
 
           $form['element_uri'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<b>URI</b>: " . $this->getElement()->uri . "<br><br>"),
+            '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
           ];
 
+          // kint($this->getElement(), 'Element Details: ' . $this->getElement()->label);
           $typeUri = $this->getElement()->typeUri;
 
-          if ($typeUri)
+          if ($typeUri && $this->getElement()->typeLabel)
             $form['element_type'] = [
               '#type' => 'markup',
-              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . "<br><br>"),
+              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($this->getElement()->typeLabel,$typeUri) . "<br><br>"),
+            ];
+
+          if (!$typeUri && $this->getElement()->hascoTypeUri && $this->getElement()->hascoTypeLabel)
+            $form['element_hascoType'] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>HascoType URI</b>: " . Utils::link($this->getElement()->hascoTypeLabel,$this->getElement()->hascoTypeUri) . "<br><br>"),
+            ];
+
+          if ($this->getElement()->superUri && $this->getElement()->superClassLabel)
+            $form['element_super'] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>Super URI</b>: " . Utils::link($this->getElement()->superClassLabel,$this->getElement()->superUri) . "<br><br>"),
             ];
 
           if (isset($this->getElement()->title)) {
