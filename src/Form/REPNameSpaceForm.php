@@ -10,7 +10,8 @@
  use Drupal\Core\Form\ConfigFormBase;
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\Core\Url;
- use Drupal\rep\Entity\Ontology;
+use Drupal\devel\Plugin\Devel\Dumper\Kint;
+use Drupal\rep\Entity\Ontology;
  use Drupal\rep\Entity\Tables;
  use Drupal\rep\Utils;
 
@@ -83,6 +84,15 @@
             ],
         ];
 
+        $form['reload_triples_selected_submit'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Reload Selected Triples'),
+            '#name' => 'reload_selected',
+            '#attributes' => [
+              'class' => ['btn', 'btn-primary', 'arrow-button'],
+            ],
+        ];
+
         $form['delete_triples_submit'] = [
             '#type' => 'submit',
             '#value' => $this->t('Delete Triples from All Ontologies with URL'),
@@ -134,6 +144,7 @@
             '#type' => 'tableselect',
             '#header' => $header,
             '#options' => $output,
+            '#multiple' => TRUE,
             '#js_select' => FALSE,
             '#empty' => t('No Ontology found'),
         ];
@@ -182,6 +193,39 @@
         // RETRIEVE TRIGGERING BUTTON
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
+
+        if ($button_name === 'reload_selected') {
+          $selected = array_filter($form_state->getValue('element_table'));
+          $abbrevs  = array_keys($selected);
+
+          if (empty($abbrevs)) {
+            \Drupal::messenger()->addWarning($this->t('Please select at least one item on the table.'));
+            return;
+          }
+
+          $namespaces = [];
+          foreach ($abbrevs as $abbr) {
+            foreach ($this->getList() as $nsObj) {
+              if ($nsObj->label === $abbr) {
+                $namespaces[] = $nsObj->uri;
+                break;
+              }
+            }
+          }
+
+          if (empty($namespaces)) {
+            \Drupal::messenger()->addWarning($this->t('Please select at least one namespace.'));
+          }
+          else {
+            $api = \Drupal::service('rep.api_connector');
+            kint($namespaces);
+            // TODONS
+            $response = $api->reloadSelectedNamespaceTriples($namespaces);
+            // \Drupal::messenger()->addMessage($this->t($response));
+            $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+          }
+          return;
+        }
 
         // RETRIEVE SELECTED ROWS, IF ANY
         $selected_rows = $form_state->getValue('element_table');
