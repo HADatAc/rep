@@ -1353,5 +1353,284 @@ class Utils {
       return '';
     }
   }
+  //public function from describeasssociationform
+public static function buildGraphFromArray($data, $resolver = null) {
+  $nodes = [];
+  $edges = [];
 
+  // Helper function to create a node
+  $createNode = function ($id, $label, $shape = 'box') {
+    return [
+      'id' => $id,
+      'label' => $label,
+      'shape' => $shape,
+      'color' => ['background' => $shape === 'box' ? '#007bff' : '#28a745', 'border' => $shape === 'box' ? '#0056b3' : '#1e7e34'],
+      'font' => ['color' => $shape === 'box' ? 'white' : 'black'],
+    ];
+  };
+
+  // Recursive walker for hasFirst -> hasNext chains
+  $walkSequence = function ($item) use (&$walkSequence, &$nodes, &$edges, $createNode, $resolver) {
+    while ($item) {
+      $id = $item->uri ?? uniqid('node_');
+      $label = $item->label ?? 'Unnamed';
+      $nodes[] = $createNode($id, $label);
+
+      // Component
+      if (isset($item->component)) {
+        $component = $item->component;
+        $componentId = $component->uri ?? uniqid('comp_');
+        $componentLabel = $component->label ?? 'Component';
+
+        $nodes[] = $createNode($componentId, $componentLabel);
+        $edges[] = ['from' => $id, 'to' => $componentId, 'label' => 'hasComponent', 'arrows' => 'to'];
+      }
+
+      // Detector stem
+      if (isset($item->detectorStem)) {
+        $stem = $item->detectorStem;
+        $stemId = $stem->uri ?? uniqid('stem_');
+        $stemLabel = $stem->label ?? 'Detector Stem';
+
+        $nodes[] = $createNode($stemId, $stemLabel);
+        $edges[] = ['from' => $item->component->uri ?? $id, 'to' => $stemId, 'label' => 'hasDetectorStem', 'arrows' => 'to'];
+      }
+
+      // Next slot
+      if (isset($item->hasNext)) {
+        $nextItemUri = $item->hasNext;
+        $nextItem = is_object($nextItemUri) ? $nextItemUri : ($resolver ? call_user_func($resolver, $nextItemUri) : null);
+        if ($nextItem && is_object($nextItem)) {
+          $edges[] = ['from' => $id, 'to' => $nextItem->uri ?? uniqid(), 'label' => 'hasNext', 'arrows' => 'to'];
+          $item = $nextItem;
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+  };
+
+  // Walk from hasFirst
+  if (isset($data['hasFirst']) && is_object($data['hasFirst'])) {
+    $walkSequence($data['hasFirst']);
+  }
+
+  // Add typeURL node
+  if (isset($data['typeURL']) && is_object($data['typeURL'])) {
+    $id = $data['typeURL']->uri ?? uniqid('type_');
+    $label = $data['typeURL']->label ?? 'Type';
+    $nodes[] = $createNode($id, $label);
+  }
+
+  return [
+    'nodes' => $nodes,
+    'edges' => $edges,
+  ];
+}
+public static function buildGraphCanvas(array $baseNodes, array $extraNodes, array $extraEdges, array $baseEdges): array {
+  $jsonBaseNodes = json_encode($baseNodes);
+  $jsonExtraNodes = json_encode($extraNodes);
+  $jsonExtraEdges = json_encode($extraEdges);
+  $jsonBaseEdges = json_encode($baseEdges);
+
+  return [
+    '#type' => 'inline_template',
+    '#template' => <<<'EOT'
+<div style="margin-top: 20px;">
+  <div id="my-network" style="width: 100%; height: 550px; border:1px solid #ccc; background:white;"></div>
+</div>
+<script src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+<link href="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.css" rel="stylesheet" />
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const container = document.getElementById("my-network");
+  const nodes = new vis.DataSet({{ nodes|raw }});
+  const edges = new vis.DataSet({{ edges|raw }});
+  const extraNodes = {{ extraNodes|raw }};
+  const extraEdges = {{ extraEdges|raw }};
+  const options = {
+    nodes: { shape: "box" },
+    edges: { arrows: "to", smooth: true },
+    layout: { improvedLayout: true },
+    physics: { stabilization: true, solver: 'forceAtlas2Based' }
+  };
+  const network = new vis.Network(container, { nodes, edges }, options);
+  let selectedNodeId = null;
+
+  const expandBtn = document.createElement("button");
+  expandBtn.id = "expand-node-btn";
+  expandBtn.textContent = "➕ Expand";
+  expandBtn.style.position = "absolute";
+  expandBtn.style.zIndex = "1000";
+  expandBtn.style.background = "#ffffff";
+  expandBtn.style.border = "1px solid #ccc";
+  expandBtn.style.padding = "6px 10px";
+  expandBtn.style.borderRadius = "5px";
+  expandBtn.style.boxShadow = "2px 2px 6px rgba(0,0,0,0.1)";
+  expandBtn.style.display = "none";
+  document.body.appendChild(expandBtn);
+
+  const expandMenu = document.createElement("div");
+  expandMenu.id = "expand-menu";
+  expandMenu.style.position = "absolute";
+  expandMenu.style.zIndex = "1000";
+  expandMenu.style.background = "#f8f9fa";
+  expandMenu.style.border = "1px solid #ccc";
+  expandMenu.style.padding = "6px 10px";
+  expandMenu.style.borderRadius = "5px";
+  expandMenu.style.boxShadow = "2px 2px 6px rgba(0,0,0,0.1)";
+  expandMenu.style.display = "none";
+  document.body.appendChild(expandMenu);
+
+  const expansionState = {};
+
+  function updateExpandButtonPosition() {
+    if (!selectedNodeId) return;
+    const nodePos = network.getPositions([selectedNodeId])[selectedNodeId];
+    const canvasPos = network.canvasToDOM(nodePos);
+    const networkRect = container.getBoundingClientRect();
+    const topOffset = window.scrollY + networkRect.top;
+    const offsetY = 10;
+    const buttonLeft = networkRect.left + canvasPos.x - expandBtn.offsetWidth / 2;
+    const buttonTop = topOffset + canvasPos.y + offsetY;
+    expandBtn.style.left = `${buttonLeft}px`;
+    expandBtn.style.top = `${buttonTop}px`;
+    expandMenu.style.left = `${buttonLeft + expandBtn.offsetWidth + 10}px`;
+    expandMenu.style.top = `${buttonTop}px`;
+  }
+
+  network.on("click", function (params) {
+    expandMenu.style.display = "none";
+    if (params.nodes.length === 0) {
+      expandBtn.style.display = "none";
+      selectedNodeId = null;
+      return;
+    }
+    selectedNodeId = params.nodes[0];
+    expandBtn.style.display = "block";
+    setTimeout(updateExpandButtonPosition, 0);
+  });
+
+  network.on("dragEnd", () => {
+    if (expandBtn.style.display === "block") setTimeout(updateExpandButtonPosition, 0);
+  });
+
+  network.on("afterDrawing", () => {
+    if (expandBtn.style.display === "block") setTimeout(updateExpandButtonPosition, 0);
+  });
+
+  expandBtn.addEventListener("click", () => {
+    if (!selectedNodeId) return;
+    const relatedEdges = extraEdges.filter(e => e.from === selectedNodeId);
+    const labels = [...new Set(relatedEdges.map(e => e.label))];
+    expandMenu.innerHTML = '';
+
+    labels.forEach(label => {
+      const key = `${selectedNodeId}_${label}`;
+      const isExpanded = expansionState[key] || false;
+      const opt = document.createElement("div");
+      opt.textContent = `${isExpanded ? "🙈" : "👁️"} ${label}`;
+      opt.style.cursor = "pointer";
+      opt.style.margin = "2px 0";
+
+      opt.addEventListener("click", () => {
+        const edgesToToggle = relatedEdges.filter(e => e.label === label);
+        const nodeIds = edgesToToggle.map(e => e.to);
+        if (!expansionState[key]) {
+          const nodesToAdd = extraNodes.filter(n => nodeIds.includes(n.id) && !nodes.get(n.id));
+          nodesToAdd.forEach(n => {
+            if (n.shape === 'ellipse') {
+              n.color = { background: '#28a745', border: '#1e7e34' };
+              n.font = { color: 'black' };
+            } else {
+              n.color = { background: '#007bff', border: '#0056b3' };
+              n.font = { color: 'white' };
+            }
+            nodes.add(n);
+          });
+          edgesToToggle.forEach(e => {
+            const id = e.from + "_" + e.to;
+            if (!edges.get(id)) edges.add({ ...e, id });
+          });
+          expansionState[key] = true;
+          opt.textContent = `🙈 ${label}`;
+        } else {
+          nodeIds.forEach(id => {
+            if (nodes.get(id)) nodes.remove(id);
+          });
+          edgesToToggle.forEach(e => {
+            const id = e.from + "_" + e.to;
+            if (edges.get(id)) edges.remove(id);
+          });
+          expansionState[key] = false;
+          opt.textContent = `👁️ ${label}`;
+        }
+        setTimeout(updateExpandButtonPosition, 0);
+      });
+
+      expandMenu.appendChild(opt);
+    });
+
+    expandMenu.style.display = "block";
+    setTimeout(updateExpandButtonPosition, 0);
+  });
+
+  // 👁️ Node visibility buttons
+  setTimeout(() => {
+    document.querySelectorAll(".graph-toggle").forEach(btn => {
+      const nodeId = btn.dataset.node;
+      btn.textContent = "👁️";
+      btn.addEventListener("click", () => {
+        const node = nodes.get(nodeId);
+        if (node) {
+          nodes.remove(nodeId);
+          edges.get().forEach(e => {
+            if (e.from === nodeId || e.to === nodeId) edges.remove(e.id);
+          });
+          btn.textContent = "👁️";
+        } else {
+          const restore = extraNodes.find(n => n.id === nodeId);
+          if (restore) {
+            if (restore.shape === 'ellipse') {
+              restore.color = { background: '#28a745', border: '#1e7e34' };
+              restore.font = { color: 'black' };
+            } else {
+              restore.color = { background: '#007bff', border: '#0056b3' };
+              restore.font = { color: 'white' };
+            }
+            nodes.add(restore);
+          }
+          extraEdges.filter(e => e.from === nodeId || e.to === nodeId).forEach(e => {
+            const id = e.from + "_" + e.to;
+            if (!edges.get(id)) edges.add({ ...e, id });
+          });
+          btn.textContent = "🙈";
+        }
+      });
+    });
+  }, 300);
+
+  const baseNodeId = nodes.getIds()[0];
+  network.selectNodes([baseNodeId]);
+  network.once("afterDrawing", () => {
+    network.emit("click", { nodes: [baseNodeId] });
+  });
+
+  window.graphNodes = nodes;
+  window.graphEdges = edges;
+  window.extraGraphNodes = extraNodes;
+  window.extraGraphEdges = extraEdges;
+});
+</script>
+EOT,
+    '#context' => [
+      'nodes' => $jsonBaseNodes,
+      'edges' => $jsonBaseEdges,
+      'extraNodes' => $jsonExtraNodes,
+      'extraEdges' => $jsonExtraEdges,
+    ],
+  ];
+}
 }

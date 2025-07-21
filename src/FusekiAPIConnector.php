@@ -2217,9 +2217,9 @@ class FusekiAPIConnector {
     }
 
     // 4) If it's a stream or other object with __toString(), cast to string.
-    if (!is_string($response) && method_exists($response, '__toString')) {
-      $response = (string) $response;
-    }
+   if (! is_string($response) && $response !== FALSE && method_exists($response, '__toString')) {
+  $response = (string) $response;
+}
 
     // 5) Now decode the JSON string.
     $obj = json_decode($response);
