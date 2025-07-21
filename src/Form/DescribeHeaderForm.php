@@ -131,11 +131,14 @@
 
           $typeUri = $this->getElement()->typeUri;
 
-          if ($typeUri)
+          if (!empty($typeUri)) {
             $form['element_type'] = [
               '#type' => 'markup',
-              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . "<br><br>"),
+              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri, $typeUri) .
+                ' <span class="graph-toggle" data-node="' . $typeUri . '" style="cursor:pointer;" title="Show/Hide node">👁️</span><br><br>'),
             ];
+}
+
 
           if (isset($this->getElement()->title)) {
             $form['element_title'] = [

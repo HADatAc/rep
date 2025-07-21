@@ -30,6 +30,11 @@ class DescribeAssociatesForm extends FormBase {
     return "describe_associates_form";
   }
   public function buildForm(array $form, FormStateInterface $form_state) {
+
+  //Code from rep.libraries.yml
+  $form['#attached']['library'][] = 'rep/describe_associates';
+
+  // Get the current URL path and decode the URI
   $request = \Drupal::request();
   $pathInfo = $request->getPathInfo();
   $pathElements = explode('/', $pathInfo);
@@ -37,6 +42,8 @@ class DescribeAssociatesForm extends FormBase {
     \Drupal::messenger()->addError($this->t('URI do elemento não foi fornecida corretamente.'));
     return $form;
   }
+
+  // Decode URI and fetch the element from the API
   $elementuri = $pathElements[3];
   $uri = base64_decode(rawurldecode($elementuri));
   $api = \Drupal::service('rep.api_connector');
@@ -45,15 +52,21 @@ class DescribeAssociatesForm extends FormBase {
     \Drupal::messenger()->addError($this->t('Elemento não encontrado.'));
     return $form;
   }
+
+  // Parse the object returned from the API
   $element = $api->parseObjectResponse($finalUri, 'getUri');
   if (!$element || !isset($element->uri)) {
     \Drupal::messenger()->addError($this->t('O objeto recuperado está vazio ou inválido.'));
     return $form;
   }
   $this->setElement($element);
+
+  // Analyze element properties
   $objectProperties = GenericObject::inspectObject($element);
   $baseUri = $element->uri;
   $baseLabel = $element->label ?? 'Element';
+
+  // Main node
   $jsonNodes = json_encode([
     [
       'id' => $baseUri,
@@ -63,8 +76,17 @@ class DescribeAssociatesForm extends FormBase {
       'font' => ['color' => 'white', 'size' => 24]
     ]
   ]);
-  $linkedNodes = [];
-  $linkedEdges = [];
+  $data = (array) $element;
+  $graph = \Drupal\rep\Utils::buildGraphFromArray($data, function($uri) use ($api) {
+  $response = $api->getUri($uri);
+  return json_decode($response);
+});
+
+$linkedNodes = $graph['nodes'];
+$linkedEdges = $graph['edges'];
+
+
+  // Build nodes and edges for all direct properties
   foreach ($objectProperties['objects'] as $property => $value) {
     if (!empty($value->uri)) {
       $linkedNodes[] = [
@@ -81,7 +103,8 @@ class DescribeAssociatesForm extends FormBase {
         'arrows' => 'to',
         'font' => ['align' => 'middle']
       ];
-      // 🔁 Sub-elementos (filhos dos filhos)
+
+      // Add children of children (sub-elements)
       $subElementRaw = $api->getUri(Utils::plainUri($value->uri));
       if ($subElementRaw) {
         $subElement = $api->parseObjectResponse($subElementRaw, 'getUri');
@@ -124,6 +147,7 @@ class DescribeAssociatesForm extends FormBase {
         }
       }
     } elseif (!empty($value->label)) {
+      // Literal (non-object) value
       $literalId = $baseUri . '-' . $property;
       $linkedNodes[] = [
         'id' => $literalId,
@@ -141,12 +165,40 @@ class DescribeAssociatesForm extends FormBase {
       ];
     }
   }
+  // Add type_uri node
+    if (!empty($element->typeUri)) {
+  $typeLabel = $element->hascoTypeLabel ?? $element->typeLabel ?? 'Type';
+
+  $linkedNodes[] = [
+    'id' => $element->typeUri,
+    'label' => ucfirst($typeLabel),
+    'shape' => 'box',
+    'color' => ['background' => '#007bff', 'border' => '#0056b3'],
+    'font' => ['color' => 'white']
+  ];
+
+  $linkedEdges[] = [
+    'from' => $element->uri,
+    'to' => $element->typeUri,
+    'label' => 'typeUri',
+    'arrows' => 'to',
+    'font' => ['align' => 'middle']
+  ];
+}
+
+  // Prepare data for JS graph rendering
   $jsonExtraNodes = json_encode($linkedNodes);
   $jsonExtraEdges = json_encode($linkedEdges);
-    // ... outras partes da função buildForm ...
-// ... [código intacto acima da renderização do grafo] ...
-// ... [código intacto acima da renderização do grafo] ...
-$form['my_network_graph'] = [
+ // Graph display (template previously included)
+$form['my_network_graph'] = Utils::buildGraphCanvas(
+    json_decode($jsonNodes, true), // baseNodes
+    $linkedNodes,                  // extraNodes
+    $linkedEdges,                  // extraEdges
+    []                             // baseEdges 
+);
+
+
+/**$form['my_network_graph'] = [
   '#type' => 'inline_template',
   '#template' => <<< 'EOT'
     <div style="margin-top: 20px;">
@@ -244,11 +296,13 @@ $form['my_network_graph'] = [
     'extraNodes' => $jsonExtraNodes,
     'extraEdges' => $jsonExtraEdges,
   ],
-];
+];**/
+// Graph title
     $form['my_network_graph_title'] = [
       '#type' => 'item',
       '#title' => '<h3>Associated Elements</h3>',
     ];
+    // Render properties in form display
     foreach ($objectProperties['objects'] as $propertyName => $propertyValue) {
   if ($propertyName === 'hasAddress') {
     $this->processPropertyAddress($propertyValue, $form, $form_state);
@@ -257,14 +311,14 @@ $form['my_network_graph'] = [
     $label = $propertyValue->label ?? '';
     $nodeId = $propertyValue->uri ?? ($baseUri . '-' . $propertyName);
     $form[$propertyName] = [
-      '#type' => 'markup',
-      '#markup' => '<b>' . $prettyName . '</b>: '
-        . Utils::link($label, $propertyValue->uri)
-        . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Mostrar/Esconder nó'>👁️</span><br><br>",
+  '#type' => 'markup',
+  '#markup' => '<b>' . $prettyName . '</b>: '
+    . Utils::link($label, $propertyValue->uri)
+    . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Show/Hide node'>👁️</span><br><br>",
     ];
   }
 }
-
+// Render array-based values
     foreach ($objectProperties['arrays'] as $propertyName => $propertyValue) {
       if (!empty($propertyValue)) {
         $prettyName = DescribeForm::prettyProperty($propertyName);
@@ -280,7 +334,7 @@ $form['my_network_graph'] = [
         ];
       }
     }
-    // Tipos associados
+    // Process associations by type
     if ($this->getElement()->hascoTypeUri === VSTOI::DEPLOYMENT) {
       AssocDeployment::process($this->getElement(), $form, $form_state);
     } else if ($this->getElement()->hascoTypeUri === SCHEMA::ORGANIZATION) {
@@ -302,6 +356,31 @@ $form['my_network_graph'] = [
     }
     return $form;
   }
+  
+  /**
+   * Public reusable method to build graph data from a generic object.
+   */
+  /**public static function buildGraphFromElement($element, $api) {
+    $objectProperties = GenericObject::inspectObject($element);
+    $baseUri = $element->uri;
+    $baseLabel = $element->label ?? 'Element';
+
+    $nodes = [];
+    $edges = [];
+
+    foreach ($objectProperties['objects'] as $property => $value) {
+      self::addNodeEdge($value, $baseUri, $property, $nodes, $edges, $api);
+    }
+
+    return [
+      'nodes' => $nodes,
+      'edges' => $edges,
+    ];
+  }*/
+
+/**
+   * Renders the address section in the form.
+   */
   public function processPropertyAddress($addressObject, array &$form, FormStateInterface $form_state) {
     $addressProperties = GenericObject::inspectObject($addressObject);
     $form['labelAddress'] = [
@@ -320,6 +399,10 @@ $form['my_network_graph'] = [
       ),
     ];
   }
+
+  /**
+   * If the current object is an OWL Class, attempts to associate by its hascoType.
+   */
   public function processClass(array &$form, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
     if ($this->getElement() != NULL && $this->getElement()->uri != NULL) {
@@ -334,6 +417,13 @@ $form['my_network_graph'] = [
       }
     }
   }
+  /**
+   * Empty validation handler.
+   */
   public function validateForm(array &$form, FormStateInterface $form_state) {}
+
+  /**
+   * Empty submit handler.
+   */
   public function submitForm(array &$form, FormStateInterface $form_state) {}
 }
