@@ -86,6 +86,12 @@ class Utils {
       case "annotationstem":
         $short = Constant::PREFIX_ANNOTATION_STEM;
         break;
+      case "component":
+        $short = Constant::PREFIX_COMPONENT;
+        break;
+      case "componentstem":
+        $short = Constant::PREFIX_COMPONENT_STEM;
+        break;
       case "codebook":
         $short = Constant::PREFIX_CODEBOOK;
         break;
