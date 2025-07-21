@@ -140,7 +140,8 @@
           if ($typeUri && $this->getElement()->typeLabel)
             $form['element_type'] = [
               '#type' => 'markup',
-              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($this->getElement()->typeLabel,$typeUri) . ' <span class="graph-toggle" data-node="' . $typeUri . '" style="cursor:pointer;" title="Show/Hide node">👁️</span><br><br>'),
+              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($this->getElement()->typeLabel,$typeUri) . '"<span class="graph-toggle" data-node="' . $typeUri . '" 
+              style="cursor:pointer;" title="Show/Hide node">👁️</span><br><br>'),
             ];
 
           if (!$typeUri && $this->getElement()->hascoTypeUri && $this->getElement()->hascoTypeLabel)
@@ -153,7 +154,7 @@
             $form['element_super'] = [
               '#type' => 'markup',
               '#markup' => $this->t("<b>Super URI</b>: " . Utils::link($this->getElement()->superClassLabel,$this->getElement()->superUri) . "<br><br>"),
-            ];
+              ];
 
 
 

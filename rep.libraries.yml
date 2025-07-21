@@ -76,6 +76,7 @@ map_entry_points:
     - core/jquery
     - core/drupalSettings
     - core/drupal.ajax
+<<<<<<< HEAD
     
 describe_associates:
   version: 1.x
@@ -84,4 +85,16 @@ describe_associates:
   dependencies:
     - core/jquery
 
+=======
+
+  describe_associates:
+    version: 1.x
+    js:
+      https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js: { type: external, minified: true }
+    css:
+      theme:
+        https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.css: { type: external }
+    dependencies:
+      - core/jquery
+>>>>>>> d7f21b5 (Test)
 
