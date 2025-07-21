@@ -76,3 +76,18 @@ map_entry_points:
     - core/jquery
     - core/drupalSettings
     - core/drupal.ajax
+
+qr_code_assets:
+  version: 1.x
+  js:
+    https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js: { type: external }
+    js/qr_code_generator.js: {} 
+  css:
+    theme:
+      css/qr_code_generator.css: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/drupalSettings
+    - core/once
+
