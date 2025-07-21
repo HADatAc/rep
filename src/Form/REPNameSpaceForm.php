@@ -86,7 +86,7 @@ use Drupal\rep\Entity\Ontology;
 
         $form['reload_triples_selected_submit'] = [
             '#type' => 'submit',
-            '#value' => $this->t('Reload Selected Triples'),
+            '#value' => $this->t('Reload Triples from Selected Ontologies'),
             '#name' => 'reload_selected',
             '#attributes' => [
               'class' => ['btn', 'btn-primary', 'arrow-button'],
