@@ -398,6 +398,61 @@ class Utils {
     return $uri;
   }
 
+  // public static function placeholderImage($url, $divider = '#') {
+  //   if ($url === NULL) {
+  //     return NULL;
+  //   }
+
+  //   $pos = strpos($url, $divider);
+  //   if ($pos === FALSE) {
+  //     return $url;
+  //   }
+  //   $placeholder = strtolower(substr($url, $pos + strlen($divider)));
+
+  //   $module_path = \Drupal::service('extension.list.module')->getPath('rep');
+  //   $placeholder_rel = $module_path . '/images/placeholders/' . $placeholder . '_placeholder.png';
+
+  //   $placeholder_abs = base_path() . $placeholder_rel;
+
+  //   dpm(file_exists($placeholder_abs), "Placeholder image exists: " . $placeholder_abs);
+
+  //   if (!file_exists($placeholder_abs)) {
+  //     $placeholder_rel = $module_path . '/images/placeholders/study_placeholder.png';
+  //     $placeholder_abs = base_path() . $placeholder_rel;
+  //   }
+
+  //   return $placeholder_abs;
+  // }
+  public static function placeholderImage($url, $default_element = 'unknown', $divider = '#', ) {
+    if ($url === NULL) {
+      return NULL;
+    }
+
+    $pos = strrpos($url, $divider);
+    $placeholder = $pos === FALSE
+      ? ''
+      : strtolower(substr($url, $pos + strlen($divider)));
+
+    $module_path = \Drupal::service('extension.list.module')->getPath('rep');
+
+    $fs_path = DRUPAL_ROOT . '/'
+            . $module_path
+            . '/images/placeholders/'
+            . $placeholder . '_placeholder.png';
+
+    if (!file_exists($fs_path)) {
+      $placeholder = $default_element;
+      $fs_path = DRUPAL_ROOT . '/'
+              . $module_path
+              . '/images/placeholders/'.$default_element.'_placeholder.png';
+    }
+
+    return base_path()
+        . $module_path
+        . '/images/placeholders/'
+        . $placeholder . '_placeholder.png';
+  }
+
   public static function repUriLink($uri) {
     $root_url = \Drupal::request()->getBaseUrl();
     $uriFinal = Utils::namespaceUri($uri);
