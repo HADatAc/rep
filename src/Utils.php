@@ -1526,7 +1526,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const key = `${selectedNodeId}_${label}`;
 
         if (!expansionState[key]) {
-          // Add missing nodes with styles and "➕"
+          // Add missing nodes with styles and single "➕"
           nodeIds.forEach(id => {
             if (!nodes.get(id)) {
               const restore = extraNodes.find(n => n.id === id);
@@ -1539,8 +1539,10 @@ document.addEventListener("DOMContentLoaded", function () {
                   restore.font = { color: 'white' };
                 }
 
-                originalLabels[restore.id] = restore.label;
-                restore.label = `${restore.label}  ➕`;
+                if (!originalLabels[restore.id]) {
+                  originalLabels[restore.id] = restore.label;
+                }
+                restore.label = `${originalLabels[restore.id]}  ➕`;
 
                 nodes.add(restore);
               }
@@ -1614,11 +1616,14 @@ document.addEventListener("DOMContentLoaded", function () {
               restore.font = { color: 'white' };
             }
 
-            originalLabels[restore.id] = restore.label;
-            restore.label = `${restore.label}  ➕`;
+            if (!originalLabels[restore.id]) {
+              originalLabels[restore.id] = restore.label;
+            }
+            restore.label = `${originalLabels[restore.id]}  ➕`;
 
             nodes.add(restore);
           }
+
           extraEdges.filter(e => e.from === nodeId || e.to === nodeId).forEach(e => {
             const id = `${e.from}_${e.to}`;
             if (!edges.get(id)) edges.add({ ...e, id });
