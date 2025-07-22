@@ -88,7 +88,7 @@ class LandingPage extends FormBase {
               ['instrumentinstance', 'Instrument instance(s)', null, 'instrument_instance', 'image'],
               ['study', 'Study(ies)', null, 'fa-graduation-cap', 'icon'],
               ['entity', 'Entity Type(s)', null, 'fa-cubes', 'icon'],
-              ['stream', 'Datafile Stream(s)', null, 'fa-file-contract', 'icon'],
+              ['stream', 'Datafile Stream(s)', null, 'datafile_stream', 'images'],
             ],
             // Row 2
             [
@@ -97,7 +97,7 @@ class LandingPage extends FormBase {
               ['componentinstance', 'Component Instance(s)', null, 'component_instance', 'image'],
               ['objectcollection', 'Object Collection(s)', 'studyobjectcollection', 'fa-boxes-stacked', 'icon'],
               ['variable', 'Variable(s)', null, 'fa-square-root-variable', 'icon'],
-              ['stream', 'Message Stream(s)', null, 'fa-envelope', 'icon'],
+              ['stream', 'Message Stream(s)', null, 'message_stream', 'images'],
             ],
             // Row 3
             [
@@ -180,7 +180,7 @@ class LandingPage extends FormBase {
                     'src'   => $image_uri,
                     'alt'   => $label,
                     'class' => ['img-responsive'],
-                    'style' => 'max-width: 80px; max-height: 80px;',
+                    'style' => 'width: 80px; height: 80px; display: inline-flex; align-items: center; justify-content: center;',
                   ],
                 ];
               }
