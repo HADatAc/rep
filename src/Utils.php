@@ -1450,7 +1450,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const extraEdges = {{ extraEdges|raw }};
 
   const options = {
-    nodes: { shape: "box" },
+    nodes: {
+      shape: "box",
+      font: { align: "center", size: 14 },
+      widthConstraint: { minimum: 70, maximum: 70 },
+      heightConstraint: { minimum: 35, maximum: 35 }
+    },
     edges: { arrows: "to", smooth: true },
     layout: { improvedLayout: true },
     physics: { stabilization: true, solver: 'forceAtlas2Based' }
@@ -1459,11 +1464,15 @@ document.addEventListener("DOMContentLoaded", function () {
   const network = new vis.Network(container, { nodes, edges }, options);
   let selectedNodeId = null;
 
-  // Store original labels and append "➕" to base node labels
+  // Store original labels and apply consistent label + font to base nodes
   const originalLabels = {};
   nodes.get().forEach(n => {
     originalLabels[n.id] = n.label;
-    nodes.update({ id: n.id, label: `${n.label}  ➕` });
+    nodes.update({
+      id: n.id,
+      label: `${n.label}\n➕`,
+      font: { size: 14 }
+    });
   });
 
   // Create the expand menu
@@ -1481,7 +1490,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const expansionState = {};
 
-  // Position the expand menu near the selected node
   function updateExpandButtonPosition() {
     if (!selectedNodeId) return;
     const nodePos = network.getPositions([selectedNodeId])[selectedNodeId];
@@ -1496,7 +1504,6 @@ document.addEventListener("DOMContentLoaded", function () {
     expandMenu.style.top = `${menuTop}px`;
   }
 
-  // Handle network click to show expansion options
   network.on("click", function (params) {
     expandMenu.style.display = "none";
 
@@ -1519,37 +1526,34 @@ document.addEventListener("DOMContentLoaded", function () {
       opt.style.cursor = "pointer";
       opt.style.margin = "2px 0";
 
-      // Toggle expand/collapse
       opt.addEventListener("click", () => {
         const edgesToToggle = relatedEdges.filter(e => e.label === label);
         const nodeIds = edgesToToggle.map(e => e.to);
         const key = `${selectedNodeId}_${label}`;
 
         if (!expansionState[key]) {
-          // Add missing nodes with styles and single "➕"
           nodeIds.forEach(id => {
             if (!nodes.get(id)) {
               const restore = extraNodes.find(n => n.id === id);
               if (restore) {
                 if (restore.shape === 'ellipse') {
                   restore.color = { background: '#28a745', border: '#1e7e34' };
-                  restore.font = { color: 'black' };
+                  restore.font = { color: 'black', size: 14 };
                 } else {
                   restore.color = { background: '#007bff', border: '#0056b3' };
-                  restore.font = { color: 'white' };
+                  restore.font = { color: 'white', size: 14 };
                 }
 
                 if (!originalLabels[restore.id]) {
                   originalLabels[restore.id] = restore.label;
                 }
-                restore.label = `${originalLabels[restore.id]}  ➕`;
+                restore.label = `${originalLabels[restore.id]}\n➕`;
 
                 nodes.add(restore);
               }
             }
           });
 
-          // Add edges
           edgesToToggle.forEach(e => {
             const id = `${e.from}_${e.to}`;
             if (!edges.get(id)) {
@@ -1560,7 +1564,6 @@ document.addEventListener("DOMContentLoaded", function () {
           expansionState[key] = true;
           opt.textContent = `🙈 ${label}`;
         } else {
-          // Collapse: remove nodes and edges
           nodeIds.forEach(id => {
             if (nodes.get(id)) nodes.remove(id);
           });
@@ -1583,7 +1586,6 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(updateExpandButtonPosition, 0);
   });
 
-  // Reposition expand menu after dragging or redrawing
   network.on("dragEnd", () => {
     if (expandMenu.style.display === "block") setTimeout(updateExpandButtonPosition, 0);
   });
@@ -1592,7 +1594,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (expandMenu.style.display === "block") setTimeout(updateExpandButtonPosition, 0);
   });
 
-  // Optional external toggle buttons
   setTimeout(() => {
     document.querySelectorAll(".graph-toggle").forEach(btn => {
       const nodeId = btn.dataset.node;
@@ -1610,16 +1611,16 @@ document.addEventListener("DOMContentLoaded", function () {
           if (restore) {
             if (restore.shape === 'ellipse') {
               restore.color = { background: '#28a745', border: '#1e7e34' };
-              restore.font = { color: 'black' };
+              restore.font = { color: 'black', size: 12 };
             } else {
               restore.color = { background: '#007bff', border: '#0056b3' };
-              restore.font = { color: 'white' };
+              restore.font = { color: 'white', size: 12 };
             }
 
             if (!originalLabels[restore.id]) {
               originalLabels[restore.id] = restore.label;
             }
-            restore.label = `${originalLabels[restore.id]}  ➕`;
+            restore.label = `${originalLabels[restore.id]}\n➕`;
 
             nodes.add(restore);
           }
@@ -1634,14 +1635,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }, 300);
 
-  // Auto-select and trigger first node
   const baseNodeId = nodes.getIds()[0];
   network.selectNodes([baseNodeId]);
   network.once("afterDrawing", () => {
     network.emit("click", { nodes: [baseNodeId] });
   });
 
-  // Expose for debugging (optional)
   window.graphNodes = nodes;
   window.graphEdges = edges;
   window.extraGraphNodes = extraNodes;
