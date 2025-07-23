@@ -92,6 +92,7 @@ class TreeForm extends FormBase {
       'attribute' => ["Attribute", EntryPoints::ATTRIBUTE],
       'detectorstem' => ["Detector Stem", EntryPoints::DETECTOR_STEM],
       'actuatorstem' => ["Actuator Stem", EntryPoints::ACTUATOR_STEM],
+      'componentstem' => ["Component Stem", EntryPoints::COMPONENT_STEM],
       'entity' => ["Entity", EntryPoints::ENTITY],
       'group' => ["Group", EntryPoints::GROUP],
       'instrument' => ["Instrument", EntryPoints::INSTRUMENT],
@@ -108,6 +109,7 @@ class TreeForm extends FormBase {
       'unit' => ["Unit", EntryPoints::UNIT],
       'detectorattribute' => ["Detector Attribute", EntryPoints::DETECTOR_ATTRIBUTE],
       'actuatorattribute' => ["Actuator Attribute", EntryPoints::ACTUATOR_ATTRIBUTE],
+      'component' => ["Component", EntryPoints::COMPONENT],
       // 'platforminstance' => ["Platform Instance", EntryPoints::PLATFORM_INSTANCE],
       // 'instrumentinstance' => ["Instrument Instance", EntryPoints::INSTRUMENT_INSTANCE],
       // 'detectorinstance' => ["Detector Instance", EntryPoints::DETECTOR_INSTANCE],
@@ -128,32 +130,42 @@ class TreeForm extends FormBase {
         'uriNamespace' => EntryPoints::ATTRIBUTE
       ],
       [
-        'id' => 'actuatorstem',
-        'uri' => EntryPoints::ACTUATOR_STEM,
-        'label' => 'Actuator Stem',
-        'typeNamespace' => EntryPoints::ACTUATOR_STEM,
-        'uriNamespace' => EntryPoints::ACTUATOR_STEM
+        'id' => 'componentstem',
+        'uri' => EntryPoints::COMPONENT_STEM,
+        'label' => 'Component Stem',
+        'typeNamespace' => EntryPoints::COMPONENT_STEM,
+        'uriNamespace' => EntryPoints::COMPONENT_STEM
       ],
       [
-        'id' => 'actuatorattribute',
-        'uri' => EntryPoints::ACTUATOR_ATTRIBUTE,
-        'label' => 'Actuator Attribute',
-        'typeNamespace' => EntryPoints::ACTUATOR_ATTRIBUTE,
-        'uriNamespace' => EntryPoints::ACTUATOR_ATTRIBUTE
+        'id' => 'component',
+        'uri' => EntryPoints::COMPONENT,
+        'label' => 'Component',
+        'typeNamespace' => EntryPoints::COMPONENT,
+        'uriNamespace' => EntryPoints::COMPONENT
       ],
       [
         'id' => 'detectorstem',
         'uri' => EntryPoints::DETECTOR_STEM,
         'label' => 'Detector Stem',
-        'typeNamespace' => EntryPoints::DETECTOR_STEM,
         'uriNamespace' => EntryPoints::DETECTOR_STEM
+      ],
+      [
+        'id' => 'actuatorstem',
+        'uri' => EntryPoints::ACTUATOR_STEM,
+        'label' => 'Actuator Stem',
+        'uriNamespace' => EntryPoints::ACTUATOR_STEM
       ],
       [
         'id' => 'detectorattribute',
         'uri' => EntryPoints::DETECTOR_ATTRIBUTE,
         'label' => 'Detector Attribute',
-        'typeNamespace' => EntryPoints::DETECTOR_ATTRIBUTE,
         'uriNamespace' => EntryPoints::DETECTOR_ATTRIBUTE
+      ],
+      [
+        'id' => 'actuatorattribute',
+        'uri' => EntryPoints::ACTUATOR_ATTRIBUTE,
+        'label' => 'Actuator Attribute',
+        'uriNamespace' => EntryPoints::ACTUATOR_ATTRIBUTE
       ],
       [
         'id' => 'entity',
