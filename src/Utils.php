@@ -1390,4 +1390,9 @@ class Utils {
     }
   }
 
+  // remove @XXXX from the end of the text
+  public static function sanitizeString($text) {
+    return preg_replace('/@.*$/', '', $text);
+  }
+
 }
