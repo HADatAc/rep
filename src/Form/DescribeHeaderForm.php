@@ -85,11 +85,14 @@
 
           if ( isset($this->getElement()->hasImageUri) ) {
             // hascoTypeLabel
-            if ($this->getElement()->typeLabel)
-              $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->typeLabel));
-            else
-              $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->hascoTypeLabel));
-            $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/'.$elementPlaceholder.'_placeholder.png';
+            // if ($this->getElement()->typeLabel)
+            //   $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->typeLabel));
+            // else if ($this->getElement()->hascoTypeLabel)
+            //   $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->hascoTypeLabel));
+            // else
+            $placeholder_image = UTILS::placeholderImage($this->getElement()->hascoTypeUri,'unknown', '/');
+
+            // $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/'.$elementPlaceholder.'_placeholder.png';
             $hasImageUri = (isset($this->getElement()->hasImageUri) && !empty($this->getElement()->hasImageUri))
                             ? Utils::getAPIImage($this->getElement()->uri, $this->getElement()->hasImageUri, $placeholder_image)
                             : $placeholder_image;

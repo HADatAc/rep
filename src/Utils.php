@@ -414,12 +414,20 @@ class Utils {
       ? ''
       : strtolower(substr($url, $pos + strlen($divider)));
 
+    // FALLBACK TO DEFAULT ELEMENT IF NO PLACEHOLDER FOUND
+    $pos = strrpos($url, '#');
+    $placeholder = $pos === FALSE
+      ? ''
+      : strtolower(substr($url, $pos + strlen('#')));
+
     $module_path = \Drupal::service('extension.list.module')->getPath('rep');
 
     $fs_path = DRUPAL_ROOT . '/'
             . $module_path
             . '/images/placeholders/'
             . $placeholder . '_placeholder.png';
+
+            dpm($placeholder, 'Placeholder: ' . $placeholder);
 
     if (!file_exists($fs_path)) {
       $placeholder = $default_element;
