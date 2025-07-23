@@ -2286,6 +2286,7 @@ class FusekiAPIConnector {
     }
 
     // 4) If it's a stream or other object with __toString(), cast to string.
+    dpm($response);
     if (!is_string($response) && method_exists($response, '__toString')) {
       $response = (string) $response;
     }
