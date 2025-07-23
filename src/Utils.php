@@ -86,6 +86,12 @@ class Utils {
       case "annotationstem":
         $short = Constant::PREFIX_ANNOTATION_STEM;
         break;
+      case "component":
+        $short = Constant::PREFIX_COMPONENT;
+        break;
+      case "componentstem":
+        $short = Constant::PREFIX_COMPONENT_STEM;
+        break;
       case "codebook":
         $short = Constant::PREFIX_CODEBOOK;
         break;
@@ -396,6 +402,36 @@ class Utils {
       }
     }
     return $uri;
+  }
+
+  public static function placeholderImage($url, $default_element = 'unknown', $divider = '#', ) {
+    if ($url === NULL) {
+      return NULL;
+    }
+
+    $pos = strrpos($url, $divider);
+    $placeholder = $pos === FALSE
+      ? ''
+      : strtolower(substr($url, $pos + strlen($divider)));
+
+    $module_path = \Drupal::service('extension.list.module')->getPath('rep');
+
+    $fs_path = DRUPAL_ROOT . '/'
+            . $module_path
+            . '/images/placeholders/'
+            . $placeholder . '_placeholder.png';
+
+    if (!file_exists($fs_path)) {
+      $placeholder = $default_element;
+      $fs_path = DRUPAL_ROOT . '/'
+              . $module_path
+              . '/images/placeholders/'.$default_element.'_placeholder.png';
+    }
+
+    return base_path()
+        . $module_path
+        . '/images/placeholders/'
+        . $placeholder . '_placeholder.png';
   }
 
   public static function repUriLink($uri) {
