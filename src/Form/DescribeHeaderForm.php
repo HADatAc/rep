@@ -133,7 +133,7 @@
             '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
           ];
 
-          kint($this->getElement());
+          #kint($this->getElement());
           $typeUri = $this->getElement()->typeUri;
 
 
