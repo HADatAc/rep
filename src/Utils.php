@@ -427,8 +427,6 @@ class Utils {
             . '/images/placeholders/'
             . $placeholder . '_placeholder.png';
 
-            dpm($placeholder, 'Placeholder: ' . $placeholder);
-
     if (!file_exists($fs_path)) {
       $placeholder = $default_element;
       $fs_path = DRUPAL_ROOT . '/'
