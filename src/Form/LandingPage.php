@@ -196,7 +196,7 @@ class LandingPage extends FormBase {
 
         $form['rep_full_list'] = [
             '#type' => 'item',
-            '#title' => '<br>There is the <a href="/rep/full">full list of kinds of elements</a> in this knowledge graph.<br>',
+            '#title' => '<br>There is the <a href="rep/full">full list of kinds of elements</a> in this knowledge graph.<br>',
         ];
 
         $form['rep_newline1'] = [
