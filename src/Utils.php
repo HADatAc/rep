@@ -414,6 +414,12 @@ class Utils {
       ? ''
       : strtolower(substr($url, $pos + strlen($divider)));
 
+    // FALLBACK TO DEFAULT ELEMENT IF NO PLACEHOLDER FOUND
+    $pos = strrpos($url, '#');
+    $placeholder = $pos === FALSE
+      ? ''
+      : strtolower(substr($url, $pos + strlen('#')));
+
     $module_path = \Drupal::service('extension.list.module')->getPath('rep');
 
     $fs_path = DRUPAL_ROOT . '/'
@@ -1388,6 +1394,11 @@ class Utils {
     else {
       return '';
     }
+  }
+
+  // remove @XXXX from the end of the text
+  public static function sanitizeString($text) {
+    return preg_replace('/@.*$/', '', $text);
   }
 
 }

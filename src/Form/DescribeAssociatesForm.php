@@ -84,7 +84,7 @@ use Drupal\rep\Vocabulary\FOAF;
             $link = ' ';
             if (isset($propertyValue->label) && isset($propertyValue->uri) &&
                ($propertyValue->label != NULL) && ($propertyValue->uri != NULL)) {
-              $link = Utils::link($propertyValue->label,$propertyValue->uri);
+              $link = Utils::link(UTILS::sanitizeString($propertyValue->label),$propertyValue->uri);
             }
             $form[$propertyName] = [
               '#type' => 'markup',
@@ -115,7 +115,7 @@ use Drupal\rep\Vocabulary\FOAF;
 
             $form[$propertyName] = [
               '#type' => 'markup',
-              '#markup' => $this->t("<b>".$prettyName . "</b>: " . $list_items ."<br>"),
+              '#markup' => $this->t("<b>".$prettyName . "</b>: " . UTILS::sanitizeString($list_items) ."<br>"),
             ];
           }
         }
