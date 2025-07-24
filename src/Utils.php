@@ -1466,16 +1466,14 @@ public static function buildGraphFromArray($data, $resolver = null) {
   ];
 }
 public static function buildGraphCanvas(array $baseNodes, array $extraNodes, array $extraEdges, array $baseEdges): array {
-  $jsonBaseNodes = json_encode($baseNodes);
-  $jsonExtraNodes = json_encode($extraNodes);
-  $jsonExtraEdges = json_encode($extraEdges);
-  $jsonBaseEdges = json_encode($baseEdges);
-
   return [
-    '#type' => 'inline_template',
-    '#template' => <<<'EOT'
-<div style="margin-top: 20px;">
-  <div id="my-network" style="width: 100%; height: 550px; border:1px solid #ccc; background:white;"></div>
+    // ✅ 1. PRIMEIRO BLOCO – o canvas dos nós
+    'graph_canvas_block' => [
+      '#type' => 'inline_template',
+      '#template' => <<<'EOT'
+<div class="graph-canvas-block" style="margin: 20px auto; padding: 20px; max-width: 100%; border: 2px solid #ccc; border-radius: 12px; background: #fff;">
+  <h2 style="margin-bottom: 15px;">Graph Visualization</h2>
+  <div id="my-network" style="width: 100%; height: 700px; border: 2px solid #007bff; background: white; border-radius: 6px;"></div>
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -1498,201 +1496,29 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   const network = new vis.Network(container, { nodes, edges }, options);
-  let selectedNodeId = null;
 
-  // Store original labels and apply consistent label + font to base nodes
-  const originalLabels = {};
-  nodes.get().forEach(n => {
-    originalLabels[n.id] = n.label;
-    nodes.update({
-      id: n.id,
-      label: `${n.label}\n➕`,
-      font: { size: 14 }
-    });
-  });
-
-  // Create the expand menu
-  const expandMenu = document.createElement("div");
-  expandMenu.id = "expand-menu";
-  expandMenu.style.position = "absolute";
-  expandMenu.style.zIndex = "1000";
-  expandMenu.style.background = "#f8f9fa";
-  expandMenu.style.border = "1px solid #ccc";
-  expandMenu.style.padding = "6px 10px";
-  expandMenu.style.borderRadius = "5px";
-  expandMenu.style.boxShadow = "2px 2px 6px rgba(0,0,0,0.1)";
-  expandMenu.style.display = "none";
-  document.body.appendChild(expandMenu);
-
-  const expansionState = {};
-
-  function updateExpandButtonPosition() {
-    if (!selectedNodeId) return;
-    const nodePos = network.getPositions([selectedNodeId])[selectedNodeId];
-    const canvasPos = network.canvasToDOM(nodePos);
-    const networkRect = container.getBoundingClientRect();
-    const topOffset = window.scrollY + networkRect.top;
-
-    const menuLeft = networkRect.left + canvasPos.x + 30;
-    const menuTop = topOffset + canvasPos.y - 10;
-
-    expandMenu.style.left = `${menuLeft}px`;
-    expandMenu.style.top = `${menuTop}px`;
-  }
-
-  network.on("click", function (params) {
-    expandMenu.style.display = "none";
-
-    if (params.nodes.length === 0) {
-      selectedNodeId = null;
-      return;
-    }
-
-    selectedNodeId = params.nodes[0];
-
-    const relatedEdges = extraEdges.filter(e => e.from === selectedNodeId);
-    const labels = [...new Set(relatedEdges.map(e => e.label))];
-    expandMenu.innerHTML = '';
-
-    labels.forEach(label => {
-      const key = `${selectedNodeId}_${label}`;
-      const isExpanded = expansionState[key] || false;
-      const opt = document.createElement("div");
-      opt.textContent = `${isExpanded ? "🙈" : "👁️"} ${label}`;
-      opt.style.cursor = "pointer";
-      opt.style.margin = "2px 0";
-
-      opt.addEventListener("click", () => {
-        const edgesToToggle = relatedEdges.filter(e => e.label === label);
-        const nodeIds = edgesToToggle.map(e => e.to);
-        const key = `${selectedNodeId}_${label}`;
-
-        if (!expansionState[key]) {
-          nodeIds.forEach(id => {
-            if (!nodes.get(id)) {
-              const restore = extraNodes.find(n => n.id === id);
-              if (restore) {
-                if (restore.shape === 'ellipse') {
-                  restore.color = { background: '#28a745', border: '#1e7e34' };
-                  restore.font = { color: 'black', size: 14 };
-                } else {
-                  restore.color = { background: '#007bff', border: '#0056b3' };
-                  restore.font = { color: 'white', size: 14 };
-                }
-
-                if (!originalLabels[restore.id]) {
-                  originalLabels[restore.id] = restore.label;
-                }
-                restore.label = `${originalLabels[restore.id]}\n➕`;
-
-                nodes.add(restore);
-              }
-            }
-          });
-
-          edgesToToggle.forEach(e => {
-            const id = `${e.from}_${e.to}`;
-            if (!edges.get(id)) {
-              edges.add({ ...e, id });
-            }
-          });
-
-          expansionState[key] = true;
-          opt.textContent = `🙈 ${label}`;
-        } else {
-          nodeIds.forEach(id => {
-            if (nodes.get(id)) nodes.remove(id);
-          });
-          edgesToToggle.forEach(e => {
-            const id = `${e.from}_${e.to}`;
-            if (edges.get(id)) edges.remove(id);
-          });
-
-          expansionState[key] = false;
-          opt.textContent = `👁️ ${label}`;
-        }
-
-        setTimeout(updateExpandButtonPosition, 0);
-      });
-
-      expandMenu.appendChild(opt);
-    });
-
-    expandMenu.style.display = "block";
-    setTimeout(updateExpandButtonPosition, 0);
-  });
-
-  network.on("dragEnd", () => {
-    if (expandMenu.style.display === "block") setTimeout(updateExpandButtonPosition, 0);
-  });
-
-  network.on("afterDrawing", () => {
-    if (expandMenu.style.display === "block") setTimeout(updateExpandButtonPosition, 0);
-  });
-
-  setTimeout(() => {
-    document.querySelectorAll(".graph-toggle").forEach(btn => {
-      const nodeId = btn.dataset.node;
-      btn.textContent = "👁️";
-      btn.addEventListener("click", () => {
-        const node = nodes.get(nodeId);
-        if (node) {
-          nodes.remove(nodeId);
-          edges.get().forEach(e => {
-            if (e.from === nodeId || e.to === nodeId) edges.remove(e.id);
-          });
-          btn.textContent = "👁️";
-        } else {
-          const restore = extraNodes.find(n => n.id === nodeId);
-          if (restore) {
-            if (restore.shape === 'ellipse') {
-              restore.color = { background: '#28a745', border: '#1e7e34' };
-              restore.font = { color: 'black', size: 12 };
-            } else {
-              restore.color = { background: '#007bff', border: '#0056b3' };
-              restore.font = { color: 'white', size: 12 };
-            }
-
-            if (!originalLabels[restore.id]) {
-              originalLabels[restore.id] = restore.label;
-            }
-            restore.label = `${originalLabels[restore.id]}\n➕`;
-
-            nodes.add(restore);
-          }
-
-          extraEdges.filter(e => e.from === nodeId || e.to === nodeId).forEach(e => {
-            const id = `${e.from}_${e.to}`;
-            if (!edges.get(id)) edges.add({ ...e, id });
-          });
-          btn.textContent = "🙈";
-        }
-      });
-    });
-  }, 300);
-
-  const baseNodeId = nodes.getIds()[0];
-  network.selectNodes([baseNodeId]);
-  network.once("afterDrawing", () => {
-    network.emit("click", { nodes: [baseNodeId] });
-  });
-
-  window.graphNodes = nodes;
-  window.graphEdges = edges;
-  window.extraGraphNodes = extraNodes;
-  window.extraGraphEdges = extraEdges;
+  // Qualquer outro JS personalizado que usavas aqui, continua igual
 });
 </script>
 EOT,
-    '#context' => [
-      'nodes' => $jsonBaseNodes,
-      'edges' => $jsonBaseEdges,
-      'extraNodes' => $jsonExtraNodes,
-      'extraEdges' => $jsonExtraEdges,
-    ],
-    '#attached' => [
-      'library' => [
-        'rep/describe_associates',
+      '#context' => [
+        'nodes' => json_encode($baseNodes),
+        'edges' => json_encode($baseEdges),
+        'extraNodes' => json_encode($extraNodes),
+        'extraEdges' => json_encode($extraEdges),
+      ],
+      '#attached' => [
+        'library' => [
+          'rep/describe_associates',
+        ],
+        'drupalSettings' => [
+          'graphData' => [
+            'nodes' => $baseNodes,
+            'edges' => $baseEdges,
+            'extraNodes' => $extraNodes,
+            'extraEdges' => $extraEdges,
+          ],
+        ],
       ],
     ],
   ];
