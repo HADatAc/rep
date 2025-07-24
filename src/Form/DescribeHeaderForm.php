@@ -90,7 +90,7 @@
             // else if ($this->getElement()->hascoTypeLabel)
             //   $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->hascoTypeLabel));
             // else
-            $placeholder_image = UTILS::placeholderImage($this->getElement()->hascoTypeUri,'unknown', '/');
+            $placeholder_image = UTILS::placeholderImage($this->getElement()->hascoTypeUri,$this->getElement()->typeLabel, '/');
 
             // $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/'.$elementPlaceholder.'_placeholder.png';
             $hasImageUri = (isset($this->getElement()->hasImageUri) && !empty($this->getElement()->hasImageUri))
@@ -119,26 +119,26 @@
 
           $form['label'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<br /><h1>" . UTILS::sanitizeString($this->getElement()->label) . "</h1>"),
+            '#markup' => $this->t("<br /><h1>" . UTILS::sanitizeString($this->getElement()->label) . "</h1><br />"),
           ];
 
         if ($this->getElement()->hascoTypeLabel === 'Organization')
-          $form['name'] = [
+          $form['organization'] = [
             '#type' => 'markup',
             '#markup' => $this->t("<h5>" . UTILS::sanitizeString($this->getElement()->name) . "</h5><br>"),
           ];
 
-          $form['type'] = [
-            '#type' => 'markup',
-            '#markup' => $this->t("<h3>" . UTILS::sanitizeString(ucfirst($type)) . "</h3><br>"),
-          ];
+          // $form['type'] = [
+          //   '#type' => 'markup',
+          //   '#markup' => $this->t("<h3>" . UTILS::sanitizeString(ucfirst($type)) . "</h3><br>"),
+          // ];
 
           $form['element_uri'] = [
             '#type' => 'markup',
             '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
           ];
 
-          kint($this->getElement());
+          // kint($this->getElement());
           $typeUri = $this->getElement()->typeUri;
 
           if ($typeUri)
