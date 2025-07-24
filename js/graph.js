@@ -35,11 +35,13 @@
 
       nodes.get().forEach(n => {
         originalLabels[n.id] = n.label;
-        nodes.update({
-          id: n.id,
-          label: `${n.label}\n➕`,
-          font: { size: 14 }
-        });
+        if (!n.label.includes('➕')) {
+          nodes.update({
+            id: n.id,
+            label: `${n.label}\n➕`,
+            font: { size: 14 }
+          });
+        }
       });
 
       const expandMenu = document.createElement("div");
@@ -87,7 +89,9 @@
                       ? { background: '#28a745', border: '#1e7e34' }
                       : { background: '#007bff', border: '#0056b3' };
                     restore.font = { color: 'white', size: 14 };
-                    restore.label = `${restore.label}\n➕`;
+                    if (!restore.label.includes('➕')) {
+                      restore.label += '\n➕';
+                    }
                     nodes.add(restore);
                   }
                 }
@@ -125,6 +129,45 @@
       network.selectNodes([baseNodeId]);
       network.once("afterDrawing", () => {
         network.emit("click", { nodes: [baseNodeId] });
+      });
+
+      // ✅ Clique externo em 👁️/🙈 para mostrar/ocultar nó
+      document.body.addEventListener("click", function (event) {
+        if (event.target.classList.contains("graph-toggle")) {
+          const nodeId = event.target.getAttribute("data-node");
+          if (!nodeId) return;
+
+          const nodeExists = nodes.get(nodeId);
+
+          if (!nodeExists) {
+            const node = extraNodes.find(n => n.id === nodeId);
+            if (node) {
+              node.color = node.shape === 'ellipse'
+                ? { background: '#28a745', border: '#1e7e34' }
+                : { background: '#007bff', border: '#0056b3' };
+              node.font = { color: 'white', size: 14 };
+              if (!node.label.includes('➕')) {
+                node.label += '\n➕';
+              }
+              nodes.add(node);
+
+              const relatedEdges = extraEdges.filter(e => e.to === nodeId || e.from === nodeId);
+              relatedEdges.forEach(edge => {
+                const edgeId = `${edge.from}_${edge.to}`;
+                if (!edges.get(edgeId)) {
+                  edges.add({ ...edge, id: edgeId });
+                }
+              });
+
+              event.target.innerText = "🙈";
+            }
+          } else {
+            nodes.remove({ id: nodeId });
+            const edgeIds = edges.getIds().filter(id => id.includes(nodeId));
+            edges.remove(edgeIds);
+            event.target.innerText = "👁️";
+          }
+        }
       });
 
       window.graphNodes = nodes;
