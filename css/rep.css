@@ -1234,3 +1234,11 @@ body.path-sem div.details-wrapper {
 .describe-header-wb {
   word-break: break-all;
 }
+
+
+/* NAMESPACE FORM */
+form.rep-form-namespace legend {
+  padding: 0 5px;
+  float: none;
+  width: fit-content;
+}
