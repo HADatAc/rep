@@ -2216,46 +2216,49 @@ class FusekiAPIConnector {
    *  If anything goes wrong, this method will return NULL and issue a Drupal error message fowrarding the message provided by
    *  the HASCO API.
    */
-  // public function parseObjectResponse($response, $methodCalled) {
-  //   if ($this->error != NULL) {
-  //     if ($this->error == 'CON') {
-  //       \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
-  //     } else {
-  //       \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
-  //     }
-  //     return NULL;
-  //   }
-  //   if ($response == NULL || $response == "") {
-  //       \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
-  //       return NULL;
-  //   }
+//   public function parseObjectResponse($response, $methodCalled) {
+//     if ($this->error != NULL) {
+//       if ($this->error == 'CON') {
+//         \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
+//       } else {
+//         \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
+//       }
+//       return NULL;
+//     }
+//     if ($response == NULL || $response == "") {
+//         \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
+//         return NULL;
+//     }
 
-  //   // Se já veio um array (já decodificado), devolve-o logo
-  //   if (is_array($response)) {
-  //     return $response;
-  //   }
+//     // Se já veio um array (já decodificado), devolve-o logo
+//     if (is_array($response)) {
+//       return $response;
+//     }
 
-  //   // Caso venha um Stream ou outro objecto com __toString(), força string
-  //   if (!is_string($response) && method_exists($response, '__toString')) {
-  //     $response = (string) $response;
-  //   }
+//     // 4) If it's a stream or other object with __toString(), cast to string.
+//     // if (!is_string($response) && method_exists($response, '__toString')) {
+//     //   $response = (string) $response;
+//     // }
+//     if (!is_string($response) && is_object($response) && method_exists($response, '__toString')) {
+//       $response = (string) $response;
+//     }
 
-  //   $obj = json_decode($response);
-  //   if ($obj == NULL) {
-  //     \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
-  //     return NULL;
-  //   }
-  //   if ($obj->isSuccessful) {
-  //     return $obj->body;
-  //   }
-  //   $message = $obj->body;
-  //   if ($message != NULL && is_string($message) &&
-  //       str_starts_with($message,"No") && str_ends_with($message,"has been found")) {
-  //     return array();
-  //   }
-  //   \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
-  //   return NULL;
-  // }
+//     $obj = json_decode($response);
+//     if ($obj == NULL) {
+//       \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
+//       return NULL;
+//     }
+//     if ($obj->isSuccessful) {
+//       return $obj->body;
+//     }
+//     $message = $obj->body;
+//     if ($message != NULL && is_string($message) &&
+//         str_starts_with($message,"No") && str_ends_with($message,"has been found")) {
+//       return array();
+//     }
+//     \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
+//     return NULL;
+//   }
 
   public function parseObjectResponse($response, $methodCalled) {
     // 1) Any prior connection or HTTP error?
