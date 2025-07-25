@@ -21,17 +21,21 @@ class AssocStudy {
     */
     $rawVCs = $api->getStudyVCs($element->uri);
     if ($rawVCs != NULL) {
-      $vcs = $api->parseObjectResponse($rawVCs,'getStudyVCs');
+      $vcs = $api->parseObjectResponse($rawVCs, 'getStudyVCs');
       if ($vcs != NULL) {
-        //dpm($vcs);
         $form['virtualcolumns']['beginVCs'] = [
           '#type' => 'markup',
           '#markup' => $t->translate("<b>Virtual Columns:</b><ul>"),
         ];
         foreach ($vcs as $propertyName => $propertyValue) {
+          $label = $propertyValue->label ?? $propertyName;
+          $uri = $propertyValue->uri ?? '';
+          $nodeId = !empty($uri) ? $uri : 'vc-' . md5($propertyName);
+
           $form['virtualcolumns'][$propertyName] = [
             '#type' => 'markup',
-            '#markup' => $t->translate("<li>" . Utils::link($propertyValue->label,$propertyValue->uri) . "</li>"),
+            '#markup' => '<li>' . Utils::link($label, $uri)
+              . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Show/Hide node'>👁️</span></li>",
           ];
         }
         $form['virtualcolumns']['endVCs'] = [

@@ -133,14 +133,14 @@
             '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
           ];
 
-          kint($this->getElement());
+          #kint($this->getElement());
           $typeUri = $this->getElement()->typeUri;
 
 
           if ($typeUri && $this->getElement()->typeLabel)
             $form['element_type'] = [
               '#type' => 'markup',
-              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($this->getElement()->typeLabel,$typeUri) . '"<span class="graph-toggle" data-node="' . $typeUri . '" 
+              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . '<span class="graph-toggle" data-node="' . $typeUri . '" 
               style="cursor:pointer;" title="Show/Hide node">👁️</span><br><br>'),
             ];
 
