@@ -74,42 +74,87 @@
         labels.forEach(label => {
           const key = `${selectedNodeId}_${label}`;
           const isExpanded = expansionState[key] || false;
+
           const opt = document.createElement("div");
           opt.textContent = `${isExpanded ? "🙈" : "👁️"} ${label}`;
-          opt.style.cssText = "cursor:pointer;margin:2px 0;";
-          opt.addEventListener("click", () => {
-            const edgesToToggle = relatedEdges.filter(e => e.label === label);
-            const nodeIds = edgesToToggle.map(e => e.to);
-            if (!expansionState[key]) {
-              nodeIds.forEach(id => {
-                if (!nodes.get(id)) {
-                  const restore = extraNodes.find(n => n.id === id);
-                  if (restore) {
-                    restore.color = restore.shape === 'ellipse'
-                      ? { background: '#28a745', border: '#1e7e34' }
-                      : { background: '#007bff', border: '#0056b3' };
-                    restore.font = { color: 'white', size: 14 };
-                    if (!restore.label.includes('➕')) {
-                      restore.label += '\n➕';
-                    }
-                    nodes.add(restore);
+          opt.style.cssText = "cursor:pointer;margin:2px 0;position:relative;";
+          
+          // SUBMENU para hasVirtualColumn
+          if (label === 'hasVirtualColumn') {
+            opt.addEventListener("click", () => {
+              // Evita duplicação
+              if (opt.querySelector(".submenu")) {
+                opt.querySelector(".submenu").remove();
+                return;
+              }
+
+              const submenu = document.createElement("div");
+              submenu.className = "submenu";
+              submenu.style.cssText = "position:absolute; left:120px; top:0; background:#f1f1f1; border:1px solid #ccc; padding:5px; border-radius:4px; box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;";
+
+              const vcEdges = relatedEdges.filter(e => e.label === label);
+
+              vcEdges.forEach(e => {
+                const vcNode = extraNodes.find(n => n.id === e.to);
+                if (!vcNode) return;
+
+                const vcItem = document.createElement("div");
+                vcItem.textContent = vcNode.label;
+                vcItem.style.cssText = "cursor:pointer; padding:2px 4px;";
+                vcItem.addEventListener("click", () => {
+                  const edgeId = `${e.from}_${e.to}`;
+                  if (!nodes.get(vcNode.id)) {
+                    nodes.add(vcNode);
+                    edges.add({ ...e, id: edgeId });
                   }
-                }
+                  submenu.remove();
+                  expandMenu.style.display = "none";
+                });
+
+                submenu.appendChild(vcItem);
               });
-              edgesToToggle.forEach(e => {
-                const id = `${e.from}_${e.to}`;
-                if (!edges.get(id)) edges.add({ ...e, id });
-              });
-              expansionState[key] = true;
-              opt.textContent = `🙈 ${label}`;
-            } else {
-              nodeIds.forEach(id => nodes.remove(id));
-              edgesToToggle.forEach(e => edges.remove(`${e.from}_${e.to}`));
-              expansionState[key] = false;
-              opt.textContent = `👁️ ${label}`;
-            }
-            setTimeout(updateExpandButtonPosition, 0);
-          });
+
+              opt.appendChild(submenu);
+            });
+          } 
+          // COMPORTAMENTO PADRÃO para os outros rótulos
+          else {
+            opt.addEventListener("click", () => {
+              const edgesToToggle = relatedEdges.filter(e => e.label === label);
+              const nodeIds = edgesToToggle.map(e => e.to);
+
+              if (!expansionState[key]) {
+                nodeIds.forEach(id => {
+                  if (!nodes.get(id)) {
+                    const restore = extraNodes.find(n => n.id === id);
+                    if (restore) {
+                      restore.color = restore.shape === 'ellipse'
+                        ? { background: '#28a745', border: '#1e7e34' }
+                        : { background: '#007bff', border: '#0056b3' };
+                      restore.font = { color: 'white', size: 14 };
+                      if (!restore.label.includes('➕')) {
+                        restore.label += '\n➕';
+                      }
+                      nodes.add(restore);
+                    }
+                  }
+                });
+                edgesToToggle.forEach(e => {
+                  const id = `${e.from}_${e.to}`;
+                  if (!edges.get(id)) edges.add({ ...e, id });
+                });
+                expansionState[key] = true;
+                opt.textContent = `🙈 ${label}`;
+              } else {
+                nodeIds.forEach(id => nodes.remove(id));
+                edgesToToggle.forEach(e => edges.remove(`${e.from}_${e.to}`));
+                expansionState[key] = false;
+                opt.textContent = `👁️ ${label}`;
+              }
+              setTimeout(updateExpandButtonPosition, 0);
+            });
+          }
+
           expandMenu.appendChild(opt);
         });
 
@@ -131,7 +176,6 @@
         network.emit("click", { nodes: [baseNodeId] });
       });
 
-      // ✅ Clique externo em 👁️/🙈 para mostrar/ocultar nó
       document.body.addEventListener("click", function (event) {
         if (event.target.classList.contains("graph-toggle")) {
           const nodeId = event.target.getAttribute("data-node");
@@ -167,6 +211,13 @@
             edges.remove(edgeIds);
             event.target.innerText = "👁️";
           }
+        }
+      });
+
+      document.addEventListener("click", function (e) {
+        if (!expandMenu.contains(e.target)) {
+          const submenu = document.querySelector(".submenu");
+          if (submenu) submenu.remove();
         }
       });
 

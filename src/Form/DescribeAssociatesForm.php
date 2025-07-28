@@ -185,6 +185,37 @@ $linkedEdges = $graph['edges'];
     'font' => ['align' => 'middle']
   ];
 }
+// Add virtual columns to the graph
+if ($element->hascoTypeUri === HASCO::STUDY) {
+  $vcRaw = $api->getStudyVCs($element->uri);
+  if ($vcRaw) {
+    $vcList = $api->parseObjectResponse($vcRaw, 'getStudyVCs');
+    if (is_array($vcList)) {
+      foreach ($vcList as $vcName => $vcObj) {
+        $vcId = !empty($vcObj->uri) ? $vcObj->uri : 'vc-' . md5($vcName);
+        $vcLabel = $vcObj->label ?? $vcName;
+
+        $linkedNodes[] = [
+  'id' => $vcId,
+  'label' => $vcLabel,
+  'shape' => 'box',
+  'color' => ['background' => '#007bff', 'border' => '#0056b3'],
+  'font' => ['color' => 'white']
+];
+
+
+        $linkedEdges[] = [
+          'from' => $element->uri,
+          'to' => $vcId,
+          'label' => 'hasVirtualColumn',
+          'arrows' => 'to',
+          'font' => ['align' => 'middle']
+        ];
+      }
+    }
+  }
+}
+
 
   // Prepare data for JS graph rendering
   $jsonExtraNodes = json_encode($linkedNodes);
