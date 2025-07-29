@@ -94,25 +94,41 @@
 
               const vcEdges = relatedEdges.filter(e => e.label === label);
 
-              vcEdges.forEach(e => {
-                const vcNode = extraNodes.find(n => n.id === e.to);
-                if (!vcNode) return;
+             vcEdges.forEach(e => {
+  const vcNode = extraNodes.find(n => n.id === e.to);
+  if (!vcNode) return;
 
-                const vcItem = document.createElement("div");
-                vcItem.textContent = vcNode.label;
-                vcItem.style.cssText = "cursor:pointer; padding:2px 4px;";
-                vcItem.addEventListener("click", () => {
-                  const edgeId = `${e.from}_${e.to}`;
-                  if (!nodes.get(vcNode.id)) {
-                    nodes.add(vcNode);
-                    edges.add({ ...e, id: edgeId });
-                  }
-                  submenu.remove();
-                  expandMenu.style.display = "none";
-                });
+  const edgeId = `${e.from}_${e.to}`;
+  const isVisible = nodes.get(vcNode.id) !== null;
 
-                submenu.appendChild(vcItem);
-              });
+  const vcItem = document.createElement("div");
+  vcItem.style.cssText = "display: flex; justify-content: space-between; align-items: center; cursor:pointer; padding:2px 4px; min-width: 200px;";
+
+  const labelSpan = document.createElement("span");
+  labelSpan.textContent = vcNode.label;
+
+  const toggleBtn = document.createElement("span");
+  toggleBtn.textContent = isVisible ? "🙈" : "👁️";
+  toggleBtn.style.cssText = "margin-left: 8px; cursor: pointer;";
+
+  toggleBtn.addEventListener("click", (ev) => {
+    ev.stopPropagation(); // evita fechar submenu
+
+    if (nodes.get(vcNode.id)) {
+      nodes.remove(vcNode.id);
+      edges.remove(edgeId);
+      toggleBtn.textContent = "👁️";
+    } else {
+      nodes.add(vcNode);
+      edges.add({ ...e, id: edgeId });
+      toggleBtn.textContent = "🙈";
+    }
+  });
+
+  vcItem.appendChild(labelSpan);
+  vcItem.appendChild(toggleBtn);
+  submenu.appendChild(vcItem);
+});
 
               opt.appendChild(submenu);
             });
