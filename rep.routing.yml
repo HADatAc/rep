@@ -430,12 +430,3 @@ rep.tree.entry_point_mappings:
   requirements:
     _role: 'content_editor'
 
-rep.search_mt:
-  path: '/rep/search-mt'
-  defaults:
-    _form: '\Drupal\rep\Form\SearchMTForm'
-    _title: 'Search MT'
-  requirements:
-    _permission: 'access content'
-    _role: 'content_editor'
-

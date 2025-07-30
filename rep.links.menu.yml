@@ -214,17 +214,6 @@ reviewer.top_level:
   requirements:
     _role: 'content_editor'
 
-reviewer.searchMT:
-  title: Search MT
-  description: ''
-  menu_name: main
-  route_name: '<nolink>'
-  parent: reviewer.top_level
-  weight: 10
-  requirements:
-    _permission: 'access content'
-    _role: 'content_editor'
-
 reviewer.uploadingest_review:
   title: Manage MTs
   description: ''
