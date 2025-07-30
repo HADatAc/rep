@@ -76,13 +76,28 @@
           const isExpanded = expansionState[key] || false;
 
           const opt = document.createElement("div");
-          opt.textContent = `${isExpanded ? "🙈" : "👁️"} ${label}`;
-          opt.style.cssText = "cursor:pointer;margin:2px 0;position:relative;";
-          
-          // SUBMENU para hasVirtualColumn
+          opt.style.cssText = `
+            cursor: pointer;
+            margin: 2px 0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-width: 200px;
+          `;
+
+          const labelSpan = document.createElement("span");
+          labelSpan.textContent = label;
+
+          const eyeIcon = document.createElement("span");
+          eyeIcon.textContent = isExpanded ? "🙈" : "👁️";
+
+          opt.appendChild(labelSpan);
+          opt.appendChild(eyeIcon);
+
           if (label === 'hasVirtualColumn') {
             opt.addEventListener("click", () => {
-              // Evita duplicação
               if (opt.querySelector(".submenu")) {
                 opt.querySelector(".submenu").remove();
                 return;
@@ -94,47 +109,53 @@
 
               const vcEdges = relatedEdges.filter(e => e.label === label);
 
-             vcEdges.forEach(e => {
-  const vcNode = extraNodes.find(n => n.id === e.to);
-  if (!vcNode) return;
+              vcEdges.forEach(e => {
+                const vcNode = extraNodes.find(n => n.id === e.to);
+                if (!vcNode) return;
 
-  const edgeId = `${e.from}_${e.to}`;
-  const isVisible = nodes.get(vcNode.id) !== null;
+                const edgeId = `${e.from}_${e.to}`;
+                const isVisible = nodes.get(vcNode.id) !== null;
 
-  const vcItem = document.createElement("div");
-  vcItem.style.cssText = "display: flex; justify-content: space-between; align-items: center; cursor:pointer; padding:2px 4px; min-width: 200px;";
+                const vcItem = document.createElement("div");
+                vcItem.style.cssText = `
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  gap: 12px;
+                  padding: 4px 6px;
+                  min-width: 240px;
+                  cursor: default;
+                `;
 
-  const labelSpan = document.createElement("span");
-  labelSpan.textContent = vcNode.label;
+                const labelSpan = document.createElement("span");
+                labelSpan.textContent = vcNode.label;
+                labelSpan.style.cssText = "flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
 
-  const toggleBtn = document.createElement("span");
-  toggleBtn.textContent = isVisible ? "🙈" : "👁️";
-  toggleBtn.style.cssText = "margin-left: 8px; cursor: pointer;";
+                const toggleBtn = document.createElement("span");
+                toggleBtn.textContent = isVisible ? "🙈" : "👁️";
+                toggleBtn.style.cssText = "cursor: pointer;";
 
-  toggleBtn.addEventListener("click", (ev) => {
-    ev.stopPropagation(); // evita fechar submenu
+                toggleBtn.addEventListener("click", (ev) => {
+                  ev.stopPropagation();
+                  if (nodes.get(vcNode.id)) {
+                    nodes.remove(vcNode.id);
+                    edges.remove(edgeId);
+                    toggleBtn.textContent = "👁️";
+                  } else {
+                    nodes.add(vcNode);
+                    edges.add({ ...e, id: edgeId });
+                    toggleBtn.textContent = "🙈";
+                  }
+                });
 
-    if (nodes.get(vcNode.id)) {
-      nodes.remove(vcNode.id);
-      edges.remove(edgeId);
-      toggleBtn.textContent = "👁️";
-    } else {
-      nodes.add(vcNode);
-      edges.add({ ...e, id: edgeId });
-      toggleBtn.textContent = "🙈";
-    }
-  });
-
-  vcItem.appendChild(labelSpan);
-  vcItem.appendChild(toggleBtn);
-  submenu.appendChild(vcItem);
-});
+                vcItem.appendChild(labelSpan);
+                vcItem.appendChild(toggleBtn);
+                submenu.appendChild(vcItem);
+              });
 
               opt.appendChild(submenu);
             });
-          } 
-          // COMPORTAMENTO PADRÃO para os outros rótulos
-          else {
+          } else {
             opt.addEventListener("click", () => {
               const edgesToToggle = relatedEdges.filter(e => e.label === label);
               const nodeIds = edgesToToggle.map(e => e.to);
@@ -160,12 +181,12 @@
                   if (!edges.get(id)) edges.add({ ...e, id });
                 });
                 expansionState[key] = true;
-                opt.textContent = `🙈 ${label}`;
+                eyeIcon.textContent = "🙈";
               } else {
                 nodeIds.forEach(id => nodes.remove(id));
                 edgesToToggle.forEach(e => edges.remove(`${e.from}_${e.to}`));
                 expansionState[key] = false;
-                opt.textContent = `👁️ ${label}`;
+                eyeIcon.textContent = "👁️";
               }
               setTimeout(updateExpandButtonPosition, 0);
             });
