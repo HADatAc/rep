@@ -429,3 +429,13 @@ rep.tree.entry_point_mappings:
     _controller: '\Drupal\rep\Controller\TreeController::getEntryPointMappings'
   requirements:
     _role: 'content_editor'
+
+rep.search_mt:
+  path: '/rep/search-mt'
+  defaults:
+    _form: '\Drupal\rep\Form\SearchMTForm'
+    _title: 'Search MT'
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+
