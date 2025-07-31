@@ -439,7 +439,7 @@ rep.search_mt:
     _role: 'content_editor'
 
 rep.mt_list_element:
-  path: 'dpl/list/{elementtype}/{keyword}/{page}/{pagesize}'
+  path: 'rep/list/{elementtype}/{keyword}/{page}/{pagesize}'
   defaults:
     _form: '\Drupal\rep\Form\MTListForm'
   requirements:
