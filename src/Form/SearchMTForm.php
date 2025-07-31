@@ -16,7 +16,7 @@ class SearchMTForm extends FormBase {
    * {@inheritdoc}
    */
   public function getFormId() {
-    return 'mt_search_form';
+    return 'searchmtform';
   }
 
   protected $elementtype;
@@ -59,93 +59,120 @@ class SearchMTForm extends FormBase {
     return $this->pagesize = $pgsize;
   }
 
-  /**
-   * {@inheritdoc}
-   */
+  public function iconSubmitForm(array &$form, FormStateInterface $form_state) {
+  $clicked_button = $form_state->getTriggeringElement()['#name'];
+  $form_state->setValue('search_element_type', $clicked_button);
+  $form_state->setValue('search_keyword', '');
+}
+
   public function buildForm(array $form, FormStateInterface $form_state) {
-  $form['#attached']['library'][] = 'std/std_icons';
+    $form['#attached']['library'][] = 'rep/searchmt_icons';
 
-  // GET URL INFO
-  $request = \Drupal::request();
-  $pathInfo = $request->getPathInfo();
-  $pathElements = explode('/', $pathInfo);
 
-  $this->setElementType('study');
-  $this->setKeyword('');
-  $this->setPage(1);
-  $this->setPageSize(9);
+    // RETRIEVE PARAMETERS FROM HTML REQUEST
+    $request = \Drupal::request();
+    $pathInfo = $request->getPathInfo();
+    $pathElements = (explode('/',$pathInfo));
+    $this->setElementType('platform');
+    $this->setKeyword('');
+    $this->setPage(1);
+    $this->setPageSize(12);
 
-  if (count($pathElements) >= 7) {
-    $this->setElementType($pathElements[3]);
-    $this->setKeyword($pathElements[4] === '_' ? '' : $pathElements[4]);
-    $this->setPage((int) $pathElements[5]);
-    $this->setPageSize((int) $pathElements[6]);
-  }
+    // IT IS A CLASS ELEMENT if size of path elements is equal 5
+    if (sizeof($pathElements) == 5) {
 
-  $form['element_icons'] = [
-    '#type' => 'container',
-    '#attributes' => ['class' => ['element-icons-grid-wrapper']],
-  ];
+          // ELEMENT TYPE
+          $this->setElementType($pathElements[4]);
 
-  $form['element_icons']['grid'] = [
-    '#type' => 'container',
-    '#attributes' => ['class' => ['element-icons-grid']],
-  ];
+    // IT IS AN INSTANCE ELEMENT if size of path elements is greate or equal 7
+    } else if (sizeof($pathElements) >= 7) {
 
-  $element_types = [
-    'dsg' => ['label' => 'DSGs', 'image' => 'dsg_placeholder.png'],
-    'dd' => ['label' => 'DDs', 'image' => 'dd_placeholder.png'],
-    'sdd' => ['label' => 'SDDs', 'image' => 'sdd_placeholder.png'],
-    'da' => ['label' => 'DAs', 'image' => 'da_placeholder.png'],
-    'study' => ['label' => 'Studies', 'image' => 'study_placeholder.png'],
-    'studyrole' => ['label' => 'Study Roles', 'image' => 'studyrole_placeholder.png'],
-  ];
+      // ELEMENT TYPE
+      $this->setElementType($pathElements[3]);
 
-    
+      // KEYWORD
+      if ($pathElements[4] == '_') {
+        $this->setKeyword('');
+      } else {
+        $this->setKeyword($pathElements[4]);
+      }
 
-  foreach ($element_types as $type => $info) {
+      // PAGE
+      $this->setPage((int)$pathElements[5]);
 
-    $module_path = \Drupal::request()->getBaseUrl() . '/' . \Drupal::service('extension.list.module')->getPath('rep');
-    $placeholder_image = $module_path . '/images/placeholders/' . $info['image'];
-
-    $button_classes = ['element-icon-button'];
-    if ($type === $this->getElementType()) {
-    $button_classes[] = 'selected';
+      // PAGESIZE
+      $this->setPageSize((int)$pathElements[6]);
     }
 
-    $form['element_icons']['grid'][$type] = [
+    $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument');
+    $preferred_detector = \Drupal::config('rep.settings')->get('preferred_detector');
+
+    $form['element_icons'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['element-icons-grid-wrapper']],
+    ];
+
+    $form['element_icons']['grid'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['element-icons-grid']],
+    ];
+
+
+$element_types = [
+  'ins' => ['label' => 'INS', 'image' => 'ins_placeholder.png'],
+  'dsg' => ['label' => 'DSG', 'image' => 'dsg_placeholder.png'],
+  'dd'  => ['label' => 'DD', 'image' => 'dd_placeholder.png'],
+  'sdd' => ['label' => 'SDD', 'image' => 'sdd_placeholder.png'],
+  'dp2' => ['label' => 'DP2', 'image' => 'dp2_placeholder.png'],
+  'str' => ['label' => 'STR', 'image' => 'str_placeholder.png'],
+];
+
+foreach ($element_types as $type => $info) {
+
+  $module_path = \Drupal::request()->getBaseUrl(). '/' . \Drupal::service('extension.list.module')->getPath('rep');
+  $placeholder_image = $module_path . '/images/placeholders/' . $info['image'];
+  
+  $button_classes = ['element-icon-button'];
+if ($type === $this->getElementType()) {
+  $button_classes[] = 'selected';
+}
+
+  $form['element_icons']['grid'][$type] = [
+    '#type' => 'submit',
+    '#value' => '',
+    '#attributes' => [      
+    'class' => $button_classes,
+    'style' => "background-image: url('$placeholder_image');",
+    'title' => $this->t($info['label']),
+    'aria-label' => $this->t($info['label']),
+],
+    '#name' => $type,
+    '#submit' => ['::iconSubmitForm'],
+    '#limit_validation_errors' => [],
+    '#ajax' => [
+    'callback' => '::ajaxSubmitForm',
+    'progress' => [
+    'type' => 'none',
+  ],
+],
+  ];
+}
+
+    $form['search_keyword'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Keyword'),
+      '#default_value' => $this->getKeyword(),
+    ];
+    $form['search_submit'] = [
       '#type' => 'submit',
-      '#value' => '',
+      '#value' => $this->t('Search'),
       '#attributes' => [
-        'class' => $button_classes,
-        'style' => "background-image: url('$placeholder_image');",
-        'title' => $this->t($info['label']),
-        'aria-label' => $this->t($info['label']),
-      ],
-      '#name' => $type,
-      '#submit' => ['::iconSubmitForm'],
-      '#limit_validation_errors' => [],
-      '#ajax' => [
-        'callback' => '::ajaxSubmitForm',
-        'progress' => ['type' => 'none'],
+        'class' => ['btn', 'btn-primary', 'search-button'],
       ],
     ];
+
+    return $form;
   }
-
-  $form['search_keyword'] = [
-    '#type' => 'textfield',
-    '#title' => $this->t('Keyword'),
-    '#default_value' => $this->getKeyword(),
-  ];
-
-  $form['search_submit'] = [
-    '#type' => 'submit',
-    '#value' => $this->t('Search'),
-    '#attributes' => ['class' => ['btn', 'btn-primary', 'search-button']],
-  ];
-
-  return $form;
-}
 
   /**
    * {@inheritdoc}
@@ -156,7 +183,6 @@ class SearchMTForm extends FormBase {
     }
   }
 
-
   /**
    * {@inheritdoc}
    */
@@ -165,7 +191,22 @@ class SearchMTForm extends FormBase {
     if ($this->getKeyword() == NULL || $this->getKeyword() == '') {
       $this->setKeyword("_");
     }
-    $url = Url::fromRoute('std.list_element');
+
+    // ^TODO: must be removed in the future
+    if ($form_state->getValue('search_element_type') === 'stream2') {
+      $form_state->setValue('search_element_type', 'stream');
+    }
+
+    // IF ELEMENT TYPE IS CLASS
+    if ($form_state->getValue('search_element_type') == 'platform') {
+      $url = Url::fromRoute('rep.browse_tree');
+      $url->setRouteParameter('mode', 'browse');
+      $url->setRouteParameter('elementtype', $form_state->getValue('search_element_type'));
+      return $url;
+    }
+
+    // IF ELEMENT TYPE IS INSTANCE
+    $url = Url::fromRoute('rep.list_element');
     $url->setRouteParameter('elementtype', $form_state->getValue('search_element_type'));
     $url->setRouteParameter('keyword', $this->getKeyword());
     $url->setRouteParameter('page', $this->getPage());
@@ -189,13 +230,8 @@ class SearchMTForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-  $url = $this->redirectUrl($form_state);
-  $form_state->setRedirectUrl($url);
+    $url = $this->redirectUrl($form_state);
+    $form_state->setRedirectUrl($url);
   }
 
-  public function iconSubmitForm(array &$form, FormStateInterface $form_state) {
-  $clicked_button = $form_state->getTriggeringElement()['#name'];
-  $form_state->setValue('search_element_type', $clicked_button);
-  $form_state->setValue('search_keyword', '');
-}
 }
