@@ -218,7 +218,7 @@ reviewer.searchMT:
   title: Search MT
   description: ''
   menu_name: main
-  route_name: '<nolink>'
+  route_name: rep.search_mt
   parent: reviewer.top_level
   weight: 10
   requirements:
