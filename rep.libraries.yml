@@ -154,8 +154,9 @@ qr_code_assets:
     - core/jquery
     - core/drupalSettings
     - core/once
-searchmt_icons:
+
+mtsearch_icons:
   version: 1.x
   css:
     theme:
-      css/searchmt_icons.css: {}
+      css/mtsearch_icons.css: {}

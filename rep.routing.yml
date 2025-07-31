@@ -499,9 +499,18 @@ rep.api.save:
 rep.search_mt:
   path: '/rep/search-mt'
   defaults:
-    _form: '\Drupal\rep\Form\SearchMTForm'
+    _form: '\Drupal\rep\Form\MTSearchForm'
     _title: 'Search MT'
   requirements:
     _permission: 'access content'
     _role: 'content_editor'
 
+rep.mt_list_element:
+  path: 'dpl/list/{elementtype}/{keyword}/{page}/{pagesize}'
+  defaults:
+    _form: '\Drupal\rep\Form\MTListForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'
+  options:
+    no_cache: 'TRUE'
