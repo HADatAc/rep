@@ -142,6 +142,16 @@
                     edges.remove(edgeId);
                     toggleBtn.textContent = "👁️";
                   } else {
+                    // ✅ AQUI — preserva cor personalizada se houver
+                    if (!vcNode.color) {
+                      if (vcNode.shape === 'ellipse') {
+                        vcNode.color = { background: '#28a745', border: '#1e7e34' };
+                        vcNode.font = { color: 'black' };
+                      } else {
+                        vcNode.color = { background: '#007bff', border: '#0056b3' };
+                        vcNode.font = { color: 'white' };
+                      }
+                    }
                     nodes.add(vcNode);
                     edges.add({ ...e, id: edgeId });
                     toggleBtn.textContent = "🙈";
@@ -165,13 +175,23 @@
                   if (!nodes.get(id)) {
                     const restore = extraNodes.find(n => n.id === id);
                     if (restore) {
-                      restore.color = restore.shape === 'ellipse'
-                        ? { background: '#28a745', border: '#1e7e34' }
-                        : { background: '#007bff', border: '#0056b3' };
-                      restore.font = { color: 'white', size: 14 };
                       if (!restore.label.includes('➕')) {
                         restore.label += '\n➕';
                       }
+                      restore.font = restore.font || {};
+                      restore.font.size = 14;
+
+                      // ✅ Preserva cor personalizada
+                      if (!restore.color) {
+                        if (restore.shape === 'ellipse') {
+                          restore.color = { background: '#28a745', border: '#1e7e34' };
+                          restore.font = { color: 'black' };
+                        } else {
+                          restore.color = { background: '#007bff', border: '#0056b3' };
+                          restore.font = { color: 'white' };
+                        }
+                      }
+
                       nodes.add(restore);
                     }
                   }
@@ -223,13 +243,23 @@
           if (!nodeExists) {
             const node = extraNodes.find(n => n.id === nodeId);
             if (node) {
-              node.color = node.shape === 'ellipse'
-                ? { background: '#28a745', border: '#1e7e34' }
-                : { background: '#007bff', border: '#0056b3' };
-              node.font = { color: 'white', size: 14 };
               if (!node.label.includes('➕')) {
                 node.label += '\n➕';
               }
+              node.font = node.font || {};
+              node.font.size = 14;
+
+              // ✅ Aqui também, respeita cor original
+              if (!node.color) {
+                if (node.shape === 'ellipse') {
+                  node.color = { background: '#28a745', border: '#1e7e34' };
+                  node.font = { color: 'black' };
+                } else {
+                  node.color = { background: '#007bff', border: '#0056b3' };
+                  node.font = { color: 'white' };
+                }
+              }
+
               nodes.add(node);
 
               const relatedEdges = extraEdges.filter(e => e.to === nodeId || e.from === nodeId);

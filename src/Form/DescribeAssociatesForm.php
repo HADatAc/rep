@@ -67,15 +67,9 @@ class DescribeAssociatesForm extends FormBase {
   $baseLabel = $element->label ?? 'Element';
 
   // Main node
-  $jsonNodes = json_encode([
-    [
-      'id' => $baseUri,
-      'label' => $baseLabel,
-      'shape' => 'box',
-      'color' => ['background' => '#007bff', 'border' => '#0056b3'],
-      'font' => ['color' => 'white', 'size' => 24]
-    ]
-  ]);
+  $baseNode = Utils::buildNode($baseUri, $baseLabel, $element->typeUri ?? null, 'box', 24);
+$jsonNodes = json_encode([$baseNode]);
+
   $data = (array) $element;
   $graph = \Drupal\rep\Utils::buildGraphFromArray($data, function($uri) use ($api) {
   $response = $api->getUri($uri);
@@ -89,13 +83,12 @@ $linkedEdges = $graph['edges'];
   // Build nodes and edges for all direct properties
   foreach ($objectProperties['objects'] as $property => $value) {
     if (!empty($value->uri)) {
-      $linkedNodes[] = [
-        'id' => $value->uri,
-        'label' => $value->label ?? $property,
-        'shape' => 'box',
-        'color' => ['background' => '#007bff', 'border' => '#0056b3'],
-        'font' => ['color' => 'white']
-      ];
+     $linkedNodes[] = Utils::buildNode(
+  $value->uri,
+  $value->label ?? $property,
+  $value->typeUri ?? null
+);
+
       $linkedEdges[] = [
         'from' => $baseUri,
         'to' => $value->uri,
@@ -112,13 +105,12 @@ $linkedEdges = $graph['edges'];
           $subProps = GenericObject::inspectObject($subElement);
           foreach ($subProps['objects'] as $subProp => $subVal) {
             if (!empty($subVal->uri)) {
-              $linkedNodes[] = [
-                'id' => $subVal->uri,
-                'label' => $subVal->label ?? $subProp,
-                'shape' => 'box',
-                'color' => ['background' => '#007bff', 'border' => '#0056b3'],
-                'font' => ['color' => 'white']
-              ];
+              $linkedNodes[] = Utils::buildNode(
+  $subVal->uri,
+  $subVal->label ?? $subProp,
+  $subVal->typeUri ?? null
+);
+
               $linkedEdges[] = [
                 'from' => $value->uri,
                 'to' => $subVal->uri,
@@ -169,13 +161,12 @@ $linkedEdges = $graph['edges'];
     if (!empty($element->typeUri)) {
   $typeLabel = $element->hascoTypeLabel ?? $element->typeLabel ?? 'Type';
 
-  $linkedNodes[] = [
-    'id' => $element->typeUri,
-    'label' => ucfirst($typeLabel),
-    'shape' => 'box',
-    'color' => ['background' => '#007bff', 'border' => '#0056b3'],
-    'font' => ['color' => 'white']
-  ];
+  $linkedNodes[] = Utils::buildNode(
+  $element->typeUri,
+  ucfirst($typeLabel),
+  $element->typeUri // Assume que OWL::CLAZZ virá aqui se for o caso
+);
+
 
   $linkedEdges[] = [
     'from' => $element->uri,
@@ -195,13 +186,12 @@ if ($element->hascoTypeUri === HASCO::STUDY) {
         $vcId = !empty($vcObj->uri) ? $vcObj->uri : 'vc-' . md5($vcName);
         $vcLabel = $vcObj->label ?? $vcName;
 
-        $linkedNodes[] = [
-  'id' => $vcId,
-  'label' => $vcLabel,
-  'shape' => 'box',
-  'color' => ['background' => '#007bff', 'border' => '#0056b3'],
-  'font' => ['color' => 'white']
-];
+       $linkedNodes[] = Utils::buildNode(
+  $vcId,
+  $vcLabel,
+  $vcObj->typeUri ?? null
+);
+
 
 
         $linkedEdges[] = [

@@ -15,6 +15,7 @@ use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\Component\Render\Markup;
 use Drupal\Component\Utility\Html;
+use Drupal\rep\Vocabulary\OWL;
 
 class Utils {
 
@@ -1395,13 +1396,23 @@ public static function buildGraphFromArray($data, $resolver = null) {
   $edges = [];
 
   // Helper function to create a node
-  $createNode = function ($id, $label, $shape = 'box') {
+  $createNode = function ($id, $label, $typeUri = null) {
+    $shape = 'box';
+    $color = ['background' => '#007bff', 'border' => '#0056b3']; // Azul padrão
+    $font = ['color' => 'white'];
+
+    if ($typeUri === 'http://www.w3.org/2002/07/owl#Class') {
+      $shape = 'ellipse';
+      $color = ['background' => '#28a745', 'border' => '#1e7e34']; // Verde
+      $font = ['color' => 'black'];
+    }
+
     return [
       'id' => $id,
       'label' => $label,
       'shape' => $shape,
-      'color' => ['background' => $shape === 'box' ? '#007bff' : '#28a745', 'border' => $shape === 'box' ? '#0056b3' : '#1e7e34'],
-      'font' => ['color' => $shape === 'box' ? 'white' : 'black'],
+      'color' => $color,
+      'font' => $font,
     ];
   };
 
@@ -1410,15 +1421,17 @@ public static function buildGraphFromArray($data, $resolver = null) {
     while ($item) {
       $id = $item->uri ?? uniqid('node_');
       $label = $item->label ?? 'Unnamed';
-      $nodes[] = $createNode($id, $label);
+      $typeUri = $item->typeUri ?? null;
+      $nodes[] = $createNode($id, $label, $typeUri);
 
       // Component
       if (isset($item->component)) {
         $component = $item->component;
         $componentId = $component->uri ?? uniqid('comp_');
         $componentLabel = $component->label ?? 'Component';
+        $componentType = $component->typeUri ?? null;
 
-        $nodes[] = $createNode($componentId, $componentLabel);
+        $nodes[] = $createNode($componentId, $componentLabel, $componentType);
         $edges[] = ['from' => $id, 'to' => $componentId, 'label' => 'hasComponent', 'arrows' => 'to'];
       }
 
@@ -1427,8 +1440,9 @@ public static function buildGraphFromArray($data, $resolver = null) {
         $stem = $item->detectorStem;
         $stemId = $stem->uri ?? uniqid('stem_');
         $stemLabel = $stem->label ?? 'Detector Stem';
+        $stemType = $stem->typeUri ?? null;
 
-        $nodes[] = $createNode($stemId, $stemLabel);
+        $nodes[] = $createNode($stemId, $stemLabel, $stemType);
         $edges[] = ['from' => $item->component->uri ?? $id, 'to' => $stemId, 'label' => 'hasDetectorStem', 'arrows' => 'to'];
       }
 
@@ -1457,7 +1471,9 @@ public static function buildGraphFromArray($data, $resolver = null) {
   if (isset($data['typeURL']) && is_object($data['typeURL'])) {
     $id = $data['typeURL']->uri ?? uniqid('type_');
     $label = $data['typeURL']->label ?? 'Type';
-    $nodes[] = $createNode($id, $label);
+    $typeUri = $data['typeURL']->typeUri ?? null;
+
+    $nodes[] = $createNode($id, $label, $typeUri);
   }
 
   return [
@@ -1465,6 +1481,7 @@ public static function buildGraphFromArray($data, $resolver = null) {
     'edges' => $edges,
   ];
 }
+
 public static function buildGraphCanvas(array $baseNodes, array $extraNodes, array $extraEdges, array $baseEdges): array {
   return [
     // ✅ 1. PRIMEIRO BLOCO – o canvas dos nós
@@ -1523,5 +1540,20 @@ EOT,
     ],
   ];
 }
+public static function buildNode($uri, $label, $typeUri = null, $shape = 'box', $size = 20) {
+  $color = ['background' => '#007bff', 'border' => '#0056b3']; // Azul padrão
+  if ($typeUri === 'http://www.w3.org/2002/07/owl#Class') {
+    $color = ['background' => '#28a745', 'border' => '#1e7e34']; // Verde se for Class
+  }
+
+  return [
+    'id' => $uri,
+    'label' => $label,
+    'shape' => $shape,
+    'color' => $color,
+    'font' => ['color' => 'white', 'size' => $size],
+  ];
+}
+
 
 }
