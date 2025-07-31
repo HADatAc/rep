@@ -99,11 +99,6 @@ class SearchMTForm extends FormBase {
     'da' => ['label' => 'DAs', 'image' => 'da_placeholder.png'],
     'study' => ['label' => 'Studies', 'image' => 'study_placeholder.png'],
     'studyrole' => ['label' => 'Study Roles', 'image' => 'studyrole_placeholder.png'],
-    'virtualcolumn' => ['label' => 'Virtual Columns', 'image' => 'virtualcolumn_placeholder.png'],
-    'studyobjectcollection' => ['label' => 'Object Collections', 'image' => 'studyobjectcollection_placeholder.png'],
-    'studyobject' => ['label' => 'Study Objects', 'image' => 'studyobject_placeholder.png'],
-    'processstem' => ['label' => 'Process Stems', 'image' => 'processstem_placeholder.png'],
-    'process' => ['label' => 'Processes', 'image' => 'process_placeholder.png'],
   ];
 
     
