@@ -83,7 +83,7 @@ class LandingPage extends FormBase {
           $rows = [
             // Row 1
             [
-              ['project', 'Project(s)', null, 'fa-diagram-project', 'icon'],
+              ['project', 'Project(s)', null, 'fa-list-check', 'icon'],
               ['instrument', 'Instrument(s)', null, 'instrument', 'image'],
               ['instrumentinstance', 'Instrument instance(s)', null, 'instrument_instance', 'image'],
               ['study', 'Study(ies)', null, 'fa-graduation-cap', 'icon'],
@@ -95,7 +95,7 @@ class LandingPage extends FormBase {
               ['organization', 'Organization(s)', null, 'fa-building', 'icon'],
               ['component', 'Component(s)', null, 'fa-puzzle-piece', 'icon'],
               ['componentinstance', 'Component Instance(s)', null, 'component_instance', 'image'],
-              ['objectcollection', 'object Collection(s)', null, 'fa-cubes', 'icon'],
+              ['objectcollection', 'object Collection(s)', null, 'studyobjectcollection', 'images'],
               ['variable', 'Variable(s)', null, 'variable', 'images'],
               ['stream', 'Message Stream(s)', null, 'message_stream', 'images'],
             ],
@@ -104,7 +104,7 @@ class LandingPage extends FormBase {
               ['person', 'Person(s)', null, 'fa-user', 'icon'],
               ['codebook', 'Codebook(s)', null, 'fa-book', 'icon'],
               ['deployment', 'Deployment(s)', null, 'deployment', 'images'],
-              ['object', 'Object(s)', 'studyobject', 'fa-cube', 'icon'],
+              ['object', 'Object(s)', 'studyobject', 'studyobject', 'images'],
               ['semanticvariable', 'Semantic Variable(s)', null, 'semanticvariable', 'images'],
               ['value', 'Value(s)', null, 'value', 'images'],
             ],
