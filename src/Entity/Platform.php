@@ -47,4 +47,36 @@ class Platform {
 
   }
 
+  public static function generateCardOutput($list) {
+
+    // ROOT URL
+    $root_url = \Drupal::request()->getBaseUrl();
+
+    $output = array();
+    foreach ($list as $element) {
+      $uri = ' ';
+      if ($element->uri != NULL) {
+        $uri = $element->uri;
+      }
+      $uri = Utils::namespaceUri($uri);
+      $label = ' ';
+      if ($element->label != NULL) {
+        $label = $element->label;
+      }
+      $version = ' ';
+      if ($element->hasVersion != NULL) {
+        $version = $element->hasVersion;
+      }
+      $output[$element->uri] = [
+        'element_uri' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+        'element_name' => $label,
+        'element_version' => $version,
+        'element_image' => $element->hasImageUri,
+        'element_hascotypeuri' => $element->hascoTypeUri
+      ];
+    }
+    return $output;
+
+  }
+
 }

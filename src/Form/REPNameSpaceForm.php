@@ -70,72 +70,93 @@ use Drupal\rep\Entity\Ontology;
         $header = Ontology::generateHeader();
         $output = Ontology::generateOutput($this->getList());
 
+        $form['actions_wrapper'] = [
+          '#type'       => 'container',
+          '#attributes' => ['class' => ['row', 'gx-3', 'gy-3', 'mb-4']],
+        ];
+
+        $form['actions_wrapper']['col_ontology'] = [
+          '#type'       => 'container',
+          '#attributes' => ['class' => ['col-md-4']],
+        ];
+
+        $form['actions_wrapper']['col_ontology']['namespace_actions'] = [
+          '#type'       => 'fieldset',
+          '#title'      => $this->t('Ontology Actions'),
+          '#attributes' => ['class' => ['p-3', 'border', 'rounded', 'w-100']],
+        ];
+        $form['actions_wrapper']['col_ontology']['namespace_actions']['add_ontology'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Add'),
+          '#name'       => 'add_ontology',
+          '#attributes' => ['class' => ['btn', 'btn-primary', 'mb-2', 'add-element-button']],
+        ];
+        $form['actions_wrapper']['col_ontology']['namespace_actions']['update_namespace'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Update Selected'),
+          '#name'       => 'upd_selected',
+          '#attributes' => ['class' => ['btn', 'btn-warning', 'mb-2', 'save-button']],
+        ];
+        $form['actions_wrapper']['col_ontology']['namespace_actions']['delete_namespace'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Delete Selected'),
+          '#name'       => 'del_selected',
+          '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-button']],
+        ];
+
+        // --------------------------------------------------------------------------
+        // COLUMN 2: All Triples Actions
+        // --------------------------------------------------------------------------
+        $form['actions_wrapper']['col_all_triples'] = [
+          '#type'       => 'container',
+          '#attributes' => ['class' => ['col-md-4']],
+        ];
+        // Reload Triples from All Ontologies with URL (primary)
+        $form['actions_wrapper']['col_all_triples']['triples_all_actions'] = [
+          '#type'       => 'fieldset',
+          '#title'      => $this->t('All Ontologies Triples Actions'),
+          '#attributes' => ['class' => ['p-3', 'border', 'rounded', 'w-100']],
+        ];
+        $form['actions_wrapper']['col_all_triples']['triples_all_actions']['reload_triples_submit'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Reload with URL'),
+          '#name'       => 'reload_all',
+          '#attributes' => ['class' => ['btn', 'btn-primary', 'mb-2', 'reload-button']],
+        ];
+        $form['actions_wrapper']['col_all_triples']['triples_all_actions']['delete_triples_submit'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Delete with URL'),
+          '#name'       => 'delete_all',
+          '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-button']],
+        ];
+
+        // --------------------------------------------------------------------------
+        // COLUMN 3: Selected Triples Actions
+        // --------------------------------------------------------------------------
+       $form['actions_wrapper']['col_selected_triples'] = [
+          '#type'       => 'container',
+          '#attributes' => ['class' => ['col-md-4',]],
+        ];
+        // Reload Triples from Selected Ontologies (primary)
+        $form['actions_wrapper']['col_selected_triples']['triples_selected_actions'] = [
+          '#type'       => 'fieldset',
+          '#title'      => $this->t('Selected Triples Ontologies Actions'),
+          '#attributes' => ['class' => ['p-3', 'border', 'rounded', 'w-100']],
+        ];
+        $form['actions_wrapper']['col_selected_triples']['triples_selected_actions']['reload_triples_selected_submit'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Reload from Selected'),
+          '#name'       => 'reload_selected',
+          '#attributes' => ['class' => ['btn', 'btn-primary', 'mb-2', 'arrow-button']],
+        ];
+        $form['actions_wrapper']['col_selected_triples']['triples_selected_actions']['delete_triples_selected'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Delete from Selected'),
+          '#name'       => 'delete_selected',
+          '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-button']],
+        ];
+
         $form['filler_1'] = [
-            '#type' => 'item',
-            '#title' => $this->t('<br>'),
-        ];
-
-        $form['reload_triples_submit'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Reload Triples from All Ontologies with URL'),
-            '#name' => 'reload',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'reload-button'],
-            ],
-        ];
-
-        $form['reload_triples_selected_submit'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Reload Triples from Selected Ontologies'),
-            '#name' => 'reload_selected',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'arrow-button'],
-            ],
-        ];
-
-        $form['delete_triples_submit'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Delete Triples from All Ontologies with URL'),
-            '#name' => 'delete',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'delete-element-button'],
-            ],
-        ];
-
-        $form['add_ontology'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Add Ontology'),
-            '#name' => 'add_ontology',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'add-element-button'],
-            ],
-        ];
-
-        $form['update_namespace'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Update Selected Ontology'),
-            '#name' => 'upd_selected',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'save-button'],
-            ],
-        ];
-
-        $form['delete_namespace'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Delete Selected Ontologies'),
-            '#name' => 'del_selected',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'delete-element-button'],
-            ],
-        ];
-
-        //$form['reset_namespace'] = [
-        //    '#type' => 'submit',
-        //    '#value' => $this->t('Reset Ontologies'),
-        //    '#name' => 'reset',
-        //];
-
-        $form['filler_2'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
         ];
@@ -149,7 +170,7 @@ use Drupal\rep\Entity\Ontology;
             '#empty' => t('No Ontology found'),
         ];
 
-        $form['filler_3'] = [
+        $form['filler_2'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
         ];
@@ -163,7 +184,7 @@ use Drupal\rep\Entity\Ontology;
             ],
         ];
 
-        $form['filler_4'] = [
+        $form['filler_3'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
         ];

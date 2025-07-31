@@ -83,11 +83,11 @@ $linkedEdges = $graph['edges'];
   // Build nodes and edges for all direct properties
   foreach ($objectProperties['objects'] as $property => $value) {
     if (!empty($value->uri)) {
-     $linkedNodes[] = Utils::buildNode(
-  $value->uri,
-  $value->label ?? $property,
-  $value->typeUri ?? null
-);
+      $linkedNodes[] = Utils::buildNode(
+        $value->uri,
+        $value->label ?? $property,
+        $value->typeUri ?? null
+      );
 
       $linkedEdges[] = [
         'from' => $baseUri,
@@ -106,10 +106,10 @@ $linkedEdges = $graph['edges'];
           foreach ($subProps['objects'] as $subProp => $subVal) {
             if (!empty($subVal->uri)) {
               $linkedNodes[] = Utils::buildNode(
-  $subVal->uri,
-  $subVal->label ?? $subProp,
-  $subVal->typeUri ?? null
-);
+                $subVal->uri,
+                $subVal->label ?? $subProp,
+                $subVal->typeUri ?? null
+              );
 
               $linkedEdges[] = [
                 'from' => $value->uri,
@@ -134,8 +134,14 @@ $linkedEdges = $graph['edges'];
                 'arrows' => 'to',
                 'font' => ['align' => 'middle']
               ];
+              // THIS IS THE PROCESSING OF GENERAL OBJECT PROPERTIES
+              $prettyName = DescribeForm::prettyProperty($propertyName);
+              $link = ' ';
+              if (isset($propertyValue->label) && isset($propertyValue->uri) &&
+                 ($propertyValue->label != NULL) && ($propertyValue->uri != NULL)) {
+                $link = Utils::link(UTILS::sanitizeString($propertyValue->label),$propertyValue->uri);
+              }
             }
-          }
         }
       }
     } elseif (!empty($value->label)) {
@@ -158,15 +164,20 @@ $linkedEdges = $graph['edges'];
     }
   }
   // Add type_uri node
-    if (!empty($element->typeUri)) {
-  $typeLabel = $element->hascoTypeLabel ?? $element->typeLabel ?? 'Type';
+  if (!empty($element->typeUri)) {
+    $typeLabel = $element->hascoTypeLabel ?? $element->typeLabel ?? 'Type';
 
-  $linkedNodes[] = Utils::buildNode(
-  $element->typeUri,
-  ucfirst($typeLabel),
-  $element->typeUri // Assume que OWL::CLAZZ virá aqui se for o caso
-);
+    $linkedNodes[] = Utils::buildNode(
+      $element->typeUri,
+      ucfirst($typeLabel),
+      $element->typeUri // Assume que OWL::CLAZZ virá aqui se for o caso
+    );
 
+    $form[$propertyName] = [
+      '#type' => 'markup',
+      '#markup' => $this->t("<b>".$prettyName . "</b>: " . UTILS::sanitizeString($list_items) ."<br>"),
+    ];
+  }
 
   $linkedEdges[] = [
     'from' => $element->uri,
