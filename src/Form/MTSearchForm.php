@@ -10,13 +10,13 @@ use Drupal\Core\Ajax\RedirectCommand;
 use Drupal\rep\Vocabulary\HASCO;
 use Drupal\rep\Vocabulary\VSTOI;
 
-class SearchMTForm extends FormBase {
+class MTSearchForm extends FormBase {
 
   /**
    * {@inheritdoc}
    */
   public function getFormId() {
-    return 'searchmtform';
+    return 'mtsearchform';
   }
 
   protected $elementtype;
@@ -66,7 +66,7 @@ class SearchMTForm extends FormBase {
 }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $form['#attached']['library'][] = 'rep/searchmt_icons';
+    $form['#attached']['library'][] = 'rep/mtsearch_icons';
 
 
     // RETRIEVE PARAMETERS FROM HTML REQUEST
@@ -206,7 +206,7 @@ if ($type === $this->getElementType()) {
     }
 
     // IF ELEMENT TYPE IS INSTANCE
-    $url = Url::fromRoute('rep.list_element');
+    $url = Url::fromRoute('rep.mt_list_element');
     $url->setRouteParameter('elementtype', $form_state->getValue('search_element_type'));
     $url->setRouteParameter('keyword', $this->getKeyword());
     $url->setRouteParameter('page', $this->getPage());
