@@ -84,15 +84,7 @@
           }
 
           if ( isset($this->getElement()->hasImageUri) ) {
-            // hascoTypeLabel
-            // if ($this->getElement()->typeLabel)
-            //   $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->typeLabel));
-            // else if ($this->getElement()->hascoTypeLabel)
-            //   $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->hascoTypeLabel));
-            // else
             $placeholder_image = UTILS::placeholderImage($this->getElement()->hascoTypeUri,$this->getElement()->typeLabel, '/');
-
-            // $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/'.$elementPlaceholder.'_placeholder.png';
             $hasImageUri = (isset($this->getElement()->hasImageUri) && !empty($this->getElement()->hasImageUri))
                             ? Utils::getAPIImage($this->getElement()->uri, $this->getElement()->hasImageUri, $placeholder_image)
                             : $placeholder_image;
@@ -137,14 +129,19 @@
             '#type' => 'markup',
             '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
           ];
-
-          // kint($this->getElement());
           $typeUri = $this->getElement()->typeUri;
 
-          if ($typeUri)
+          if ($typeUri && $this->getElement()->typeLabel)
             $form['element_type'] = [
               '#type' => 'markup',
-              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . "<br><br>"),
+              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . '<span class="graph-toggle" data-node="' . $typeUri . '" 
+              style="cursor:pointer;" title="Show/Hide node">👁️</span><br><br>'),
+            ];
+
+          if (!$typeUri && $this->getElement()->hascoTypeUri && $this->getElement()->hascoTypeLabel)
+            $form['element_hascoType'] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>HascoType URI</b>: " . Utils::link($this->getElement()->hascoTypeLabel,$this->getElement()->hascoTypeUri) . "<br><br>"),
             ];
 
           if ($this->getElement()->hascoTypeUri)

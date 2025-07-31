@@ -79,6 +79,7 @@ use Drupal\rep\Entity\Ontology;
           '#type'       => 'container',
           '#attributes' => ['class' => ['col-md-4']],
         ];
+
         $form['actions_wrapper']['col_ontology']['namespace_actions'] = [
           '#type'       => 'fieldset',
           '#title'      => $this->t('Ontology Actions'),
