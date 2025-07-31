@@ -74,42 +74,144 @@
         labels.forEach(label => {
           const key = `${selectedNodeId}_${label}`;
           const isExpanded = expansionState[key] || false;
+
           const opt = document.createElement("div");
-          opt.textContent = `${isExpanded ? "🙈" : "👁️"} ${label}`;
-          opt.style.cssText = "cursor:pointer;margin:2px 0;";
-          opt.addEventListener("click", () => {
-            const edgesToToggle = relatedEdges.filter(e => e.label === label);
-            const nodeIds = edgesToToggle.map(e => e.to);
-            if (!expansionState[key]) {
-              nodeIds.forEach(id => {
-                if (!nodes.get(id)) {
-                  const restore = extraNodes.find(n => n.id === id);
-                  if (restore) {
-                    restore.color = restore.shape === 'ellipse'
-                      ? { background: '#28a745', border: '#1e7e34' }
-                      : { background: '#007bff', border: '#0056b3' };
-                    restore.font = { color: 'white', size: 14 };
-                    if (!restore.label.includes('➕')) {
-                      restore.label += '\n➕';
+          opt.style.cssText = `
+            cursor: pointer;
+            margin: 2px 0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-width: 200px;
+          `;
+
+          const labelSpan = document.createElement("span");
+          labelSpan.textContent = label;
+
+          const eyeIcon = document.createElement("span");
+          eyeIcon.textContent = isExpanded ? "🙈" : "👁️";
+
+          opt.appendChild(labelSpan);
+          opt.appendChild(eyeIcon);
+
+          if (label === 'hasVirtualColumn') {
+            opt.addEventListener("click", () => {
+              if (opt.querySelector(".submenu")) {
+                opt.querySelector(".submenu").remove();
+                return;
+              }
+
+              const submenu = document.createElement("div");
+              submenu.className = "submenu";
+              submenu.style.cssText = "position:absolute; left:120px; top:0; background:#f1f1f1; border:1px solid #ccc; padding:5px; border-radius:4px; box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;";
+
+              const vcEdges = relatedEdges.filter(e => e.label === label);
+
+              vcEdges.forEach(e => {
+                const vcNode = extraNodes.find(n => n.id === e.to);
+                if (!vcNode) return;
+
+                const edgeId = `${e.from}_${e.to}`;
+                const isVisible = nodes.get(vcNode.id) !== null;
+
+                const vcItem = document.createElement("div");
+                vcItem.style.cssText = `
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  gap: 12px;
+                  padding: 4px 6px;
+                  min-width: 240px;
+                  cursor: default;
+                `;
+
+                const labelSpan = document.createElement("span");
+                labelSpan.textContent = vcNode.label;
+                labelSpan.style.cssText = "flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+
+                const toggleBtn = document.createElement("span");
+                toggleBtn.textContent = isVisible ? "🙈" : "👁️";
+                toggleBtn.style.cssText = "cursor: pointer;";
+
+                toggleBtn.addEventListener("click", (ev) => {
+                  ev.stopPropagation();
+                  if (nodes.get(vcNode.id)) {
+                    nodes.remove(vcNode.id);
+                    edges.remove(edgeId);
+                    toggleBtn.textContent = "👁️";
+                  } else {
+                    // ✅ AQUI — preserva cor personalizada se houver
+                    if (!vcNode.color) {
+                      if (vcNode.shape === 'ellipse') {
+                        vcNode.color = { background: '#28a745', border: '#1e7e34' };
+                        vcNode.font = { color: 'black' };
+                      } else {
+                        vcNode.color = { background: '#007bff', border: '#0056b3' };
+                        vcNode.font = { color: 'white' };
+                      }
                     }
-                    nodes.add(restore);
+                    nodes.add(vcNode);
+                    edges.add({ ...e, id: edgeId });
+                    toggleBtn.textContent = "🙈";
                   }
-                }
+                });
+
+                vcItem.appendChild(labelSpan);
+                vcItem.appendChild(toggleBtn);
+                submenu.appendChild(vcItem);
               });
-              edgesToToggle.forEach(e => {
-                const id = `${e.from}_${e.to}`;
-                if (!edges.get(id)) edges.add({ ...e, id });
-              });
-              expansionState[key] = true;
-              opt.textContent = `🙈 ${label}`;
-            } else {
-              nodeIds.forEach(id => nodes.remove(id));
-              edgesToToggle.forEach(e => edges.remove(`${e.from}_${e.to}`));
-              expansionState[key] = false;
-              opt.textContent = `👁️ ${label}`;
-            }
-            setTimeout(updateExpandButtonPosition, 0);
-          });
+
+              opt.appendChild(submenu);
+            });
+          } else {
+            opt.addEventListener("click", () => {
+              const edgesToToggle = relatedEdges.filter(e => e.label === label);
+              const nodeIds = edgesToToggle.map(e => e.to);
+
+              if (!expansionState[key]) {
+                nodeIds.forEach(id => {
+                  if (!nodes.get(id)) {
+                    const restore = extraNodes.find(n => n.id === id);
+                    if (restore) {
+                      if (!restore.label.includes('➕')) {
+                        restore.label += '\n➕';
+                      }
+                      restore.font = restore.font || {};
+                      restore.font.size = 14;
+
+                      // ✅ Preserva cor personalizada
+                      if (!restore.color) {
+                        if (restore.shape === 'ellipse') {
+                          restore.color = { background: '#28a745', border: '#1e7e34' };
+                          restore.font = { color: 'black' };
+                        } else {
+                          restore.color = { background: '#007bff', border: '#0056b3' };
+                          restore.font = { color: 'white' };
+                        }
+                      }
+
+                      nodes.add(restore);
+                    }
+                  }
+                });
+                edgesToToggle.forEach(e => {
+                  const id = `${e.from}_${e.to}`;
+                  if (!edges.get(id)) edges.add({ ...e, id });
+                });
+                expansionState[key] = true;
+                eyeIcon.textContent = "🙈";
+              } else {
+                nodeIds.forEach(id => nodes.remove(id));
+                edgesToToggle.forEach(e => edges.remove(`${e.from}_${e.to}`));
+                expansionState[key] = false;
+                eyeIcon.textContent = "👁️";
+              }
+              setTimeout(updateExpandButtonPosition, 0);
+            });
+          }
+
           expandMenu.appendChild(opt);
         });
 
@@ -131,7 +233,6 @@
         network.emit("click", { nodes: [baseNodeId] });
       });
 
-      // ✅ Clique externo em 👁️/🙈 para mostrar/ocultar nó
       document.body.addEventListener("click", function (event) {
         if (event.target.classList.contains("graph-toggle")) {
           const nodeId = event.target.getAttribute("data-node");
@@ -142,13 +243,23 @@
           if (!nodeExists) {
             const node = extraNodes.find(n => n.id === nodeId);
             if (node) {
-              node.color = node.shape === 'ellipse'
-                ? { background: '#28a745', border: '#1e7e34' }
-                : { background: '#007bff', border: '#0056b3' };
-              node.font = { color: 'white', size: 14 };
               if (!node.label.includes('➕')) {
                 node.label += '\n➕';
               }
+              node.font = node.font || {};
+              node.font.size = 14;
+
+              // ✅ Aqui também, respeita cor original
+              if (!node.color) {
+                if (node.shape === 'ellipse') {
+                  node.color = { background: '#28a745', border: '#1e7e34' };
+                  node.font = { color: 'black' };
+                } else {
+                  node.color = { background: '#007bff', border: '#0056b3' };
+                  node.font = { color: 'white' };
+                }
+              }
+
               nodes.add(node);
 
               const relatedEdges = extraEdges.filter(e => e.to === nodeId || e.from === nodeId);
@@ -167,6 +278,13 @@
             edges.remove(edgeIds);
             event.target.innerText = "👁️";
           }
+        }
+      });
+
+      document.addEventListener("click", function (e) {
+        if (!expandMenu.contains(e.target)) {
+          const submenu = document.querySelector(".submenu");
+          if (submenu) submenu.remove();
         }
       });
 
