@@ -125,7 +125,7 @@ rdf_graph_editor:
   dependencies:
     - core/drupalSettings
     - core/jquery
-    
+
 describe_associates:
   version: 1.x
   js:
@@ -145,7 +145,7 @@ qr_code_assets:
   version: 1.x
   js:
     https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js: { type: external }
-    js/qr_code_generator.js: {} 
+    js/qr_code_generator.js: {}
   css:
     theme:
       css/qr_code_generator.css: {}
@@ -154,3 +154,8 @@ qr_code_assets:
     - core/jquery
     - core/drupalSettings
     - core/once
+searchmt_icons:
+  version: 1.x
+  css:
+    theme:
+      css/searchmt_icons.css: {}
