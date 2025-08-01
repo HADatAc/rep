@@ -192,19 +192,6 @@ if ($type === $this->getElementType()) {
       $this->setKeyword("_");
     }
 
-    // ^TODO: must be removed in the future
-    if ($form_state->getValue('search_element_type') === 'stream2') {
-      $form_state->setValue('search_element_type', 'stream');
-    }
-
-    // IF ELEMENT TYPE IS CLASS
-    if ($form_state->getValue('search_element_type') == 'platform') {
-      $url = Url::fromRoute('rep.browse_tree');
-      $url->setRouteParameter('mode', 'browse');
-      $url->setRouteParameter('elementtype', $form_state->getValue('search_element_type'));
-      return $url;
-    }
-
     // IF ELEMENT TYPE IS INSTANCE
     $url = Url::fromRoute('rep.mt_list_element');
     $url->setRouteParameter('elementtype', $form_state->getValue('search_element_type'));
