@@ -1510,12 +1510,11 @@ public static function buildGraphFromArray($data, $resolver = null) {
     'nodes' => $nodes,
     'edges' => $edges,
   ];
+}
 
   // remove @XXXX from the end of the text
-  public static function sanitizeString($text) {
-    return preg_replace('/@.*$/', '', $text);
-  }
-
+public static function sanitizeString($text) {
+  return preg_replace('/@.*$/', '', $text);
 }
 
 public static function buildGraphCanvas(array $baseNodes, array $extraNodes, array $extraEdges, array $baseEdges): array {

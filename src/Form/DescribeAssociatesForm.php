@@ -172,11 +172,6 @@ $linkedEdges = $graph['edges'];
       ucfirst($typeLabel),
       $element->typeUri // Assume que OWL::CLAZZ virá aqui se for o caso
     );
-
-    $form[$propertyName] = [
-      '#type' => 'markup',
-      '#markup' => $this->t("<b>".$prettyName . "</b>: " . UTILS::sanitizeString($list_items) ."<br>"),
-    ];
   }
 
   $linkedEdges[] = [
@@ -226,7 +221,7 @@ $form['my_network_graph'] = Utils::buildGraphCanvas(
     json_decode($jsonNodes, true), // baseNodes
     $linkedNodes,                  // extraNodes
     $linkedEdges,                  // extraEdges
-    []                             // baseEdges 
+    []                             // baseEdges
 );
 
 
@@ -388,7 +383,7 @@ $form['my_network_graph'] = Utils::buildGraphCanvas(
     }
     return $form;
   }
-  
+
   /**
    * Public reusable method to build graph data from a generic object.
    */
