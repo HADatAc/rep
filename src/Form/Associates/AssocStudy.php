@@ -301,7 +301,7 @@ class AssocStudy {
             'soc_reference' => $soc->virtualColumn->socreference,
             'soc_role_label' => $soc->virtualColumn->label,
             'soc_has_scope' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->hasScopeUri).'">'.
-            $soc->label.'</a>'),
+            Utils::namespaceUri($soc->hasScope->uri).'</a>'),
             'soc_has_space_scopes' => t($spaceScopes),
             'soc_has_time_scopes' => t($timeScopes),
             'soc_num_objects' => $soc->numOfObjects,
