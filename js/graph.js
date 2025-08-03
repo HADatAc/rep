@@ -8,16 +8,8 @@
 
       container.dataset.loaded = "true";
 
-      const eyeSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-class="lucide lucide-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
-
-      const eyeOffSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-class="lucide lucide-eye-off"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.39 
-21.39 0 0 1 5.06-6.06M9.88 9.88a3 3 0 1 0 4.24 4.24M3 3l18 18"/>
-<path d="M10.73 5.08A10.94 10.94 0 0 1 12 4c7 0 11 
-8 11 8a21.27 21.27 0 0 1-2.82 4.17"/></svg>`;
+      const eyeSVG = `<i class="fa fa-eye"></i>`;
+      const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
 
       const nodes = new vis.DataSet(drupalSettings.graphData.nodes);
       const edges = new vis.DataSet(drupalSettings.graphData.edges);
@@ -176,7 +168,7 @@ class="lucide lucide-eye-off"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0
               opt.appendChild(submenu);
             });
 
-                   } else {
+          } else {
             opt.addEventListener("click", () => {
               const edgesToToggle = relatedEdges.filter(e => e.label === label);
               const nodeIds = edgesToToggle.map(e => e.to);
@@ -242,10 +234,11 @@ class="lucide lucide-eye-off"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0
       network.once("afterDrawing", () => {
         network.emit("click", { nodes: [baseNodeId] });
       });
+
       document.body.addEventListener("click", function (event) {
         const toggleWrapper = event.target.closest(".graph-toggle");
         if (toggleWrapper) {
-  const nodeId = toggleWrapper.getAttribute("data-node");
+          const nodeId = toggleWrapper.getAttribute("data-node");
           if (!nodeId) return;
 
           const nodeExists = nodes.get(nodeId);
@@ -270,7 +263,6 @@ class="lucide lucide-eye-off"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0
               }
 
               nodes.add(node);
-
               const relatedEdges = extraEdges.filter(e => e.to === nodeId || e.from === nodeId);
               relatedEdges.forEach(edge => {
                 const edgeId = `${edge.from}_${edge.to}`;
@@ -279,13 +271,13 @@ class="lucide lucide-eye-off"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0
                 }
               });
 
-              event.target.innerHTML = eyeOffSVG;
+              toggleWrapper.innerHTML = eyeOffSVG;
             }
           } else {
             nodes.remove({ id: nodeId });
             const edgeIds = edges.getIds().filter(id => id.includes(nodeId));
             edges.remove(edgeIds);
-            event.target.innerHTML = eyeSVG;
+            toggleWrapper.innerHTML = eyeSVG;
           }
         }
       });
@@ -304,4 +296,3 @@ class="lucide lucide-eye-off"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0
     }
   };
 })(jQuery, Drupal, drupalSettings);
-

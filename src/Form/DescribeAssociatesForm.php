@@ -33,6 +33,8 @@ class DescribeAssociatesForm extends FormBase {
 
   //Code from rep.libraries.yml
   $form['#attached']['library'][] = 'rep/describe_associates';
+  $form['#attached']['library'][] = 'rep/fontawesome';
+
 
   // Get the current URL path and decode the URI
   $request = \Drupal::request();
@@ -238,12 +240,13 @@ $form['my_network_graph'] = Utils::buildGraphCanvas(
     $prettyName = DescribeForm::prettyProperty($propertyName);
     $label = $propertyValue->label ?? '';
     $nodeId = $propertyValue->uri ?? ($baseUri . '-' . $propertyName);
-    $form[$propertyName] = [
+   $form[$propertyName] = [
   '#type' => 'markup',
   '#markup' => '<b>' . $prettyName . '</b>: '
     . Utils::link($label, $propertyValue->uri)
-    . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Show/Hide node'>👁️</span><br><br>",
-    ];
+    . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Show/Hide node'><i class='fa fa-eye'></i></span><br><br>",
+];
+
   }
 }
 // Render array-based values

@@ -19,6 +19,7 @@ class AssocStudy {
     /*
     *    PLACE's VIRTUAL COLUMNS
     */
+   // PLACE's VIRTUAL COLUMNS
     $rawVCs = $api->getStudyVCs($element->uri);
     if ($rawVCs != NULL) {
       $vcs = $api->parseObjectResponse($rawVCs, 'getStudyVCs');
@@ -35,7 +36,7 @@ class AssocStudy {
           $form['virtualcolumns'][$propertyName] = [
             '#type' => 'markup',
             '#markup' => '<li>' . Utils::link($label, $uri)
-              . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Show/Hide node'>👁️</span></li>",
+              . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Mostrar/Ocultar nó'><i class='fa fa-eye'></i></span></li>",
           ];
         }
         $form['virtualcolumns']['endVCs'] = [
