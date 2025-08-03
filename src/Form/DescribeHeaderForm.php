@@ -132,11 +132,22 @@
           $typeUri = $this->getElement()->typeUri;
 
           if ($typeUri && $this->getElement()->typeLabel)
-            $form['element_type'] = [
-              '#type' => 'markup',
-              '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . '<span class="graph-toggle" data-node="' . $typeUri . '" 
-              style="cursor:pointer;" title="Show/Hide node">👁️</span><br><br>'),
-            ];
+           $form['element_type'] = [
+  '#type' => 'inline_template',
+  '#template' => '<b>Type URI</b>: <a href="{{ uri }}" target="_blank">{{ uri }}</a> 
+  <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+    class="lucide lucide-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/></svg>
+  </span><br><br>',
+  '#context' => [
+    'uri' => $this->getElement()->typeUri,
+  ],
+];
+
+
+
 
           if (!$typeUri && $this->getElement()->hascoTypeUri && $this->getElement()->hascoTypeLabel)
             $form['element_hascoType'] = [

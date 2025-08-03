@@ -8,6 +8,17 @@
 
       container.dataset.loaded = "true";
 
+      const eyeSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+class="lucide lucide-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+
+      const eyeOffSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+class="lucide lucide-eye-off"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.39 
+21.39 0 0 1 5.06-6.06M9.88 9.88a3 3 0 1 0 4.24 4.24M3 3l18 18"/>
+<path d="M10.73 5.08A10.94 10.94 0 0 1 12 4c7 0 11 
+8 11 8a21.27 21.27 0 0 1-2.82 4.17"/></svg>`;
+
       const nodes = new vis.DataSet(drupalSettings.graphData.nodes);
       const edges = new vis.DataSet(drupalSettings.graphData.edges);
       const extraNodes = drupalSettings.graphData.extraNodes;
@@ -91,7 +102,7 @@
           labelSpan.textContent = label;
 
           const eyeIcon = document.createElement("span");
-          eyeIcon.textContent = isExpanded ? "🙈" : "👁️";
+          eyeIcon.innerHTML = isExpanded ? eyeOffSVG : eyeSVG;
 
           opt.appendChild(labelSpan);
           opt.appendChild(eyeIcon);
@@ -132,7 +143,7 @@
                 labelSpan.style.cssText = "flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
 
                 const toggleBtn = document.createElement("span");
-                toggleBtn.textContent = isVisible ? "🙈" : "👁️";
+                toggleBtn.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
                 toggleBtn.style.cssText = "cursor: pointer;";
 
                 toggleBtn.addEventListener("click", (ev) => {
@@ -140,9 +151,8 @@
                   if (nodes.get(vcNode.id)) {
                     nodes.remove(vcNode.id);
                     edges.remove(edgeId);
-                    toggleBtn.textContent = "👁️";
+                    toggleBtn.innerHTML = eyeSVG;
                   } else {
-                    // ✅ AQUI — preserva cor personalizada se houver
                     if (!vcNode.color) {
                       if (vcNode.shape === 'ellipse') {
                         vcNode.color = { background: '#28a745', border: '#1e7e34' };
@@ -154,7 +164,7 @@
                     }
                     nodes.add(vcNode);
                     edges.add({ ...e, id: edgeId });
-                    toggleBtn.textContent = "🙈";
+                    toggleBtn.innerHTML = eyeOffSVG;
                   }
                 });
 
@@ -165,7 +175,8 @@
 
               opt.appendChild(submenu);
             });
-          } else {
+
+                   } else {
             opt.addEventListener("click", () => {
               const edgesToToggle = relatedEdges.filter(e => e.label === label);
               const nodeIds = edgesToToggle.map(e => e.to);
@@ -181,7 +192,6 @@
                       restore.font = restore.font || {};
                       restore.font.size = 14;
 
-                      // ✅ Preserva cor personalizada
                       if (!restore.color) {
                         if (restore.shape === 'ellipse') {
                           restore.color = { background: '#28a745', border: '#1e7e34' };
@@ -201,12 +211,12 @@
                   if (!edges.get(id)) edges.add({ ...e, id });
                 });
                 expansionState[key] = true;
-                eyeIcon.textContent = "🙈";
+                eyeIcon.innerHTML = eyeOffSVG;
               } else {
                 nodeIds.forEach(id => nodes.remove(id));
                 edgesToToggle.forEach(e => edges.remove(`${e.from}_${e.to}`));
                 expansionState[key] = false;
-                eyeIcon.textContent = "👁️";
+                eyeIcon.innerHTML = eyeSVG;
               }
               setTimeout(updateExpandButtonPosition, 0);
             });
@@ -232,10 +242,10 @@
       network.once("afterDrawing", () => {
         network.emit("click", { nodes: [baseNodeId] });
       });
-
       document.body.addEventListener("click", function (event) {
-        if (event.target.classList.contains("graph-toggle")) {
-          const nodeId = event.target.getAttribute("data-node");
+        const toggleWrapper = event.target.closest(".graph-toggle");
+        if (toggleWrapper) {
+  const nodeId = toggleWrapper.getAttribute("data-node");
           if (!nodeId) return;
 
           const nodeExists = nodes.get(nodeId);
@@ -249,7 +259,6 @@
               node.font = node.font || {};
               node.font.size = 14;
 
-              // ✅ Aqui também, respeita cor original
               if (!node.color) {
                 if (node.shape === 'ellipse') {
                   node.color = { background: '#28a745', border: '#1e7e34' };
@@ -270,13 +279,13 @@
                 }
               });
 
-              event.target.innerText = "🙈";
+              event.target.innerHTML = eyeOffSVG;
             }
           } else {
             nodes.remove({ id: nodeId });
             const edgeIds = edges.getIds().filter(id => id.includes(nodeId));
             edges.remove(edgeIds);
-            event.target.innerText = "👁️";
+            event.target.innerHTML = eyeSVG;
           }
         }
       });
@@ -295,3 +304,4 @@
     }
   };
 })(jQuery, Drupal, drupalSettings);
+
