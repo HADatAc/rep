@@ -184,6 +184,7 @@ $linkedEdges = $graph['edges'];
     'font' => ['align' => 'middle']
   ];
 }
+
 // Add virtual columns to the graph
 if ($element->hascoTypeUri === HASCO::STUDY) {
   $vcRaw = $api->getStudyVCs($element->uri);
@@ -199,9 +200,6 @@ if ($element->hascoTypeUri === HASCO::STUDY) {
   $vcLabel,
   $vcObj->typeUri ?? null
 );
-
-
-
         $linkedEdges[] = [
           'from' => $element->uri,
           'to' => $vcId,
@@ -225,8 +223,6 @@ $form['my_network_graph'] = Utils::buildGraphCanvas(
     $linkedEdges,                  // extraEdges
     []                             // baseEdges
 );
-
-
 // Graph title
     $form['my_network_graph_title'] = [
       '#type' => 'item',

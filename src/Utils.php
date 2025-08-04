@@ -1506,6 +1506,22 @@ public static function buildGraphFromArray($data, $resolver = null) {
     $nodes[] = $createNode($id, $label, $typeUri);
   }
 
+  // ✅ Add hascoTypeUri node and edge (CORRETAMENTE DENTRO DA FUNÇÃO)
+  // ✅ CORRETO: adicionar hascoTypeUri apenas se realmente existir
+if (!empty($data['hascoTypeUri']) && is_string($data['hascoTypeUri'])) {
+  $hascoTypeUri = $data['hascoTypeUri'];
+
+  if (!isset($data['typeUri']) || $data['typeUri'] !== $hascoTypeUri) {
+   $shortLabel = preg_match('/#([^#\/]+)$/', $hascoTypeUri, $matches) ? $matches[1] : basename($hascoTypeUri);
+    $nodes[] = $createNode($hascoTypeUri, $shortLabel);
+    $edges[] = [
+      'from' => $data['uri'] ?? 'root',
+      'to' => $hascoTypeUri,
+      'label' => 'hascoTypeUri',
+      'arrows' => 'to'
+    ];
+  }
+}
   return [
     'nodes' => $nodes,
     'edges' => $edges,
@@ -1592,3 +1608,4 @@ public static function buildNode($uri, $label, $typeUri = null, $shape = 'box', 
 
 
 }
+

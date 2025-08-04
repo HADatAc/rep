@@ -14,7 +14,31 @@
       const nodes = new vis.DataSet(drupalSettings.graphData.nodes);
       const edges = new vis.DataSet(drupalSettings.graphData.edges);
       const extraNodes = drupalSettings.graphData.extraNodes;
-      const extraEdges = drupalSettings.graphData.extraEdges;
+      let extraEdges = drupalSettings.graphData.extraEdges; // << alterado de const para let
+
+      // 🔁 Transformar loops (from === to) em conexões com nó virtual
+      const loopEdges = extraEdges.filter(e => e.from === e.to);
+      loopEdges.forEach(e => {
+        const virtualNodeId = `${e.from}_loop_virtual_${e.label}`;
+        if (!extraNodes.some(n => n.id === virtualNodeId)) {
+          extraNodes.push({
+            id: virtualNodeId,
+            label: e.label,
+            shape: 'ellipse',
+            font: { color: 'black' },
+            color: { background: '#ffc107', border: '#e0a800' }
+          });
+        }
+        // Substituir a aresta de loop por aresta com destino ao nó virtual
+        extraEdges.push({
+          from: e.from,
+          to: virtualNodeId,
+          label: e.label
+        });
+      });
+      // Remover os loops originais
+      extraEdges = extraEdges.filter(e => e.from !== e.to);
+
 
       const options = {
         nodes: {
@@ -71,7 +95,23 @@
 
         selectedNodeId = params.nodes[0];
         const relatedEdges = extraEdges.filter(e => e.from === selectedNodeId);
-        const labels = [...new Set(relatedEdges.map(e => e.label))];
+        let labels = [...new Set(
+  relatedEdges
+    .filter(e => extraNodes.some(n => n.id === e.to))
+    .map(e => e.label)
+)];
+
+// Adiciona "hascoTypeUri" se houver aresta válida e destino existente
+const hasHascoTypeUriEdge = extraEdges.some(e =>
+  e.label === 'hascoTypeUri' &&
+  e.from === selectedNodeId &&
+  extraNodes.find(n => n.id === e.to)
+);
+if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
+  labels.push('hascoTypeUri');
+}
+
+
         expandMenu.innerHTML = '';
 
         labels.forEach(label => {
@@ -195,6 +235,10 @@
                       }
 
                       nodes.add(restore);
+                      selectedNodeId = restore.id;
+                      network.selectNodes([restore.id]);
+                      network.emit("click", { nodes: [restore.id] });
+
                     }
                   }
                 });
@@ -205,8 +249,30 @@
                 expansionState[key] = true;
                 eyeIcon.innerHTML = eyeOffSVG;
               } else {
-                nodeIds.forEach(id => nodes.remove(id));
-                edgesToToggle.forEach(e => edges.remove(`${e.from}_${e.to}`));
+                nodeIds.forEach(id => {
+                  if (id.includes('_loop_virtual_')) return; // nunca remover nó virtual
+
+                  const node = nodes.get(id);
+
+                  // ⚠️ Não remover se tiver arestas que apontam para ele (ex: de loop virtual)
+                  const isTargetOfOtherEdges = extraEdges.some(e => e.to === id && e.from !== id);
+
+                  if (extraNodes.some(n => n.id === id) && node && !isTargetOfOtherEdges) {
+                    nodes.remove(id);
+                  }
+                });
+              edgesToToggle.forEach(e => {
+                const edgeId = `${e.from}_${e.to}`;
+                if (e.from === e.to) {
+                  // Aresta de loop — não remova se o nó ainda estiver visível
+                  if (nodes.get(e.from)) {
+                    return;
+                  }
+                }
+                if (edges.get(edgeId)) {
+                  edges.remove(edgeId);
+                }
+              });
                 expansionState[key] = false;
                 eyeIcon.innerHTML = eyeSVG;
               }

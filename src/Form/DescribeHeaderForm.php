@@ -138,10 +138,17 @@ class DescribeHeaderForm extends FormBase {
 
       if ($this->getElement()->hascoTypeUri) {
         $form['element_hascoType'] = [
-          '#type' => 'markup',
-          '#markup' => $this->t("<b>HascoType URI</b>: " . Utils::link($this->getElement()->hascoTypeUri, $this->getElement()->hascoTypeUri) . "<br><br>"),
+          '#type' => 'inline_template',
+          '#template' => '<b>HascoType URI</b>: <a href="{{ uri }}" target="_blank">{{ uri }}</a> 
+          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
+            <i class="fa fa-eye"></i>
+          </span><br><br>',
+          '#context' => [
+            'uri' => $this->getElement()->hascoTypeUri,
+          ],
         ];
       }
+
 
       if ($this->getElement()->superUri) {
         $form['element_super'] = [
