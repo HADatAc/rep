@@ -119,7 +119,7 @@ use Drupal\rep\Entity\Ontology;
         $form['actions_wrapper']['col_all_triples']['triples_all_actions']['reload_triples_submit'] = [
           '#type'       => 'submit',
           '#value'      => $this->t('Reload with URL'),
-          '#name'       => 'reload_all',
+          '#name'       => 'reload',
           '#attributes' => ['class' => ['btn', 'btn-primary', 'mb-2', 'reload-button']],
         ];
         $form['actions_wrapper']['col_all_triples']['triples_all_actions']['delete_triples_submit'] = [
@@ -213,6 +213,8 @@ use Drupal\rep\Entity\Ontology;
         // RETRIEVE TRIGGERING BUTTON
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
+
+        dpm($button_name);
 
         if ($button_name === 'reload_selected') {
           $selected = array_filter($form_state->getValue('element_table'));
