@@ -52,13 +52,13 @@ class ListManagerEmailPageBySOC {
       if ($module == NULL) {
         return '';
       }
-     return $root_url . '/' . $module . REPGUI::SELECT_PAGE_BYSOC . 
-          base64_encode($socuri) . '/' . 
+     return $root_url . '/' . $module . REPGUI::SELECT_PAGE_BYSOC .
+          base64_encode($socuri) . '/' .
           $elementtype . '/' .
-          strval($page) . '/' . 
+          strval($page) . '/' .
           strval($pagesize);
     }
-    return ''; 
+    return '';
   }
 
 }

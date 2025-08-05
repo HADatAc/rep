@@ -300,13 +300,13 @@ class AssocStudy {
           }
           $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              Utils::namespaceUri($soc->uri).'</a>'),
+            Utils::namespaceUri($soc->uri).'</a>'),
             'soc_label' => $soc->label,
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
             'soc_role_label' => $soc->virtualColumn->label,
             'soc_has_scope' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->hasScopeUri).'">'.
-            $soc->label.'</a>'),
+            Utils::namespaceUri($soc->hasScope->uri).'</a>'),
             'soc_has_space_scopes' => t($spaceScopes),
             'soc_has_time_scopes' => t($timeScopes),
             'soc_num_objects' => $soc->numOfObjects,
@@ -328,16 +328,16 @@ class AssocStudy {
           $linkObjects = $root_url.REPGUI::VIEW_STUDY_OBJECTS.base64_encode($soc->uri);
           $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm view-button" '.
             ' role="button">View Objects</a>';
-            $timeScopes = ' ';
-            if ($soc->timeScopes != NULL && !empty($soc->timeScopes)) {
-              foreach ($soc->timeScopes as $timeSoc) {
-                $timeScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeSoc->uri).'">'.
-                  $timeSoc->label.'</a> ';
+            $spaceScopes = ' ';
+            if ($soc->spaceScopes != NULL && !empty($soc->spaceScopes)) {
+              foreach ($soc->spaceScopes as $spaceSoc) {
+                $spaceScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($spaceSoc->uri).'">'.
+                  $spaceSoc->label.'</a> ';
               }
             }
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              $soc->label.'</a>'),
+              Utils::namespaceUri($soc->uri).'</a>'),
             'soc_label' => $soc->label,
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
@@ -371,7 +371,7 @@ class AssocStudy {
             }
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              $soc->label.'</a>'),
+              Utils::namespaceUri($soc->uri).'</a>'),
             'soc_label' => $soc->label,
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,

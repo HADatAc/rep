@@ -76,6 +76,55 @@ map_entry_points:
     - core/jquery
     - core/drupalSettings
     - core/drupal.ajax
+
+ace_ttl:
+  version: 1.0
+  js:
+    https://cdnjs.cloudflare.com/ajax/libs/ace/1.11.2/ace.js: { type: external }
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+  js_footer: true
+
+rdf_graph_editor:
+  version: 1.x
+  js:
+    # 1) CodeMirror
+    https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js:
+      type: external
+      minified: true
+      weight: -30
+    https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/turtle/turtle.min.js:
+      type: external
+      minified: true
+      weight: -29
+
+    # 2) N3.js parser
+    https://unpkg.com/n3/browser/n3.min.js:
+      type: external
+      minified: true
+      weight: -20
+
+    # 3) Cytoscape.js
+    https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.2/cytoscape.min.js:
+      type: external
+      minified: true
+      weight: -10
+
+    # 4) Nosso init — como módulo para podermos usar import()
+    js/rdf-graph-editor.js:
+      attributes:
+        type: module
+
+  css:
+    theme:
+      # estilo base do CodeMirror
+      https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css:
+        type: external
+
+  dependencies:
+    - core/drupalSettings
+    - core/jquery
     
 describe_associates:
   version: 1.x
@@ -91,8 +140,3 @@ fontawesome:
   css:
     theme:
       https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css: { type: external }
-
-
-
-
-
