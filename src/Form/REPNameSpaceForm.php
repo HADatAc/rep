@@ -125,7 +125,7 @@ use Drupal\rep\Entity\Ontology;
         $form['actions_wrapper']['col_all_triples']['triples_all_actions']['delete_triples_submit'] = [
           '#type'       => 'submit',
           '#value'      => $this->t('Delete with URL'),
-          '#name'       => 'delete_all',
+          '#name'       => 'delete',
           '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-button']],
         ];
 
@@ -213,8 +213,6 @@ use Drupal\rep\Entity\Ontology;
         // RETRIEVE TRIGGERING BUTTON
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
-
-        dpm($button_name);
 
         if ($button_name === 'reload_selected') {
           $selected = array_filter($form_state->getValue('element_table'));

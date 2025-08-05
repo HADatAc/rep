@@ -429,3 +429,52 @@ rep.tree.entry_point_mappings:
     _controller: '\Drupal\rep\Controller\TreeController::getEntryPointMappings'
   requirements:
     _role: 'content_editor'
+
+# ONT
+rep.ont_load:
+  path: '/ont/{filename}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\OntController::load'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: TRUE
+
+rep.ont_edit:
+  path: '/ont/edit/{filename}'
+  defaults:
+    _form: '\Drupal\rep\Form\OntEditForm'
+    _title: 'Editar ONT TTL'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: TRUE
+
+rep.ont_modify:
+  path: '/ont/modify/{filename}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\OntController::modify'
+    _title: 'Modify ONT TTL'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: TRUE
+
+rep.api.get:
+  path: '/ont/api/get/{filename}'
+  defaults:
+    _controller: 'Drupal\rep\Controller\OntController::apiGet'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: TRUE
+
+rep.api.save:
+  path: '/ont/api/save/{filename}'
+  defaults:
+    _controller: 'Drupal\rep\Controller\OntController::apiSave'
+  requirements:
+    _permission: 'access content'
+  methods: ['POST']
+  options:
+    no_cache: TRUE
