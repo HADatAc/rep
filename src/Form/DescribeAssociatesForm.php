@@ -33,6 +33,8 @@ class DescribeAssociatesForm extends FormBase {
 
   //Code from rep.libraries.yml
   $form['#attached']['library'][] = 'rep/describe_associates';
+  $form['#attached']['library'][] = 'rep/fontawesome';
+
 
   // Get the current URL path and decode the URI
   $request = \Drupal::request();
@@ -182,6 +184,7 @@ $linkedEdges = $graph['edges'];
     'font' => ['align' => 'middle']
   ];
 }
+
 // Add virtual columns to the graph
 if ($element->hascoTypeUri === HASCO::STUDY) {
   $vcRaw = $api->getStudyVCs($element->uri);
@@ -197,9 +200,6 @@ if ($element->hascoTypeUri === HASCO::STUDY) {
   $vcLabel,
   $vcObj->typeUri ?? null
 );
-
-
-
         $linkedEdges[] = [
           'from' => $element->uri,
           'to' => $vcId,
@@ -223,107 +223,6 @@ $form['my_network_graph'] = Utils::buildGraphCanvas(
     $linkedEdges,                  // extraEdges
     []                             // baseEdges
 );
-
-
-/**$form['my_network_graph'] = [
-  '#type' => 'inline_template',
-  '#template' => <<< 'EOT'
-    <div style="margin-top: 20px;">
-      <div id="my-network" style="width: 100%; height: 550px; border:1px solid #ccc; background:white;"></div>
-    </div>
-    <script src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
-    <link href="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.css" rel="stylesheet" />
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const container = document.getElementById("my-network");
-        const nodes = new vis.DataSet({{ nodes|raw }});
-        const edges = new vis.DataSet([]);
-        const extraNodes = {{ extraNodes|raw }};
-        const extraEdges = {{ extraEdges|raw }};
-
-        const options = {
-          nodes: { shape: "box" },
-          edges: { arrows: "to", smooth: true },
-          layout: { improvedLayout: true },
-          physics: { stabilization: true, solver: 'forceAtlas2Based' }
-        };
-
-        const network = new vis.Network(container, { nodes, edges }, options);
-
-        window.graphNodes = nodes;
-        window.graphEdges = edges;
-        window.extraGraphNodes = extraNodes;
-        window.extraGraphEdges = extraEdges;
-
-        // Clique para expandir o nó (lazy load)
-        network.on("doubleClick", function (params) {
-          if (params.nodes.length > 0) {
-            const nodeId = params.nodes[0];
-            const newNodes = extraNodes.filter(n => !nodes.get(n.id) && (n.id !== nodeId && (nodeId === n.from || nodeId === n.to)));
-            const newEdges = extraEdges.filter(e => (e.from === nodeId || e.to === nodeId) && !edges.get(e.from + "_" + e.to));
-
-            newNodes.forEach(n => {
-              if (n.shape === 'ellipse') {
-                n.color = { background: '#28a745', border: '#1e7e34' };
-                n.font = { color: 'black' };
-              } else {
-                n.color = { background: '#007bff', border: '#0056b3' };
-                n.font = { color: 'white' };
-              }
-              nodes.add(n);
-            });
-
-            newEdges.forEach(e => {
-              edges.add({ ...e, id: e.from + "_" + e.to });
-            });
-          }
-        });
-
-        // Mostrar/ocultar nós com ícones 👁️/🙈
-        setTimeout(() => {
-          document.querySelectorAll(".graph-toggle").forEach(btn => {
-            const nodeId = btn.dataset.node;
-            btn.textContent = "👁️";
-            btn.addEventListener("click", () => {
-              const node = nodes.get(nodeId);
-              if (node) {
-                nodes.remove(nodeId);
-                edges.get().forEach(e => {
-                  if (e.from === nodeId || e.to === nodeId) {
-                    edges.remove(e.id);
-                  }
-                });
-                btn.textContent = "👁️";
-              } else {
-                const restore = extraNodes.find(n => n.id === nodeId);
-                if (restore) {
-                  if (restore.shape === 'ellipse') {
-                    restore.color = { background: '#28a745', border: '#1e7e34' };
-                    restore.font = { color: 'black' };
-                  } else {
-                    restore.color = { background: '#007bff', border: '#0056b3' };
-                    restore.font = { color: 'white' };
-                  }
-                  nodes.add(restore);
-                }
-                extraEdges.filter(e => e.from === nodeId || e.to === nodeId).forEach(e => {
-                  const id = e.from + "_" + e.to;
-                  if (!edges.get(id)) edges.add({ ...e, id });
-                });
-                btn.textContent = "🙈";
-              }
-            });
-          });
-        }, 300);
-      });
-    </script>
-  EOT,
-  '#context' => [
-    'nodes' => $jsonNodes,
-    'extraNodes' => $jsonExtraNodes,
-    'extraEdges' => $jsonExtraEdges,
-  ],
-];**/
 // Graph title
     $form['my_network_graph_title'] = [
       '#type' => 'item',
@@ -337,12 +236,13 @@ $form['my_network_graph'] = Utils::buildGraphCanvas(
     $prettyName = DescribeForm::prettyProperty($propertyName);
     $label = $propertyValue->label ?? '';
     $nodeId = $propertyValue->uri ?? ($baseUri . '-' . $propertyName);
-    $form[$propertyName] = [
+   $form[$propertyName] = [
   '#type' => 'markup',
   '#markup' => '<b>' . $prettyName . '</b>: '
     . Utils::link($label, $propertyValue->uri)
-    . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Show/Hide node'>👁️</span><br><br>",
-    ];
+    . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Show/Hide node'><i class='fa fa-eye'></i></span><br><br>",
+];
+
   }
 }
 // Render array-based values

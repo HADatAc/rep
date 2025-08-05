@@ -8,10 +8,37 @@
 
       container.dataset.loaded = "true";
 
+      const eyeSVG = `<i class="fa fa-eye"></i>`;
+      const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
+
       const nodes = new vis.DataSet(drupalSettings.graphData.nodes);
       const edges = new vis.DataSet(drupalSettings.graphData.edges);
       const extraNodes = drupalSettings.graphData.extraNodes;
-      const extraEdges = drupalSettings.graphData.extraEdges;
+      let extraEdges = drupalSettings.graphData.extraEdges; // << alterado de const para let
+
+      // 🔁 Transformar loops (from === to) em conexões com nó virtual
+      const loopEdges = extraEdges.filter(e => e.from === e.to);
+      loopEdges.forEach(e => {
+        const virtualNodeId = `${e.from}_loop_virtual_${e.label}`;
+        if (!extraNodes.some(n => n.id === virtualNodeId)) {
+          extraNodes.push({
+            id: virtualNodeId,
+            label: e.label,
+            shape: 'ellipse',
+            font: { color: 'black' },
+            color: { background: '#ffc107', border: '#e0a800' }
+          });
+        }
+        // Substituir a aresta de loop por aresta com destino ao nó virtual
+        extraEdges.push({
+          from: e.from,
+          to: virtualNodeId,
+          label: e.label
+        });
+      });
+      // Remover os loops originais
+      extraEdges = extraEdges.filter(e => e.from !== e.to);
+
 
       const options = {
         nodes: {
@@ -68,7 +95,23 @@
 
         selectedNodeId = params.nodes[0];
         const relatedEdges = extraEdges.filter(e => e.from === selectedNodeId);
-        const labels = [...new Set(relatedEdges.map(e => e.label))];
+        let labels = [...new Set(
+  relatedEdges
+    .filter(e => extraNodes.some(n => n.id === e.to))
+    .map(e => e.label)
+)];
+
+// Adiciona "hascoTypeUri" se houver aresta válida e destino existente
+const hasHascoTypeUriEdge = extraEdges.some(e =>
+  e.label === 'hascoTypeUri' &&
+  e.from === selectedNodeId &&
+  extraNodes.find(n => n.id === e.to)
+);
+if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
+  labels.push('hascoTypeUri');
+}
+
+
         expandMenu.innerHTML = '';
 
         labels.forEach(label => {
@@ -91,7 +134,7 @@
           labelSpan.textContent = label;
 
           const eyeIcon = document.createElement("span");
-          eyeIcon.textContent = isExpanded ? "🙈" : "👁️";
+          eyeIcon.innerHTML = isExpanded ? eyeOffSVG : eyeSVG;
 
           opt.appendChild(labelSpan);
           opt.appendChild(eyeIcon);
@@ -132,7 +175,7 @@
                 labelSpan.style.cssText = "flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
 
                 const toggleBtn = document.createElement("span");
-                toggleBtn.textContent = isVisible ? "🙈" : "👁️";
+                toggleBtn.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
                 toggleBtn.style.cssText = "cursor: pointer;";
 
                 toggleBtn.addEventListener("click", (ev) => {
@@ -140,9 +183,8 @@
                   if (nodes.get(vcNode.id)) {
                     nodes.remove(vcNode.id);
                     edges.remove(edgeId);
-                    toggleBtn.textContent = "👁️";
+                    toggleBtn.innerHTML = eyeSVG;
                   } else {
-                    // ✅ AQUI — preserva cor personalizada se houver
                     if (!vcNode.color) {
                       if (vcNode.shape === 'ellipse') {
                         vcNode.color = { background: '#28a745', border: '#1e7e34' };
@@ -154,7 +196,7 @@
                     }
                     nodes.add(vcNode);
                     edges.add({ ...e, id: edgeId });
-                    toggleBtn.textContent = "🙈";
+                    toggleBtn.innerHTML = eyeOffSVG;
                   }
                 });
 
@@ -165,6 +207,7 @@
 
               opt.appendChild(submenu);
             });
+
           } else {
             opt.addEventListener("click", () => {
               const edgesToToggle = relatedEdges.filter(e => e.label === label);
@@ -181,7 +224,6 @@
                       restore.font = restore.font || {};
                       restore.font.size = 14;
 
-                      // ✅ Preserva cor personalizada
                       if (!restore.color) {
                         if (restore.shape === 'ellipse') {
                           restore.color = { background: '#28a745', border: '#1e7e34' };
@@ -193,6 +235,10 @@
                       }
 
                       nodes.add(restore);
+                      selectedNodeId = restore.id;
+                      network.selectNodes([restore.id]);
+                      network.emit("click", { nodes: [restore.id] });
+
                     }
                   }
                 });
@@ -201,12 +247,34 @@
                   if (!edges.get(id)) edges.add({ ...e, id });
                 });
                 expansionState[key] = true;
-                eyeIcon.textContent = "🙈";
+                eyeIcon.innerHTML = eyeOffSVG;
               } else {
-                nodeIds.forEach(id => nodes.remove(id));
-                edgesToToggle.forEach(e => edges.remove(`${e.from}_${e.to}`));
+                nodeIds.forEach(id => {
+                  if (id.includes('_loop_virtual_')) return; // nunca remover nó virtual
+
+                  const node = nodes.get(id);
+
+                  // ⚠️ Não remover se tiver arestas que apontam para ele (ex: de loop virtual)
+                  const isTargetOfOtherEdges = extraEdges.some(e => e.to === id && e.from !== id);
+
+                  if (extraNodes.some(n => n.id === id) && node && !isTargetOfOtherEdges) {
+                    nodes.remove(id);
+                  }
+                });
+              edgesToToggle.forEach(e => {
+                const edgeId = `${e.from}_${e.to}`;
+                if (e.from === e.to) {
+                  // Aresta de loop — não remova se o nó ainda estiver visível
+                  if (nodes.get(e.from)) {
+                    return;
+                  }
+                }
+                if (edges.get(edgeId)) {
+                  edges.remove(edgeId);
+                }
+              });
                 expansionState[key] = false;
-                eyeIcon.textContent = "👁️";
+                eyeIcon.innerHTML = eyeSVG;
               }
               setTimeout(updateExpandButtonPosition, 0);
             });
@@ -234,8 +302,9 @@
       });
 
       document.body.addEventListener("click", function (event) {
-        if (event.target.classList.contains("graph-toggle")) {
-          const nodeId = event.target.getAttribute("data-node");
+        const toggleWrapper = event.target.closest(".graph-toggle");
+        if (toggleWrapper) {
+          const nodeId = toggleWrapper.getAttribute("data-node");
           if (!nodeId) return;
 
           const nodeExists = nodes.get(nodeId);
@@ -249,7 +318,6 @@
               node.font = node.font || {};
               node.font.size = 14;
 
-              // ✅ Aqui também, respeita cor original
               if (!node.color) {
                 if (node.shape === 'ellipse') {
                   node.color = { background: '#28a745', border: '#1e7e34' };
@@ -261,7 +329,6 @@
               }
 
               nodes.add(node);
-
               const relatedEdges = extraEdges.filter(e => e.to === nodeId || e.from === nodeId);
               relatedEdges.forEach(edge => {
                 const edgeId = `${edge.from}_${edge.to}`;
@@ -270,13 +337,13 @@
                 }
               });
 
-              event.target.innerText = "🙈";
+              toggleWrapper.innerHTML = eyeOffSVG;
             }
           } else {
             nodes.remove({ id: nodeId });
             const edgeIds = edges.getIds().filter(id => id.includes(nodeId));
             edges.remove(edgeIds);
-            event.target.innerText = "👁️";
+            toggleWrapper.innerHTML = eyeSVG;
           }
         }
       });
