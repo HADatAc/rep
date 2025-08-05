@@ -77,27 +77,6 @@ map_entry_points:
     - core/drupalSettings
     - core/drupal.ajax
 
-# codemirror_ttl:
-#   version: 1.0
-#   css:
-#     # base must be here so the gutter (line-number column) CSS is injected.
-#     base:
-#       https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css: {}
-#     theme:
-#       https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css: {}
-#   js:
-#     https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js:
-#       type: external
-#       minified: true
-#     https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/turtle/turtle.min.js:
-#       type: external
-#       minified: true
-#   dependencies:
-#     - core/drupal
-#     - core/jquery
-#     - core/drupalSettings    # <<< make sure this is here
-#   js_footer: true
-
 ace_ttl:
   version: 1.0
   js:
@@ -146,3 +125,18 @@ rdf_graph_editor:
   dependencies:
     - core/drupalSettings
     - core/jquery
+    
+describe_associates:
+  version: 1.x
+  js:
+    #https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js: { type: external, minified: true }
+    js/vis-network.min.js: {}
+    js/graph.js: {}
+  dependencies:
+    - core/jquery
+
+fontawesome:
+  version: 1.x
+  css:
+    theme:
+      https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css: { type: external }
