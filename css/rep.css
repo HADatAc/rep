@@ -1243,3 +1243,10 @@ form.rep-form-namespace legend {
   float: none;
   width: fit-content;
 }
+
+.selected-button {
+  background-color: rgb(0, 100, 0) !important;
+  color: white !important;
+  border-radius: 6px;
+  border: 2px solid rgb(0, 56, 0) !important; 
+}

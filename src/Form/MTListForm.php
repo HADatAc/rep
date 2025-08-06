@@ -94,6 +94,8 @@ class MTListForm extends FormBase {
     $session = \Drupal::request()->getSession();
     $view_type = $form_state->get('view_type') ?? $session->get('rep_select_mt_view_type') ?? 'table';
     $form_state->set('view_type', $view_type);
+    $table_active_class = ($view_type == 'table') ? ['selected-button'] : [];
+    $card_active_class = ($view_type == 'card') ? ['selected-button'] : [];
 
     if ($view_type == 'table') {
 
@@ -220,7 +222,7 @@ class MTListForm extends FormBase {
       '#name' => 'view_table',
       '#attributes' => [
         'style' => 'padding: 20px;',
-        'class' => ['table-view-button', 'fa-xl', 'mx-1'],
+        'class' => array_merge(['table-view-button', 'fa-xl', 'mx-1'], $table_active_class),
         'title' => $this->t('Table View'),
       ],
       '#submit' => ['::viewTableSubmit'],
@@ -233,7 +235,7 @@ class MTListForm extends FormBase {
       '#name' => 'view_card',
       '#attributes' => [
         'style' => 'padding: 20px;',
-        'class' => ['card-view-button', 'fa-xl'],
+        'class' => array_merge(['card-view-button', 'fa-xl'], $card_active_class),
         'title' => $this->t('Card View'),
       ],
       '#submit' => ['::viewCardSubmit'],
@@ -304,6 +306,8 @@ class MTListForm extends FormBase {
       '#type' => 'item',
       '#markup' => '<br><br><br>',
     ];
+
+    $form['#attached']['library'][] = 'rep/mtlist_styles';
 
     return $form;
   }
