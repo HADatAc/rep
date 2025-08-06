@@ -256,7 +256,6 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-
   public function getHascoType($uri) {
     $endpoint = "/hascoapi/api/hascotype/".rawurlencode($uri);
     $method = 'GET';
@@ -777,6 +776,31 @@ class FusekiAPIConnector {
       "/delete/" .
       rawurlencode($elementUri);
     $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/:elementtype/bysoc/:socuri/:pageSize/:offset                                  org.hascoapi.console.controllers.restapi.StudyObjectCollectionAPI.getElementsBySOC(socuri : String, elementtype: String, pageSize : Integer, offset : Integer)
+  public function listElementsBySOC($elementType, $socuri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/bysoc/".
+      rawurlencode($socuri)."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/:elementtype/bysoc/total/:socuri                                              org.hascoapi.console.controllers.restapi.StudyObjectCollectionAPI.getTotalElementsBySOC(socuri : String, elementtype : String)
+  public function listSizeElementsBySOC($elementType, $socuri) {
+    $endpoint = "/hascoapi/api/".
+      $elementType .
+      "/bysoc/total/" .
+      rawurlencode($socuri);
+    $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -2046,6 +2070,15 @@ class FusekiAPIConnector {
 
   public function repoDeleteNamespaceTriples() {
     $endpoint = "/hascoapi/api/repo/ont/delete";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/repo/namespace/topclasses/:abbreviation org.hascoapi.console.controllers.restapi.RepoPage.getTopClasses(abbreviation : String)
+  public function repoTopClassNamespaces() {
+    $endpoint = "/hascoapi/api/repo/namespace/topclasses/".rawurlencode($abbreviation);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

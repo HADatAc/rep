@@ -79,9 +79,9 @@ use Drupal\rep\Entity\Ontology;
           '#type'       => 'container',
           '#attributes' => ['class' => ['col-md-4']],
         ];
-
         $form['actions_wrapper']['col_ontology']['namespace_actions'] = [
-          '#type'       => 'fieldset',
+
+   '#type'       => 'fieldset',
           '#title'      => $this->t('Ontology Actions'),
           '#attributes' => ['class' => ['p-3', 'border', 'rounded', 'w-100']],
         ];
@@ -127,10 +127,8 @@ use Drupal\rep\Entity\Ontology;
           '#type'       => 'submit',
           '#value'      => $this->t('Delete with URL'),
           '#name'       => 'delete',
-          '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-button']],
-        ];
-
-        // --------------------------------------------------------------------------
+      '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-butto          '#name'       => 'delete_all',
+-----------------------------------------------------------------
         // COLUMN 3: Selected Triples Actions
         // --------------------------------------------------------------------------
        $form['actions_wrapper']['col_selected_triples'] = [
@@ -214,14 +212,12 @@ use Drupal\rep\Entity\Ontology;
         // RETRIEVE TRIGGERING BUTTON
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
+form_state->getTriggeringElement();
+        $button_name = $triggering_element['#name'];
+ \Drupal::messenger()->addWarning($this->t('Please select at least one item on the table.'));
+          dpm($button_name);
 
-        if ($button_name === 'reload_selected') {
-          $selected = array_filter($form_state->getValue('element_table'));
-          $abbrevs  = array_keys($selected);
-
-          if (empty($abbrevs)) {
-            \Drupal::messenger()->addWarning($this->t('Please select at least one item on the table.'));
-            return;
+          return;
           }
 
           $namespaces = [];
