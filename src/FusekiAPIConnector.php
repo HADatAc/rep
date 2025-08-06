@@ -2077,7 +2077,7 @@ class FusekiAPIConnector {
   }
 
   // GET     /hascoapi/api/repo/namespace/topclasses/:abbreviation org.hascoapi.console.controllers.restapi.RepoPage.getTopClasses(abbreviation : String)
-  public function repoTopClassNamespaces() {
+  public function repoTopClassNamespaces($abbreviation) {
     $endpoint = "/hascoapi/api/repo/namespace/topclasses/".rawurlencode($abbreviation);
     $method = "GET";
     $api_url = $this->getApiUrl();
