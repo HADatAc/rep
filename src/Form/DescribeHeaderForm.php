@@ -115,8 +115,7 @@ class DescribeHeaderForm extends FormBase {
       ];
 
       $typeUri = $this->getElement()->typeUri;
-
-      if ($typeUri && $this->getElement()->typeLabel) {
+      if ($typeUri) {
         $form['element_type'] = [
           '#type' => 'inline_template',
           '#template' => '<b>Type URI</b>: <a href="{{ uri }}" target="_blank">{{ uri }}</a> 
@@ -129,7 +128,7 @@ class DescribeHeaderForm extends FormBase {
         ];
       }
 
-      if (!$typeUri && $this->getElement()->hascoTypeUri && $this->getElement()->hascoTypeLabel) {
+      if (!$typeUri && $this->getElement()->hascoTypeUri) {
         $form['element_hascoType'] = [
           '#type' => 'markup',
           '#markup' => $this->t("<b>HascoType URI</b>: " . Utils::link($this->getElement()->hascoTypeLabel, $this->getElement()->hascoTypeUri) . "<br><br>"),

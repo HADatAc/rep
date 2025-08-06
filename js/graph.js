@@ -145,7 +145,6 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
                 opt.querySelector(".submenu").remove();
                 return;
               }
-
               const submenu = document.createElement("div");
               submenu.className = "submenu";
               submenu.style.cssText = "position:absolute; left:120px; top:0; background:#f1f1f1; border:1px solid #ccc; padding:5px; border-radius:4px; box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;";
@@ -207,6 +206,59 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
 
               opt.appendChild(submenu);
             });
+          } else if (label === 'hascoTypeUri') {
+  opt.addEventListener("click", () => {
+    const uriEdge = extraEdges.find(e =>
+      e.label === 'hascoTypeUri' && e.from === selectedNodeId
+    );
+    if (!uriEdge) return;
+
+    const targetNode = extraNodes.find(n => n.id === uriEdge.to);
+    if (!targetNode) return;
+
+    const nodeAlreadyVisible = nodes.get(targetNode.id);
+
+    if (nodeAlreadyVisible) {
+      edges.remove({ id: `${uriEdge.from}_${uriEdge.to}` });
+
+      const hasOtherConnections = edges.get().some(e =>
+        e.from === targetNode.id || e.to === targetNode.id
+      );
+      if (!hasOtherConnections) {
+        nodes.remove({ id: targetNode.id });
+      }
+
+      expansionState[key] = false;
+      eyeIcon.innerHTML = eyeSVG;
+
+    } else {
+      if (!targetNode.label || targetNode.label.trim() === '') {
+        const idParts = targetNode.id.split('/');
+        targetNode.label = idParts[idParts.length - 1] || targetNode.id;
+      }
+
+      if (!targetNode.label.includes('➕')) {
+        targetNode.label += '\n➕';
+      }
+
+      targetNode.font = targetNode.font || { size: 14 };
+      if (!targetNode.color) {
+        targetNode.color = {
+          background: '#007bff',
+          border: '#0056b3'
+        };
+        targetNode.font.color = 'white';
+      }
+
+      nodes.add(targetNode);
+      edges.add({ ...uriEdge, id: `${uriEdge.from}_${uriEdge.to}` });
+
+      expansionState[key] = true;
+      eyeIcon.innerHTML = eyeOffSVG;
+    }
+
+    setTimeout(updateExpandButtonPosition, 0);
+  });  
 
           } else {
             opt.addEventListener("click", () => {
@@ -218,6 +270,10 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
                   if (!nodes.get(id)) {
                     const restore = extraNodes.find(n => n.id === id);
                     if (restore) {
+                      if (!restore.label || restore.label.trim() === '') {
+                    const idParts = restore.id.split('/');
+                    restore.label = idParts[idParts.length - 1] || restore.id;
+                      }
                       if (!restore.label.includes('➕')) {
                         restore.label += '\n➕';
                       }
@@ -249,33 +305,29 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
                 expansionState[key] = true;
                 eyeIcon.innerHTML = eyeOffSVG;
               } else {
-                nodeIds.forEach(id => {
-                  if (id.includes('_loop_virtual_')) return; // nunca remover nó virtual
+  // 1. Primeiro remova as arestas
+  edgesToToggle.forEach(e => {
+    const edgeId = `${e.from}_${e.to}`;
+    if (edges.get(edgeId)) {
+      edges.remove(edgeId);
+    }
+  });
 
-                  const node = nodes.get(id);
+  // 2. Depois remova os nós, apenas se não tiverem mais conexões
+  nodeIds.forEach(id => {
+    if (id.includes('_loop_virtual_')) return; // nunca remover nó virtual
 
-                  // ⚠️ Não remover se tiver arestas que apontam para ele (ex: de loop virtual)
-                  const isTargetOfOtherEdges = extraEdges.some(e => e.to === id && e.from !== id);
+    const node = nodes.get(id);
+    const hasOtherConnections = edges.get().some(e => e.from === id || e.to === id);
 
-                  if (extraNodes.some(n => n.id === id) && node && !isTargetOfOtherEdges) {
-                    nodes.remove(id);
-                  }
-                });
-              edgesToToggle.forEach(e => {
-                const edgeId = `${e.from}_${e.to}`;
-                if (e.from === e.to) {
-                  // Aresta de loop — não remova se o nó ainda estiver visível
-                  if (nodes.get(e.from)) {
-                    return;
-                  }
-                }
-                if (edges.get(edgeId)) {
-                  edges.remove(edgeId);
-                }
-              });
-                expansionState[key] = false;
-                eyeIcon.innerHTML = eyeSVG;
-              }
+    if (node && !hasOtherConnections) {
+      nodes.remove(id);
+    }
+  });
+  expansionState[key] = false;
+  eyeIcon.innerHTML = eyeSVG;
+}
+
               setTimeout(updateExpandButtonPosition, 0);
             });
           }
