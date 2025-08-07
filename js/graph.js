@@ -139,7 +139,7 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
           opt.appendChild(labelSpan);
           opt.appendChild(eyeIcon);
 
-          if (label === 'hasVirtualColumn') {
+          if (label === 'hasVirtualColumn' || label === 'hasSampleCollection') {
             opt.addEventListener("click", () => {
               if (opt.querySelector(".submenu")) {
                 opt.querySelector(".submenu").remove();

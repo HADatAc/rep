@@ -211,6 +211,36 @@ if ($element->hascoTypeUri === HASCO::STUDY) {
     }
   }
 }
+// Add Sample Collections to the graph
+if ($element->hascoTypeUri === HASCO::STUDY) {
+  $socRaw = $api->getStudySOCs($element->uri, 1000, 0); // ou qualquer número razoável de limite
+  if ($socRaw) {
+    $socs = $api->parseObjectResponse($socRaw, 'getStudySOCs');
+    if (is_array($socs)) {
+      foreach ($socs as $soc) {
+        if (!empty($soc->uri) && $soc->typeUri === HASCO::SAMPLE_COLLECTION) {
+          $socLabel = $soc->label ?? Utils::namespaceUri($soc->uri);
+          $socId = $soc->uri;
+
+          $linkedNodes[] = Utils::buildNode(
+            $socId,
+            $socLabel,
+            $soc->typeUri
+          );
+
+          $linkedEdges[] = [
+            'from' => $element->uri,
+            'to' => $socId,
+            'label' => 'hasSampleCollection',
+            'arrows' => 'to',
+            'font' => ['align' => 'middle']
+          ];
+        }
+      }
+    }
+  }
+}
+
 
 
   // Prepare data for JS graph rendering
