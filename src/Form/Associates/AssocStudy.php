@@ -300,8 +300,7 @@ class AssocStudy {
           $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
             Utils::namespaceUri($soc->uri).'</a>'),
-            'soc_label' => $soc->label . " <span class='graph-toggle' data-node='" . $soc->uri . "' style='cursor:pointer;' title='Mostrar/Ocultar nó'><i class='fa fa-eye'></i></span>",
-
+            'soc_label' => ['data' => ['#markup' => $soc->label . " <span class='graph-toggle' data-node='" . $soc->uri . "' style='cursor:pointer;' title='Mostrar/Ocultar nó'><i class='fa fa-eye'></i></span>"]],
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
             'soc_role_label' => $soc->virtualColumn->label,
@@ -338,7 +337,7 @@ class AssocStudy {
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
               Utils::namespaceUri($soc->uri).'</a>'),
-            'soc_label' => $soc->label . " <span class='graph-toggle' data-node='" . $soc->uri . "' style='cursor:pointer;' title='Mostrar/Ocultar nó'><i class='fa fa-eye'></i></span>",
+            'soc_label' => ['data' => ['#markup' => $soc->label . " <span class='graph-toggle' data-node='" . $soc->uri . "' style='cursor:pointer;' title='Mostrar/Ocultar nó'><i class='fa fa-eye'></i></span>"]],
 
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
@@ -373,7 +372,8 @@ class AssocStudy {
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
               Utils::namespaceUri($soc->uri).'</a>'),
-            'soc_label' => $soc->label . " <span class='graph-toggle' data-node='" . $soc->uri . "' style='cursor:pointer;' title='Mostrar/Ocultar nó'><i class='fa fa-eye'></i></span>",
+            'soc_label' => ['data' => ['#markup' => $soc->label . " <span class='graph-toggle' data-node='" . $soc->uri . "' style='cursor:pointer;' title='Mostrar/Ocultar nó'><i class='fa fa-eye'></i></span>"]],
+
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
             'soc_role_label' => $soc->virtualColumn->label,
