@@ -128,6 +128,14 @@ rep.get_child:
   requirements:
     _permission: 'access content'
 
+rep.get_topclass:
+  path: '/rep/gettopclass'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getTopClass'
+    _title: 'Get TopClass'
+  requirements:
+    _permission: 'access content'
+
 rep.get_subclasskeyword:
   path: '/rep/subclasskeyword'
   defaults:
@@ -444,7 +452,7 @@ rep.ont_edit:
   path: '/ont/edit/{filename}'
   defaults:
     _form: '\Drupal\rep\Form\OntEditForm'
-    _title: 'Editar ONT TTL'
+    _title: 'Edit Application Ontology File'
   requirements:
     _permission: 'access content'
   options:
@@ -454,7 +462,17 @@ rep.ont_modify:
   path: '/ont/modify/{filename}'
   defaults:
     _controller: '\Drupal\rep\Controller\OntController::modify'
-    _title: 'Modify ONT TTL'
+    _title: 'Modify Application Ontology File'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: TRUE
+
+rep.ont_injest:
+  path: '/ont/injest'
+  defaults:
+    _controller: '\Drupal\rep\Controller\OntController::injest'
+    _title: 'Injest Application Ontology File'
   requirements:
     _permission: 'access content'
   options:

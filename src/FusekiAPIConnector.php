@@ -2737,4 +2737,61 @@ class FusekiAPIConnector {
     ]);
     return NULL;
   }
+
+  // POST    /hascoapi/api/repo/namespace/app/          org.hascoapi.console.controllers.restapi.RepoPage.ingestAppOnt(request: play.mvc.Http.Request)
+  public function uploadOntologyFile() {
+    // 1) Resolve the physical file path
+    /** @var FileSystemInterface $file_system */
+    $file_system = \Drupal::service('file_system');
+    $private_uri = 'private://ont/hadatac.ttl';
+    $path = $file_system->realpath($private_uri);
+
+    if (!file_exists($path)) {
+      \Drupal::logger('REP')->error('File not found at @path', ['@path' => $path]);
+      \Drupal::messenger()->addError(t('Ontology file not found at %path.', ['%path' => $path]));
+      return FALSE;
+    }
+
+    // 2) Prepare filename and read contents
+    $filename = basename($path);
+    $file_content = file_get_contents($path);
+    if ($file_content === FALSE) {
+      \Drupal::messenger()->addError(t('Unable to read file contents from %path.', ['%path' => $path]));
+      return FALSE;
+    }
+
+    // 3) Determine MIME type
+    $guesser   = \Drupal::service('file.mime_type.guesser');
+    // use guessMimeType(), not guess()
+    $mime_type = $guesser->guessMimeType($path) ?: 'application/octet-stream';
+
+    // 4) Build API endpoint URL
+    $endpoint = '/repo/namespace/app/';
+
+    // 5) Send POST request via Guzzle
+    $api_url = $this->getApiUrl();
+    $client = new Client();
+
+    try {
+      $response = $client->post($api_url . $endpoint, [
+        'headers' => [
+          'Content-Type'  => $mime_type,
+          'Authorization' => $this->bearer,
+        ],
+        'body' => $file_content,
+      ]);
+    }
+    catch (ConnectException $e) {
+      \Drupal::messenger()->addError(t('Connection error: @msg', ['@msg' => $e->getMessage()]));
+      return NULL;
+    }
+    catch (ClientException $e) {
+      $res = $e->getResponse();
+      $status = $res ? $res->getStatusCode() : 'n/a';
+      \Drupal::messenger()->addError(t('Upload failed. HTTP status code: @code', ['@code' => $status]));
+      return NULL;
+    }
+
+    return $response->getBody()->getContents();
+  }
 }

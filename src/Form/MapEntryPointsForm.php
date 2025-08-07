@@ -41,6 +41,13 @@ class MapEntryPointsForm extends FormBase {
     // 1) Services & constants
     $tables     = new Tables(\Drupal::database());
     $namespaces = $tables->getNamespaces();
+    // $namespaces = $tables->getTopClasses('hasco');
+
+    // kint($namespaces, 'Namespaces');
+    if ($namespaces === NULL) {
+      $this->messenger()->addError($this->t('No namespaces found.'));
+      return [];
+    }
 
     $reflection = new \ReflectionClass(EntryPoints::class);
     $constants  = $reflection->getConstants();
@@ -118,7 +125,7 @@ class MapEntryPointsForm extends FormBase {
       '#type'               => 'select',
       '#title'              => $this->t('Entry Point'),
       '#empty_option'       => $this->t('Select please'),
-      '#options'            => $entry_options,
+      '#options'            => $namespaces,
       '#default_value'      => $selected_ep_key,
       '#attributes'         => ['class' => ['map-entry-point-select']],
       '#options_attributes' => (function () use ($entry_root_uris) {
@@ -167,16 +174,16 @@ class MapEntryPointsForm extends FormBase {
       '#prefix'             => '<div class="col-md-5">',
       '#suffix'             => '</div>',
     ];
-    // b) Entry-point textfield (3 cols)
-    $form['row']['right_col']['custom_root'] = [
-      '#type'          => 'textfield',
-      '#title'         => $this->t('Entry Point'),
-      '#description'   => $this->t('Type only the class label (e.g. "Agent").'),
-      '#default_value' => $form_state->getValue('custom_root') ?: '',
-      '#attributes'    => ['id' => 'edit-custom-root'],
-      '#prefix'        => '<div class="col-md-4">',
-      '#suffix'        => '</div>',
-    ];
+    // // b) Entry-point textfield (3 cols)
+    // $form['row']['right_col']['custom_root'] = [
+    //   '#type'          => 'textfield',
+    //   '#title'         => $this->t('Entry Point'),
+    //   '#description'   => $this->t('Type only the class label (e.g. "Agent").'),
+    //   '#default_value' => $form_state->getValue('custom_root') ?: '',
+    //   '#attributes'    => ['id' => 'edit-custom-root'],
+    //   '#prefix'        => '<div class="col-md-4">',
+    //   '#suffix'        => '</div>',
+    // ];
     // c) Load-tree button (3 cols)
     $form['row']['right_col']['load_tree'] = [
       '#type'       => 'button',
@@ -206,6 +213,7 @@ class MapEntryPointsForm extends FormBase {
     // $form['#attached']['library'][] = 'rep/rep_tree';
     $form['#attached']['library'][] = 'rep/map_entry_points';
     $form['#attached']['drupalSettings']['repMap'] = [
+      'apiTopClassEndpoint' => $base . '/rep/gettopclass?_format=json',
       'apiEndpoint'     => $base . '/rep/getchildren?_format=json',
       'childParam'      => 'nodeUri',
       // the constant URI root for the currently selected entry point
