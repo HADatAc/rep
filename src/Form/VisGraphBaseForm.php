@@ -121,22 +121,32 @@ class VisGraphBaseForm extends FormBase {
       if ($socRaw) {
         $socs = $api->parseObjectResponse($socRaw, 'getStudySOCs');
         if (is_array($socs)) {
-          foreach ($socs as $soc) {
-            if (!empty($soc->uri) && $soc->typeUri === HASCO::SAMPLE_COLLECTION) {
-              $socLabel = $soc->label ?? Utils::namespaceUri($soc->uri);
-              $linkedNodes[] = Utils::buildNode($soc->uri, $socLabel, $soc->typeUri);
-              $linkedEdges[] = [
-                'from' => $element->uri,
-                'to' => $soc->uri,
-                'label' => 'hasSampleCollection',
-                'arrows' => 'to',
-                'font' => ['align' => 'middle']
-              ];
-            }
-          }
-        }
+  foreach ($socs as $soc) {
+    if (!empty($soc->uri)) {
+      $socLabel = $soc->label ?? Utils::namespaceUri($soc->uri);
+      $linkedNodes[] = Utils::buildNode($soc->uri, $socLabel, $soc->typeUri);
+
+      if ($soc->typeUri === HASCO::SAMPLE_COLLECTION) {
+        $linkedEdges[] = [
+          'from' => $element->uri,
+          'to' => $soc->uri,
+          'label' => 'hasSampleCollection',
+          'arrows' => 'to',
+          'font' => ['align' => 'middle']
+        ];
+      } elseif ($soc->typeUri === HASCO::SUBJECT_GROUP || $soc->typeUri === HASCO::STUDY_OBJECT_COLLECTION) {
+        $linkedEdges[] = [
+          'from' => $element->uri,
+          'to' => $soc->uri,
+          'label' => 'hasSubjectCollection',
+          'arrows' => 'to',
+          'font' => ['align' => 'middle']
+        ];
       }
     }
+  }
+}
+
 
     $form['#attached']['library'][] = 'rep/vis_graph_panel';
 
@@ -154,7 +164,8 @@ class VisGraphBaseForm extends FormBase {
 
     return $form;
   }
-
+}
+}
   public function validateForm(array &$form, FormStateInterface $form_state) {}
   public function submitForm(array &$form, FormStateInterface $form_state) {}
 
