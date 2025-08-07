@@ -56,13 +56,13 @@ class DescribeAssociatesForm extends FormBase {
     $finalUri = $api->getUri(Utils::plainUri($uri));
 
     if (!$finalUri) {
-      \Drupal::messenger()->addError($this->t('Elemento não encontrado.'));
+      \Drupal::messenger()->addError($this->t('Element not found.'));
       return $form;
     }
 
     $element = $api->parseObjectResponse($finalUri, 'getUri');
     if (!$element || !isset($element->uri)) {
-      \Drupal::messenger()->addError($this->t('O objeto recuperado está vazio ou inválido.'));
+      \Drupal::messenger()->addError($this->t('the recovery object is empty or invalid.'));
       return $form;
     }
 
