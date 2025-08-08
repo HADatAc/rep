@@ -1559,6 +1559,7 @@ public static function buildNode($uri, $label, $typeUri = null, $shape = 'box', 
     'shape' => $shape,
     'color' => $color,
     'font' => ['color' => $fontColor, 'size' => $size],
+    'typeUri' => $typeUri,
   ];
 }
 

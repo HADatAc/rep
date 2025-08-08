@@ -7,6 +7,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\rep\Utils;
 use Drupal\rep\Entity\GenericObject;
 use Drupal\rep\Vocabulary\HASCO;
+use Drupal\Core\Url;
 
 class VisGraphBaseForm extends FormBase {
 
@@ -64,7 +65,8 @@ class VisGraphBaseForm extends FormBase {
           'arrows' => 'to',
           'font' => ['align' => 'middle']
         ];
-      } elseif (!empty($value->label)) {
+      }
+      elseif (!empty($value->label)) {
         $literalId = $baseUri . '-' . $property;
         $linkedNodes[] = [
           'id' => $literalId,
@@ -133,7 +135,8 @@ class VisGraphBaseForm extends FormBase {
                   'arrows' => 'to',
                   'font' => ['align' => 'middle']
                 ];
-              } elseif ($soc->typeUri === HASCO::SUBJECT_GROUP || $soc->typeUri === HASCO::STUDY_OBJECT_COLLECTION) {
+              }
+              elseif (in_array($soc->typeUri, [HASCO::SUBJECT_GROUP, HASCO::STUDY_OBJECT_COLLECTION])) {
                 $linkedEdges[] = [
                   'from' => $element->uri,
                   'to' => $soc->uri,
@@ -148,12 +151,16 @@ class VisGraphBaseForm extends FormBase {
       }
     }
 
+    // 🔹 Adiciona a biblioteca e garante que o endpoint existe
     $form['#attached']['library'][] = 'rep/vis_graph_panel';
-
-    $form['my_network_graph_title'] = [
-      '#type' => 'item',
-      '#title' => '<h3>Associated Elements</h3>',
-    ];
+    try {
+      $form['#attached']['drupalSettings']['rep']['socObjectsEndpoint'] =
+        Url::fromRoute('rep.soc_objects')->toString();
+    }
+    catch (\Exception $e) {
+      // Se a rota não existir, evita quebrar
+      $form['#attached']['drupalSettings']['rep']['socObjectsEndpoint'] = '';
+    }
 
     $form['my_network_graph'] = Utils::buildGraphCanvas(
       json_decode($jsonNodes, true),
@@ -161,6 +168,12 @@ class VisGraphBaseForm extends FormBase {
       $linkedEdges,
       []
     );
+
+    $form['my_network_graph_title'] = [
+      '#type' => 'item',
+      '#title' => '<h3>Associated Elements</h3>',
+      
+    ];
 
     return $form;
   }

@@ -52,9 +52,10 @@
         edges: { arrows: "to", smooth: true },
         layout: { improvedLayout: true },
         physics: {
-          stabilization: { iterations: 50 },
-          solver: 'forceAtlas2Based'
-        }
+        stabilization: { iterations: 500 },
+        updateInterval: 100,
+        solver: 'repulsion'
+      }
       };
 
       const network = new vis.Network(container, { nodes, edges }, options);
@@ -96,6 +97,10 @@
         }
 
         selectedNodeId = params.nodes[0];
+        const selectedNode =
+    nodes.get(selectedNodeId) ||
+    extraNodes.find(n => n.id === selectedNodeId);
+
         const relatedEdges = extraEdges.filter(e => e.from === selectedNodeId);
         let labels = [...new Set(
           relatedEdges
@@ -112,6 +117,52 @@
         if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
           labels.push('hascoTypeUri');
         }
+        // 🔥 Lazy-load se não há labels (p.ex. SOC ainda sem “contains” carregados)
+  if (labels.length === 0 && drupalSettings?.rep?.socObjectsEndpoint) {
+  const selectedNode = nodes.get(selectedNodeId) || 
+                       extraNodes.find(n => n.id === selectedNodeId);
+
+  const isPossiblySoc = selectedNode?.typeUri &&
+    (
+      selectedNode.typeUri.includes('/hasco/SampleCollection') ||
+      selectedNode.typeUri.includes('/hasco/SubjectGroup') ||
+      selectedNode.typeUri.includes('/hasco/StudyObjectCollection') ||
+      selectedNode.typeUri.includes('/hasco/SpaceCollection') ||
+      selectedNode.typeUri.includes('/hasco/TimeCollection')
+    );
+
+  if (isPossiblySoc) {
+    $.ajax({
+      url: drupalSettings.rep.socObjectsEndpoint,
+      data: { uri: selectedNodeId, limit: 100, offset: 0 },
+      dataType: "json",
+      success: function (data) {
+        if (data?.nodes?.length) {
+          // Adiciona novos nós
+          data.nodes.forEach(n => {
+            if (!extraNodes.find(en => en.id === n.id)) {
+              extraNodes.push(n);
+            }
+          });
+          // Adiciona novas edges
+          data.edges.forEach(e => {
+            const exists = extraEdges.find(ee =>
+              ee.from === e.from && ee.to === e.to && ee.label === e.label
+            );
+            if (!exists) {
+              extraEdges.push(e);
+            }
+          });
+
+          // Re-dispara o clique para reconstruir o menu
+          setTimeout(() => network.emit("click", { nodes: [selectedNodeId] }), 0);
+        }
+      }
+    });
+    return; // espera carregar
+  }
+}
+
 
         expandMenu.innerHTML = '';
 
@@ -141,73 +192,102 @@
           opt.appendChild(eyeIcon);
 
           if (label === 'hasVirtualColumn' || label === 'hasSampleCollection' || label === 'hasSubjectCollection') {
-            opt.addEventListener("click", () => {
-              if (opt.querySelector(".submenu")) {
-                opt.querySelector(".submenu").remove();
-                return;
-              }
-              const submenu = document.createElement("div");
-              submenu.className = "submenu";
-              submenu.style.cssText = "position:absolute; left:120px; top:0; background:#f1f1f1; border:1px solid #ccc; padding:5px; border-radius:4px; box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;";
+  opt.addEventListener("click", () => {
+    if (opt.querySelector(".submenu")) {
+      opt.querySelector(".submenu").remove();
+      return;
+    }
+    const submenu = document.createElement("div");
+    submenu.className = "submenu";
+    submenu.style.cssText = "position:absolute; left:120px; top:0; background:#f1f1f1; border:1px solid #ccc; padding:5px; border-radius:4px; box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;";
 
-              const vcEdges = relatedEdges.filter(e => e.label === label);
-
-              vcEdges.forEach(e => {
-                const vcNode = extraNodes.find(n => n.id === e.to);
-                if (!vcNode) return;
-
-                const edgeId = `${e.from}_${e.to}`;
-                const isVisible = nodes.get(vcNode.id) !== null;
-
-                const vcItem = document.createElement("div");
-                vcItem.style.cssText = `
-                  display: flex;
-                  align-items: center;
-                  justify-content: space-between;
-                  gap: 12px;
-                  padding: 4px 6px;
-                  min-width: 240px;
-                  cursor: default;
-                `;
-
-                const labelSpan = document.createElement("span");
-                labelSpan.textContent = vcNode.label;
-                labelSpan.style.cssText = "flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
-
-                const toggleBtn = document.createElement("span");
-                toggleBtn.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
-                toggleBtn.style.cssText = "cursor: pointer;";
-
-                toggleBtn.addEventListener("click", (ev) => {
-                  ev.stopPropagation();
-                  if (nodes.get(vcNode.id)) {
-                    nodes.remove(vcNode.id);
-                    edges.remove(edgeId);
-                    toggleBtn.innerHTML = eyeSVG;
-                  } else {
-                    if (!vcNode.color) {
-                      if (vcNode.shape === 'ellipse') {
-                        vcNode.color = { background: '#28a745', border: '#1e7e34' };
-                        vcNode.font = { color: 'black' };
-                      } else {
-                        vcNode.color = { background: '#007bff', border: '#0056b3' };
-                        vcNode.font = { color: 'white' };
-                      }
-                    }
-                    nodes.add(vcNode);
-                    edges.add({ ...e, id: edgeId });
-                    toggleBtn.innerHTML = eyeOffSVG;
-                  }
-                });
-
-                vcItem.appendChild(labelSpan);
-                vcItem.appendChild(toggleBtn);
-                submenu.appendChild(vcItem);
-              });
-
-              opt.appendChild(submenu);
+    // 🔹 Verifica se já temos edges para este label, senão vai buscar por AJAX
+    let vcEdges = relatedEdges.filter(e => e.label === label);
+    if (vcEdges.length === 0 && (label === 'hasSampleCollection' || label === 'hasSubjectCollection')) {
+      // Chamada AJAX para lazy loading
+      $.ajax({
+        url: drupalSettings.rep.socObjectsEndpoint,
+        data: { uri: selectedNodeId, limit: 50, offset: 0 },
+        dataType: "json",
+        success: function (data) {
+          if (data.nodes && data.edges) {
+            // Adiciona ao extraNodes/extraEdges para uso futuro
+            data.nodes.forEach(n => {
+              if (!extraNodes.find(en => en.id === n.id)) extraNodes.push(n);
             });
-          } else if (label === 'hascoTypeUri') {
+            data.edges.forEach(e => {
+              if (!extraEdges.find(ee => ee.from === e.from && ee.to === e.to && ee.label === e.label)) {
+                extraEdges.push(e);
+              }
+            });
+            // Atualiza e reabre o submenu
+            relatedEdges.push(...data.edges);
+            opt.click(); // chama de novo para reconstruir o submenu
+          } else {
+            alert("Nenhum objeto encontrado.");
+          }
+        }
+      });
+      return; // sai agora, vai reentrar depois via opt.click()
+    }
+
+    // 🔹 Continua com a lógica original para construir os itens do submenu
+    vcEdges.forEach(e => {
+      const vcNode = extraNodes.find(n => n.id === e.to);
+      if (!vcNode) return;
+
+      const edgeId = `${e.from}_${e.to}`;
+      const isVisible = nodes.get(vcNode.id) !== null;
+
+      const vcItem = document.createElement("div");
+      vcItem.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 4px 6px;
+        min-width: 240px;
+        cursor: default;
+      `;
+
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = vcNode.label;
+      labelSpan.style.cssText = "flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+
+      const toggleBtn = document.createElement("span");
+      toggleBtn.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
+      toggleBtn.style.cssText = "cursor: pointer;";
+
+      toggleBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        if (nodes.get(vcNode.id)) {
+          nodes.remove(vcNode.id);
+          edges.remove(edgeId);
+          toggleBtn.innerHTML = eyeSVG;
+        } else {
+          if (!vcNode.color) {
+            if (vcNode.shape === 'ellipse') {
+              vcNode.color = { background: '#28a745', border: '#1e7e34' };
+              vcNode.font = { color: 'black' };
+            } else {
+              vcNode.color = { background: '#007bff', border: '#0056b3' };
+              vcNode.font = { color: 'white' };
+            }
+          }
+          nodes.add(vcNode);
+          edges.add({ ...e, id: edgeId });
+          toggleBtn.innerHTML = eyeOffSVG;
+        }
+      });
+
+      vcItem.appendChild(labelSpan);
+      vcItem.appendChild(toggleBtn);
+      submenu.appendChild(vcItem);
+    });
+
+    opt.appendChild(submenu);
+  });
+        }else if (label === 'hascoTypeUri') {
             opt.addEventListener("click", () => {
               const uriEdge = extraEdges.find(e =>
                 e.label === 'hascoTypeUri' && e.from === selectedNodeId
