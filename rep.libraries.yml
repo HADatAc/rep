@@ -129,7 +129,14 @@ rdf_graph_editor:
 describe_associates:
   version: 1.x
   js:
-    #https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js: { type: external, minified: true }
+    js/vis-network.min.js: {}
+    js/graph.js: {}
+  dependencies:
+    - core/jquery
+
+vis_graph_panel:
+  version: 1.x
+  js:
     js/vis-network.min.js: {}
     js/graph.js: {}
   dependencies:

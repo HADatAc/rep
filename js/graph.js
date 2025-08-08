@@ -14,9 +14,9 @@
       const nodes = new vis.DataSet(drupalSettings.graphData.nodes);
       const edges = new vis.DataSet(drupalSettings.graphData.edges);
       const extraNodes = drupalSettings.graphData.extraNodes;
-      let extraEdges = drupalSettings.graphData.extraEdges; // << alterado de const para let
+      let extraEdges = drupalSettings.graphData.extraEdges; // changed from const to let
 
-      // 🔁 Transformar loops (from === to) em conexões com nó virtual
+      // 🔁 Convert loops (from === to) into connections with virtual nodes
       const loopEdges = extraEdges.filter(e => e.from === e.to);
       loopEdges.forEach(e => {
         const virtualNodeId = `${e.from}_loop_virtual_${e.label}`;
@@ -29,16 +29,15 @@
             color: { background: '#ffc107', border: '#e0a800' }
           });
         }
-        // Substituir a aresta de loop por aresta com destino ao nó virtual
+        // Replace the loop edge with an edge to the virtual node
         extraEdges.push({
           from: e.from,
           to: virtualNodeId,
           label: e.label
         });
       });
-      // Remover os loops originais
+      // Remove the original loops
       extraEdges = extraEdges.filter(e => e.from !== e.to);
-
 
       const options = {
         nodes: {
@@ -96,21 +95,20 @@
         selectedNodeId = params.nodes[0];
         const relatedEdges = extraEdges.filter(e => e.from === selectedNodeId);
         let labels = [...new Set(
-  relatedEdges
-    .filter(e => extraNodes.some(n => n.id === e.to))
-    .map(e => e.label)
-)];
+          relatedEdges
+            .filter(e => extraNodes.some(n => n.id === e.to))
+            .map(e => e.label)
+        )];
 
-// Adiciona "hascoTypeUri" se houver aresta válida e destino existente
-const hasHascoTypeUriEdge = extraEdges.some(e =>
-  e.label === 'hascoTypeUri' &&
-  e.from === selectedNodeId &&
-  extraNodes.find(n => n.id === e.to)
-);
-if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
-  labels.push('hascoTypeUri');
-}
-
+        // Add "hascoTypeUri" if there is a valid edge and an existing destination
+        const hasHascoTypeUriEdge = extraEdges.some(e =>
+          e.label === 'hascoTypeUri' &&
+          e.from === selectedNodeId &&
+          extraNodes.find(n => n.id === e.to)
+        );
+        if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
+          labels.push('hascoTypeUri');
+        }
 
         expandMenu.innerHTML = '';
 
@@ -139,13 +137,12 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
           opt.appendChild(labelSpan);
           opt.appendChild(eyeIcon);
 
-          if (label === 'hasVirtualColumn') {
+          if (label === 'hasVirtualColumn' || label === 'hasSampleCollection' || label === 'hasSubjectCollection') {
             opt.addEventListener("click", () => {
               if (opt.querySelector(".submenu")) {
                 opt.querySelector(".submenu").remove();
                 return;
               }
-
               const submenu = document.createElement("div");
               submenu.className = "submenu";
               submenu.style.cssText = "position:absolute; left:120px; top:0; background:#f1f1f1; border:1px solid #ccc; padding:5px; border-radius:4px; box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;";
@@ -207,7 +204,59 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
 
               opt.appendChild(submenu);
             });
+          } else if (label === 'hascoTypeUri') {
+            opt.addEventListener("click", () => {
+              const uriEdge = extraEdges.find(e =>
+                e.label === 'hascoTypeUri' && e.from === selectedNodeId
+              );
+              if (!uriEdge) return;
 
+              const targetNode = extraNodes.find(n => n.id === uriEdge.to);
+              if (!targetNode) return;
+
+              const nodeAlreadyVisible = nodes.get(targetNode.id);
+
+              if (nodeAlreadyVisible) {
+                edges.remove({ id: `${uriEdge.from}_${uriEdge.to}` });
+
+                const hasOtherConnections = edges.get().some(e =>
+                  e.from === targetNode.id || e.to === targetNode.id
+                );
+                if (!hasOtherConnections) {
+                  nodes.remove({ id: targetNode.id });
+                }
+
+                expansionState[key] = false;
+                eyeIcon.innerHTML = eyeSVG;
+
+              } else {
+                if (!targetNode.label || targetNode.label.trim() === '') {
+                  const idParts = targetNode.id.split('/');
+                  targetNode.label = idParts[idParts.length - 1] || targetNode.id;
+                }
+
+                if (!targetNode.label.includes('➕')) {
+                  targetNode.label += '\n➕';
+                }
+
+                targetNode.font = targetNode.font || { size: 14 };
+                if (!targetNode.color) {
+                  targetNode.color = {
+                    background: '#007bff',
+                    border: '#0056b3'
+                  };
+                  targetNode.font.color = 'white';
+                }
+
+                nodes.add(targetNode);
+                edges.add({ ...uriEdge, id: `${uriEdge.from}_${uriEdge.to}` });
+
+                expansionState[key] = true;
+                eyeIcon.innerHTML = eyeOffSVG;
+              }
+
+              setTimeout(updateExpandButtonPosition, 0);
+            });
           } else {
             opt.addEventListener("click", () => {
               const edgesToToggle = relatedEdges.filter(e => e.label === label);
@@ -218,6 +267,10 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
                   if (!nodes.get(id)) {
                     const restore = extraNodes.find(n => n.id === id);
                     if (restore) {
+                      if (!restore.label || restore.label.trim() === '') {
+                        const idParts = restore.id.split('/');
+                        restore.label = idParts[idParts.length - 1] || restore.id;
+                      }
                       if (!restore.label.includes('➕')) {
                         restore.label += '\n➕';
                       }
@@ -238,7 +291,6 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
                       selectedNodeId = restore.id;
                       network.selectNodes([restore.id]);
                       network.emit("click", { nodes: [restore.id] });
-
                     }
                   }
                 });
@@ -249,33 +301,29 @@ if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
                 expansionState[key] = true;
                 eyeIcon.innerHTML = eyeOffSVG;
               } else {
+                // 1. First remove the edges
+                edgesToToggle.forEach(e => {
+                  const edgeId = `${e.from}_${e.to}`;
+                  if (edges.get(edgeId)) {
+                    edges.remove(edgeId);
+                  }
+                });
+
+                // 2. Then remove the nodes, only if there are no more connections
                 nodeIds.forEach(id => {
-                  if (id.includes('_loop_virtual_')) return; // nunca remover nó virtual
+                  if (id.includes('_loop_virtual_')) return; // never remove virtual node
 
                   const node = nodes.get(id);
+                  const hasOtherConnections = edges.get().some(e => e.from === id || e.to === id);
 
-                  // ⚠️ Não remover se tiver arestas que apontam para ele (ex: de loop virtual)
-                  const isTargetOfOtherEdges = extraEdges.some(e => e.to === id && e.from !== id);
-
-                  if (extraNodes.some(n => n.id === id) && node && !isTargetOfOtherEdges) {
+                  if (node && !hasOtherConnections) {
                     nodes.remove(id);
                   }
                 });
-              edgesToToggle.forEach(e => {
-                const edgeId = `${e.from}_${e.to}`;
-                if (e.from === e.to) {
-                  // Aresta de loop — não remova se o nó ainda estiver visível
-                  if (nodes.get(e.from)) {
-                    return;
-                  }
-                }
-                if (edges.get(edgeId)) {
-                  edges.remove(edgeId);
-                }
-              });
                 expansionState[key] = false;
                 eyeIcon.innerHTML = eyeSVG;
               }
+
               setTimeout(updateExpandButtonPosition, 0);
             });
           }
