@@ -9,7 +9,7 @@ use Drupal\rep\Form\Associates\AssocDeployment;
 use Drupal\rep\Form\Associates\AssocOrganization;
 use Drupal\rep\Form\Associates\AssocPlace;
 use Drupal\rep\Form\Associates\AssocPlatform;
-use Drupal\rep\Form\Associates\AssocPlatforminstance;
+use Drupal\rep\Form\Associates\AssocPlatformInstance;
 use Drupal\rep\Form\Associates\AssocStream;
 use Drupal\rep\Form\Associates\AssocStudy;
 use Drupal\rep\Form\Associates\AssocStudyObjectCollection;
@@ -46,7 +46,7 @@ class DescribeAssociatesForm extends FormBase {
     $pathElements = explode('/', $pathInfo);
 
     if (count($pathElements) < 4) {
-      \Drupal::messenger()->addError($this->t('URI do elemento não foi fornecida corretamente.'));
+      \Drupal::messenger()->addError($this->t('The element URI was not provided correctly.'));
       return $form;
     }
 
@@ -62,7 +62,7 @@ class DescribeAssociatesForm extends FormBase {
 
     $element = $api->parseObjectResponse($finalUri, 'getUri');
     if (!$element || !isset($element->uri)) {
-      \Drupal::messenger()->addError($this->t('the recovery object is empty or invalid.'));
+      \Drupal::messenger()->addError($this->t('The recovery object is empty or invalid.'));
       return $form;
     }
 
@@ -70,12 +70,12 @@ class DescribeAssociatesForm extends FormBase {
     $objectProperties = GenericObject::inspectObject($element);
     $baseUri = $element->uri;
 
-    // ✅ INSERE O GRAFO COMO UM PAINEL USANDO VisGraphBaseForm
+    // ✅ Insert the graph as a panel using VisGraphBaseForm
     $graphForm = new VisGraphBaseForm();
     $graphForm->setVisElement($element);
     $form += \Drupal::formBuilder()->getForm($graphForm);
 
-    // ✅ PROPRIEDADES (com olhinho)
+    // ✅ Properties (with eye icon)
     foreach ($objectProperties['objects'] as $propertyName => $propertyValue) {
       if ($propertyName === 'hasAddress') {
         $this->processPropertyAddress($propertyValue, $form, $form_state);
@@ -92,7 +92,7 @@ class DescribeAssociatesForm extends FormBase {
       }
     }
 
-    // ✅ ARRAYS (listas de valores)
+    // ✅ Arrays (lists of values)
     foreach ($objectProperties['arrays'] as $propertyName => $propertyValue) {
       if (!empty($propertyValue)) {
         $prettyName = DescribeForm::prettyProperty($propertyName);
@@ -109,7 +109,7 @@ class DescribeAssociatesForm extends FormBase {
       }
     }
 
-    // ✅ PROCESSA ASSOCIAÇÕES por tipo do objeto
+    // ✅ Process associations by object type
     $typeUri = $element->hascoTypeUri ?? $element->typeUri ?? '';
 
     switch ($typeUri) {

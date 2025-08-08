@@ -8,7 +8,6 @@ use Drupal\rep\Utils;
 use Drupal\rep\Entity\GenericObject;
 use Drupal\rep\Vocabulary\HASCO;
 
-
 class VisGraphBaseForm extends FormBase {
 
   protected $visElement;
@@ -29,7 +28,7 @@ class VisGraphBaseForm extends FormBase {
     $element = $this->getVisElement();
 
     if (!$element || !isset($element->uri)) {
-      \Drupal::messenger()->addError($this->t('Elemento inválido para o grafo.'));
+      \Drupal::messenger()->addError($this->t('Invalid element for the graph.'));
       return $form;
     }
 
@@ -96,7 +95,7 @@ class VisGraphBaseForm extends FormBase {
       ];
     }
 
-    // Adiciona virtual columns e sample collections
+    // Add virtual columns and sample collections
     if ($element->hascoTypeUri === HASCO::STUDY) {
       $vcRaw = $api->getStudyVCs($element->uri);
       if ($vcRaw) {
@@ -121,32 +120,33 @@ class VisGraphBaseForm extends FormBase {
       if ($socRaw) {
         $socs = $api->parseObjectResponse($socRaw, 'getStudySOCs');
         if (is_array($socs)) {
-  foreach ($socs as $soc) {
-    if (!empty($soc->uri)) {
-      $socLabel = $soc->label ?? Utils::namespaceUri($soc->uri);
-      $linkedNodes[] = Utils::buildNode($soc->uri, $socLabel, $soc->typeUri);
+          foreach ($socs as $soc) {
+            if (!empty($soc->uri)) {
+              $socLabel = $soc->label ?? Utils::namespaceUri($soc->uri);
+              $linkedNodes[] = Utils::buildNode($soc->uri, $socLabel, $soc->typeUri);
 
-      if ($soc->typeUri === HASCO::SAMPLE_COLLECTION) {
-        $linkedEdges[] = [
-          'from' => $element->uri,
-          'to' => $soc->uri,
-          'label' => 'hasSampleCollection',
-          'arrows' => 'to',
-          'font' => ['align' => 'middle']
-        ];
-      } elseif ($soc->typeUri === HASCO::SUBJECT_GROUP || $soc->typeUri === HASCO::STUDY_OBJECT_COLLECTION) {
-        $linkedEdges[] = [
-          'from' => $element->uri,
-          'to' => $soc->uri,
-          'label' => 'hasSubjectCollection',
-          'arrows' => 'to',
-          'font' => ['align' => 'middle']
-        ];
+              if ($soc->typeUri === HASCO::SAMPLE_COLLECTION) {
+                $linkedEdges[] = [
+                  'from' => $element->uri,
+                  'to' => $soc->uri,
+                  'label' => 'hasSampleCollection',
+                  'arrows' => 'to',
+                  'font' => ['align' => 'middle']
+                ];
+              } elseif ($soc->typeUri === HASCO::SUBJECT_GROUP || $soc->typeUri === HASCO::STUDY_OBJECT_COLLECTION) {
+                $linkedEdges[] = [
+                  'from' => $element->uri,
+                  'to' => $soc->uri,
+                  'label' => 'hasSubjectCollection',
+                  'arrows' => 'to',
+                  'font' => ['align' => 'middle']
+                ];
+              }
+            }
+          }
+        }
       }
     }
-  }
-}
-
 
     $form['#attached']['library'][] = 'rep/vis_graph_panel';
 
@@ -164,8 +164,7 @@ class VisGraphBaseForm extends FormBase {
 
     return $form;
   }
-}
-}
+
   public function validateForm(array &$form, FormStateInterface $form_state) {}
   public function submitForm(array &$form, FormStateInterface $form_state) {}
 

@@ -119,7 +119,7 @@ class DescribeHeaderForm extends FormBase {
         $form['element_type'] = [
           '#type' => 'inline_template',
           '#template' => '<b>Type URI</b>: <a href="{{ uri }}" target="_blank">{{ uri }}</a> 
-          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
+          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Show/Hide node">
             <i class="fa fa-eye"></i>
           </span><br><br>',
           '#context' => [
@@ -139,7 +139,7 @@ class DescribeHeaderForm extends FormBase {
         $form['element_hascoType'] = [
           '#type' => 'inline_template',
           '#template' => '<b>HascoType URI</b>: <a href="{{ uri }}" target="_blank">{{ uri }}</a> 
-          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
+          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Show/Hide node">
             <i class="fa fa-eye"></i>
           </span><br><br>',
           '#context' => [

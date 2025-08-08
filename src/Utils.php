@@ -1387,7 +1387,7 @@ class Utils {
       return '';
     }
 
-    // Se o valor já for uma URL completa, retorna diretamente.
+    // If the value is already a full URL, return it directly.
     if (strpos($apiDocument, 'http') === 0) {
       return $apiDocument;
     }
@@ -1399,17 +1399,17 @@ class Utils {
       $file_content = $response->getContent();
       $original_content_type = $response->headers->get('Content-Type');
 
-      // Verifica a extensão do arquivo com base no nome.
+      // Check the file extension based on the name.
       $extension = strtolower(pathinfo($apiDocument, PATHINFO_EXTENSION));
 
       if ($extension === 'pdf') {
-        // Se for PDF, force o Content-Type para application/pdf.
+        // If it is a PDF, force the Content-Type to application/pdf.
         $content_type = 'application/pdf';
         $response->headers->set('Content-Type', $content_type);
         $response->headers->set('Content-Disposition', 'inline; filename="' . $apiDocument . '"');
       }
       else {
-        // Para outros tipos de arquivo, usa o Content-Type original.
+        // For other file types, use the original Content-Type.
         $content_type = $original_content_type;
       }
 
@@ -1420,13 +1420,14 @@ class Utils {
       return '';
     }
   }
-  // 🔁 Constrói nós e arestas a partir de um array de dados (visElement convertido)
+
+  // 🔁 Builds nodes and edges from an array of data (converted visElement)
   public static function buildGraphFromArray($data, $resolver = null) {
   $nodes = [];
   $edges = [];
 
   $createNode = function ($id, $label, $typeUri = null) {
-    $label = self::sanitizeString($label); // ✅ sanitiza
+    $label = self::sanitizeString($label); // ✅ sanitizes
     $shape = 'box';
     $color = ['background' => '#007bff', 'border' => '#0056b3'];
     $font = ['color' => 'white'];
@@ -1503,12 +1504,12 @@ class Utils {
   return ['nodes' => $nodes, 'edges' => $edges];
 }
 
-// ✅ Remove @lang ou @type do final
+// ✅ Removes @lang or @type from the end
 public static function sanitizeString($text) {
   return preg_replace('/@.*$/', '', $text);
 }
 
-// ✅ Renderiza o painel do canvas do grafo com todos os dados necessários
+// ✅ Renders the graph canvas panel with all necessary data
 public static function buildGraphCanvas(array $baseNodes, array $extraNodes, array $extraEdges, array $baseEdges): array {
   return [
     'graph_canvas_block' => [
@@ -1526,7 +1527,7 @@ EOT,
         'extraEdges' => json_encode($extraEdges),
       ],
       '#attached' => [
-        'library' => ['rep/vis_graph_panel'], // ✅ inclui nova libraria JS
+        'library' => ['rep/vis_graph_panel'], // ✅ includes new JS library
         'drupalSettings' => [
           'graphData' => [
             'nodes' => $baseNodes,
@@ -1536,14 +1537,14 @@ EOT,
           ],
         ],
       ],
-      '#cache' => ['max-age' => 0], // ✅ evita cache
+      '#cache' => ['max-age' => 0], // ✅ disables caching
     ],
   ];
 }
 
-// 🧱 Criação básica de um nó com formatação visual
+// 🧱 Basic creation of a node with visual formatting
 public static function buildNode($uri, $label, $typeUri = null, $shape = 'box', $size = 20) {
-  $label = self::sanitizeString($label); // ✅ sanitiza o label
+  $label = self::sanitizeString($label); // ✅ sanitizes the label
   $color = ['background' => '#007bff', 'border' => '#0056b3'];
   $fontColor = 'white';
 
@@ -1562,6 +1563,7 @@ public static function buildNode($uri, $label, $typeUri = null, $shape = 'box', 
 }
 
 }
+
 
 
 
