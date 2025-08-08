@@ -41,6 +41,7 @@ class DescribeAssociatesForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $form['#attached']['library'][] = 'rep/fontawesome';
 
+    
     $request = \Drupal::request();
     $pathInfo = $request->getPathInfo();
     $pathElements = explode('/', $pathInfo);
@@ -65,15 +66,16 @@ class DescribeAssociatesForm extends FormBase {
       \Drupal::messenger()->addError($this->t('The recovery object is empty or invalid.'));
       return $form;
     }
+     // ✅ Insert the graph as a panel using VisGraphBaseForm
+    $graphForm = new VisGraphBaseForm();
+    $graphForm->setVisElement($element);
+    $form += \Drupal::formBuilder()->getForm($graphForm);
 
     $this->setElement($element);
     $objectProperties = GenericObject::inspectObject($element);
     $baseUri = $element->uri;
 
-    // ✅ Insert the graph as a panel using VisGraphBaseForm
-    $graphForm = new VisGraphBaseForm();
-    $graphForm->setVisElement($element);
-    $form += \Drupal::formBuilder()->getForm($graphForm);
+   
 
     // ✅ Properties (with eye icon)
     foreach ($objectProperties['objects'] as $propertyName => $propertyValue) {

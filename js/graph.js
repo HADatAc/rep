@@ -16,6 +16,9 @@
       const extraNodes = drupalSettings.graphData.extraNodes;
       let extraEdges = drupalSettings.graphData.extraEdges; // changed from const to let
 
+      // Flag system to track opened nodes
+      let openedNodes = {}; // Storing opened nodes by ID
+
       // 🔁 Convert loops (from === to) into connections with virtual nodes
       const loopEdges = extraEdges.filter(e => e.from === e.to);
       loopEdges.forEach(e => {
