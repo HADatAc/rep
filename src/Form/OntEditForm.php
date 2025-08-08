@@ -50,8 +50,17 @@ class OntEditForm extends FormBase {
     $form['injest_button'] = [
       '#type' => 'container',
       '#attributes' => [
-        // utiliza utilitários de flexbox (Bootstrap ou similar)
         'class' => ['d-flex', 'justify-content-end', 'mb-3'],
+      ],
+    ];
+    $form['injest_button']['view_application_ontology'] = [
+      '#type' => 'link',
+      '#title' => $this->t('View Application Ontology'),
+      '#url' => Url::fromRoute('rep.ont_load', ['filename' => $filename]),
+      '#attributes' => [
+        'class' => ['btn', 'button', 'button--primary', 'view-button', 'text-align-center', 'mx-2'],
+        'target' => '_new',
+        'rel' => 'noopener noreferrer',
       ],
     ];
     $form['injest_button']['injest_application_ontology'] = [
@@ -59,15 +68,13 @@ class OntEditForm extends FormBase {
       '#title' => $this->t('Injest Application Ontology'),
       '#url' => Url::fromRoute('rep.ont_injest'),
       '#attributes' => [
-        // classes de botão (pode ajustar para o seu tema)
-        'class' => ['btn', 'button', 'button--primary', 'ingest_mt-button', 'text-align-center'],
+        'class' => ['btn', 'button', 'button--warning', 'ingest_mt-button', 'text-align-center'],
       ],
     ];
 
     $form['rdf_editor_textarea'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Ontology (Turtle)'),
-      // '#description' => $this->t('Edite aqui o TTL. O grafo será atualizado automaticamente ao lado.'),
       '#attributes' => [
         'id'    => 'rdf-editor-textarea',
         'rows'  => 25,
@@ -81,10 +88,10 @@ class OntEditForm extends FormBase {
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Save'),
+      '#value' => $this->t('Save Application ontology File'),
       '#button_type' => 'primary',
       '#attributes' => [
-        'class' => ['mb-5'],
+        'class' => ['mb-5', 'save-button'],
       ],
     ];
 
