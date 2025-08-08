@@ -24,6 +24,7 @@
           entryMappings = {},
           namespaceBaseUris = {},
           apiEndpoint = '',
+          apiTopClassEndpoint = '',
           childParam = 'nodeUri'
         } = cfg;
         // console.log('[repMap] cfg', cfg);
@@ -81,7 +82,7 @@
               // if (!/^https?:\/\//.test(uri)) {
               //   uri = base.replace(/\/$/, '') + '/' + uri;
               // }
-              return $.getJSON(apiEndpoint, { [childParam]: uri })
+              return $.getJSON(apiTopClassEndpoint, { [childParam]: uri })
                 .done(data => {
                   const api = data.map(item => {
                     // let real = /^https?:\/\//.test(item.uri)
@@ -266,11 +267,12 @@
             e.preventDefault();
             // console.log('[repMap] Load RIGHT tree');
             const base = $nsSelect.val() || '';
-            const label = $('#edit-custom-root').val().trim();
-            if (!label) {
-              return alert(Drupal.t('Please enter a class label, e.g. “Agent”.'));
-            }
-            const uri = base + label;
+            // const label = $('#edit-custom-root').val().trim();
+            // if (!label) {
+            //   return alert(Drupal.t('Please enter a class label, e.g. “Agent”.'));
+            // }
+            // const uri = base + label;
+            const uri = base;
             $('#edit-selected-node').val(uri);
             drawTree($('#ontology-tree'), uri, []);
           });

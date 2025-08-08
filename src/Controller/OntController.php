@@ -179,4 +179,16 @@ class OntController extends ControllerBase {
     }
     return new Response('success', 200);
   }
+
+  public function injest() {
+    $api = \Drupal::service('rep.api_connector');
+    $result = $api->uploadOntologyFile();
+    $obj = json_decode($result);
+    if ($obj->isSuccessful) {
+      $this->messenger()->addStatus($this->t('Ontology file uploaded successfully.'));
+    } else {
+      $this->messenger()->addError($this->t('Failed to upload ontology file: @message', ['@message' => $obj->body]));
+    }
+    return $this->redirect('rep.ont_edit');
+  }
 }

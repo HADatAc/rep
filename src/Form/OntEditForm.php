@@ -47,6 +47,23 @@ class OntEditForm extends FormBase {
       '#value' => $filename,
     ];
 
+    $form['injest_button'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        // utiliza utilitários de flexbox (Bootstrap ou similar)
+        'class' => ['d-flex', 'justify-content-end', 'mb-3'],
+      ],
+    ];
+    $form['injest_button']['injest_application_ontology'] = [
+      '#type' => 'link',
+      '#title' => $this->t('Injest Application Ontology'),
+      '#url' => Url::fromRoute('rep.ont_injest'),
+      '#attributes' => [
+        // classes de botão (pode ajustar para o seu tema)
+        'class' => ['btn', 'button', 'button--primary', 'ingest_mt-button', 'text-align-center'],
+      ],
+    ];
+
     $form['rdf_editor_textarea'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Ontology (Turtle)'),
@@ -56,6 +73,9 @@ class OntEditForm extends FormBase {
         'rows'  => 25,
         'style' => 'font-family: monospace;',
       ],
+      '#wrapper_attributes' => [
+        'style' => 'min-height: 400px; overflow: auto;',
+      ],
     ];
 
     $form['actions'] = ['#type' => 'actions'];
@@ -63,6 +83,9 @@ class OntEditForm extends FormBase {
       '#type' => 'submit',
       '#value' => $this->t('Save'),
       '#button_type' => 'primary',
+      '#attributes' => [
+        'class' => ['mb-5'],
+      ],
     ];
 
     return $form;
@@ -73,10 +96,17 @@ class OntEditForm extends FormBase {
    * Only checks presence of version IRI, skips full RDF parsing to preserve file format.
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
+    // Look for a line like:
+    //   owl:versionIRI   hadatac:1 ;
     $data = $form_state->getValue('rdf_editor_textarea');
-    $pattern = '/owl:versionIRI\s+hasco:[0-9]+\.[0-9]+\s*;/';
-    if (!preg_match($pattern, $data)) {
-      $form_state->setErrorByName('rdf_editor_textarea', $this->t('Version IRI pattern not found.'));
+    $versionPattern = '/owl:versionIRI\s+hadatac:(\d+(?:\.\d+)?)\s*;/';
+
+    if (!preg_match($versionPattern, $data)) {
+      // Prevent submission if no valid version IRI is found.
+      $form_state->setErrorByName(
+        'rdf_editor_textarea',
+        $this->t('Version IRI pattern not found. Please include a line like “owl:versionIRI   hadatac:1 ;”.')
+      );
     }
   }
 
@@ -84,67 +114,65 @@ class OntEditForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    // Retrieve filename and textarea contents.
     $filename = $form_state->getValue('filename');
-    $data = $form_state->getValue('rdf_editor_textarea');
+    $originalData = $form_state->getValue('rdf_editor_textarea');
     $fileSystem = \Drupal::service('file_system');
 
-    // INJECT subClassOf
-    // 1) Verifica se existe o bloco hasco:Attribute
-    if (!preg_match('/^\s*hasco:Attribute\b/m', $data)) {
-      $this->messenger()->addError($this->t('Elemento hasco:Attribute não encontrado. Nenhuma alteração foi feita.'));
-      // Redireciona de volta ao formulário sem prosseguir
+    // 1) Find the current version number (e.g. "1" or "2.3").
+    $versionPattern = '/owl:versionIRI\s+hadatac:(\d+(?:\.\d+)?)\s*;/';
+    if (!preg_match($versionPattern, $originalData, $matches)) {
+      $this->messenger()->addError($this->t('Version IRI pattern not found; no changes were made.'));
       $form_state->setRedirectUrl(Url::fromRoute('rep.ont_edit', ['filename' => $filename]));
       return;
     }
+    $currentVersion = $matches[1];
+    // Increment the integer part; adjust logic if you need different versioning.
+    $newVersion = intval($currentVersion) + 1;
 
-    // 2) Injeta o novo triplo abaixo do final do bloco (antes do ponto final)
-    $data = preg_replace(
-      // Captura desde "hasco:Attribute" até o primeiro "." que fecha o bloco
-      '/(hasco:Attribute\b[\s\S]*?\.)/m',
-      // Reinsere o fechamento e adiciona o novo nó
-      "$1\n\n<http://xmlns.com/foaf/0.1/Agent>\n    rdfs:label  \"Agent\" ;\n    rdf:type  owl:Class ;\n    rdfs:comment  \"An agent is an entity that acts, or has the capacity to act.\" ;\n    rdfs:subClassOf  hasco:Attribute .",
-      $data,
-      1  // apenas a primeira ocorrência
+    // 2) Replace the version IRI line.
+    $updatedData = preg_replace(
+      $versionPattern,
+      'owl:versionIRI   hadatac:' . $newVersion . ' ;',
+      $originalData,
+      1
     );
 
-    // Match current version IRI.
-    $pattern = '/owl:versionIRI\s+hasco:([0-9]+\.[0-9]+)\s*;/';
-    if (!preg_match($pattern, $data, $matches)) {
-      $this->messenger()->addError('Version IRI pattern not found. No changes made.');
-      $form_state->setRedirectUrl(Url::fromRoute('rep.edit', ['filename' => $filename]));
-      return;
-    }
+    // 3) Replace the rdfs:label line to match the new version.
+    $labelPattern = '/rdfs:label\s+"HADATAC Ontology v\d+"\s*;/';
+    $updatedData = preg_replace(
+      $labelPattern,
+      'rdfs:label       "HADATAC Ontology v' . $newVersion . '" ;',
+      $updatedData,
+      1
+    );
 
-    $currentVersion = $matches[1];
-    list($major, $minor) = explode('.', $currentVersion);
-    $newVersion = $major . '.' . ($minor + 1);
-
-    // Define and prepare version directories.
+    // 4) Prepare directories for archiving.
     $dirCurrent = 'private://ont/' . $currentVersion;
-    $dirNew = 'private://ont/' . $newVersion;
+    $dirNew     = 'private://ont/' . $newVersion;
     $fileSystem->prepareDirectory($dirCurrent, FileSystemInterface::CREATE_DIRECTORY);
     $fileSystem->prepareDirectory($dirNew, FileSystemInterface::CREATE_DIRECTORY);
 
-    $origDir = $fileSystem->realpath($dirCurrent);
-    $newDir  = $fileSystem->realpath($dirNew);
+    $origDir  = $fileSystem->realpath($dirCurrent);
+    $newDir   = $fileSystem->realpath($dirNew);
     $baseFile = $fileSystem->realpath('private://ont/' . $filename);
 
-    // Archive original content.
-    file_put_contents($origDir . '/' . $filename, $data);
+    // 5) Archive the original file under its version directory.
+    file_put_contents($origDir . '/' . $filename, $originalData);
 
-    // Update version IRI in content.
-    $newData = preg_replace($pattern, 'owl:versionIRI   hasco:' . $newVersion . ' ;', $data, 1);
+    // 6) Save the updated ontology into the new version folder and overwrite the base file.
+    file_put_contents($newDir . '/' . $filename, $updatedData);
+    file_put_contents($baseFile, $updatedData);
 
-    // Update RDF label to reflect new version.
-    $labelPattern = '/(rdfs:label\s+")HASCO Ontology v[0-9]+\.[0-9]+("\s*;)/';
-    $labelReplacement = '$1HASCO Ontology v' . $newVersion . '$2';
-    $newData = preg_replace($labelPattern, $labelReplacement, $newData, 1);
+    // 7) Notify the user of success.
+    $this->messenger()->addStatus(
+      $this->t(
+        'Ontology archived under version @old and updated to version @new.',
+        ['@old' => $currentVersion, '@new' => $newVersion]
+      )
+    );
 
-    // Save updated files.
-    file_put_contents($newDir . '/' . $filename, $newData);
-    file_put_contents($baseFile, $newData);
-
-    $this->messenger()->addStatus('File archived under version ' . $currentVersion . ' and updated to version ' . $newVersion . '.');
+    // Redirect back to the edit form for this file.
     $form_state->setRedirectUrl(Url::fromRoute('rep.ont_edit', ['filename' => $filename]));
   }
 }

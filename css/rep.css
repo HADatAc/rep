@@ -261,6 +261,7 @@ button.manage_slotelements-button {
   transform: translateY(-50%);
 }
 
+a.ingest_mt-button,
 button.ingest_mt-button {
   position: relative;
   padding-left: 2.1rem;
@@ -395,6 +396,7 @@ button.check-button.top-icon {
   text-align: center;
   padding-left: 12px;
 }
+
 button.check-button.top-icon::before {
   content: "\f00c";
   font-family: "Font Awesome 6 Free";
