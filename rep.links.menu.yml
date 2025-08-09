@@ -40,6 +40,7 @@ rep.icons_explanation:
   weight: 110
   requirements:
     _permission: 'access content'
+    _role: 'content_editor'
 
 #
 # REPOSITORY

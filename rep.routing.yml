@@ -523,7 +523,7 @@ rep.icons_explanation:
   path: 'rep/icons-explanation'
   defaults:
     _form: '\Drupal\rep\Form\IconsExplanationForm'
-    _title: 'Icons explanation'
+    _title: 'Icons Explanation'
   requirements:
     _permission: 'access content'
 
