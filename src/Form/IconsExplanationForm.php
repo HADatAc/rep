@@ -1,56 +1,61 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 
-class IconsExplanationForm extends FormBase {
+final class IconsExplanationForm extends FormBase {
 
-  public function getFormId() {
+  public function getFormId(): string {
     return 'rep_icons_explanation_form';
   }
 
-  public function buildForm(array $form, FormStateInterface $form_state) {
+  public function buildForm(array $form, FormStateInterface $form_state): array {
 
-    // 1) HEADER ASSOCIATIVO (as chaves definem as colunas)
+    // Cabeçalho.
     $header = [
-      'icon' => $this->t('Icon'),
-      'name' => $this->t('Name'),
-      'desc' => $this->t('Explanation'),
+      ['data' => $this->t('Icon')],
+      ['data' => $this->t('Name')],
+      ['data' => $this->t('Explanation')],
     ];
 
-    // 2) Dados das linhas (livre para editares)
-    $rowsData = [
-      ['icon' => '🔷',   'name' => 'Class',    'desc' => 'Represents an ontology class node.'],
-      ['icon' => '🧭',   'name' => 'Property', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '👤',   'name' => 'Instance', 'desc' => 'Represents an instance/individual.'],
-      ['icon' => 'sbfakv','name' => 'Instance', 'desc' => 'Represents an instance/individual.'],
+    // Dados da tabela.
+    $rows_data = [
+      ['icon' => '🔷',     'name' => 'Class',    'desc' => 'Represents an ontology class node.'],
+      ['icon' => '🧭',     'name' => 'Property', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '👤',     'name' => 'Instance', 'desc' => 'Represents an instance/individual.'],
+      ['icon' => 'teste', 'name' => 'teste', 'desc' => 'test'],
     ];
 
-    // 3) Cada linha usa as MESMAS chaves do header
+    // Linhas.
     $rows = [];
-    foreach ($rowsData as $r) {
+    foreach ($rows_data as $r) {
       $rows[] = [
-        'icon' => ['data' => (string) $r['icon']],
-        'name' => ['data' => (string) $r['name']],
-        'desc' => ['data' => (string) $r['desc']],
+        ['data' => (string) $r['icon'], 'class' => ['kg-col-icon']],
+        ['data' => (string) $r['name']],
+        ['data' => (string) $r['desc']],
       ];
     }
 
+    // Tabela.
     $form['icons_table'] = [
       '#type' => 'table',
       '#header' => $header,
-      '#rows' => $rows,
+      '#rows'  => $rows,
       '#empty' => $this->t('No icons to display.'),
-      '#attributes' => ['class' => ['kg-icons-table']],
-      '#sticky' => TRUE,
-      // Evita que o JS "responsive table" reestruture as colunas após o load:
+      '#attributes' => [
+        'class' => ['kg-icons-table'],
+        'style' => 'max-width: 980px; margin: 0 auto;',
+      ],
       '#responsive' => FALSE,
+      '#sticky' => FALSE,
     ];
 
     return $form;
   }
 
-  public function submitForm(array &$form, FormStateInterface $form_state) {}
+  public function submitForm(array &$form, FormStateInterface $form_state): void {}
 }
