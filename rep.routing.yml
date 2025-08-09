@@ -451,3 +451,12 @@ rep.mt_list_element:
     _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
+
+rep.icons_explanation:
+  path: 'rep/icons-explanation'
+  defaults:
+    _form: '\Drupal\rep\Form\IconsExplanationForm'
+    _title: 'Icons explanation'
+  requirements:
+    _permission: 'access content'
+
