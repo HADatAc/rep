@@ -31,6 +31,15 @@ rep.uri_describe:
   requirements:
     _permission: 'access content'
 
+rep.icons_explanation:
+  title: 'Icons Explanation'
+  description: 'Explanation of Knowledge Graph icons'
+  route_name: rep.icons_explanation
+  parent: rep.kg
+  menu_name: main
+  weight: 110
+  requirements:
+    _permission: 'access content'
 
 #
 # REPOSITORY
