@@ -1,25 +1,73 @@
+/**
+ * rep/vis_graph_panel : Graph behavior with lazy-loading (vis.js)
+ *
+ * Expects backend to inject:
+ *   drupalSettings.graphData = {
+ *     nodes: [...],           // base visible nodes
+ *     edges: [...],           // base visible edges
+ *     extraNodes: [...],      // cache of known-but-hidden nodes
+ *     extraEdges: [...]       // cache of known-but-hidden edges
+ *   }
+ * And the Study/SOC lazy endpoint:
+ *   drupalSettings.rep.socObjectsEndpoint = '/rep/graph/expand'
+ *
+ * What it does:
+ *  - Builds one vis.Network and never recreates it (preserves canvas/layout).
+ *  - Keeps extraNodes/extraEdges as an in-memory cache for on-demand expansion.
+ *  - Converts self-loops into virtual nodes so users can toggle them.
+ *  - On node click:
+ *      • shows an expand menu with the available predicates (labels)
+ *      • if node looks like SOC and we don’t yet know “contains”, it fetches it
+ *      • if node looks like Study and we don’t yet know SOC edges, it fetches them
+ *  - Adds/removes nodes/edges incrementally.
+ */
+
 (function ($, Drupal, drupalSettings) {
   Drupal.behaviors.graphInit = {
-    attach: function (context, settings) {
-      if (!context.querySelector || context.querySelector('#my-network')?.dataset.loaded === "true") return;
+    attach: function (context) {
+      // Avoid attaching twice to the same canvas
+      const container = context.querySelector('#my-network');
+      if (!container || container.dataset.loaded === 'true') return;
+      if (typeof vis === 'undefined') return;
+      container.dataset.loaded = 'true';
 
-      const container = document.getElementById("my-network");
-      if (!container || typeof vis === 'undefined') return;
+      // Endpoint for lazy expansion (with safe fallbacks)
+      const socEndpoint =
+        (drupalSettings && drupalSettings.rep && drupalSettings.rep.socObjectsEndpoint) ||
+        (window.Drupal && Drupal.url ? Drupal.url('rep/graph/expand') : '/rep/graph/expand');
 
-      container.dataset.loaded = "true";
-
+      // Small icons (Font Awesome expected on the page)
       const eyeSVG = `<i class="fa fa-eye"></i>`;
       const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
 
-      const nodes = new vis.DataSet(drupalSettings.graphData.nodes);
-      const edges = new vis.DataSet(drupalSettings.graphData.edges);
-      const extraNodes = drupalSettings.graphData.extraNodes;
-      let extraEdges = drupalSettings.graphData.extraEdges; // changed from const to let
+      // Bootstrap sources from drupalSettings
+      const base = drupalSettings.graphData || {};
+      const nodes = new vis.DataSet(base.nodes || []);
+      const edges = new vis.DataSet(base.edges || []);
+      const extraNodes = base.extraNodes || [];
+      let   extraEdges = base.extraEdges || [];
 
-      // Flag system to track opened nodes
-      let openedNodes = {}; // Storing opened nodes by ID
+      // Avoid repeated fetch for the same node
+      const openedNodes = {};
 
-      // 🔁 Convert loops (from === to) into connections with virtual nodes
+      // ------------------ helpers: keep layout stable while adding stuff ------------------
+      function freezeAllNodes(ds) {
+        ds.get().forEach(n => ds.update({ id: n.id, fixed: { x: true, y: true } }));
+      }
+      function unfreezeNodes(ds, ids) {
+        ids.forEach(id => ds.update({ id, fixed: { x: false, y: false } }));
+      }
+      function placeAround(network, centerId, newIds, radius = 140) {
+        const pos = network.getPositions([centerId])[centerId];
+        if (!pos) return;
+        const N = newIds.length || 1;
+        newIds.forEach((id, i) => {
+          const a = (2 * Math.PI * i) / N;
+          network.moveNode(id, pos.x + radius * Math.cos(a), pos.y + radius * Math.sin(a));
+        });
+      }
+
+      // ------------------ convert loop edges into "virtual" nodes ------------------
       const loopEdges = extraEdges.filter(e => e.from === e.to);
       loopEdges.forEach(e => {
         const virtualNodeId = `${e.from}_loop_virtual_${e.label}`;
@@ -32,16 +80,11 @@
             color: { background: '#ffc107', border: '#e0a800' }
           });
         }
-        // Replace the loop edge with an edge to the virtual node
-        extraEdges.push({
-          from: e.from,
-          to: virtualNodeId,
-          label: e.label
-        });
+        extraEdges.push({ from: e.from, to: virtualNodeId, label: e.label });
       });
-      // Remove the original loops
-      extraEdges = extraEdges.filter(e => e.from !== e.to);
+      extraEdges = extraEdges.filter(e => e.from !== e.to); // drop original loops
 
+      // ------------------ vis.js options ------------------
       const options = {
         nodes: {
           shape: "box",
@@ -52,134 +95,213 @@
         edges: { arrows: "to", smooth: true },
         layout: { improvedLayout: true },
         physics: {
-        stabilization: { iterations: 500 },
-        updateInterval: 100,
-        solver: 'repulsion'
-      }
+          solver: 'repulsion',
+          stabilization: {
+            enabled: true,
+            iterations: 500,
+            updateInterval: 100
+          }
+        }
       };
 
+      // Build network once (we only mutate datasets after this)
       const network = new vis.Network(container, { nodes, edges }, options);
-      let selectedNodeId = null;
-      const originalLabels = {};
-      const expansionState = {};
 
+      // Add a “+” affordance on initial visible nodes
       nodes.get().forEach(n => {
-        originalLabels[n.id] = n.label;
-        if (!n.label.includes('➕')) {
-          nodes.update({
-            id: n.id,
-            label: `${n.label}\n➕`,
-            font: { size: 14 }
-          });
+        if (!n.label?.includes('➕')) {
+          nodes.update({ id: n.id, label: `${n.label}\n➕`, font: { size: 14 } });
         }
       });
 
+      // ------------------ floating expand menu ------------------
+      const expansionState = {}; // key `${nodeId}_${label}` → boolean
+
       const expandMenu = document.createElement("div");
       expandMenu.id = "expand-menu";
-      expandMenu.style.cssText = "position:absolute;z-index:1000;background:#f8f9fa;border:1px solid #ccc;padding:6px 10px;border-radius:5px;box-shadow:2px 2px 6px rgba(0,0,0,0.1);display:none;";
+      expandMenu.style.cssText = `
+        position:absolute;z-index:1000;background:#f8f9fa;border:1px solid #ccc;
+        padding:6px 10px;border-radius:5px;box-shadow:2px 2px 6px rgba(0,0,0,0.1);
+        display:none;
+      `;
       document.body.appendChild(expandMenu);
 
-      function updateExpandButtonPosition() {
-        if (!selectedNodeId) return;
-        const nodePos = network.getPositions([selectedNodeId])[selectedNodeId];
+      function updateExpandMenuPosition(nodeId) {
+        if (!nodeId) return;
+        const nodePos = network.getPositions([nodeId])[nodeId];
+        if (!nodePos) return;
         const canvasPos = network.canvasToDOM(nodePos);
-        const networkRect = container.getBoundingClientRect();
-        const topOffset = window.scrollY + networkRect.top;
-        expandMenu.style.left = `${networkRect.left + canvasPos.x + 30}px`;
-        expandMenu.style.top = `${topOffset + canvasPos.y - 10}px`;
+        const rect = container.getBoundingClientRect();
+        const topOffset = window.scrollY + rect.top;
+        expandMenu.style.left = `${rect.left + canvasPos.x + 30}px`;
+        expandMenu.style.top  = `${topOffset + canvasPos.y - 10}px`;
       }
 
+      // ------------------ utilities ------------------
+      function edgeIdOf(e) {
+        return e.id || `${e.from}_${e.to}_${e.label}`;
+      }
+
+      function ensureNodeStyle(n) {
+        if (!n.label || !n.label.trim()) {
+          const p = n.id.split('/');
+          n.label = p[p.length - 1] || n.id;
+        }
+        if (!n.label.includes('➕')) n.label += '\n➕';
+        n.font = n.font || { size: 14 };
+        if (!n.color) {
+          if (n.shape === 'ellipse') {
+            n.color = { background: '#28a745', border: '#1e7e34' };
+            n.font.color = 'black';
+          } else {
+            n.color = { background: '#007bff', border: '#0056b3' };
+            n.font = { ...(n.font || {}), color: 'white' };
+          }
+        }
+        return n;
+      }
+
+      // Filter which predicate labels we want to show in the menu
+      function isDisplayableLabel(label) {
+        if (!label) return false;
+        if (label === 'contains' || label === 'hascoTypeUri') return true;
+        if (label.startsWith('has')) return true; // most domain links
+        // hide common literals/internal props from the menu
+        const blacklist = new Set(['label','comment','body','hasImageUri','hasWebDocument','hasStatus','id']);
+        return !blacklist.has(label);
+      }
+
+      // Merge payload → cache + live datasets + position new nodes
+      function mergeGraphPayload(payload, anchorNodeId) {
+        if (!payload) return;
+        const newNodes = payload.nodes || [];
+        const newEdges = payload.edges || [];
+
+        // Cache merge (avoid duplicates)
+        newNodes.forEach(n => {
+          if (!extraNodes.find(x => x.id === n.id)) extraNodes.push(n);
+        });
+        newEdges.forEach(e => {
+          const id = edgeIdOf(e);
+          if (!extraEdges.find(x => edgeIdOf(x) === id)) {
+            e.id = id;
+            extraEdges.push(e);
+          }
+        });
+
+        // Live datasets + style
+        const existing = new Set(nodes.getIds());
+        const addedIds = [];
+        newNodes.forEach(n => {
+          if (!existing.has(n.id)) {
+            nodes.add(ensureNodeStyle({ ...n }));
+            addedIds.push(n.id);
+          } else {
+            nodes.update(ensureNodeStyle({ ...n }));
+          }
+        });
+        const eExisting = new Set(edges.getIds());
+        newEdges.forEach(e => {
+          const id = edgeIdOf(e);
+          if (!eExisting.has(id)) edges.add({ ...e, id });
+        });
+
+        // Place newcomers around anchor, without global shake
+        if (addedIds.length) {
+          freezeAllNodes(nodes);
+          placeAround(network, anchorNodeId, addedIds);
+          network.redraw();
+          unfreezeNodes(nodes, addedIds);
+        }
+      }
+
+      // Quick “kind” classifier by typeUri (used to decide when to lazy-load)
+      function nodeKindByTypeUri(typeUri) {
+        if (!typeUri) return 'other';
+        if (typeUri.includes('/hasco/Study')) return 'study';
+        if (
+          typeUri.includes('/hasco/SampleCollection') ||
+          typeUri.includes('/hasco/SubjectGroup') ||
+          typeUri.includes('/hasco/StudyObjectCollection') ||
+          typeUri.includes('/hasco/SpaceCollection') ||
+          typeUri.includes('/hasco/TimeCollection')
+        ) return 'soc';
+        return 'other';
+      }
+
+      // ------------------ node click: build menu + lazy-load if needed ------------------
       network.on("click", function (params) {
         expandMenu.style.display = "none";
-        if (params.nodes.length === 0) {
-          selectedNodeId = null;
-          return;
+        if (params.nodes.length === 0) return;
+
+        const selectedNodeId = params.nodes[0];
+        const selectedNode   = nodes.get(selectedNodeId) || extraNodes.find(n => n.id === selectedNodeId);
+        if (!selectedNode) return;
+
+        const kind = nodeKindByTypeUri(selectedNode?.typeUri);
+
+        // Already-known edges from this node
+        const relatedEdges = extraEdges.filter(e => e.from === selectedNodeId);
+
+        // If SOC and we still don't know "contains", fetch it now (even if other labels exist)
+        const hasContains = extraEdges.some(e => e.from === selectedNodeId && e.label === 'contains');
+        if (socEndpoint && kind === 'soc' && !hasContains && !openedNodes[selectedNodeId]) {
+          openedNodes[selectedNodeId] = true;
+          $.getJSON(socEndpoint, { from: selectedNodeId, limit: 100, offset: 0, debug: 1 })
+            .done(data => {
+              console.log('[EXPAND]', selectedNodeId, data);
+              mergeGraphPayload(data, selectedNodeId);
+              setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
+            })
+            .fail(() => { openedNodes[selectedNodeId] = false; });
+          return; // wait for AJAX
         }
 
-        selectedNodeId = params.nodes[0];
-        const selectedNode =
-    nodes.get(selectedNodeId) ||
-    extraNodes.find(n => n.id === selectedNodeId);
+        // If Study and we still don't know SOC edges, fetch them now
+        const hasSOC = extraEdges.some(e =>
+          e.from === selectedNodeId &&
+          (e.label === 'hasSampleCollection' || e.label === 'hasSubjectCollection' || e.label === 'hasCollection')
+        );
+        if (socEndpoint && kind === 'study' && !hasSOC && !openedNodes[selectedNodeId]) {
+          openedNodes[selectedNodeId] = true;
+          $.getJSON(socEndpoint, { from: selectedNodeId, limit: 100, offset: 0, debug: 1 })
+            .done(data => {
+              console.log('[EXPAND]', selectedNodeId, data);
+              mergeGraphPayload(data, selectedNodeId);
+              setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
+            })
+            .fail(() => { openedNodes[selectedNodeId] = false; });
+          return; // wait for AJAX
+        }
 
-        const relatedEdges = extraEdges.filter(e => e.from === selectedNodeId);
+        // Build the list of labels we can toggle in the menu
         let labels = [...new Set(
           relatedEdges
             .filter(e => extraNodes.some(n => n.id === e.to))
             .map(e => e.label)
-        )];
+        )].filter(isDisplayableLabel);
 
-        // Add "hascoTypeUri" if there is a valid edge and an existing destination
-        const hasHascoTypeUriEdge = extraEdges.some(e =>
-          e.label === 'hascoTypeUri' &&
-          e.from === selectedNodeId &&
-          extraNodes.find(n => n.id === e.to)
+        // Always expose type edge if already known
+        const hasTypeEdge = extraEdges.some(e =>
+          e.label === 'hascoTypeUri' && e.from === selectedNodeId && extraNodes.find(n => n.id === e.to)
         );
-        if (hasHascoTypeUriEdge && !labels.includes('hascoTypeUri')) {
-          labels.push('hascoTypeUri');
-        }
-        // 🔥 Lazy-load se não há labels (p.ex. SOC ainda sem “contains” carregados)
-  if (labels.length === 0 && drupalSettings?.rep?.socObjectsEndpoint) {
-  const selectedNode = nodes.get(selectedNodeId) || 
-                       extraNodes.find(n => n.id === selectedNodeId);
+        if (hasTypeEdge && !labels.includes('hascoTypeUri')) labels.push('hascoTypeUri');
 
-  const isPossiblySoc = selectedNode?.typeUri &&
-    (
-      selectedNode.typeUri.includes('/hasco/SampleCollection') ||
-      selectedNode.typeUri.includes('/hasco/SubjectGroup') ||
-      selectedNode.typeUri.includes('/hasco/StudyObjectCollection') ||
-      selectedNode.typeUri.includes('/hasco/SpaceCollection') ||
-      selectedNode.typeUri.includes('/hasco/TimeCollection')
-    );
+        // Always show "contains" for SOCs (even if not loaded yet)
+        if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
 
-  if (isPossiblySoc) {
-    $.ajax({
-      url: drupalSettings.rep.socObjectsEndpoint,
-      data: { uri: selectedNodeId, limit: 100, offset: 0 },
-      dataType: "json",
-      success: function (data) {
-        if (data?.nodes?.length) {
-          // Adiciona novos nós
-          data.nodes.forEach(n => {
-            if (!extraNodes.find(en => en.id === n.id)) {
-              extraNodes.push(n);
-            }
-          });
-          // Adiciona novas edges
-          data.edges.forEach(e => {
-            const exists = extraEdges.find(ee =>
-              ee.from === e.from && ee.to === e.to && ee.label === e.label
-            );
-            if (!exists) {
-              extraEdges.push(e);
-            }
-          });
-
-          // Re-dispara o clique para reconstruir o menu
-          setTimeout(() => network.emit("click", { nodes: [selectedNodeId] }), 0);
-        }
-      }
-    });
-    return; // espera carregar
-  }
-}
-
-
+        // Build the floating menu
         expandMenu.innerHTML = '';
 
         labels.forEach(label => {
           const key = `${selectedNodeId}_${label}`;
-          const isExpanded = expansionState[key] || false;
+          const isExpanded = !!expansionState[key];
 
           const opt = document.createElement("div");
           opt.style.cssText = `
-            cursor: pointer;
-            margin: 2px 0;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            min-width: 200px;
+            cursor: pointer; margin: 2px 0; position: relative;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; min-width: 220px;
           `;
 
           const labelSpan = document.createElement("span");
@@ -191,155 +313,168 @@
           opt.appendChild(labelSpan);
           opt.appendChild(eyeIcon);
 
-          if (label === 'hasVirtualColumn' || label === 'hasSampleCollection' || label === 'hasSubjectCollection') {
-  opt.addEventListener("click", () => {
-    if (opt.querySelector(".submenu")) {
-      opt.querySelector(".submenu").remove();
-      return;
-    }
-    const submenu = document.createElement("div");
-    submenu.className = "submenu";
-    submenu.style.cssText = "position:absolute; left:120px; top:0; background:#f1f1f1; border:1px solid #ccc; padding:5px; border-radius:4px; box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;";
-
-    // 🔹 Verifica se já temos edges para este label, senão vai buscar por AJAX
-    let vcEdges = relatedEdges.filter(e => e.label === label);
-    if (vcEdges.length === 0 && (label === 'hasSampleCollection' || label === 'hasSubjectCollection')) {
-      // Chamada AJAX para lazy loading
-      $.ajax({
-        url: drupalSettings.rep.socObjectsEndpoint,
-        data: { uri: selectedNodeId, limit: 50, offset: 0 },
-        dataType: "json",
-        success: function (data) {
-          if (data.nodes && data.edges) {
-            // Adiciona ao extraNodes/extraEdges para uso futuro
-            data.nodes.forEach(n => {
-              if (!extraNodes.find(en => en.id === n.id)) extraNodes.push(n);
-            });
-            data.edges.forEach(e => {
-              if (!extraEdges.find(ee => ee.from === e.from && ee.to === e.to && ee.label === e.label)) {
-                extraEdges.push(e);
-              }
-            });
-            // Atualiza e reabre o submenu
-            relatedEdges.push(...data.edges);
-            opt.click(); // chama de novo para reconstruir o submenu
-          } else {
-            alert("Nenhum objeto encontrado.");
-          }
-        }
-      });
-      return; // sai agora, vai reentrar depois via opt.click()
-    }
-
-    // 🔹 Continua com a lógica original para construir os itens do submenu
-    vcEdges.forEach(e => {
-      const vcNode = extraNodes.find(n => n.id === e.to);
-      if (!vcNode) return;
-
-      const edgeId = `${e.from}_${e.to}`;
-      const isVisible = nodes.get(vcNode.id) !== null;
-
-      const vcItem = document.createElement("div");
-      vcItem.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 4px 6px;
-        min-width: 240px;
-        cursor: default;
-      `;
-
-      const labelSpan = document.createElement("span");
-      labelSpan.textContent = vcNode.label;
-      labelSpan.style.cssText = "flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
-
-      const toggleBtn = document.createElement("span");
-      toggleBtn.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
-      toggleBtn.style.cssText = "cursor: pointer;";
-
-      toggleBtn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        if (nodes.get(vcNode.id)) {
-          nodes.remove(vcNode.id);
-          edges.remove(edgeId);
-          toggleBtn.innerHTML = eyeSVG;
-        } else {
-          if (!vcNode.color) {
-            if (vcNode.shape === 'ellipse') {
-              vcNode.color = { background: '#28a745', border: '#1e7e34' };
-              vcNode.font = { color: 'black' };
-            } else {
-              vcNode.color = { background: '#007bff', border: '#0056b3' };
-              vcNode.font = { color: 'white' };
-            }
-          }
-          nodes.add(vcNode);
-          edges.add({ ...e, id: edgeId });
-          toggleBtn.innerHTML = eyeOffSVG;
-        }
-      });
-
-      vcItem.appendChild(labelSpan);
-      vcItem.appendChild(toggleBtn);
-      submenu.appendChild(vcItem);
-    });
-
-    opt.appendChild(submenu);
-  });
-        }else if (label === 'hascoTypeUri') {
+          // SPECIAL: "contains" toggle for SOCs (will fetch if missing, else toggle)
+          if (label === 'contains') {
             opt.addEventListener("click", () => {
-              const uriEdge = extraEdges.find(e =>
-                e.label === 'hascoTypeUri' && e.from === selectedNodeId
-              );
-              if (!uriEdge) return;
+              const isMemberLabel = (lbl) =>
+                lbl === 'contains' || lbl === 'hasMember' || lbl === 'hasStudyObject' || lbl === 'hasObject';
 
+              let edgesContains = extraEdges.filter(
+                e => e.from === selectedNodeId && isMemberLabel(e.label)
+              );
+
+              // Not loaded yet? Fetch and reopen menu.
+              if (!edgesContains.length) {
+                if (!socEndpoint) return;
+                $.getJSON(socEndpoint, { from: selectedNodeId, limit: 100, offset: 0, debug: 1 })
+                  .done(data => {
+                    console.log('[graph] contains response', data);
+                    mergeGraphPayload(data, selectedNodeId);
+
+                    // Refresh local cache after merge
+                    edgesContains = extraEdges.filter(
+                      e => e.from === selectedNodeId && isMemberLabel(e.label)
+                    );
+
+                    if (!edgesContains.length) return; // nothing to show
+                    setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
+                  })
+                  .fail(xhr => console.warn('[graph] contains fetch failed', xhr.status, xhr.responseText));
+                return;
+              }
+
+              // Toggle all contained nodes/edges at once
+              const nodeIds = edgesContains.map(e => e.to);
+              if (!expansionState[key]) {
+                nodeIds.forEach(id => {
+                  if (!nodes.get(id)) {
+                    const src = extraNodes.find(n => n.id === id);
+                    if (src) nodes.add(ensureNodeStyle({ ...src }));
+                  }
+                });
+                edgesContains.forEach(e => {
+                  const id = edgeIdOf(e);
+                  if (!edges.get(id)) edges.add({ ...e, id });
+                });
+                expansionState[key] = true;
+                eyeIcon.innerHTML = eyeOffSVG;
+              } else {
+                edgesContains.forEach(e => {
+                  const id = edgeIdOf(e);
+                  if (edges.get(id)) edges.remove(id);
+                });
+                nodeIds.forEach(id => {
+                  const hasOther = edges.get().some(e => e.from === id || e.to === id);
+                  if (!hasOther && nodes.get(id)) nodes.remove(id);
+                });
+                expansionState[key] = false;
+                eyeIcon.innerHTML = eyeSVG;
+              }
+
+              setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
+            });
+
+          // Submenu for VC/SOCs (toggle children individually)
+          } else if (label === 'hasVirtualColumn' || label === 'hasSampleCollection' || label === 'hasSubjectCollection') {
+            opt.addEventListener("click", () => {
+              if (opt.querySelector(".submenu")) {
+                opt.querySelector(".submenu").remove();
+                return;
+              }
+
+              const submenu = document.createElement("div");
+              submenu.className = "submenu";
+              submenu.style.cssText = `
+                position:absolute; left:120px; top:0; background:#f1f1f1;
+                border:1px solid #ccc; padding:5px; border-radius:4px;
+                box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
+              `;
+
+              let labelEdges = relatedEdges.filter(e => e.label === label);
+
+              // If none yet for SOC labels, fetch and rebuild submenu
+              if (labelEdges.length === 0 && socEndpoint &&
+                  (label === 'hasSampleCollection' || label === 'hasSubjectCollection')) {
+                $.getJSON(socEndpoint, { from: selectedNodeId, limit: 100, offset: 0, debug: 1 })
+                  .done(data => {
+                    console.log('[EXPAND submenu]', selectedNodeId, data);
+                    mergeGraphPayload(data, selectedNodeId);
+                    setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
+                  });
+                return;
+              }
+
+              // One row per child node
+              labelEdges.forEach(e => {
+                const child = extraNodes.find(n => n.id === e.to);
+                if (!child) return;
+
+                const id = edgeIdOf(e);
+                const isVisible = !!nodes.get(child.id);
+
+                const row = document.createElement("div");
+                row.style.cssText = `
+                  display:flex; align-items:center; justify-content:space-between;
+                  gap:12px; padding:4px 6px; min-width:260px; cursor:default;
+                `;
+
+                const s = document.createElement("span");
+                s.textContent = child.label;
+                s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+
+                const toggle = document.createElement("span");
+                toggle.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
+                toggle.style.cssText = "cursor:pointer;";
+
+                toggle.addEventListener("click", (ev) => {
+                  ev.stopPropagation();
+                  if (nodes.get(child.id)) {
+                    if (edges.get(id)) edges.remove(id);
+                    const still = edges.get().some(x => x.from === child.id || x.to === child.id);
+                    if (!still) nodes.remove(child.id);
+                    toggle.innerHTML = eyeSVG;
+                  } else {
+                    nodes.add(ensureNodeStyle({ ...child }));
+                    if (!edges.get(id)) edges.add({ ...e, id });
+                    toggle.innerHTML = eyeOffSVG;
+                  }
+                });
+
+                row.appendChild(s);
+                row.appendChild(toggle);
+                submenu.appendChild(row);
+              });
+
+              opt.appendChild(submenu);
+            });
+
+          // Type link (single target)
+          } else if (label === 'hascoTypeUri') {
+            opt.addEventListener("click", () => {
+              const uriEdge = extraEdges.find(e => e.label === 'hascoTypeUri' && e.from === selectedNodeId);
+              if (!uriEdge) return;
               const targetNode = extraNodes.find(n => n.id === uriEdge.to);
               if (!targetNode) return;
 
-              const nodeAlreadyVisible = nodes.get(targetNode.id);
+              const id = edgeIdOf(uriEdge);
+              const visible = !!nodes.get(targetNode.id);
 
-              if (nodeAlreadyVisible) {
-                edges.remove({ id: `${uriEdge.from}_${uriEdge.to}` });
-
-                const hasOtherConnections = edges.get().some(e =>
-                  e.from === targetNode.id || e.to === targetNode.id
-                );
-                if (!hasOtherConnections) {
-                  nodes.remove({ id: targetNode.id });
-                }
-
+              if (visible) {
+                if (edges.get(id)) edges.remove(id);
+                const hasOther = edges.get().some(e => e.from === targetNode.id || e.to === targetNode.id);
+                if (!hasOther) nodes.remove(targetNode.id);
                 expansionState[key] = false;
                 eyeIcon.innerHTML = eyeSVG;
-
               } else {
-                if (!targetNode.label || targetNode.label.trim() === '') {
-                  const idParts = targetNode.id.split('/');
-                  targetNode.label = idParts[idParts.length - 1] || targetNode.id;
-                }
-
-                if (!targetNode.label.includes('➕')) {
-                  targetNode.label += '\n➕';
-                }
-
-                targetNode.font = targetNode.font || { size: 14 };
-                if (!targetNode.color) {
-                  targetNode.color = {
-                    background: '#007bff',
-                    border: '#0056b3'
-                  };
-                  targetNode.font.color = 'white';
-                }
-
-                nodes.add(targetNode);
-                edges.add({ ...uriEdge, id: `${uriEdge.from}_${uriEdge.to}` });
-
+                nodes.add(ensureNodeStyle({ ...targetNode }));
+                if (!edges.get(id)) edges.add({ ...uriEdge, id });
                 expansionState[key] = true;
                 eyeIcon.innerHTML = eyeOffSVG;
               }
-
-              setTimeout(updateExpandButtonPosition, 0);
+              setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
             });
+
+          // Generic toggle: add/remove all nodes for this predicate at once
           } else {
             opt.addEventListener("click", () => {
               const edgesToToggle = relatedEdges.filter(e => e.label === label);
@@ -348,137 +483,94 @@
               if (!expansionState[key]) {
                 nodeIds.forEach(id => {
                   if (!nodes.get(id)) {
-                    const restore = extraNodes.find(n => n.id === id);
-                    if (restore) {
-                      if (!restore.label || restore.label.trim() === '') {
-                        const idParts = restore.id.split('/');
-                        restore.label = idParts[idParts.length - 1] || restore.id;
-                      }
-                      if (!restore.label.includes('➕')) {
-                        restore.label += '\n➕';
-                      }
-                      restore.font = restore.font || {};
-                      restore.font.size = 14;
-
-                      if (!restore.color) {
-                        if (restore.shape === 'ellipse') {
-                          restore.color = { background: '#28a745', border: '#1e7e34' };
-                          restore.font = { color: 'black' };
-                        } else {
-                          restore.color = { background: '#007bff', border: '#0056b3' };
-                          restore.font = { color: 'white' };
-                        }
-                      }
-
-                      nodes.add(restore);
-                      selectedNodeId = restore.id;
-                      network.selectNodes([restore.id]);
-                      network.emit("click", { nodes: [restore.id] });
-                    }
+                    const src = extraNodes.find(n => n.id === id);
+                    if (src) nodes.add(ensureNodeStyle({ ...src }));
                   }
                 });
                 edgesToToggle.forEach(e => {
-                  const id = `${e.from}_${e.to}`;
+                  const id = edgeIdOf(e);
                   if (!edges.get(id)) edges.add({ ...e, id });
                 });
                 expansionState[key] = true;
                 eyeIcon.innerHTML = eyeOffSVG;
               } else {
-                // 1. First remove the edges
                 edgesToToggle.forEach(e => {
-                  const edgeId = `${e.from}_${e.to}`;
-                  if (edges.get(edgeId)) {
-                    edges.remove(edgeId);
-                  }
+                  const id = edgeIdOf(e);
+                  if (edges.get(id)) edges.remove(id);
                 });
-
-                // 2. Then remove the nodes, only if there are no more connections
                 nodeIds.forEach(id => {
-                  if (id.includes('_loop_virtual_')) return; // never remove virtual node
-
-                  const node = nodes.get(id);
-                  const hasOtherConnections = edges.get().some(e => e.from === id || e.to === id);
-
-                  if (node && !hasOtherConnections) {
-                    nodes.remove(id);
-                  }
+                  if (id.includes('_loop_virtual_')) return; // keep virtual node
+                  const hasOther = edges.get().some(e => e.from === id || e.to === id);
+                  if (!hasOther && nodes.get(id)) nodes.remove(id);
                 });
                 expansionState[key] = false;
                 eyeIcon.innerHTML = eyeSVG;
               }
-
-              setTimeout(updateExpandButtonPosition, 0);
+              setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
             });
           }
 
           expandMenu.appendChild(opt);
         });
 
+        // Show & position menu
         expandMenu.style.display = "block";
-        setTimeout(updateExpandButtonPosition, 0);
+        setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
       });
 
-      network.on("dragEnd", () => {
-        if (expandMenu.style.display === "block") setTimeout(updateExpandButtonPosition, 0);
+      // Keep menu next to node while dragging/redrawing
+      network.on("dragEnd", params => {
+        if (expandMenu.style.display === "block" && params.nodes?.length) {
+          setTimeout(() => updateExpandMenuPosition(params.nodes[0]), 0);
+        }
       });
-
       network.on("afterDrawing", () => {
-        if (expandMenu.style.display === "block") setTimeout(updateExpandButtonPosition, 0);
-      });
-
-      const baseNodeId = nodes.getIds()[0];
-      network.selectNodes([baseNodeId]);
-      network.once("afterDrawing", () => {
-        network.emit("click", { nodes: [baseNodeId] });
-      });
-
-      document.body.addEventListener("click", function (event) {
-        const toggleWrapper = event.target.closest(".graph-toggle");
-        if (toggleWrapper) {
-          const nodeId = toggleWrapper.getAttribute("data-node");
-          if (!nodeId) return;
-
-          const nodeExists = nodes.get(nodeId);
-
-          if (!nodeExists) {
-            const node = extraNodes.find(n => n.id === nodeId);
-            if (node) {
-              if (!node.label.includes('➕')) {
-                node.label += '\n➕';
-              }
-              node.font = node.font || {};
-              node.font.size = 14;
-
-              if (!node.color) {
-                if (node.shape === 'ellipse') {
-                  node.color = { background: '#28a745', border: '#1e7e34' };
-                  node.font = { color: 'black' };
-                } else {
-                  node.color = { background: '#007bff', border: '#0056b3' };
-                  node.font = { color: 'white' };
-                }
-              }
-
-              nodes.add(node);
-              const relatedEdges = extraEdges.filter(e => e.to === nodeId || e.from === nodeId);
-              relatedEdges.forEach(edge => {
-                const edgeId = `${edge.from}_${edge.to}`;
-                if (!edges.get(edgeId)) {
-                  edges.add({ ...edge, id: edgeId });
-                }
-              });
-
-              toggleWrapper.innerHTML = eyeOffSVG;
-            }
-          } else {
-            nodes.remove({ id: nodeId });
-            const edgeIds = edges.getIds().filter(id => id.includes(nodeId));
-            edges.remove(edgeIds);
-            toggleWrapper.innerHTML = eyeSVG;
-          }
+        if (expandMenu.style.display === "block") {
+          const sel = network.getSelectedNodes();
+          if (sel && sel.length) setTimeout(() => updateExpandMenuPosition(sel[0]), 0);
         }
       });
 
+      // Select base node and open its menu once
+      const baseNodeId = nodes.getIds()[0];
+      if (baseNodeId) {
+        network.selectNodes([baseNodeId]);
+        network.once("afterDrawing", () => {
+          if (network.emit) network.emit("click", { nodes: [baseNodeId] });
+        });
+      }
+
+      // Optional: support external toggle buttons (.graph-toggle[data-node="<id>"])
+      document.body.addEventListener("click", function (event) {
+        const toggleWrapper = event.target.closest(".graph-toggle");
+        if (!toggleWrapper) return;
+
+        const nodeId = toggleWrapper.getAttribute("data-node");
+        if (!nodeId) return;
+
+        const exists = !!nodes.get(nodeId);
+        if (!exists) {
+          const node = extraNodes.find(n => n.id === nodeId);
+          if (!node) return;
+          nodes.add(ensureNodeStyle({ ...node }));
+          const related = extraEdges.filter(e => e.to === nodeId || e.from === nodeId);
+          related.forEach(e => {
+            const id = edgeIdOf(e);
+            if (!edges.get(id)) edges.add({ ...e, id });
+          });
+          toggleWrapper.innerHTML = eyeOffSVG;
+        } else {
+          nodes.remove(nodeId);
+          // Remove all edges touching this node
+          const ids = edges.getIds().filter(id =>
+            id.startsWith(`${nodeId}_`) || id.includes(`_${nodeId}_`)
+          );
+          edges.remove(ids);
+          toggleWrapper.innerHTML = eyeSVG;
+        }
+      });
+
+      // Close any submenu when clicking outside
       document.addEventListener("click", function (e) {
         if (!expandMenu.contains(e.target)) {
           const submenu = document.querySelector(".submenu");
@@ -486,6 +578,7 @@
         }
       });
 
+      // Expose for quick debugging in console
       window.graphNodes = nodes;
       window.graphEdges = edges;
       window.extraGraphNodes = extraNodes;

@@ -37,10 +37,14 @@ class VisGraphBaseForm extends FormBase {
     $baseUri = $element->uri;
     $baseLabel = $element->label ?? 'Element';
 
+    // Base node shown in the canvas immediately.
     $baseNode = Utils::buildNode($baseUri, $baseLabel, $element->typeUri ?? null, 'box', 24);
     $jsonNodes = json_encode([$baseNode]);
 
+    /** @var \Drupal\rep\FusekiAPIConnector $api */
     $api = \Drupal::service('rep.api_connector');
+
+    // Build initial graph (visible + cached parts) from the inspected object.
     $data = (array) $element;
     $graph = Utils::buildGraphFromArray($data, function($uri) use ($api) {
       $response = $api->getUri($uri);
@@ -50,6 +54,7 @@ class VisGraphBaseForm extends FormBase {
     $linkedNodes = $graph['nodes'];
     $linkedEdges = $graph['edges'];
 
+    // Attach object properties as edges/nodes
     foreach ($objectProperties['objects'] as $property => $value) {
       if (!empty($value->uri)) {
         $linkedNodes[] = Utils::buildNode(
@@ -67,6 +72,7 @@ class VisGraphBaseForm extends FormBase {
         ];
       }
       elseif (!empty($value->label)) {
+        // Render literals as green ellipses
         $literalId = $baseUri . '-' . $property;
         $linkedNodes[] = [
           'id' => $literalId,
@@ -85,6 +91,7 @@ class VisGraphBaseForm extends FormBase {
       }
     }
 
+    // Type edge for the base element
     if (!empty($element->typeUri)) {
       $typeLabel = $element->hascoTypeLabel ?? $element->typeLabel ?? 'Type';
       $linkedNodes[] = Utils::buildNode($element->typeUri, ucfirst($typeLabel), $element->typeUri);
@@ -97,8 +104,9 @@ class VisGraphBaseForm extends FormBase {
       ];
     }
 
-    // Add virtual columns and sample collections
+    // Domain additions when the base element is a Study
     if ($element->hascoTypeUri === HASCO::STUDY) {
+      // Virtual Columns
       $vcRaw = $api->getStudyVCs($element->uri);
       if ($vcRaw) {
         $vcList = $api->parseObjectResponse($vcRaw, 'getStudyVCs');
@@ -118,6 +126,7 @@ class VisGraphBaseForm extends FormBase {
         }
       }
 
+      // SOCs (sample/subject/study object collections)
       $socRaw = $api->getStudySOCs($element->uri, 1000, 0);
       if ($socRaw) {
         $socs = $api->parseObjectResponse($socRaw, 'getStudySOCs');
@@ -151,28 +160,40 @@ class VisGraphBaseForm extends FormBase {
       }
     }
 
-    // 🔹 Adiciona a biblioteca e garante que o endpoint existe
+    // Load the graph behaviour library (your vis.js behavior)
     $form['#attached']['library'][] = 'rep/vis_graph_panel';
-    try {
-      $form['#attached']['drupalSettings']['rep']['socObjectsEndpoint'] =
-        Url::fromRoute('rep.soc_objects')->toString();
-    }
-    catch (\Exception $e) {
-      // Se a rota não existir, evita quebrar
-      $form['#attached']['drupalSettings']['rep']['socObjectsEndpoint'] = '';
-    }
 
-    $form['my_network_graph'] = Utils::buildGraphCanvas(
+    // Build the canvas render array
+    $canvas = Utils::buildGraphCanvas(
       json_decode($jsonNodes, true),
       $linkedNodes,
       $linkedEdges,
       []
     );
 
+    // ✅ Inject drupalSettings right next to the canvas where the JS runs.
+    // This guarantees our endpoint is available to the behavior.
+    if (!isset($canvas['#attached'])) {
+      $canvas['#attached'] = [];
+    }
+    if (!isset($canvas['#attached']['library'])) {
+      $canvas['#attached']['library'] = [];
+    }
+    // Ensure drupalSettings is printed on the page
+    $canvas['#attached']['library'][] = 'core/drupalSettings';
+
+    // Expose the lazy-expansion endpoint to JS:
+    // JS will read drupalSettings.rep.socObjectsEndpoint
+    $canvas['#attached']['drupalSettings']['rep']['socObjectsEndpoint'] =
+      Url::fromRoute('rep.graph.expand')->toString();
+
+    // Place the canvas on the form
+    $form['my_network_graph'] = $canvas;
+
+    // Optional title below the canvas
     $form['my_network_graph_title'] = [
       '#type' => 'item',
       '#title' => '<h3>Associated Elements</h3>',
-      
     ];
 
     return $form;
