@@ -13,6 +13,10 @@
  *   drupalSettings.rep.graphLimits = {
  *     maxMembersPerSOC, pageSize, maxLiveNodes, autoShowOnFetch
  *   }
+ *
+ * This version unifies the submenu logic: EVERY label opens the same
+ * paginated submenu (like "contains"), with « / » navigation and
+ * incremental fetch (limit/offset) from the backend.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -29,9 +33,8 @@
         (window.Drupal && Drupal.url ? Drupal.url('rep/graph/expand') : '/rep/graph/expand');
 
       const limits = (drupalSettings && drupalSettings.rep && drupalSettings.rep.graphLimits) || {};
-      // Default to 5 so pagination always works even if settings are missing.
-      const MAX_MEMBERS_PER_SOC = Number(limits.maxMembersPerSOC || 5); // client UI page size for "contains"
-      const PAGE_SIZE           = Number(limits.pageSize         || 5);  // server page size requested to backend
+      const MAX_MEMBERS_PER_SOC = Number(limits.maxMembersPerSOC || 5); // client page size
+      const PAGE_SIZE           = Number(limits.pageSize         || 5); // server page size
       const MAX_LIVE_NODES      = Number(limits.maxLiveNodes     || 600);
       const AUTO_SHOW_ON_FETCH  = Number(limits.autoShowOnFetch  || 0);
 
@@ -65,9 +68,9 @@
       for (let i = 0; i < extraNodes.length; i++) extraNodes[i] = normalizeNode(extraNodes[i]);
       for (let i = 0; i < extraEdges.length; i++) extraEdges[i] = normalizeEdge(extraEdges[i]);
 
-      const openedNodes = {};               // fetched-once guard (per node)
-      // memberPageState[nodeId] = { offset, fetched, hasMoreServer }
-      const memberPageState = {};
+      // Guards & paging state
+      const openedNodes = {};                             // fetched-once guard (per node for initial lazy fetch)
+      const pageState = Object.create(null);              // `${nodeId}:${label}` -> { offset, fetched, hasMoreServer, prefetchTried? }
 
       // ----- Layout helpers -----
       function freezeAllNodes(ds) { ds.get().forEach(n => ds.update({ id: n.id, fixed: { x: true, y: true } })); }
@@ -120,8 +123,7 @@
         }
       });
 
-      // ----- Floating menu -----
-      const expansionState = {}; // `${nodeId}_${label}` -> boolean
+      // ----- Floating menu container -----
       const expandMenu = document.createElement("div");
       expandMenu.id = "expand-menu";
       expandMenu.style.cssText = `
@@ -161,7 +163,7 @@
         if (!n.color) {
           if (n.shape === 'ellipse') {
             n.color = { background: '#28a745', border: '#1e7e34' };
-            n.font.color = 'black';
+            n.font = { ...(n.font || {}), color: 'black' };
           } else {
             n.color = { background: '#007bff', border: '#0056b3' };
             n.font = { ...(n.font || {}), color: 'white' };
@@ -171,18 +173,18 @@
       }
       function isDisplayableLabel(label) {
         if (!label) return false;
-        if (label === 'contains' || label === 'hascoTypeUri') return true;
-        if (label === 'hasCollection') return false;
-        if (label.startsWith('has')) return true;
+        if (label === 'hasCollection') return false; // normalized below
         const blacklist = new Set(['label','comment','body','hasImageUri','hasWebDocument','hasStatus','id']);
         return !blacklist.has(label);
       }
       function buildLabelEdgesMap(relEdges) {
+        // Map: label -> [{ edge, id, normalized }]
         const map = new Map();
         relEdges.forEach(e => {
           const E = normalizeEdge(e);
           const target = extraNodes.find(n => n.id === E.to);
           let lbl = e.label;
+          // Normalize generic hasCollection into specific labels based on target.typeUri
           if (lbl === 'hasCollection' && target) {
             const tu = (target.typeUri || '');
             if (tu.includes('/hasco/SampleCollection')) lbl = 'hasSampleCollection';
@@ -196,12 +198,12 @@
         });
         return map;
       }
-
       const isMemberLabel = (lbl) =>
         lbl === 'contains' || lbl === 'hasMember' || lbl === 'hasStudyObject' || lbl === 'hasObject';
       const isReverseMemberLabel = (lbl) =>
         lbl === 'isMemberOf' || lbl === 'memberOf' || lbl === 'isObjectOf';
 
+      // Create synthetic "contains" edges from reverse membership if present
       function synthesizeContainsFromReverse(nodeId) {
         const rev = extraEdges
           .map(normalizeEdge)
@@ -223,7 +225,208 @@
         alert(`Node limit reached (${MAX_LIVE_NODES}). Hide some items before loading more.`);
       }
 
-      // ----- Click handler -----
+      // ---------- Unified submenu helpers (EVERY label uses this) ----------
+      function itemsForLabel(nodeId, label) {
+        // Build the list of edges currently cached for this label from "nodeId"
+        const norms = extraEdges.map(normalizeEdge);
+        if (label === 'contains') {
+          return norms
+            .filter(e => e.from === nodeId && isMemberLabel(e.label))
+            .map(e => ({ edge: { ...e, label: 'contains' }, id: edgeIdOf({ ...e, label: 'contains' }) }))
+            .filter(obj => extraNodes.some(n => n.id === obj.edge.to));
+        }
+        const rel = norms.filter(e => e.from === nodeId);
+        const map = buildLabelEdgesMap(rel);
+        return (map.get(label) || []).filter(({ edge }) => extraNodes.some(n => n.id === edge.to));
+      }
+
+      function fetchMoreForLabel(nodeId, label, state, rightBtn, after) {
+        // Ask the backend for the next page for this label
+        if (!socEndpoint) return;
+        const params = { from: nodeId, limit: PAGE_SIZE, offset: state.fetched, debug: 1 };
+        if (label === 'contains') params.relation = 'contains';
+        else params.label = label;
+
+        const prev = rightBtn.textContent;
+        rightBtn.disabled = true; rightBtn.textContent = '…';
+
+        const before = itemsForLabel(nodeId, label).length;
+
+        $.getJSON(socEndpoint, params)
+          .done(data => {
+            mergeGraphPayload(data, nodeId);
+            // Recompute returned count based on what we can see in cache
+            const afterCount = itemsForLabel(nodeId, label).length;
+            const returned = Math.max(0, afterCount - before);
+            state.fetched += returned;
+            const meta = (data && data.meta) || {};
+            state.hasMoreServer = (typeof meta.totalGuess === 'number')
+              ? (state.fetched < meta.totalGuess)
+              : (returned === PAGE_SIZE);
+            after(returned);
+          })
+          .fail(() => {
+            // if it fails, stop trying to fetch infinitely
+            state.hasMoreServer = false;
+            after(0);
+          })
+          .always(() => {
+            rightBtn.textContent = prev;
+            rightBtn.disabled = false;
+          });
+      }
+
+      function openLabelSubmenu(opt, nodeId, label) {
+        let submenu = opt.querySelector(".submenu");
+        if (submenu) { submenu.remove(); return; }
+        closeAllSubmenus();
+
+        // Initialize paging state for (node,label) if missing
+        const key = `${nodeId}:${label}`;
+        if (!pageState[key]) {
+          const now = itemsForLabel(nodeId, label).length;
+          pageState[key] = { offset: 0, fetched: now, hasMoreServer: false, prefetchTried: false };
+        }
+        const state = pageState[key];
+
+        submenu = document.createElement("div");
+        submenu.className = "submenu";
+        submenu.style.cssText = `
+          position:absolute; left:140px; top:0; background:#f1f1f1;
+          border:1px solid #ccc; padding:6px; border-radius:4px;
+          box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
+          max-height: 340px; overflow:auto; min-width: 320px; pointer-events:auto;
+        `;
+        opt.appendChild(submenu);
+
+        const renderPage = () => {
+          submenu.innerHTML = '';
+
+          // Current cached rows for this label
+          const list = itemsForLabel(nodeId, label);
+          const totalFetched = list.length;
+
+          // If nothing cached yet (and it's not a trivial 1-item label), try a prefetch
+          const fetchable = (label !== 'hascoTypeUri');
+          if (fetchable && totalFetched === 0 && !state.prefetchTried) {
+            state.prefetchTried = true;
+            // Assume there *may* be more on server until proven otherwise
+            state.hasMoreServer = true;
+            fetchMoreForLabel(nodeId, label, state, { textContent:'', disabled:false }, (returned) => {
+              // Re-render after the first batch
+              renderPage();
+            });
+            // Show a light skeleton for UX
+            const loading = document.createElement('div');
+            loading.style.cssText = "padding:6px 4px; opacity:.7;";
+            loading.textContent = 'Loading...';
+            submenu.appendChild(loading);
+            return; // defer actual render until fetch returns
+          }
+
+          // Pagination window within cached items
+          const start = Math.max(
+            0,
+            Math.min(state.offset, Math.max(0, totalFetched - MAX_MEMBERS_PER_SOC))
+          );
+          const end = Math.min(start + MAX_MEMBERS_PER_SOC, totalFetched);
+          const page = list.slice(start, end);
+
+          // Rows
+          page.forEach(({ edge: e, id }) => {
+            const child = extraNodes.find(n => n.id === e.to)
+                        || normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
+            if (!extraNodes.find(n => n.id === child.id)) extraNodes.push(child);
+
+            const edgeId = id || edgeIdOf({ ...e, label }); // ensure stable id
+            const isVisible = !!nodes.get(child.id);
+
+            const row = document.createElement("div");
+            row.style.cssText = `
+              display:flex; align-items:center; justify-content:space-between;
+              gap:12px; padding:4px 6px; min-width:300px; cursor:default;
+            `;
+
+            const s = document.createElement("span");
+            s.textContent = child.label;
+            s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+
+            const toggle = document.createElement("span");
+            toggle.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
+            toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
+
+            toggle.addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              if (!nodes.get(child.id)) {
+                if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
+                nodes.add(ensureNodeStyle({ ...child }));
+                if (!edges.get(edgeId)) edges.add({ ...e, id: edgeId, label });
+                toggle.innerHTML = eyeOffSVG;
+              } else {
+                if (edges.get(edgeId)) edges.remove(edgeId);
+                const still = edges.get().some(x => x.from === child.id || x.to === child.id);
+                if (!still) nodes.remove(child.id);
+                toggle.innerHTML = eyeSVG;
+              }
+            });
+
+            row.appendChild(s);
+            row.appendChild(toggle);
+            submenu.appendChild(row);
+          });
+
+          // Footer with « and » controls
+          const footer = document.createElement('div');
+          footer.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:8px;";
+
+          const left = document.createElement('button');
+          left.type = 'button';
+          left.className = 'btn btn-sm btn-light';
+          left.textContent = '«';
+          left.disabled = (state.offset <= 0);
+          left.onclick = (e3) => { e3.stopPropagation(); state.offset = Math.max(0, state.offset - MAX_MEMBERS_PER_SOC); renderPage(); };
+
+          const info = document.createElement('span');
+          info.style.cssText = "font-size:12px; opacity:.8;";
+          const pageNum = Math.floor(state.offset / MAX_MEMBERS_PER_SOC) + 1;
+          const totalPages = Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC));
+          info.textContent = `Page ${pageNum} / ${totalPages} — showing ${page.length} of ${totalFetched}${state.hasMoreServer ? '+' : ''}`;
+
+          const right = document.createElement('button');
+          right.type = 'button';
+          right.className = 'btn btn-sm btn-light';
+          right.textContent = '»';
+
+          const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
+          const canFetchMore = !!state.hasMoreServer && (label !== 'hascoTypeUri');
+          right.disabled = !canAdvanceCached && !canFetchMore;
+
+          right.onclick = (e3) => {
+            e3.stopPropagation();
+            if (canAdvanceCached) {
+              state.offset += MAX_MEMBERS_PER_SOC;
+              renderPage();
+            } else if (canFetchMore) {
+              fetchMoreForLabel(nodeId, label, state, right, (returned) => {
+                if (returned > 0) state.offset += MAX_MEMBERS_PER_SOC;
+                renderPage();
+              });
+            }
+          };
+
+          footer.appendChild(left);
+          footer.appendChild(info);
+          footer.appendChild(right);
+          submenu.appendChild(footer);
+
+          // keep menu positioned
+          setTimeout(() => updateExpandMenuPosition(nodeId), 0);
+        };
+
+        renderPage();
+      }
+
+      // ----- Node click -> build floating menu and wire submenu for each label -----
       network.on("click", function (params) {
         expandMenu.style.display = "none";
         closeAllSubmenus();
@@ -247,43 +450,23 @@
         }
         const kind = nodeKindByTypeUri(selectedNode?.typeUri);
 
-        const relatedEdges = extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId);
-
-        let hasContains =
+        // If reverse membership is cached, synthesize "contains" edges
+        const hasContains =
           extraEdges.map(normalizeEdge).some(e => e.from === selectedNodeId && isMemberLabel(e.label)) ||
           extraEdges.map(normalizeEdge).some(e => e.to   === selectedNodeId && isReverseMemberLabel(e.label));
         if (hasContains) synthesizeContainsFromReverse(selectedNodeId);
 
-        // Lazy fetch SOC members if we still don't know any
+        // Lazy fetch initial SOC members or Study SOCs if we know nothing yet
         if (socEndpoint && kind === 'soc' && !hasContains && !openedNodes[selectedNodeId]) {
           openedNodes[selectedNodeId] = true;
           $.getJSON(socEndpoint, { from: selectedNodeId, relation: 'contains', limit: PAGE_SIZE, offset: 0, debug: 1 })
             .done(data => {
               mergeGraphPayload(data, selectedNodeId);
-              synthesizeContainsFromReverse(selectedNodeId);
-
-              const meta = (data && data.meta) || {};
-              const returned = typeof meta.count === 'number'
-                ? meta.count
-                : extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId && isMemberLabel(e.label)).length;
-
-              memberPageState[selectedNodeId] = {
-                offset: 0,
-                fetched: returned,
-                // If server tells us totalGuess, trust it; else assume "has more" when a full page came back
-                hasMoreServer: (typeof meta.totalGuess === 'number')
-                  ? (returned < meta.totalGuess)
-                  : (returned === PAGE_SIZE)
-              };
-
-              // Re-open the menu programmatically
               setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
             })
             .fail(() => { openedNodes[selectedNodeId] = false; });
           return;
         }
-
-        // Lazy fetch Study → SOCs (first page)
         const hasSOC = extraEdges.map(normalizeEdge).some(e =>
           e.from === selectedNodeId &&
           (e.label === 'hasSampleCollection' ||
@@ -303,26 +486,25 @@
           return;
         }
 
+        // Build available labels for this node from cached edges
+        const relatedEdges = extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId);
         const labelEdgesMap = buildLabelEdgesMap(
           relatedEdges.filter(e => extraNodes.some(n => n.id === e.to))
         );
-
         let labels = Array.from(labelEdgesMap.keys()).filter(isDisplayableLabel);
 
+        // Ensure type and contains appear when available/meaningful
         const hasTypeEdge = extraEdges.map(normalizeEdge).some(e =>
           e.label === 'hascoTypeUri' && e.from === selectedNodeId && extraNodes.find(n => n.id === e.to)
         );
         if (hasTypeEdge && !labels.includes('hascoTypeUri')) labels.push('hascoTypeUri');
         if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
 
-        // ----- Build floating menu -----
+        // Render floating menu (each label opens the same unified submenu)
         expandMenu.innerHTML = '';
         closeAllSubmenus();
 
         labels.forEach(label => {
-          const key = `${selectedNodeId}_${label}`;
-          const isExpanded = !!expansionState[key];
-
           const opt = document.createElement("div");
           opt.style.cssText = `
             cursor: pointer; margin: 2px 0; position: relative;
@@ -332,327 +514,16 @@
           const labelSpan = document.createElement("span");
           labelSpan.textContent = label;
           const eyeIcon = document.createElement("span");
-          eyeIcon.innerHTML = isExpanded ? eyeOffSVG : eyeSVG;
+          eyeIcon.innerHTML = eyeSVG;
+
           opt.appendChild(labelSpan);
           opt.appendChild(eyeIcon);
 
-          // ========== CONTAINS (with « / » pagination) ==========
-          if (label === 'contains') {
-            opt.addEventListener("click", (ev) => {
-              ev.stopPropagation();
-
-              let submenu = opt.querySelector(".submenu");
-              if (submenu) { submenu.remove(); return; }
-              closeAllSubmenus();
-
-              // Ensure page state
-              const nowEdges = extraEdges.map(normalizeEdge).filter(
-                e => e.from === selectedNodeId && isMemberLabel(e.label)
-              );
-              if (!memberPageState[selectedNodeId]) {
-                memberPageState[selectedNodeId] = {
-                  offset: 0,
-                  fetched: nowEdges.length,
-                  hasMoreServer: (nowEdges.length === PAGE_SIZE)
-                };
-              }
-              const state = memberPageState[selectedNodeId];
-
-              submenu = document.createElement("div");
-              submenu.className = "submenu";
-              submenu.style.cssText = `
-                position:absolute; left:140px; top:0; background:#f1f1f1;
-                border:1px solid #ccc; padding:6px; border-radius:4px;
-                box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
-                max-height: 340px; overflow:auto; min-width: 320px; pointer-events:auto;
-              `;
-              opt.appendChild(submenu);
-
-              // Re-render the rows and footer in-place (no menu rebuild)
-              const renderPage = () => {
-                submenu.innerHTML = '';
-
-                const membersNow = extraEdges.map(normalizeEdge).filter(
-                  e => e.from === selectedNodeId && isMemberLabel(e.label)
-                );
-                const totalFetched = membersNow.length;
-                const start = Math.max(0, Math.min(state.offset, Math.max(0, totalFetched - 1)));
-                const end = Math.min(start + MAX_MEMBERS_PER_SOC, totalFetched);
-                const page = membersNow.slice(start, end);
-
-                page.forEach(e => {
-                  const child = extraNodes.find(n => n.id === e.to) ||
-                                normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
-                  if (!extraNodes.find(n => n.id === child.id)) extraNodes.push(child);
-
-                  const id = edgeIdOf({ ...e, label: 'contains' });
-                  const isVisible = !!nodes.get(child.id);
-
-                  const row = document.createElement("div");
-                  row.style.cssText = `
-                    display:flex; align-items:center; justify-content:space-between;
-                    gap:12px; padding:4px 6px; min-width:300px; cursor:default;
-                  `;
-
-                  const s = document.createElement("span");
-                  s.textContent = child.label;
-                  s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
-
-                  // >>> toggle is a SPAN (no Bootstrap button = no blue background)
-                  const toggle = document.createElement("span");
-                  toggle.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
-                  toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
-
-                  toggle.addEventListener("click", (e2) => {
-                    e2.stopPropagation();
-                    if (!nodes.get(child.id)) {
-                      if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
-                      nodes.add(ensureNodeStyle({ ...child }));
-                      if (!edges.get(id)) edges.add({ ...e, id, label: 'contains' });
-                      toggle.innerHTML = eyeOffSVG;
-                    } else {
-                      if (edges.get(id)) edges.remove(id);
-                      const still = edges.get().some(x => x.from === child.id || x.to === child.id);
-                      if (!still) nodes.remove(child.id);
-                      toggle.innerHTML = eyeSVG;
-                    }
-                  });
-
-                  row.appendChild(s);
-                  row.appendChild(toggle);
-                  submenu.appendChild(row);
-                });
-
-                // Footer with « and » controls
-                const footer = document.createElement('div');
-                footer.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:8px;";
-
-                const left = document.createElement('button');
-                left.type = 'button';
-                left.className = 'btn btn-sm btn-light';
-                left.textContent = '«';
-                left.disabled = (state.offset <= 0);
-                left.onclick = (e3) => { e3.stopPropagation(); state.offset = Math.max(0, state.offset - MAX_MEMBERS_PER_SOC); renderPage(); };
-
-                const info = document.createElement('span');
-                info.style.cssText = "font-size:12px; opacity:.8;";
-                const pageNum = Math.floor(state.offset / MAX_MEMBERS_PER_SOC) + 1;
-                const totalPages = Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC));
-                info.textContent = `Page ${pageNum} / ${totalPages} — showing ${page.length} of ${totalFetched}${state.hasMoreServer ? '+' : ''}`;
-
-                const right = document.createElement('button');
-                right.type = 'button';
-                right.className = 'btn btn-sm btn-light';
-                right.textContent = '»';
-
-                // Advance if we have more cached; otherwise fetch next server page
-                const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
-                const canFetchMore = !!state.hasMoreServer;
-                right.disabled = !canAdvanceCached && !canFetchMore;
-
-                right.onclick = (e3) => {
-                  e3.stopPropagation();
-                  if (canAdvanceCached) {
-                    state.offset = state.offset + MAX_MEMBERS_PER_SOC;
-                    renderPage();
-                  } else if (canFetchMore && socEndpoint) {
-                    // Mini spinner feedback
-                    const prevText = right.textContent;
-                    right.disabled = true;
-                    right.textContent = '…';
-
-                    const beforeCount = extraEdges.map(normalizeEdge).filter(
-                      x => x.from === selectedNodeId && isMemberLabel(x.label)
-                    ).length;
-
-                    $.getJSON(socEndpoint, {
-                      from: selectedNodeId,
-                      relation: 'contains',
-                      limit: PAGE_SIZE,
-                      offset: memberPageState[selectedNodeId].fetched,
-                      debug: 1
-                    }).done(data => {
-                      mergeGraphPayload(data, selectedNodeId);
-
-                      const meta = (data && data.meta) || {};
-                      const afterCount = extraEdges.map(normalizeEdge).filter(
-                        x => x.from === selectedNodeId && isMemberLabel(x.label)
-                      ).length;
-                      const returned = typeof meta.count === 'number' ? meta.count : Math.max(0, afterCount - beforeCount);
-
-                      memberPageState[selectedNodeId].fetched += returned;
-                      // hasMoreServer: trust totalGuess if present, else size-based heuristic
-                      memberPageState[selectedNodeId].hasMoreServer = (typeof meta.totalGuess === 'number')
-                        ? (memberPageState[selectedNodeId].fetched < meta.totalGuess)
-                        : (returned === PAGE_SIZE);
-
-                      if (returned > 0) {
-                        state.offset = state.offset + MAX_MEMBERS_PER_SOC;
-                      }
-                      right.textContent = prevText;
-                      right.disabled = false;
-                      renderPage();
-                    }).fail(() => {
-                      right.textContent = prevText;
-                      right.disabled = false;
-                    });
-                  }
-                };
-
-                footer.appendChild(left);
-                footer.appendChild(info);
-                footer.appendChild(right);
-                submenu.appendChild(footer);
-
-                // keep menu positioned
-                setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
-              };
-
-              renderPage();
-            });
-
-          // ----- SOC/VC submenus -----
-          } else if (['hasVirtualColumn','hasSampleCollection','hasSubjectCollection','hasSpaceCollection','hasTimeCollection','hasCollection'].includes(label)) {
-            opt.addEventListener("click", (ev) => {
-              ev.stopPropagation();
-              const existing = opt.querySelector(".submenu");
-              if (existing) { existing.remove(); return; }
-              closeAllSubmenus();
-
-              const submenu = document.createElement("div");
-              submenu.className = "submenu";
-              submenu.style.cssText = `
-                position:absolute; left:140px; top:0; background:#f1f1f1;
-                border:1px solid #ccc; padding:6px; border-radius:4px;
-                box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
-                max-height: 320px; overflow:auto; pointer-events:auto;
-              `;
-
-              let labelEdges = (buildLabelEdgesMap(relatedEdges)).get(label) || [];
-              const socLabels = new Set(['hasSampleCollection','hasSubjectCollection','hasSpaceCollection','hasTimeCollection','hasCollection']);
-              if (labelEdges.length === 0 && socEndpoint && socLabels.has(label)) {
-                $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
-                  .done(data => {
-                    mergeGraphPayload(data, selectedNodeId);
-                    setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
-                  });
-                return;
-              }
-
-              labelEdges.forEach(({ edge: e, id }) => {
-                const child = extraNodes.find(n => n.id === e.to);
-                if (!child) return;
-
-                const isVisible = !!nodes.get(child.id);
-
-                const row = document.createElement("div");
-                row.style.cssText = `
-                  display:flex; align-items:center; justify-content:space-between;
-                  gap:12px; padding:4px 6px; min-width:300px; cursor:default;
-                `;
-
-                const s = document.createElement("span");
-                s.textContent = child.label;
-                s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
-
-                // >>> toggle is a SPAN (no Bootstrap button)
-                const toggle = document.createElement("span");
-                toggle.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
-                toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
-
-                toggle.addEventListener("click", (e2) => {
-                  e2.stopPropagation();
-                  if (!nodes.get(child.id)) {
-                    if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
-                    nodes.add(ensureNodeStyle({ ...child }));
-                    if (!edges.get(id)) edges.add({ ...e, id, label }); // normalized label
-                    toggle.innerHTML = eyeOffSVG;
-                  } else {
-                    if (edges.get(id)) edges.remove(id);
-                    const still = edges.get().some(x => x.from === child.id || x.to === child.id);
-                    if (!still) nodes.remove(child.id);
-                    toggle.innerHTML = eyeSVG;
-                  }
-                });
-
-                row.appendChild(s);
-                row.appendChild(toggle);
-                submenu.appendChild(row);
-              });
-
-              opt.appendChild(submenu);
-              setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
-            });
-
-          // ----- Type link -----
-          } else if (label === 'hascoTypeUri') {
-            opt.addEventListener("click", (ev) => {
-              ev.stopPropagation();
-              closeAllSubmenus();
-
-              const uriEdge = extraEdges.map(normalizeEdge).find(e => e.label === 'hascoTypeUri' && e.from === selectedNodeId);
-              if (!uriEdge) return;
-              const targetNode = extraNodes.find(n => n.id === uriEdge.to);
-              if (!targetNode) return;
-
-              const id = edgeIdOf(uriEdge);
-              const visible = !!nodes.get(targetNode.id);
-
-              if (visible) {
-                if (edges.get(id)) edges.remove(id);
-                const hasOther = edges.get().some(e => e.from === targetNode.id || e.to === targetNode.id);
-                if (!hasOther) nodes.remove(targetNode.id);
-                expansionState[key] = false;
-                eyeIcon.innerHTML = eyeSVG;
-              } else {
-                if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
-                nodes.add(ensureNodeStyle({ ...targetNode }));
-                if (!edges.get(id)) edges.add({ ...uriEdge, id });
-                expansionState[key] = true;
-                eyeIcon.innerHTML = eyeOffSVG;
-              }
-              setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
-            });
-
-          // ----- Generic toggle -----
-          } else {
-            opt.addEventListener("click", (ev) => {
-              ev.stopPropagation();
-              closeAllSubmenus();
-
-              const edgesToToggle = (buildLabelEdgesMap(relatedEdges)).get(label) || [];
-              const nodeIds = edgesToToggle.map(obj => obj.edge.to);
-
-              if (!expansionState[key]) {
-                const need = nodeIds.filter(id => !nodes.get(id)).length;
-                if (!canAddMoreVisibleNodes(need)) { warnNodeCap(); return; }
-
-                nodeIds.forEach(id => {
-                  if (!nodes.get(id)) {
-                    const src = extraNodes.find(n => n.id === id) ||
-                                normalizeNode({ id, label: (id.split('/').pop() || id), shape: 'box' });
-                    if (!extraNodes.find(n => n.id === src.id)) extraNodes.push(src);
-                    nodes.add(ensureNodeStyle({ ...src }));
-                  }
-                });
-                edgesToToggle.forEach(({ edge: e, id }) => {
-                  if (!edges.get(id)) edges.add({ ...normalizeEdge(e), id, label });
-                });
-                expansionState[key] = true;
-                eyeIcon.innerHTML = eyeOffSVG;
-              } else {
-                edgesToToggle.forEach(({ id }) => { if (edges.get(id)) edges.remove(id); });
-                nodeIds.forEach(id => {
-                  if (id.includes('_loop_virtual_')) return;
-                  const hasOther = edges.get().some(e => e.from === id || e.to === id);
-                  if (!hasOther && nodes.get(id)) nodes.remove(id);
-                });
-                expansionState[key] = false;
-                eyeIcon.innerHTML = eyeSVG;
-              }
-              setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
-            });
-          }
+          opt.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            openLabelSubmenu(opt, selectedNodeId, label);
+            setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
+          });
 
           expandMenu.appendChild(opt);
         });

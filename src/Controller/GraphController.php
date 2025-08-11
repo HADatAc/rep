@@ -15,10 +15,10 @@ use Drupal\rep\Vocabulary\HASCO;
  *
  * Notes:
  * - Always includes the "from" node in the result.
- * - Provides two fast paths:
+ * - Fast paths:
  *     • Study  -> returns its collections (sample/subject/space/time) with paging
  *     • SOC    -> returns its members ("contains") with paging
- * - Falls back to generic walking when a specific "label" is requested.
+ * - For any other label, walks only that property and applies paging when possible.
  * - Returns { nodes:[], edges:[], meta:{} } (meta only when debug=1).
  */
 class GraphController extends ControllerBase {
@@ -151,8 +151,9 @@ class GraphController extends ControllerBase {
         $members   = [];
         $used      = null;
 
-        // Try connector methods that support paging first.
+        // Try connector methods that support paging first (priority to the one you use in preload).
         foreach ([
+          'studyObjectsBySOCwithPage',
           'getSOCObjects',
           'getSOCMembers',
           'getStudyObjectsFromSOC',
@@ -171,7 +172,7 @@ class GraphController extends ControllerBase {
               break;
             }
           } catch (\Throwable $e) {
-            // swallow and keep trying alternatives
+            // keep trying alternatives
           }
         }
 
@@ -228,7 +229,6 @@ LIMIT {$limit} OFFSET {$offset}
                 $used = "SPARQL:$runner";
                 $meta['count'] = count($rows['results']['bindings']);
               } elseif (is_array($rows)) {
-                // Some connectors may return a simplified array.
                 $tmpCount = 0;
                 foreach ($rows as $r) {
                   $vObj   = is_array($r) ? ($r['obj']   ?? ($r['obj']['value']   ?? null)) : null;
@@ -292,22 +292,30 @@ LIMIT {$limit} OFFSET {$offset}
 
     $properties = (array) $obj;
 
-    // Study -> Virtual Columns
+    // Study -> Virtual Columns (paged via array_slice)
     if ($label === 'hasVirtualColumn' && $isStudy) {
       $vcRaw = $api->getStudyVCs($from);
       if ($vcRaw) {
-        $vcList = $api->parseObjectResponse($vcRaw, 'getStudyVCs');
-        foreach (($vcList ?? []) as $vcName => $vcObj) {
+        $vcList = $api->parseObjectResponse($vcRaw, 'getStudyVCs') ?? [];
+        $total  = is_array($vcList) ? count($vcList) : 0;
+        // preserve keys to allow associative list (name => obj)
+        $slice = array_slice($vcList, $offset, $limit, true);
+        $cnt = 0;
+        foreach ($slice as $vcName => $vcObj) {
+          $cnt++;
           $vcId    = !empty($vcObj->uri) ? $expandCurie((string) $vcObj->uri) : 'vc-' . md5((string) $vcName);
           $vcLabel = $vcObj->label ?? (is_string($vcName) ? $vcName : 'Virtual Column');
           $nodes[] = Utils::buildNode($vcId, $vcLabel, $vcObj->typeUri ?? null);
           $edges[] = ['id' => "{$from}_{$vcId}_hasVirtualColumn", 'from' => $from, 'to' => $vcId, 'label' => 'hasVirtualColumn', 'arrows' => 'to'];
         }
+        $meta['count'] = $cnt;
+        $meta['totalGuess'] = $total;
       }
     }
-    // Study -> Filter SOCs by desired edge label (sample/subject/space/time)
+    // Study -> Filter SOCs by desired edge label (sample/subject/space/time) with paging
     elseif ($isStudy && in_array($label, ['hasSampleCollection','hasSubjectCollection','hasSpaceCollection','hasTimeCollection'], true)) {
-      $socRaw = $api->getStudySOCs($from, 1000, 0);
+      $socRaw = $api->getStudySOCs($from, $limit, $offset);
+      $cnt = 0;
       if ($socRaw) {
         $socs = $api->parseObjectResponse($socRaw, 'getStudySOCs');
         foreach (($socs ?? []) as $soc) {
@@ -323,28 +331,62 @@ LIMIT {$limit} OFFSET {$offset}
           };
           if ($label !== $pred) { continue; }
 
+          $cnt++;
           $socUri = $expandCurie((string) $soc->uri);
           $nodes[] = Utils::buildNode($socUri, $soc->label ?? Utils::namespaceUri($socUri), $soc->typeUri ?? null);
           $edges[] = ['id' => "{$from}_{$socUri}_{$pred}", 'from' => $from, 'to' => $socUri, 'label' => $pred, 'arrows' => 'to'];
         }
       }
+      $meta['count'] = $cnt;
     }
-    // Generic walker: traverse object properties (and arrays of objects).
+    // Generic walker: traverse the requested property only; apply paging when it's an array.
     else {
-      foreach ($properties as $prop => $val) {
-        if ($label && $prop !== $label) { continue; }
+      if ($label && array_key_exists($label, $properties)) {
+        $val = $properties[$label];
 
+        // Single object
         if (is_object($val) && !empty($val->uri)) {
           $childUri = $expandCurie((string) $val->uri);
           $nodes[] = Utils::buildNode($childUri, $val->label ?? Utils::namespaceUri($childUri), $val->typeUri ?? null);
-          $edges[] = ['id' => "{$from}_{$childUri}_{$prop}", 'from' => $from, 'to' => $childUri, 'label' => $prop, 'arrows' => 'to'];
+          $edges[] = ['id' => "{$from}_{$childUri}_{$label}", 'from' => $from, 'to' => $childUri, 'label' => $label, 'arrows' => 'to'];
+          $meta['count'] = 1;
+          $meta['totalGuess'] = 1;
         }
+        // Array of objects (paged)
         elseif (is_array($val)) {
+          $total = 0;
           foreach ($val as $v) {
-            if (is_object($v) && !empty($v->uri)) {
-              $childUri = $expandCurie((string) $v->uri);
-              $nodes[] = Utils::buildNode($childUri, $v->label ?? Utils::namespaceUri($childUri), $v->typeUri ?? null);
-              $edges[] = ['id' => "{$from}_{$childUri}_{$prop}", 'from' => $from, 'to' => $childUri, 'label' => $prop, 'arrows' => 'to'];
+            if (is_object($v) && !empty($v->uri)) $total++;
+          }
+          $i = 0; $added = 0;
+          foreach ($val as $v) {
+            if (!is_object($v) || empty($v->uri)) continue;
+            if ($i++ < $offset) continue;
+            if ($added >= $limit) break;
+
+            $childUri = $expandCurie((string) $v->uri);
+            $nodes[] = Utils::buildNode($childUri, $v->label ?? Utils::namespaceUri($childUri), $v->typeUri ?? null);
+            $edges[] = ['id' => "{$from}_{$childUri}_{$label}", 'from' => $from, 'to' => $childUri, 'label' => $label, 'arrows' => 'to'];
+            $added++;
+          }
+          $meta['count'] = $added;
+          $meta['totalGuess'] = $total;
+        }
+        // Other types (literal etc.) — ignore for pagination purposes
+      } else {
+        // No specific label requested: do a conservative generic walk without paging hints.
+        foreach ($properties as $prop => $val) {
+          if (is_object($val) && !empty($val->uri)) {
+            $childUri = $expandCurie((string) $val->uri);
+            $nodes[] = Utils::buildNode($childUri, $val->label ?? Utils::namespaceUri($childUri), $val->typeUri ?? null);
+            $edges[] = ['id' => "{$from}_{$childUri}_{$prop}", 'from' => $from, 'to' => $childUri, 'label' => $prop, 'arrows' => 'to'];
+          } elseif (is_array($val)) {
+            foreach ($val as $v) {
+              if (is_object($v) && !empty($v->uri)) {
+                $childUri = $expandCurie((string) $v->uri);
+                $nodes[] = Utils::buildNode($childUri, $v->label ?? Utils::namespaceUri($childUri), $v->typeUri ?? null);
+                $edges[] = ['id' => "{$from}_{$childUri}_{$prop}", 'from' => $from, 'to' => $childUri, 'label' => $prop, 'arrows' => 'to'];
+              }
             }
           }
         }
