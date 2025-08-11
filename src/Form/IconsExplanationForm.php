@@ -15,51 +15,84 @@ final class IconsExplanationForm extends FormBase {
 
   public function buildForm(array $form, FormStateInterface $form_state): array {
 
+    $form['#attached']['library'][] = 'rep/mtsearch_icons';
+
+    $module_path = \Drupal::service('extension.list.module')->getPath('rep');
+    $base_url = \Drupal::request()->getBaseUrl();
+    $placeholder_base = $base_url . '/' . $module_path . '/images/placeholders/';
+
     $header = [
       ['data' => $this->t('Icon')],
       ['data' => $this->t('Name')],
       ['data' => $this->t('Explanation')],
     ];
 
-    $rows_data = [
-      ['icon' => '🔷',     'name' => 'DAs',    'desc' => 'Represents an ontology class node.'],
-      ['icon' => '🧭',     'name' => 'Studies', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '👤',     'name' => 'Study Roles', 'desc' => 'Represents an instance/individual.'],
-      ['icon' => 'teste', 'name' => 'Virtual Columns', 'desc' => 'test'],
-      ['icon' => '🧭',     'name' => 'Object Collections', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Study Objects', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'mudar', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'mudar', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'DD', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'SDD', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'SV', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Entity', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Attribute', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Unit', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Platform', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Platform Instances', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Instrument Instances', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Detector Instances', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Actuator Instances', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Deployments', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'Message Streams', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'File Streams', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'INS', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'DSG', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'DD', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'SDD', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'DP2', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '🧭',     'name' => 'STR', 'desc' => 'Represents a property/relation.'],
+    $map_img = [
+      'INS' => 'ins_placeholder.png',
+      'DSG' => 'dsg_placeholder.png',
+      'DD'  => 'dd_placeholder.png',
+      'SDD' => 'sdd_placeholder.png',
+      'DP2' => 'dp2_placeholder.png',
+      'STR' => 'str_placeholder.png',
     ];
 
-    $rows = [];
-    foreach ($rows_data as $r) {
-      $rows[] = [
-        ['data' => (string) $r['icon'], 'class' => ['kg-col-icon']],
-        ['data' => (string) $r['name']],
-        ['data' => (string) $r['desc']],
-      ];
-    }
+    $rows_data = [
+      ['name' => 'DAs', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Studies', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Study Roles', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Virtual Columns', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Object Collections', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Study Objects', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'CHANGE LATER', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'CHANGE LATER', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Data Dictionary', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Semantic Data Dictionary', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'SV', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Entity', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Attribute', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Unit', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Platform', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Platform Instances', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Instrument Instances', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Detector Instances', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Actuator Instances', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Deployments', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'Message Streams', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'File Streams', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'INS', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'DSG', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'DD',  'desc' => 'Represents a property/relation.'],
+      ['name' => 'SDD', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'DP2', 'desc' => 'Represents a property/relation.'],
+      ['name' => 'STR', 'desc' => 'Represents a property/relation.'],
+    ];
+
+$rows = [];
+foreach ($rows_data as $r) {
+  $img = $map_img[$r['name']] ?? null;
+  $style = $img ? "background-image: url('{$placeholder_base}{$img}');" : '';
+
+  $button = [
+    '#type' => 'html_tag',
+    '#tag' => 'button',
+    '#value' => '', 
+    '#attributes' => [
+      'type' => 'button',
+      'class' => ['element-icon-button', 'kg-col-icon'],
+      'style' => $style,
+      'title' => $this->t($r['name']),
+      'aria-label' => $this->t($r['name']),
+      'onclick' => 'return false;',
+    ],
+    '#attached' => [],
+  ];
+
+  $rows[] = [
+    ['data' => $button],
+    ['data' => (string) $r['name']],
+    ['data' => (string) $r['desc']],
+  ];
+}
 
     $form['icons_table'] = [
       '#type' => 'table',
