@@ -34,6 +34,12 @@ class VisGraphBaseForm extends FormBase {
       return $form;
     }
 
+    // -------- Limits exposed to the frontend --------
+    $MAX_MEMBERS_PER_SOC = 5;   // how many SOC members to preload / show initially
+    $PAGE_SIZE            = 5;  // "Load more..." page size
+    $MAX_LIVE_NODES       = 600; // safety cap for visible nodes
+    $AUTO_SHOW_ON_FETCH   = 0;   // don't auto-add nodes fetched via AJAX
+
     // Normalize CURIEs like "ahead:XYZ" into full IRIs.
     $expandCurie = static function (?string $v): ?string {
       return (is_string($v) && str_starts_with($v, 'ahead:'))
@@ -172,7 +178,7 @@ class VisGraphBaseForm extends FormBase {
         }
       }
 
-      // 2) Study → SOCs (Subject/Sample/Space/Time) + preload de membros para "contains".
+      // 2) Study → SOCs (Subject/Sample/Space/Time) + preload limited members for "contains".
       $socRaw = $api->getStudySOCs($element->uri, 1000, 0);
       if ($socRaw) {
         $socs = $api->parseObjectResponse($socRaw, 'getStudySOCs');
@@ -208,8 +214,8 @@ class VisGraphBaseForm extends FormBase {
               'font'   => ['align' => 'middle'],
             ];
 
-            // PRELOAD: members of this SOC so that its "contains" toggle works from the Study page.
-            $rawObjs = $api->studyObjectsBySOCwithPage($soc->uri, 1000, 0); // pass original URI value
+            // PRELOAD (limited): members of this SOC so the "contains" submenu works immediately.
+            $rawObjs = $api->studyObjectsBySOCwithPage($soc->uri, $MAX_MEMBERS_PER_SOC, 0);
             if ($rawObjs) {
               $objs = $api->parseObjectResponse($rawObjs, 'studyObjectsBySOCwithPage');
               if (is_array($objs)) {
@@ -223,7 +229,7 @@ class VisGraphBaseForm extends FormBase {
                   $linkedEdges[] = [
                     'from'   => $socUri,
                     'to'     => $objUri,
-                    'label'  => 'contains',       // <- what the JS menu expects
+                    'label'  => 'contains',
                     'arrows' => 'to',
                     'font'   => ['align' => 'middle'],
                   ];
@@ -245,8 +251,8 @@ class VisGraphBaseForm extends FormBase {
     ], true);
 
     if ($isSOC) {
-      // Preload member Study Objects so the "contains" toggle works immediately on SOC page.
-      $rawObjs = $api->studyObjectsBySOCwithPage($element->uri, 1000, 0);
+      // Limited preload so the "contains" submenu opens fast without flooding the canvas.
+      $rawObjs = $api->studyObjectsBySOCwithPage($element->uri, $MAX_MEMBERS_PER_SOC, 0);
       if ($rawObjs) {
         $objs = $api->parseObjectResponse($rawObjs, 'studyObjectsBySOCwithPage');
         if (is_array($objs)) {
@@ -309,10 +315,17 @@ class VisGraphBaseForm extends FormBase {
       []             // baseEdges: none initially
     );
 
-    // Ensure drupalSettings and expose the lazy endpoint to JS.
+    // Ensure drupalSettings and expose the lazy endpoint + limits to JS.
     $canvas['#attached']['library'][] = 'core/drupalSettings';
     $canvas['#attached']['drupalSettings']['rep']['socObjectsEndpoint'] =
       Url::fromRoute('rep.graph.expand')->toString();
+
+    $canvas['#attached']['drupalSettings']['rep']['graphLimits'] = [
+      'maxMembersPerSOC' => $MAX_MEMBERS_PER_SOC,
+      'pageSize'         => $PAGE_SIZE,
+      'maxLiveNodes'     => $MAX_LIVE_NODES,
+      'autoShowOnFetch'  => $AUTO_SHOW_ON_FETCH,
+    ];
 
     // Place the canvas on the form.
     $form['my_network_graph'] = $canvas;

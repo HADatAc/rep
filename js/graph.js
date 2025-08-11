@@ -3,41 +3,48 @@
  *
  * Expects backend to inject:
  *   drupalSettings.graphData = {
- *     nodes: [...],           // base visible nodes
- *     edges: [...],           // base visible edges
- *     extraNodes: [...],      // cache of known-but-hidden nodes
- *     extraEdges: [...]       // cache of known-but-hidden edges
+ *     nodes: [...],
+ *     edges: [...],
+ *     extraNodes: [...],
+ *     extraEdges: [...]
  *   }
- * And the Study/SOC lazy endpoint:
- *   drupalSettings.rep.socObjectsEndpoint = '/rep/graph/expand'
+ * And:
+ *   drupalSettings.rep.socObjectsEndpoint
+ *   drupalSettings.rep.graphLimits = {
+ *     maxMembersPerSOC, pageSize, maxLiveNodes, autoShowOnFetch
+ *   }
  */
 
 (function ($, Drupal, drupalSettings) {
   Drupal.behaviors.graphInit = {
     attach: function (context) {
-      // Prevent double init
       const container = context.querySelector('#my-network');
       if (!container || container.dataset.loaded === 'true') return;
       if (typeof vis === 'undefined') return;
       container.dataset.loaded = 'true';
 
-      // Endpoint
+      // ----- Config & limits (with safe defaults) -----
       const socEndpoint =
         (drupalSettings && drupalSettings.rep && drupalSettings.rep.socObjectsEndpoint) ||
         (window.Drupal && Drupal.url ? Drupal.url('rep/graph/expand') : '/rep/graph/expand');
 
-      // Icons
+      const limits = (drupalSettings && drupalSettings.rep && drupalSettings.rep.graphLimits) || {};
+      const MAX_MEMBERS_PER_SOC = Number(limits.maxMembersPerSOC || 50);
+      const PAGE_SIZE           = Number(limits.pageSize         || 50);
+      const MAX_LIVE_NODES      = Number(limits.maxLiveNodes     || 600);
+      const AUTO_SHOW_ON_FETCH  = Number(limits.autoShowOnFetch  || 0); // how many nodes to auto-show from fetch
+
       const eyeSVG = `<i class="fa fa-eye"></i>`;
       const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
 
-      // Data caches
+      // ----- Data caches -----
       const base = drupalSettings.graphData || {};
       const nodes = new vis.DataSet(base.nodes || []);
       const edges = new vis.DataSet(base.edges || []);
       const extraNodes = base.extraNodes || [];
       let   extraEdges = base.extraEdges || [];
 
-      // ------ ID normalization (CURIE -> IRI) ------
+      // ----- Normalize CURIE -> IRI -----
       const AHEAD = 'http://hadatac.org/ont/arrowhead/';
       function expandCurie(v) {
         return (typeof v === 'string' && v.startsWith('ahead:')) ? (AHEAD + v.slice(6)) : v;
@@ -54,14 +61,13 @@
         e.to   = expandCurie(e.to);
         return e;
       }
-      // normalize initial caches
       for (let i = 0; i < extraNodes.length; i++) extraNodes[i] = normalizeNode(extraNodes[i]);
       for (let i = 0; i < extraEdges.length; i++) extraEdges[i] = normalizeEdge(extraEdges[i]);
 
-      // Track nodes for which we fetched
-      const openedNodes = {};
+      const openedNodes = {}; // fetched once guard
+      const memberPageState = {}; // per-node pagination state for "contains"
 
-      // ------ layout helpers ------
+      // ----- Layout helpers -----
       function freezeAllNodes(ds) {
         ds.get().forEach(n => ds.update({ id: n.id, fixed: { x: true, y: true } }));
       }
@@ -78,7 +84,7 @@
         });
       }
 
-      // ------ convert loop edges into "virtual" nodes ------
+      // ----- Virtualize loop edges -----
       const loopEdges = extraEdges.filter(e => e.from === e.to);
       loopEdges.forEach(e => {
         const virtualNodeId = `${e.from}_loop_virtual_${e.label}`;
@@ -95,7 +101,7 @@
       });
       extraEdges = extraEdges.filter(e => e.from !== e.to);
 
-      // ------ vis.js ------
+      // ----- vis.js network -----
       const options = {
         nodes: {
           shape: "box",
@@ -109,14 +115,14 @@
       };
       const network = new vis.Network(container, { nodes, edges }, options);
 
-      // add "+” affordance on visible nodes
+      // affordance
       nodes.get().forEach(n => {
         if (!n.label?.includes('➕')) {
           nodes.update({ id: n.id, label: `${n.label}\n➕`, font: { size: 14 } });
         }
       });
 
-      // ------ floating menu ------
+      // ----- Floating menu -----
       const expansionState = {}; // `${nodeId}_${label}` -> boolean
       const expandMenu = document.createElement("div");
       expandMenu.id = "expand-menu";
@@ -141,7 +147,7 @@
         expandMenu.style.top  = `${topOffset + canvasPos.y - 10}px`;
       }
 
-      // ------ utilities ------
+      // ----- Utilities -----
       function edgeIdOf(e) {
         const from = expandCurie(e.from);
         const to   = expandCurie(e.to);
@@ -193,7 +199,7 @@
         return map;
       }
 
-      // membership label helpers
+      // membership helpers
       const isMemberLabel = (lbl) =>
         lbl === 'contains' || lbl === 'hasMember' || lbl === 'hasStudyObject' || lbl === 'hasObject';
       const isReverseMemberLabel = (lbl) =>
@@ -212,7 +218,15 @@
         });
       }
 
-      // ------ node click handler ------
+      function canAddMoreVisibleNodes(addCount) {
+        const current = nodes.length ? nodes.length : nodes.getIds().length;
+        return (current + addCount) <= MAX_LIVE_NODES;
+      }
+      function warnNodeCap() {
+        alert(`Node limit reached (${MAX_LIVE_NODES}). Hide some items before loading more.`);
+      }
+
+      // ----- Click handler -----
       network.on("click", function (params) {
         expandMenu.style.display = "none";
         closeAllSubmenus();
@@ -238,27 +252,28 @@
 
         const relatedEdges = extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId);
 
-        // contains availability (forward or reverse)
         let hasContains =
           extraEdges.map(normalizeEdge).some(e => e.from === selectedNodeId && isMemberLabel(e.label)) ||
           extraEdges.map(normalizeEdge).some(e => e.to   === selectedNodeId && isReverseMemberLabel(e.label));
-
         if (hasContains) synthesizeContainsFromReverse(selectedNodeId);
 
-        // lazy fetch for SOC if nothing known yet
+        // lazy fetch SOC members if we know nothing
         if (socEndpoint && kind === 'soc' && !hasContains && !openedNodes[selectedNodeId]) {
           openedNodes[selectedNodeId] = true;
-          $.getJSON(socEndpoint, { from: selectedNodeId, limit: 100, offset: 0, debug: 1 })
+          $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
             .done(data => {
               mergeGraphPayload(data, selectedNodeId);
               synthesizeContainsFromReverse(selectedNodeId);
+              // initialize pagination state
+              const known = extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId && isMemberLabel(e.label)).length;
+              memberPageState[selectedNodeId] = { shown: Math.min(known, MAX_MEMBERS_PER_SOC), fetched: known, exhausted: known < PAGE_SIZE };
               setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
             })
             .fail(() => { openedNodes[selectedNodeId] = false; });
           return;
         }
 
-        // lazy fetch for Study -> SOCs
+        // lazy fetch Study -> SOCs
         const hasSOC = extraEdges.map(normalizeEdge).some(e =>
           e.from === selectedNodeId &&
           (e.label === 'hasSampleCollection' ||
@@ -269,7 +284,7 @@
         );
         if (socEndpoint && kind === 'study' && !hasSOC && !openedNodes[selectedNodeId]) {
           openedNodes[selectedNodeId] = true;
-          $.getJSON(socEndpoint, { from: selectedNodeId, limit: 100, offset: 0, debug: 1 })
+          $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
             .done(data => {
               mergeGraphPayload(data, selectedNodeId);
               setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
@@ -278,7 +293,6 @@
           return;
         }
 
-        // map labels
         const labelEdgesMap = buildLabelEdgesMap(
           relatedEdges.filter(e => extraNodes.some(n => n.id === e.to))
         );
@@ -289,7 +303,6 @@
           e.label === 'hascoTypeUri' && e.from === selectedNodeId && extraNodes.find(n => n.id === e.to)
         );
         if (hasTypeEdge && !labels.includes('hascoTypeUri')) labels.push('hascoTypeUri');
-
         if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
 
         // build menu
@@ -304,7 +317,7 @@
           opt.style.cssText = `
             cursor: pointer; margin: 2px 0; position: relative;
             display: flex; align-items: center; justify-content: space-between;
-            gap: 10px; min-width: 220px;
+            gap: 10px; min-width: 260px;
           `;
           const labelSpan = document.createElement("span");
           labelSpan.textContent = label;
@@ -313,75 +326,55 @@
           opt.appendChild(labelSpan);
           opt.appendChild(eyeIcon);
 
-          // ---------- CONTAINS as a SUBMENU (individual toggles) ----------
+          // ----- CONTAINS: submenu with pagination -----
           if (label === 'contains') {
             opt.addEventListener("click", (ev) => {
               ev.stopPropagation();
 
-              // Toggle if already open
               const existing = opt.querySelector(".submenu");
               if (existing) { existing.remove(); return; }
-
               closeAllSubmenus();
 
-              // Get member edges (forward first)
-              let memberEdges = extraEdges.map(normalizeEdge).filter(
+              let allMemberEdges = extraEdges.map(normalizeEdge).filter(
                 e => e.from === selectedNodeId && isMemberLabel(e.label)
               );
 
-              // If none, synthesize from reverse and retry
-              if (!memberEdges.length) {
-                const reverse = extraEdges.map(normalizeEdge).filter(
-                  e => e.to === selectedNodeId && isReverseMemberLabel(e.label)
-                );
-                if (reverse.length) {
-                  synthesizeContainsFromReverse(selectedNodeId);
-                  memberEdges = extraEdges.map(normalizeEdge).filter(
-                    e => e.from === selectedNodeId && isMemberLabel(e.label)
-                  );
-                }
+              // Init page state if needed
+              const known = allMemberEdges.length;
+              if (!memberPageState[selectedNodeId]) {
+                memberPageState[selectedNodeId] = {
+                  shown: Math.min(known, MAX_MEMBERS_PER_SOC),
+                  fetched: known,
+                  exhausted: false
+                };
               }
+              const state = memberPageState[selectedNodeId];
+              state.shown = Math.min(state.shown, known || 0);
 
-              // If still none, fetch and rebuild
-              if (!memberEdges.length) {
-                if (!socEndpoint) return;
-                $.getJSON(socEndpoint, { from: selectedNodeId, limit: 100, offset: 0, debug: 1 })
-                  .done(data => {
-                    mergeGraphPayload(data, selectedNodeId);
-                    synthesizeContainsFromReverse(selectedNodeId);
-                    setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
-                  });
-                return;
-              }
+              const toShow = allMemberEdges.slice(0, state.shown);
 
-              // Ensure every target node exists (create minimal stub if needed)
-              memberEdges.forEach(e => {
-                if (!extraNodes.find(n => n.id === e.to)) {
-                  const stub = normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
-                  extraNodes.push(stub);
-                }
-              });
-
-              // Build submenu
               const submenu = document.createElement("div");
               submenu.className = "submenu";
               submenu.style.cssText = `
-                position:absolute; left:120px; top:0; background:#f1f1f1;
-                border:1px solid #ccc; padding:5px; border-radius:4px;
+                position:absolute; left:140px; top:0; background:#f1f1f1;
+                border:1px solid #ccc; padding:6px; border-radius:4px;
                 box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
+                max-height: 320px; overflow:auto;
               `;
 
-              memberEdges.forEach(e => {
-                const child = extraNodes.find(n => n.id === e.to);
-                if (!child) return;
+              // rows
+              toShow.forEach(e => {
+                const child = extraNodes.find(n => n.id === e.to) ||
+                              normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
+                if (!extraNodes.find(n => n.id === child.id)) extraNodes.push(child);
 
-                const id = edgeIdOf({ ...e, label: 'contains' }); // normalize id
+                const id = edgeIdOf({ ...e, label: 'contains' });
                 const isVisible = !!nodes.get(child.id);
 
                 const row = document.createElement("div");
                 row.style.cssText = `
                   display:flex; align-items:center; justify-content:space-between;
-                  gap:12px; padding:4px 6px; min-width:260px; cursor:default;
+                  gap:12px; padding:4px 6px; min-width:300px; cursor:default;
                 `;
 
                 const s = document.createElement("span");
@@ -394,15 +387,16 @@
 
                 toggle.addEventListener("click", (e2) => {
                   e2.stopPropagation();
-                  if (nodes.get(child.id)) {
+                  if (!nodes.get(child.id)) {
+                    if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
+                    nodes.add(ensureNodeStyle({ ...child }));
+                    if (!edges.get(id)) edges.add({ ...e, id, label: 'contains' });
+                    toggle.innerHTML = eyeOffSVG;
+                  } else {
                     if (edges.get(id)) edges.remove(id);
                     const still = edges.get().some(x => x.from === child.id || x.to === child.id);
                     if (!still) nodes.remove(child.id);
                     toggle.innerHTML = eyeSVG;
-                  } else {
-                    nodes.add(ensureNodeStyle({ ...child }));
-                    if (!edges.get(id)) edges.add({ ...e, id, label: 'contains' });
-                    toggle.innerHTML = eyeOffSVG;
                   }
                 });
 
@@ -411,11 +405,61 @@
                 submenu.appendChild(row);
               });
 
+              // footer: count + load more
+              const footer = document.createElement('div');
+              footer.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:8px;";
+
+              const info = document.createElement('span');
+              info.style.cssText = "font-size:12px; opacity:.8;";
+              info.textContent = `Showing ${toShow.length}${state.exhausted ? '' : '+'} of ${state.fetched}${state.exhausted ? '' : '+'}`;
+              footer.appendChild(info);
+
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'btn btn-sm btn-light';
+              btn.textContent = 'Load more…';
+
+              // Decide if we need to show or fetch more
+              if (state.shown < state.fetched) {
+                btn.onclick = (e3) => {
+                  e3.stopPropagation();
+                  state.shown = Math.min(state.shown + PAGE_SIZE, state.fetched);
+                  // reopen submenu
+                  setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
+                };
+              } else if (!state.exhausted && socEndpoint) {
+                btn.onclick = (e3) => {
+                  e3.stopPropagation();
+                  $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: state.fetched, debug: 1 })
+                    .done(data => {
+                      const before = extraEdges.length;
+                      mergeGraphPayload(data, selectedNodeId);
+                      const after = extraEdges.length;
+                      const added = Math.max(0, after - before);
+
+                      // how many new contains edges for this node
+                      const newContains = extraEdges.map(normalizeEdge).filter(
+                        x => x.from === selectedNodeId && isMemberLabel(x.label)
+                      ).length - known;
+
+                      state.fetched += newContains;
+                      state.shown   = Math.min(state.shown + newContains, state.fetched);
+                      state.exhausted = (newContains < PAGE_SIZE);
+
+                      setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
+                    });
+                };
+              } else {
+                btn.disabled = true;
+              }
+              footer.appendChild(btn);
+              submenu.appendChild(footer);
+
               opt.appendChild(submenu);
               setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
             });
 
-          // ---------- SOC/VC submenus ----------
+          // ----- SOC/VC submenus -----
           } else if (['hasVirtualColumn','hasSampleCollection','hasSubjectCollection','hasSpaceCollection','hasTimeCollection','hasCollection'].includes(label)) {
             opt.addEventListener("click", (ev) => {
               ev.stopPropagation();
@@ -426,15 +470,16 @@
               const submenu = document.createElement("div");
               submenu.className = "submenu";
               submenu.style.cssText = `
-                position:absolute; left:120px; top:0; background:#f1f1f1;
-                border:1px solid #ccc; padding:5px; border-radius:4px;
+                position:absolute; left:140px; top:0; background:#f1f1f1;
+                border:1px solid #ccc; padding:6px; border-radius:4px;
                 box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
+                max-height: 320px; overflow:auto;
               `;
 
               let labelEdges = (buildLabelEdgesMap(relatedEdges)).get(label) || [];
               const socLabels = new Set(['hasSampleCollection','hasSubjectCollection','hasSpaceCollection','hasTimeCollection','hasCollection']);
               if (labelEdges.length === 0 && socEndpoint && socLabels.has(label)) {
-                $.getJSON(socEndpoint, { from: selectedNodeId, limit: 100, offset: 0, debug: 1 })
+                $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
                   .done(data => {
                     mergeGraphPayload(data, selectedNodeId);
                     setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
@@ -451,7 +496,7 @@
                 const row = document.createElement("div");
                 row.style.cssText = `
                   display:flex; align-items:center; justify-content:space-between;
-                  gap:12px; padding:4px 6px; min-width:260px; cursor:default;
+                  gap:12px; padding:4px 6px; min-width:300px; cursor:default;
                 `;
 
                 const s = document.createElement("span");
@@ -464,15 +509,16 @@
 
                 toggle.addEventListener("click", (e2) => {
                   e2.stopPropagation();
-                  if (nodes.get(child.id)) {
+                  if (!nodes.get(child.id)) {
+                    if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
+                    nodes.add(ensureNodeStyle({ ...child }));
+                    if (!edges.get(id)) edges.add({ ...e, id, label }); // normalized label
+                    toggle.innerHTML = eyeOffSVG;
+                  } else {
                     if (edges.get(id)) edges.remove(id);
                     const still = edges.get().some(x => x.from === child.id || x.to === child.id);
                     if (!still) nodes.remove(child.id);
                     toggle.innerHTML = eyeSVG;
-                  } else {
-                    nodes.add(ensureNodeStyle({ ...child }));
-                    if (!edges.get(id)) edges.add({ ...e, id, label }); // normalized label
-                    toggle.innerHTML = eyeOffSVG;
                   }
                 });
 
@@ -485,7 +531,7 @@
               setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
             });
 
-          // ---------- Type link ----------
+          // ----- Type link -----
           } else if (label === 'hascoTypeUri') {
             opt.addEventListener("click", (ev) => {
               ev.stopPropagation();
@@ -506,6 +552,7 @@
                 expansionState[key] = false;
                 eyeIcon.innerHTML = eyeSVG;
               } else {
+                if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
                 nodes.add(ensureNodeStyle({ ...targetNode }));
                 if (!edges.get(id)) edges.add({ ...uriEdge, id });
                 expansionState[key] = true;
@@ -514,7 +561,7 @@
               setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
             });
 
-          // ---------- Generic toggle ----------
+          // ----- Generic toggle -----
           } else {
             opt.addEventListener("click", (ev) => {
               ev.stopPropagation();
@@ -524,6 +571,10 @@
               const nodeIds = edgesToToggle.map(obj => obj.edge.to);
 
               if (!expansionState[key]) {
+                // capacity check
+                const need = nodeIds.filter(id => !nodes.get(id)).length;
+                if (!canAddMoreVisibleNodes(need)) { warnNodeCap(); return; }
+
                 nodeIds.forEach(id => {
                   if (!nodes.get(id)) {
                     const src = extraNodes.find(n => n.id === id) ||
@@ -554,17 +605,17 @@
           expandMenu.appendChild(opt);
         });
 
-        // show menu
         expandMenu.style.display = "block";
         setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
       });
 
-      // ------ merge payload ------
+      // ----- Merge payload (respect limits, no auto-flood) -----
       function mergeGraphPayload(payload, anchorNodeId) {
         if (!payload) return;
         const newNodes = (payload.nodes || []).map(normalizeNode);
         const newEdges = (payload.edges || []).map(normalizeEdge);
 
+        // cache merge
         newNodes.forEach(n => { if (!extraNodes.find(x => x.id === n.id)) extraNodes.push(n); });
         newEdges.forEach(e => {
           const id = edgeIdOf(e);
@@ -573,16 +624,26 @@
           }
         });
 
+        // DO NOT auto-show everything fetched; show at most AUTO_SHOW_ON_FETCH for preview
+        let autoShown = 0;
         const existing = new Set(nodes.getIds());
         const addedIds = [];
         newNodes.forEach(n => {
-          if (!existing.has(n.id)) { nodes.add(ensureNodeStyle({ ...n })); addedIds.push(n.id); }
-          else { nodes.update(ensureNodeStyle({ ...n })); }
+          if (AUTO_SHOW_ON_FETCH <= 0) return;
+          if (autoShown >= AUTO_SHOW_ON_FETCH) return;
+          if (!existing.has(n.id)) {
+            if (!canAddMoreVisibleNodes(1)) return; // silently skip
+            nodes.add(ensureNodeStyle({ ...n }));
+            addedIds.push(n.id);
+            autoShown++;
+          }
         });
-        const eExisting = new Set(edges.getIds());
+        // edges only if both endpoints visible
         newEdges.forEach(e => {
           const id = edgeIdOf(e);
-          if (!eExisting.has(id)) edges.add({ ...e, id });
+          if (!edges.get(id) && nodes.get(e.from) && nodes.get(e.to)) {
+            edges.add({ ...e, id });
+          }
         });
 
         if (addedIds.length) {
@@ -606,7 +667,7 @@
         }
       });
 
-      // auto-select first node
+      // auto-open first node
       const baseNodeId = nodes.getIds()[0];
       if (baseNodeId) {
         network.selectNodes([baseNodeId]);
@@ -615,7 +676,7 @@
         });
       }
 
-      // external toggle buttons
+      // external toggle buttons (.graph-toggle)
       document.body.addEventListener("click", function (event) {
         const toggleWrapper = event.target.closest(".graph-toggle");
         if (!toggleWrapper) return;
@@ -625,6 +686,7 @@
 
         const exists = !!nodes.get(nodeId);
         if (!exists) {
+          if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
           const node = extraNodes.find(n => n.id === nodeId) ||
                        normalizeNode({ id: nodeId, label: (nodeId.split('/').pop() || nodeId), shape: 'box' });
           if (!extraNodes.find(n => n.id === node.id)) extraNodes.push(node);
@@ -645,13 +707,13 @@
         }
       });
 
-      // close submenus
+      // close submenus globally
       document.addEventListener("click", function (e) {
         if (!expandMenu.contains(e.target)) closeAllSubmenus();
       });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllSubmenus(); });
 
-      // debug hooks
+      // debug
       window.graphNodes = nodes;
       window.graphEdges = edges;
       window.extraGraphNodes = extraNodes;
