@@ -151,7 +151,7 @@ class VisGraphBaseForm extends FormBase {
     // -------------------- Domain additions: when base is a Study --------------------
     $isStudy = ($baseType === HASCO::STUDY);
     if ($isStudy) {
-      // Virtual Columns attached to the Study.
+      // 1) Virtual Columns of the Study.
       $vcRaw = $api->getStudyVCs($element->uri);
       if ($vcRaw) {
         $vcList = $api->parseObjectResponse($vcRaw, 'getStudyVCs');
@@ -172,7 +172,7 @@ class VisGraphBaseForm extends FormBase {
         }
       }
 
-      // Study → SOCs (Subject/Sample/Space/Time)
+      // 2) Study → SOCs (Subject/Sample/Space/Time) + preload de membros para "contains".
       $socRaw = $api->getStudySOCs($element->uri, 1000, 0);
       if ($socRaw) {
         $socs = $api->parseObjectResponse($socRaw, 'getStudySOCs');
@@ -198,6 +198,7 @@ class VisGraphBaseForm extends FormBase {
               continue;
             }
 
+            // SOC node
             $linkedNodes[] = Utils::buildNode($socUri, $socLabel, $socType);
             $linkedEdges[] = [
               'from'   => $baseUri,
@@ -206,6 +207,29 @@ class VisGraphBaseForm extends FormBase {
               'arrows' => 'to',
               'font'   => ['align' => 'middle'],
             ];
+
+            // PRELOAD: members of this SOC so that its "contains" toggle works from the Study page.
+            $rawObjs = $api->studyObjectsBySOCwithPage($soc->uri, 1000, 0); // pass original URI value
+            if ($rawObjs) {
+              $objs = $api->parseObjectResponse($rawObjs, 'studyObjectsBySOCwithPage');
+              if (is_array($objs)) {
+                foreach ($objs as $o) {
+                  if (empty($o->uri)) { continue; }
+                  $objUri   = $expandCurie($o->uri);
+                  $objLabel = $o->label ?? Utils::namespaceUri($objUri);
+                  $objType  = $o->typeUri ?? null;
+
+                  $linkedNodes[] = Utils::buildNode($objUri, $objLabel, $objType);
+                  $linkedEdges[] = [
+                    'from'   => $socUri,
+                    'to'     => $objUri,
+                    'label'  => 'contains',       // <- what the JS menu expects
+                    'arrows' => 'to',
+                    'font'   => ['align' => 'middle'],
+                  ];
+                }
+              }
+            }
           }
         }
       }
@@ -221,7 +245,7 @@ class VisGraphBaseForm extends FormBase {
     ], true);
 
     if ($isSOC) {
-      // 1) Preload member Study Objects so the "contains" toggle works immediately.
+      // Preload member Study Objects so the "contains" toggle works immediately on SOC page.
       $rawObjs = $api->studyObjectsBySOCwithPage($element->uri, 1000, 0);
       if ($rawObjs) {
         $objs = $api->parseObjectResponse($rawObjs, 'studyObjectsBySOCwithPage');
@@ -237,7 +261,7 @@ class VisGraphBaseForm extends FormBase {
             $linkedEdges[] = [
               'from'   => $baseUri,
               'to'     => $objUri,
-              'label'  => 'contains',   // <- what the front-end expects
+              'label'  => 'contains',
               'arrows' => 'to',
               'font'   => ['align' => 'middle'],
             ];
@@ -245,7 +269,7 @@ class VisGraphBaseForm extends FormBase {
         }
       }
 
-      // 2) Optional: keep reverse pointer to the Study (so "isMemberOf" appears in menu).
+      // Optional: reverse pointer to the Study for the menu.
       if (!empty($objectProperties['objects']['isMemberOf']?->uri)) {
         $studyUri = $expandCurie($objectProperties['objects']['isMemberOf']->uri);
         $studyLbl = $objectProperties['objects']['isMemberOf']->label ?? Utils::namespaceUri($studyUri);
@@ -304,4 +328,5 @@ class VisGraphBaseForm extends FormBase {
 
   public function validateForm(array &$form, FormStateInterface $form_state) {}
   public function submitForm(array &$form, FormStateInterface $form_state) {}
+
 }
