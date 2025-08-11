@@ -5,6 +5,7 @@ namespace Drupal\rep\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\rep\Utils;
+ use Drupal\rep\Vocabulary\REPGUI;
 
 class DescribeHeaderForm extends FormBase {
 
@@ -23,6 +24,8 @@ class DescribeHeaderForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
+
+    $root_url = \Drupal::request()->getBaseUrl();
 
     $request = \Drupal::request();
     $pathInfo = $request->getPathInfo();
@@ -116,44 +119,45 @@ class DescribeHeaderForm extends FormBase {
 
       $typeUri = $this->getElement()->typeUri;
 
-      if ($typeUri && $this->getElement()->typeLabel) {
+      if ($typeUri) {
         $form['element_type'] = [
           '#type' => 'inline_template',
-          '#template' => '<b>Type URI</b>: <a href="{{ uri }}" target="_blank">{{ uri }}</a> 
+          '#template' => '<b>Type URI</b>: <a href="{{ uri }}" target="_blank">{{ typeUri }}</a>
           <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
             <i class="fa fa-eye"></i>
           </span><br><br>',
           '#context' => [
-            'uri' => $this->getElement()->typeUri,
+            'uri' => ($root_url.REPGUI::DESCRIBE_PAGE.base64_encode($this->getElement()->typeUri)),
+            'typeUri' => rawurldecode($this->getElement()->typeUri),
           ],
-        ];
-      }
-
-      if (!$typeUri && $this->getElement()->hascoTypeUri && $this->getElement()->hascoTypeLabel) {
-        $form['element_hascoType'] = [
-          '#type' => 'markup',
-          '#markup' => $this->t("<b>HascoType URI</b>: " . Utils::link($this->getElement()->hascoTypeLabel, $this->getElement()->hascoTypeUri) . "<br><br>"),
         ];
       }
 
       if ($this->getElement()->hascoTypeUri) {
         $form['element_hascoType'] = [
           '#type' => 'inline_template',
-          '#template' => '<b>HascoType URI</b>: <a href="{{ uri }}" target="_blank">{{ uri }}</a> 
+          '#template' => '<b>HascoType URI</b>: <a href="{{ uri }}" target="_new">{{ hascoTypeUri }}</a>
           <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
             <i class="fa fa-eye"></i>
           </span><br><br>',
           '#context' => [
-            'uri' => $this->getElement()->hascoTypeUri,
+            'uri' => ($root_url.REPGUI::DESCRIBE_PAGE.base64_encode($this->getElement()->hascoTypeUri)),
+            'hascoTypeUri' => rawurldecode($this->getElement()->hascoTypeUri),
           ],
         ];
       }
 
-
       if ($this->getElement()->superUri) {
         $form['element_super'] = [
-          '#type' => 'markup',
-          '#markup' => $this->t("<b>Super URI</b>: " . Utils::link($this->getElement()->superUri, $this->getElement()->superUri) . "<br><br>"),
+          '#type' => 'inline_template',
+          '#template' => '<b>Super URI</b>: <a href="{{ uri }}" target="_new">{{ superUri }}</a>
+          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
+            <i class="fa fa-eye"></i>
+          </span><br><br>',
+          '#context' => [
+            'uri' => ($root_url.REPGUI::DESCRIBE_PAGE.base64_encode($this->getElement()->superUri)),
+            'superUri' => rawurldecode($this->getElement()->superUri),
+          ],
         ];
       }
 
