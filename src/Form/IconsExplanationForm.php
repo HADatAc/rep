@@ -15,22 +15,43 @@ final class IconsExplanationForm extends FormBase {
 
   public function buildForm(array $form, FormStateInterface $form_state): array {
 
-    // Cabeçalho.
     $header = [
       ['data' => $this->t('Icon')],
       ['data' => $this->t('Name')],
       ['data' => $this->t('Explanation')],
     ];
 
-    // Dados da tabela.
     $rows_data = [
-      ['icon' => '🔷',     'name' => 'Class',    'desc' => 'Represents an ontology class node.'],
-      ['icon' => '🧭',     'name' => 'Property', 'desc' => 'Represents a property/relation.'],
-      ['icon' => '👤',     'name' => 'Instance', 'desc' => 'Represents an instance/individual.'],
-      ['icon' => 'teste', 'name' => 'teste', 'desc' => 'test'],
+      ['icon' => '🔷',     'name' => 'DAs',    'desc' => 'Represents an ontology class node.'],
+      ['icon' => '🧭',     'name' => 'Studies', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '👤',     'name' => 'Study Roles', 'desc' => 'Represents an instance/individual.'],
+      ['icon' => 'teste', 'name' => 'Virtual Columns', 'desc' => 'test'],
+      ['icon' => '🧭',     'name' => 'Object Collections', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Study Objects', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'mudar', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'mudar', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'DD', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'SDD', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'SV', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Entity', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Attribute', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Unit', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Platform', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Platform Instances', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Instrument Instances', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Detector Instances', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Actuator Instances', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Deployments', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'Message Streams', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'File Streams', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'INS', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'DSG', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'DD', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'SDD', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'DP2', 'desc' => 'Represents a property/relation.'],
+      ['icon' => '🧭',     'name' => 'STR', 'desc' => 'Represents a property/relation.'],
     ];
 
-    // Linhas.
     $rows = [];
     foreach ($rows_data as $r) {
       $rows[] = [
@@ -40,7 +61,6 @@ final class IconsExplanationForm extends FormBase {
       ];
     }
 
-    // Tabela.
     $form['icons_table'] = [
       '#type' => 'table',
       '#header' => $header,
