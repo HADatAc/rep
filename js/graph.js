@@ -29,10 +29,11 @@
         (window.Drupal && Drupal.url ? Drupal.url('rep/graph/expand') : '/rep/graph/expand');
 
       const limits = (drupalSettings && drupalSettings.rep && drupalSettings.rep.graphLimits) || {};
-      const MAX_MEMBERS_PER_SOC = Number(limits.maxMembersPerSOC || 50);
-      const PAGE_SIZE           = Number(limits.pageSize         || 50);
+      // Default to 5 so pagination always works even if settings are missing.
+      const MAX_MEMBERS_PER_SOC = Number(limits.maxMembersPerSOC || 5); // client UI page size for "contains"
+      const PAGE_SIZE           = Number(limits.pageSize         || 5);  // server page size requested to backend
       const MAX_LIVE_NODES      = Number(limits.maxLiveNodes     || 600);
-      const AUTO_SHOW_ON_FETCH  = Number(limits.autoShowOnFetch  || 0); // how many nodes to auto-show from fetch
+      const AUTO_SHOW_ON_FETCH  = Number(limits.autoShowOnFetch  || 0);
 
       const eyeSVG = `<i class="fa fa-eye"></i>`;
       const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
@@ -64,16 +65,13 @@
       for (let i = 0; i < extraNodes.length; i++) extraNodes[i] = normalizeNode(extraNodes[i]);
       for (let i = 0; i < extraEdges.length; i++) extraEdges[i] = normalizeEdge(extraEdges[i]);
 
-      const openedNodes = {}; // fetched once guard
-      const memberPageState = {}; // per-node pagination state for "contains"
+      const openedNodes = {};               // fetched-once guard (per node)
+      // memberPageState[nodeId] = { offset, fetched, hasMoreServer }
+      const memberPageState = {};
 
       // ----- Layout helpers -----
-      function freezeAllNodes(ds) {
-        ds.get().forEach(n => ds.update({ id: n.id, fixed: { x: true, y: true } }));
-      }
-      function unfreezeNodes(ds, ids) {
-        ids.forEach(id => ds.update({ id, fixed: { x: false, y: false } }));
-      }
+      function freezeAllNodes(ds) { ds.get().forEach(n => ds.update({ id: n.id, fixed: { x: true, y: true } })); }
+      function unfreezeNodes(ds, ids) { ids.forEach(id => ds.update({ id, fixed: { x: false, y: false } })); }
       function placeAround(network, centerId, newIds, radius = 140) {
         const pos = network.getPositions([centerId])[centerId];
         if (!pos) return;
@@ -84,7 +82,7 @@
         });
       }
 
-      // ----- Virtualize loop edges -----
+      // ----- Virtualize loop edges so they are clickable -----
       const loopEdges = extraEdges.filter(e => e.from === e.to);
       loopEdges.forEach(e => {
         const virtualNodeId = `${e.from}_loop_virtual_${e.label}`;
@@ -115,7 +113,7 @@
       };
       const network = new vis.Network(container, { nodes, edges }, options);
 
-      // affordance
+      // Small affordance: add "➕" line to existing labels
       nodes.get().forEach(n => {
         if (!n.label?.includes('➕')) {
           nodes.update({ id: n.id, label: `${n.label}\n➕`, font: { size: 14 } });
@@ -129,7 +127,7 @@
       expandMenu.style.cssText = `
         position:absolute;z-index:1000;background:#f8f9fa;border:1px solid #ccc;
         padding:6px 10px;border-radius:5px;box-shadow:2px 2px 6px rgba(0,0,0,0.1);
-        display:none;
+        display:none; pointer-events:auto;
       `;
       document.body.appendChild(expandMenu);
 
@@ -199,7 +197,6 @@
         return map;
       }
 
-      // membership helpers
       const isMemberLabel = (lbl) =>
         lbl === 'contains' || lbl === 'hasMember' || lbl === 'hasStudyObject' || lbl === 'hasObject';
       const isReverseMemberLabel = (lbl) =>
@@ -257,23 +254,36 @@
           extraEdges.map(normalizeEdge).some(e => e.to   === selectedNodeId && isReverseMemberLabel(e.label));
         if (hasContains) synthesizeContainsFromReverse(selectedNodeId);
 
-        // lazy fetch SOC members if we know nothing
+        // Lazy fetch SOC members if we still don't know any
         if (socEndpoint && kind === 'soc' && !hasContains && !openedNodes[selectedNodeId]) {
           openedNodes[selectedNodeId] = true;
-          $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
+          $.getJSON(socEndpoint, { from: selectedNodeId, relation: 'contains', limit: PAGE_SIZE, offset: 0, debug: 1 })
             .done(data => {
               mergeGraphPayload(data, selectedNodeId);
               synthesizeContainsFromReverse(selectedNodeId);
-              // initialize pagination state
-              const known = extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId && isMemberLabel(e.label)).length;
-              memberPageState[selectedNodeId] = { shown: Math.min(known, MAX_MEMBERS_PER_SOC), fetched: known, exhausted: known < PAGE_SIZE };
+
+              const meta = (data && data.meta) || {};
+              const returned = typeof meta.count === 'number'
+                ? meta.count
+                : extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId && isMemberLabel(e.label)).length;
+
+              memberPageState[selectedNodeId] = {
+                offset: 0,
+                fetched: returned,
+                // If server tells us totalGuess, trust it; else assume "has more" when a full page came back
+                hasMoreServer: (typeof meta.totalGuess === 'number')
+                  ? (returned < meta.totalGuess)
+                  : (returned === PAGE_SIZE)
+              };
+
+              // Re-open the menu programmatically
               setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
             })
             .fail(() => { openedNodes[selectedNodeId] = false; });
           return;
         }
 
-        // lazy fetch Study -> SOCs
+        // Lazy fetch Study → SOCs (first page)
         const hasSOC = extraEdges.map(normalizeEdge).some(e =>
           e.from === selectedNodeId &&
           (e.label === 'hasSampleCollection' ||
@@ -305,7 +315,7 @@
         if (hasTypeEdge && !labels.includes('hascoTypeUri')) labels.push('hascoTypeUri');
         if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
 
-        // build menu
+        // ----- Build floating menu -----
         expandMenu.innerHTML = '';
         closeAllSubmenus();
 
@@ -326,137 +336,179 @@
           opt.appendChild(labelSpan);
           opt.appendChild(eyeIcon);
 
-          // ----- CONTAINS: submenu with pagination -----
+          // ========== CONTAINS (with « / » pagination) ==========
           if (label === 'contains') {
             opt.addEventListener("click", (ev) => {
               ev.stopPropagation();
 
-              const existing = opt.querySelector(".submenu");
-              if (existing) { existing.remove(); return; }
+              let submenu = opt.querySelector(".submenu");
+              if (submenu) { submenu.remove(); return; }
               closeAllSubmenus();
 
-              let allMemberEdges = extraEdges.map(normalizeEdge).filter(
+              // Ensure page state
+              const nowEdges = extraEdges.map(normalizeEdge).filter(
                 e => e.from === selectedNodeId && isMemberLabel(e.label)
               );
-
-              // Init page state if needed
-              const known = allMemberEdges.length;
               if (!memberPageState[selectedNodeId]) {
                 memberPageState[selectedNodeId] = {
-                  shown: Math.min(known, MAX_MEMBERS_PER_SOC),
-                  fetched: known,
-                  exhausted: false
+                  offset: 0,
+                  fetched: nowEdges.length,
+                  hasMoreServer: (nowEdges.length === PAGE_SIZE)
                 };
               }
               const state = memberPageState[selectedNodeId];
-              state.shown = Math.min(state.shown, known || 0);
 
-              const toShow = allMemberEdges.slice(0, state.shown);
-
-              const submenu = document.createElement("div");
+              submenu = document.createElement("div");
               submenu.className = "submenu";
               submenu.style.cssText = `
                 position:absolute; left:140px; top:0; background:#f1f1f1;
                 border:1px solid #ccc; padding:6px; border-radius:4px;
                 box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
-                max-height: 320px; overflow:auto;
+                max-height: 340px; overflow:auto; min-width: 320px; pointer-events:auto;
               `;
+              opt.appendChild(submenu);
 
-              // rows
-              toShow.forEach(e => {
-                const child = extraNodes.find(n => n.id === e.to) ||
-                              normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
-                if (!extraNodes.find(n => n.id === child.id)) extraNodes.push(child);
+              // Re-render the rows and footer in-place (no menu rebuild)
+              const renderPage = () => {
+                submenu.innerHTML = '';
 
-                const id = edgeIdOf({ ...e, label: 'contains' });
-                const isVisible = !!nodes.get(child.id);
+                const membersNow = extraEdges.map(normalizeEdge).filter(
+                  e => e.from === selectedNodeId && isMemberLabel(e.label)
+                );
+                const totalFetched = membersNow.length;
+                const start = Math.max(0, Math.min(state.offset, Math.max(0, totalFetched - 1)));
+                const end = Math.min(start + MAX_MEMBERS_PER_SOC, totalFetched);
+                const page = membersNow.slice(start, end);
 
-                const row = document.createElement("div");
-                row.style.cssText = `
-                  display:flex; align-items:center; justify-content:space-between;
-                  gap:12px; padding:4px 6px; min-width:300px; cursor:default;
-                `;
+                page.forEach(e => {
+                  const child = extraNodes.find(n => n.id === e.to) ||
+                                normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
+                  if (!extraNodes.find(n => n.id === child.id)) extraNodes.push(child);
 
-                const s = document.createElement("span");
-                s.textContent = child.label;
-                s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+                  const id = edgeIdOf({ ...e, label: 'contains' });
+                  const isVisible = !!nodes.get(child.id);
 
-                const toggle = document.createElement("span");
-                toggle.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
-                toggle.style.cssText = "cursor:pointer;";
+                  const row = document.createElement("div");
+                  row.style.cssText = `
+                    display:flex; align-items:center; justify-content:space-between;
+                    gap:12px; padding:4px 6px; min-width:300px; cursor:default;
+                  `;
 
-                toggle.addEventListener("click", (e2) => {
-                  e2.stopPropagation();
-                  if (!nodes.get(child.id)) {
-                    if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
-                    nodes.add(ensureNodeStyle({ ...child }));
-                    if (!edges.get(id)) edges.add({ ...e, id, label: 'contains' });
-                    toggle.innerHTML = eyeOffSVG;
-                  } else {
-                    if (edges.get(id)) edges.remove(id);
-                    const still = edges.get().some(x => x.from === child.id || x.to === child.id);
-                    if (!still) nodes.remove(child.id);
-                    toggle.innerHTML = eyeSVG;
-                  }
+                  const s = document.createElement("span");
+                  s.textContent = child.label;
+                  s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+
+                  // >>> toggle is a SPAN (no Bootstrap button = no blue background)
+                  const toggle = document.createElement("span");
+                  toggle.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
+                  toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
+
+                  toggle.addEventListener("click", (e2) => {
+                    e2.stopPropagation();
+                    if (!nodes.get(child.id)) {
+                      if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
+                      nodes.add(ensureNodeStyle({ ...child }));
+                      if (!edges.get(id)) edges.add({ ...e, id, label: 'contains' });
+                      toggle.innerHTML = eyeOffSVG;
+                    } else {
+                      if (edges.get(id)) edges.remove(id);
+                      const still = edges.get().some(x => x.from === child.id || x.to === child.id);
+                      if (!still) nodes.remove(child.id);
+                      toggle.innerHTML = eyeSVG;
+                    }
+                  });
+
+                  row.appendChild(s);
+                  row.appendChild(toggle);
+                  submenu.appendChild(row);
                 });
 
-                row.appendChild(s);
-                row.appendChild(toggle);
-                submenu.appendChild(row);
-              });
+                // Footer with « and » controls
+                const footer = document.createElement('div');
+                footer.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:8px;";
 
-              // footer: count + load more
-              const footer = document.createElement('div');
-              footer.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:8px;";
+                const left = document.createElement('button');
+                left.type = 'button';
+                left.className = 'btn btn-sm btn-light';
+                left.textContent = '«';
+                left.disabled = (state.offset <= 0);
+                left.onclick = (e3) => { e3.stopPropagation(); state.offset = Math.max(0, state.offset - MAX_MEMBERS_PER_SOC); renderPage(); };
 
-              const info = document.createElement('span');
-              info.style.cssText = "font-size:12px; opacity:.8;";
-              info.textContent = `Showing ${toShow.length}${state.exhausted ? '' : '+'} of ${state.fetched}${state.exhausted ? '' : '+'}`;
-              footer.appendChild(info);
+                const info = document.createElement('span');
+                info.style.cssText = "font-size:12px; opacity:.8;";
+                const pageNum = Math.floor(state.offset / MAX_MEMBERS_PER_SOC) + 1;
+                const totalPages = Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC));
+                info.textContent = `Page ${pageNum} / ${totalPages} — showing ${page.length} of ${totalFetched}${state.hasMoreServer ? '+' : ''}`;
 
-              const btn = document.createElement('button');
-              btn.type = 'button';
-              btn.className = 'btn btn-sm btn-light';
-              btn.textContent = 'Load more…';
+                const right = document.createElement('button');
+                right.type = 'button';
+                right.className = 'btn btn-sm btn-light';
+                right.textContent = '»';
 
-              // Decide if we need to show or fetch more
-              if (state.shown < state.fetched) {
-                btn.onclick = (e3) => {
+                // Advance if we have more cached; otherwise fetch next server page
+                const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
+                const canFetchMore = !!state.hasMoreServer;
+                right.disabled = !canAdvanceCached && !canFetchMore;
+
+                right.onclick = (e3) => {
                   e3.stopPropagation();
-                  state.shown = Math.min(state.shown + PAGE_SIZE, state.fetched);
-                  // reopen submenu
-                  setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
-                };
-              } else if (!state.exhausted && socEndpoint) {
-                btn.onclick = (e3) => {
-                  e3.stopPropagation();
-                  $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: state.fetched, debug: 1 })
-                    .done(data => {
-                      const before = extraEdges.length;
+                  if (canAdvanceCached) {
+                    state.offset = state.offset + MAX_MEMBERS_PER_SOC;
+                    renderPage();
+                  } else if (canFetchMore && socEndpoint) {
+                    // Mini spinner feedback
+                    const prevText = right.textContent;
+                    right.disabled = true;
+                    right.textContent = '…';
+
+                    const beforeCount = extraEdges.map(normalizeEdge).filter(
+                      x => x.from === selectedNodeId && isMemberLabel(x.label)
+                    ).length;
+
+                    $.getJSON(socEndpoint, {
+                      from: selectedNodeId,
+                      relation: 'contains',
+                      limit: PAGE_SIZE,
+                      offset: memberPageState[selectedNodeId].fetched,
+                      debug: 1
+                    }).done(data => {
                       mergeGraphPayload(data, selectedNodeId);
-                      const after = extraEdges.length;
-                      const added = Math.max(0, after - before);
 
-                      // how many new contains edges for this node
-                      const newContains = extraEdges.map(normalizeEdge).filter(
+                      const meta = (data && data.meta) || {};
+                      const afterCount = extraEdges.map(normalizeEdge).filter(
                         x => x.from === selectedNodeId && isMemberLabel(x.label)
-                      ).length - known;
+                      ).length;
+                      const returned = typeof meta.count === 'number' ? meta.count : Math.max(0, afterCount - beforeCount);
 
-                      state.fetched += newContains;
-                      state.shown   = Math.min(state.shown + newContains, state.fetched);
-                      state.exhausted = (newContains < PAGE_SIZE);
+                      memberPageState[selectedNodeId].fetched += returned;
+                      // hasMoreServer: trust totalGuess if present, else size-based heuristic
+                      memberPageState[selectedNodeId].hasMoreServer = (typeof meta.totalGuess === 'number')
+                        ? (memberPageState[selectedNodeId].fetched < meta.totalGuess)
+                        : (returned === PAGE_SIZE);
 
-                      setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
+                      if (returned > 0) {
+                        state.offset = state.offset + MAX_MEMBERS_PER_SOC;
+                      }
+                      right.textContent = prevText;
+                      right.disabled = false;
+                      renderPage();
+                    }).fail(() => {
+                      right.textContent = prevText;
+                      right.disabled = false;
                     });
+                  }
                 };
-              } else {
-                btn.disabled = true;
-              }
-              footer.appendChild(btn);
-              submenu.appendChild(footer);
 
-              opt.appendChild(submenu);
-              setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
+                footer.appendChild(left);
+                footer.appendChild(info);
+                footer.appendChild(right);
+                submenu.appendChild(footer);
+
+                // keep menu positioned
+                setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
+              };
+
+              renderPage();
             });
 
           // ----- SOC/VC submenus -----
@@ -473,7 +525,7 @@
                 position:absolute; left:140px; top:0; background:#f1f1f1;
                 border:1px solid #ccc; padding:6px; border-radius:4px;
                 box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
-                max-height: 320px; overflow:auto;
+                max-height: 320px; overflow:auto; pointer-events:auto;
               `;
 
               let labelEdges = (buildLabelEdgesMap(relatedEdges)).get(label) || [];
@@ -503,9 +555,10 @@
                 s.textContent = child.label;
                 s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
 
+                // >>> toggle is a SPAN (no Bootstrap button)
                 const toggle = document.createElement("span");
                 toggle.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
-                toggle.style.cssText = "cursor:pointer;";
+                toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
 
                 toggle.addEventListener("click", (e2) => {
                   e2.stopPropagation();
@@ -571,7 +624,6 @@
               const nodeIds = edgesToToggle.map(obj => obj.edge.to);
 
               if (!expansionState[key]) {
-                // capacity check
                 const need = nodeIds.filter(id => !nodes.get(id)).length;
                 if (!canAddMoreVisibleNodes(need)) { warnNodeCap(); return; }
 
@@ -584,7 +636,7 @@
                   }
                 });
                 edgesToToggle.forEach(({ edge: e, id }) => {
-                  if (!edges.get(id)) edges.add({ ...normalizeEdge(e), id, label }); // normalized label
+                  if (!edges.get(id)) edges.add({ ...normalizeEdge(e), id, label });
                 });
                 expansionState[key] = true;
                 eyeIcon.innerHTML = eyeOffSVG;
@@ -615,7 +667,7 @@
         const newNodes = (payload.nodes || []).map(normalizeNode);
         const newEdges = (payload.edges || []).map(normalizeEdge);
 
-        // cache merge
+        // Cache merge (dedupe)
         newNodes.forEach(n => { if (!extraNodes.find(x => x.id === n.id)) extraNodes.push(n); });
         newEdges.forEach(e => {
           const id = edgeIdOf(e);
@@ -624,7 +676,7 @@
           }
         });
 
-        // DO NOT auto-show everything fetched; show at most AUTO_SHOW_ON_FETCH for preview
+        // Optional preview auto-show
         let autoShown = 0;
         const existing = new Set(nodes.getIds());
         const addedIds = [];
@@ -632,13 +684,12 @@
           if (AUTO_SHOW_ON_FETCH <= 0) return;
           if (autoShown >= AUTO_SHOW_ON_FETCH) return;
           if (!existing.has(n.id)) {
-            if (!canAddMoreVisibleNodes(1)) return; // silently skip
+            if (!canAddMoreVisibleNodes(1)) return;
             nodes.add(ensureNodeStyle({ ...n }));
             addedIds.push(n.id);
             autoShown++;
           }
         });
-        // edges only if both endpoints visible
         newEdges.forEach(e => {
           const id = edgeIdOf(e);
           if (!edges.get(id) && nodes.get(e.from) && nodes.get(e.to)) {
@@ -654,7 +705,7 @@
         }
       }
 
-      // keep menu position
+      // Keep menu positioned while dragging / drawing
       network.on("dragEnd", params => {
         if (expandMenu.style.display === "block" && params.nodes?.length) {
           setTimeout(() => updateExpandMenuPosition(params.nodes[0]), 0);
@@ -667,7 +718,7 @@
         }
       });
 
-      // auto-open first node
+      // Auto-open first node
       const baseNodeId = nodes.getIds()[0];
       if (baseNodeId) {
         network.selectNodes([baseNodeId]);
@@ -676,7 +727,7 @@
         });
       }
 
-      // external toggle buttons (.graph-toggle)
+      // External toggle buttons (.graph-toggle)
       document.body.addEventListener("click", function (event) {
         const toggleWrapper = event.target.closest(".graph-toggle");
         if (!toggleWrapper) return;
@@ -707,13 +758,13 @@
         }
       });
 
-      // close submenus globally
+      // Close submenus globally (but only if click is outside the floating menu)
       document.addEventListener("click", function (e) {
         if (!expandMenu.contains(e.target)) closeAllSubmenus();
       });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllSubmenus(); });
 
-      // debug
+      // Debug exports
       window.graphNodes = nodes;
       window.graphEdges = edges;
       window.extraGraphNodes = extraNodes;
