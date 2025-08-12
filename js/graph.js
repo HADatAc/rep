@@ -15,10 +15,11 @@
  *   }
  *
  * In this build:
- * - `hascoTypeUri` and `typeUri` are distinct labels everywhere.
- * - Submenu toggles are scoped to the specific edge (from,to,label), not to the node.
+ * - `hascoTypeUri` and `typeUri` are treated as *different* labels everywhere.
+ * - Submenu toggles are scoped to the specific edge (from,to,label) — you can open both.
  * - External eyes (.graph-toggle) can target a specific label via data-label and
- *   are optionaly scoped by data-from to a single edge.
+ *   optionally scope to one origin via data-from.
+ * - Class nodes (type resources) render as GREEN boxes; instances stay BLUE; literals are GREEN ellipses.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -122,12 +123,49 @@
       };
       const network = new vis.Network(container, { nodes, edges }, options);
 
-      // Small affordance: add "➕" line to show a node can be expanded
-      nodes.get().forEach(n => {
-        if (!n.label?.includes('➕')) {
-          nodes.update({ id: n.id, label: `${n.label}\n➕`, font: { size: 14 } });
+      // ---------- Styling helpers (green for classes, blue for instances, green ellipse for literals) ----------
+      function isClassNode(n) {
+        // A node is a "class" when its id == typeUri (this is how type nodes are built server-side)
+        if (!n) return false;
+        const id = typeof n.id === 'string' ? expandCurie(n.id) : n.id;
+        const tu = typeof n.typeUri === 'string' ? expandCurie(n.typeUri) : n.typeUri;
+        return !!id && !!tu && id === tu;
+      }
+
+      function ensureNodeStyle(n) {
+        // Provide safe label
+        if (!n.label || !String(n.label).trim()) {
+          const p = (n.id || '').split('/');
+          n.label = p[p.length - 1] || (n.id || '');
         }
-      });
+        if (!n.label.includes('➕')) n.label += '\n➕';
+        n.font = n.font || { size: 14 };
+
+        // LITERAL: keep ellipse green with dark text
+        if (n.shape === 'ellipse') {
+          n.color = { background: '#28a745', border: '#1e7e34' };
+          n.font  = { ...(n.font || {}), color: 'black' };
+          return n;
+        }
+
+        // CLASS: force green box if id === typeUri
+        if (isClassNode(n)) {
+          n.shape = 'box';
+          n.color = { background: '#28a745', border: '#1e7e34' };
+          n.font  = { ...(n.font || {}), color: 'white' };
+          return n;
+        }
+
+        // INSTANCE: default blue box
+        if (!n.color) {
+          n.color = { background: '#007bff', border: '#0056b3' };
+          n.font  = { ...(n.font || {}), color: 'white' };
+        }
+        return n;
+      }
+
+      // Normalize style for already-visible nodes (adds ➕ and class/instance colors)
+      nodes.get().forEach(n => nodes.update(ensureNodeStyle({ ...n })));
 
       // ----- Floating menu container -----
       const expandMenu = document.createElement("div");
@@ -158,25 +196,6 @@
         const from = expandCurie(e.from);
         const to   = expandCurie(e.to);
         return e.id || `${from}_${to}_${e.label}`;
-      }
-      function ensureNodeStyle(n) {
-        // provide safe label + colors if missing
-        if (!n.label || !n.label.trim()) {
-          const p = (n.id || '').split('/');
-          n.label = p[p.length - 1] || (n.id || '');
-        }
-        if (!n.label.includes('➕')) n.label += '\n➕';
-        n.font = n.font || { size: 14 };
-        if (!n.color) {
-          if (n.shape === 'ellipse') {
-            n.color = { background: '#28a745', border: '#1e7e34' };
-            n.font = { ...(n.font || {}), color: 'black' };
-          } else {
-            n.color = { background: '#007bff', border: '#0056b3' };
-            n.font = { ...(n.font || {}), color: 'white' };
-          }
-        }
-        return n;
       }
       function isDisplayableLabel(label) {
         if (!label) return false;
@@ -240,7 +259,7 @@
           if (e.from !== nodeId) return false;
           if (label === 'contains') return isMemberLabel(e.label);
           if (label === 'hascoTypeUri') return e.label === 'hascoTypeUri';
-          if (label === 'typeUri') return e.label === 'typeUri';
+          if (label === 'typeUri')     return e.label === 'typeUri';
           return e.label === label;
         };
 
@@ -364,7 +383,15 @@
           page.forEach(({ edge: e, id }) => {
             let child = extraNodes.find(n => n.id === e.to);
             if (!child) {
-              child = normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
+              child = normalizeNode({
+                id: e.to,
+                label: (e.to.split('/').pop() || e.to),
+                shape: 'box'
+              });
+              // If this submenu is for a type label, mark child as a CLASS node (typeUri == id)
+              if (label === 'typeUri' || label === 'hascoTypeUri') {
+                child.typeUri = child.id;
+              }
               extraNodes.push(child);
             }
 
@@ -374,7 +401,7 @@
             if (!child.label || !String(child.label).trim()) child.label = displayLabel;
 
             const edgeId = id || edgeIdOf({ ...e, label });
-            const edgeOn = !!edges.get(edgeId); // <<< KEY: toggle reflects EDGE, not NODE
+            const edgeOn = !!edges.get(edgeId); // toggle reflects EDGE, not NODE
 
             const row = document.createElement("div");
             row.style.cssText = `
