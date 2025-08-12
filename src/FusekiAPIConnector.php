@@ -256,7 +256,6 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-
   public function getHascoType($uri) {
     $endpoint = "/hascoapi/api/hascotype/".rawurlencode($uri);
     $method = 'GET';
@@ -777,6 +776,31 @@ class FusekiAPIConnector {
       "/delete/" .
       rawurlencode($elementUri);
     $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/:elementtype/bysoc/:socuri/:pageSize/:offset                                  org.hascoapi.console.controllers.restapi.StudyObjectCollectionAPI.getElementsBySOC(socuri : String, elementtype: String, pageSize : Integer, offset : Integer)
+  public function listElementsBySOC($elementType, $socuri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/bysoc/".
+      rawurlencode($socuri)."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/:elementtype/bysoc/total/:socuri                                              org.hascoapi.console.controllers.restapi.StudyObjectCollectionAPI.getTotalElementsBySOC(socuri : String, elementtype : String)
+  public function listSizeElementsBySOC($elementType, $socuri) {
+    $endpoint = "/hascoapi/api/".
+      $elementType .
+      "/bysoc/total/" .
+      rawurlencode($socuri);
+    $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -2052,6 +2076,15 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // GET     /hascoapi/api/repo/namespace/topclasses/:abbreviation org.hascoapi.console.controllers.restapi.RepoPage.getTopClasses(abbreviation : String)
+  public function repoTopClassNamespaces($abbreviation) {
+    $endpoint = "/hascoapi/api/repo/namespace/topclasses/".rawurlencode($abbreviation);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**************************************************************************
    *
    *                     E R R O R     M E T H O D S
@@ -2289,9 +2322,6 @@ class FusekiAPIConnector {
     }
 
     // 4) If it's a stream or other object with __toString(), cast to string.
-    // if (!is_string($response) && method_exists($response, '__toString')) {
-    //   $response = (string) $response;
-    // }
     if (!is_string($response) && is_object($response) && method_exists($response, '__toString')) {
       $response = (string) $response;
     }
@@ -2706,5 +2736,62 @@ class FusekiAPIConnector {
       '@s' => $status ?? 'none',
     ]);
     return NULL;
+  }
+
+  // POST    /hascoapi/api/repo/namespace/app/          org.hascoapi.console.controllers.restapi.RepoPage.ingestAppOnt(request: play.mvc.Http.Request)
+  public function uploadOntologyFile() {
+    // 1) Resolve the physical file path
+    /** @var FileSystemInterface $file_system */
+    $file_system = \Drupal::service('file_system');
+    $private_uri = 'private://ont/hadatac.ttl';
+    $path = $file_system->realpath($private_uri);
+
+    if (!file_exists($path)) {
+      \Drupal::logger('REP')->error('File not found at @path', ['@path' => $path]);
+      \Drupal::messenger()->addError(t('Ontology file not found at %path.', ['%path' => $path]));
+      return FALSE;
+    }
+
+    // 2) Prepare filename and read contents
+    $filename = basename($path);
+    $file_content = file_get_contents($path);
+    if ($file_content === FALSE) {
+      \Drupal::messenger()->addError(t('Unable to read file contents from %path.', ['%path' => $path]));
+      return FALSE;
+    }
+
+    // 3) Determine MIME type
+    $guesser   = \Drupal::service('file.mime_type.guesser');
+    // use guessMimeType(), not guess()
+    $mime_type = $guesser->guessMimeType($path) ?: 'application/octet-stream';
+
+    // 4) Build API endpoint URL
+    $endpoint = '/repo/namespace/app/';
+
+    // 5) Send POST request via Guzzle
+    $api_url = $this->getApiUrl();
+    $client = new Client();
+
+    try {
+      $response = $client->post($api_url . $endpoint, [
+        'headers' => [
+          'Content-Type'  => $mime_type,
+          'Authorization' => $this->bearer,
+        ],
+        'body' => $file_content,
+      ]);
+    }
+    catch (ConnectException $e) {
+      \Drupal::messenger()->addError(t('Connection error: @msg', ['@msg' => $e->getMessage()]));
+      return NULL;
+    }
+    catch (ClientException $e) {
+      $res = $e->getResponse();
+      $status = $res ? $res->getStatusCode() : 'n/a';
+      \Drupal::messenger()->addError(t('Upload failed. HTTP status code: @code', ['@code' => $status]));
+      return NULL;
+    }
+
+    return $response->getBody()->getContents();
   }
 }

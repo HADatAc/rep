@@ -19,19 +19,24 @@ class AssocStudy {
     /*
     *    PLACE's VIRTUAL COLUMNS
     */
+   // PLACE's VIRTUAL COLUMNS
     $rawVCs = $api->getStudyVCs($element->uri);
     if ($rawVCs != NULL) {
-      $vcs = $api->parseObjectResponse($rawVCs,'getStudyVCs');
+      $vcs = $api->parseObjectResponse($rawVCs, 'getStudyVCs');
       if ($vcs != NULL) {
-        //dpm($vcs);
         $form['virtualcolumns']['beginVCs'] = [
           '#type' => 'markup',
           '#markup' => $t->translate("<b>Virtual Columns:</b><ul>"),
         ];
         foreach ($vcs as $propertyName => $propertyValue) {
+          $label = $propertyValue->label ?? $propertyName;
+          $uri = $propertyValue->uri ?? '';
+          $nodeId = !empty($uri) ? $uri : 'vc-' . md5($propertyName);
+
           $form['virtualcolumns'][$propertyName] = [
             '#type' => 'markup',
-            '#markup' => $t->translate("<li>" . Utils::link($propertyValue->label,$propertyValue->uri) . "</li>"),
+            '#markup' => '<li>' . Utils::link($label, $uri)
+              . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Mostrar/Ocultar nó'><i class='fa fa-eye'></i></span></li>",
           ];
         }
         $form['virtualcolumns']['endVCs'] = [
@@ -295,7 +300,7 @@ class AssocStudy {
           }
           $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              Utils::namespaceUri($soc->uri).'</a>'),
+            Utils::namespaceUri($soc->uri).'</a>'),
             'soc_label' => $soc->label,
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
@@ -323,16 +328,16 @@ class AssocStudy {
           $linkObjects = $root_url.REPGUI::VIEW_STUDY_OBJECTS.base64_encode($soc->uri);
           $button = '<a href="' . $linkObjects . '" class="btn btn-primary btn-sm view-button" '.
             ' role="button">View Objects</a>';
-            $timeScopes = ' ';
-            if ($soc->timeScopes != NULL && !empty($soc->timeScopes)) {
-              foreach ($soc->timeScopes as $timeSoc) {
-                $timeScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeSoc->uri).'">'.
-                  $timeSoc->label.'</a> ';
+            $spaceScopes = ' ';
+            if ($soc->spaceScopes != NULL && !empty($soc->spaceScopes)) {
+              foreach ($soc->spaceScopes as $spaceSoc) {
+                $spaceScopes .= '<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($spaceSoc->uri).'">'.
+                  $spaceSoc->label.'</a> ';
               }
             }
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              $soc->label.'</a>'),
+              Utils::namespaceUri($soc->uri).'</a>'),
             'soc_label' => $soc->label,
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
@@ -366,7 +371,7 @@ class AssocStudy {
             }
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
-              $soc->label.'</a>'),
+              Utils::namespaceUri($soc->uri).'</a>'),
             'soc_label' => $soc->label,
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
