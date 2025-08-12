@@ -5,7 +5,8 @@ namespace Drupal\rep\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\rep\Utils;
- use Drupal\rep\Vocabulary\REPGUI;
+use Drupal\rep\Vocabulary\REPGUI;
+use Drupal\rep\Vocabulary\VSTOI;
 
 class DescribeHeaderForm extends FormBase {
 
@@ -30,6 +31,7 @@ class DescribeHeaderForm extends FormBase {
     $request = \Drupal::request();
     $pathInfo = $request->getPathInfo();
     $pathElements = (explode('/', $pathInfo));
+
     if (sizeof($pathElements) >= 4) {
       $elementuri = $pathElements[3];
     }
@@ -44,14 +46,17 @@ class DescribeHeaderForm extends FormBase {
         '#type' => 'item',
         '#title' => t("<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>"),
       ];
+      
       $form['type'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<h3>(UNKNOWN TYPE)</h3><br>"),
       ];
+
       $form['element_uri'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<b>URI</b>: " . $full_uri . "<br><br>"),
       ];
+
       $form['element_type'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<b>Type</b>: NONE<br><br>"),
@@ -65,8 +70,6 @@ class DescribeHeaderForm extends FormBase {
       } else if ($this->getElement()->typeLabel === NULL) {
         $type = $this->getElement()->hascoTypeLabel;
       } else if ($this->getElement()->hascoTypeLabel === NULL) {
-        $type = $this->getElement()->typeLabel;
-      } else if ($this->getElement()->typeLabel == $this->getElement()->hascoTypeLabel) {
         $type = $this->getElement()->typeLabel;
       } else if ($this->getElement()->typeLabel && $this->getElement()->hascoTypeLabel) {
         $type = $this->getElement()->typeLabel . " (" . $this->getElement()->hascoTypeLabel . ")";
@@ -117,6 +120,23 @@ class DescribeHeaderForm extends FormBase {
         '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
       ];
 
+      if ($this->getElement()->hascoTypeLabel === 'Organization') {
+        $form['name'] = [
+          '#type' => 'markup',
+          '#markup' => $this->t("<h5>" . $this->getElement()->name . "</h5><br>"),
+        ];
+      }
+
+      $form['type'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("<h3>" . ucfirst($type) . "</h3><br>"),
+      ];
+
+      $form['element_uri'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("<b>URI</b>: " . $this->getElement()->uri . "<br><br>"),
+      ];
+
       $typeUri = $this->getElement()->typeUri;
 
       if ($typeUri) {
@@ -164,23 +184,27 @@ class DescribeHeaderForm extends FormBase {
       if (isset($this->getElement()->title)) {
         $form['element_title'] = [
           '#type' => 'markup',
-          '#markup' => $this->t("<b>Title</b>: " . UTILS::sanitizeString($this->getElement()->title) . "<br><br>"),
+          '#markup' => $this->t("<b>Title</b>: " . $this->getElement()->title . "<br><br>"),
         ];
       }
 
-      if (isset($this->getElement()->description) || isset($this->getElement()->comment)) {
-        if ($this->getElement()->description !== "" && $this->getElement()->comment !== "") {
-          $descmarkup = "<b>From RDF Comment</b>: " . $this->getElement()->comment
-            . "<b>From DCTerms Description</b>: " . $this->getElement()->description;
-        } else if ($this->getElement()->description !== "") {
-          $descmarkup = "<b>Description</b>: " . $this->getElement()->description;
-        } else if ($this->getElement()->comment !== "") {
-          $descmarkup = "<b>Comment</b>: " . $this->getElement()->comment;
-        }
-
-        $form['element_short_name'] = [
-          '#type' => 'markup',
-          '#markup' => UTILS::sanitizeString($descmarkup),
+     // QR Code logic using JS
+      if($this->getElement()->hascoTypeUri===VSTOI::INSTRUMENT_INSTANCE ||
+         $this->getElement()->hascoTypeUri===VSTOI::DETECTOR_INSTANCE ||
+         $this->getElement()->hascoTypeUri===VSTOI::PLATFORM_INSTANCE ||
+         $this->getElement()->hascoTypeUri===VSTOI::ACTUATOR_INSTANCE ){
+        $form['qr_code'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'id' => 'qr-output',
+            'data-uri' => $this->getElement()->uri,
+            'style' => 'margin-top:10px;',
+          ],
+          '#attached' => [
+            'library' => [
+              'rep/qr_code_assets',
+            ],
+          ],
         ];
       }
     }
@@ -191,5 +215,4 @@ class DescribeHeaderForm extends FormBase {
   public function validateForm(array &$form, FormStateInterface $form_state) {}
 
   public function submitForm(array &$form, FormStateInterface $form_state) {}
-
 }
