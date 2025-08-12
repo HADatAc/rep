@@ -377,46 +377,60 @@
 
           // Rows
           page.forEach(({ edge: e, id }) => {
-            const child = extraNodes.find(n => n.id === e.to)
-                        || normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
-            if (!extraNodes.find(n => n.id === child.id)) extraNodes.push(child);
+  let child = extraNodes.find(n => n.id === e.to);
+  if (!child) {
+    child = normalizeNode({
+      id: e.to,
+      label: (e.to.split('/').pop() || e.to),
+      shape: 'box'
+    });
+    extraNodes.push(child);
+  }
 
-            const edgeId = id || edgeIdOf({ ...e, label }); // ensure stable id
-            const isVisible = !!nodes.get(child.id);
+  
+  const displayLabel = (child.label && String(child.label).trim())
+    ? child.label
+    : (child.id?.split('/').pop() || child.id || '(sem label)');
+  if (!child.label || !String(child.label).trim()) {
+    child.label = displayLabel;
+  }
 
-            const row = document.createElement("div");
-            row.style.cssText = `
-              display:flex; align-items:center; justify-content:space-between;
-              gap:12px; padding:4px 6px; min-width:300px; cursor:default;
-            `;
+  const edgeId = id || edgeIdOf({ ...e, label }); 
+  const isVisible = !!nodes.get(child.id);
 
-            const s = document.createElement("span");
-            s.textContent = child.label;
-            s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+  const row = document.createElement("div");
+  row.style.cssText = `
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; padding:4px 6px; min-width:300px; cursor:default;
+  `;
 
-            const toggle = document.createElement("span");
-            toggle.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
-            toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
+  const s = document.createElement("span");
+  s.textContent = displayLabel; 
+  s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
 
-            toggle.addEventListener("click", (ev) => {
-              ev.stopPropagation();
-              if (!nodes.get(child.id)) {
-                if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
-                nodes.add(ensureNodeStyle({ ...child }));
-                if (!edges.get(edgeId)) edges.add({ ...e, id: edgeId, label });
-                toggle.innerHTML = eyeOffSVG;
-              } else {
-                if (edges.get(edgeId)) edges.remove(edgeId);
-                const still = edges.get().some(x => x.from === child.id || x.to === child.id);
-                if (!still) nodes.remove(child.id);
-                toggle.innerHTML = eyeSVG;
-              }
-            });
+  const toggle = document.createElement("span");
+  toggle.innerHTML = isVisible ? eyeOffSVG : eyeSVG;
+  toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
 
-            row.appendChild(s);
-            row.appendChild(toggle);
-            submenu.appendChild(row);
-          });
+  toggle.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    if (!nodes.get(child.id)) {
+      if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
+      nodes.add(ensureNodeStyle({ ...child }));  // ensureNodeStyle mantém o fallback no canvas
+      if (!edges.get(edgeId)) edges.add({ ...e, id: edgeId, label });
+      toggle.innerHTML = eyeOffSVG;
+    } else {
+      if (edges.get(edgeId)) edges.remove(edgeId);
+      const still = edges.get().some(x => x.from === child.id || x.to === child.id);
+      if (!still) nodes.remove(child.id);
+      toggle.innerHTML = eyeSVG;
+    }
+  });
+
+  row.appendChild(s);
+  row.appendChild(toggle);
+  submenu.appendChild(row);
+});
 
           // Footer with « and » controls
           const footer = document.createElement('div');
