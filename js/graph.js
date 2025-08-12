@@ -17,6 +17,8 @@
  * This version unifies the submenu logic: EVERY label opens the same
  * paginated submenu (like "contains"), with « / » navigation and
  * incremental fetch (limit/offset) from the backend.
+ * Additionally, we apply a defensive client-side cap ("slim") so that even if
+ * the backend returns thousands of items, we only merge PAGE_SIZE per fetch.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -69,8 +71,9 @@
       for (let i = 0; i < extraEdges.length; i++) extraEdges[i] = normalizeEdge(extraEdges[i]);
 
       // Guards & paging state
-      const openedNodes = {};                             // fetched-once guard (per node for initial lazy fetch)
-      const pageState = Object.create(null);              // `${nodeId}:${label}` -> { offset, fetched, hasMoreServer, prefetchTried? }
+      const openedNodes = {};      // initial lazy fetch guard per node
+      // `${nodeId}:${label}` -> { offset, fetched, hasMoreServer, totalGuess, prefetchTried }
+      const pageState = Object.create(null);
 
       // ----- Layout helpers -----
       function freezeAllNodes(ds) { ds.get().forEach(n => ds.update({ id: n.id, fixed: { x: true, y: true } })); }
@@ -225,6 +228,35 @@
         alert(`Node limit reached (${MAX_LIVE_NODES}). Hide some items before loading more.`);
       }
 
+      // ---------- Defensive cap: keep only PAGE_SIZE items per fetch ----------
+      // This prevents UI overload if the backend returns a huge batch.
+      function slimPayloadForLabel(data, nodeId, label, maxKeep) {
+        const normNodes = (data.nodes || []).map(normalizeNode);
+        const normEdges = (data.edges || []).map(normalizeEdge);
+
+        const accept = (e) => {
+          if (e.from !== nodeId) return false;
+          if (label === 'contains') return isMemberLabel(e.label); // normalize to 'contains'
+          if (label === 'hascoTypeUri') return e.label === 'hascoTypeUri';
+          return e.label === label;
+        };
+
+        const keptEdges = [];
+        const keptNodeIds = new Set();
+
+        for (const e of normEdges) {
+          if (!accept(e)) continue;
+          const lbl = (label === 'contains') ? 'contains' : e.label;
+          const id  = edgeIdOf({ ...e, label: lbl });
+          keptEdges.push({ ...e, id, label: lbl });
+          keptNodeIds.add(e.to);
+          if (keptEdges.length >= maxKeep) break;
+        }
+
+        const keptNodes = normNodes.filter(n => keptNodeIds.has(n.id));
+        return { nodes: keptNodes, edges: keptEdges, meta: data.meta || {} };
+      }
+
       // ---------- Unified submenu helpers (EVERY label uses this) ----------
       function itemsForLabel(nodeId, label) {
         // Build the list of edges currently cached for this label from "nodeId"
@@ -250,19 +282,24 @@
         const prev = rightBtn.textContent;
         rightBtn.disabled = true; rightBtn.textContent = '…';
 
-        const before = itemsForLabel(nodeId, label).length;
-
         $.getJSON(socEndpoint, params)
           .done(data => {
-            mergeGraphPayload(data, nodeId);
-            // Recompute returned count based on what we can see in cache
-            const afterCount = itemsForLabel(nodeId, label).length;
-            const returned = Math.max(0, afterCount - before);
+            // Defensive cap: only merge PAGE_SIZE items for this label
+            const slim = slimPayloadForLabel(data, nodeId, label, PAGE_SIZE);
+            const returned = slim.edges.length;
+
+            mergeGraphPayload(slim, nodeId);
+
             state.fetched += returned;
-            const meta = (data && data.meta) || {};
+            const meta = slim.meta || {};
             state.hasMoreServer = (typeof meta.totalGuess === 'number')
               ? (state.fetched < meta.totalGuess)
               : (returned === PAGE_SIZE);
+
+            // NEW: keep a total if server shares it
+            if (typeof meta.total === 'number') state.totalGuess = meta.total;
+            else if (typeof meta.totalGuess === 'number') state.totalGuess = meta.totalGuess;
+
             after(returned);
           })
           .fail(() => {
@@ -285,7 +322,14 @@
         const key = `${nodeId}:${label}`;
         if (!pageState[key]) {
           const now = itemsForLabel(nodeId, label).length;
-          pageState[key] = { offset: 0, fetched: now, hasMoreServer: false, prefetchTried: false };
+          pageState[key] = {
+            offset: 0,
+            fetched: now,
+            // If we already have a full page cached, assume there might be more
+            hasMoreServer: (now >= PAGE_SIZE),
+            totalGuess: null,
+            prefetchTried: false
+          };
         }
         const state = pageState[key];
 
@@ -312,11 +356,10 @@
             state.prefetchTried = true;
             // Assume there *may* be more on server until proven otherwise
             state.hasMoreServer = true;
-            fetchMoreForLabel(nodeId, label, state, { textContent:'', disabled:false }, (returned) => {
-              // Re-render after the first batch
+            fetchMoreForLabel(nodeId, label, state, { textContent:'', disabled:false }, () => {
               renderPage();
             });
-            // Show a light skeleton for UX
+            // Light skeleton for UX
             const loading = document.createElement('div');
             loading.style.cssText = "padding:6px 4px; opacity:.7;";
             loading.textContent = 'Loading...';
@@ -389,8 +432,14 @@
           const info = document.createElement('span');
           info.style.cssText = "font-size:12px; opacity:.8;";
           const pageNum = Math.floor(state.offset / MAX_MEMBERS_PER_SOC) + 1;
-          const totalPages = Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC));
-          info.textContent = `Page ${pageNum} / ${totalPages} — showing ${page.length} of ${totalFetched}${state.hasMoreServer ? '+' : ''}`;
+
+          // Smart footer: show "…/…" until we know the total
+          const knownTotal = (typeof state.totalGuess === 'number') ? state.totalGuess : null;
+          const totalPagesKnown = knownTotal ? Math.max(1, Math.ceil(knownTotal / MAX_MEMBERS_PER_SOC)) : null;
+          const totalPagesTxt = totalPagesKnown ?? (state.hasMoreServer ? '…' : Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC)));
+          const totalCountTxt = knownTotal ?? (totalFetched + (state.hasMoreServer ? '+' : ''));
+
+          info.textContent = `Page ${pageNum} / ${totalPagesTxt} — showing ${page.length} of ${totalCountTxt}`;
 
           const right = document.createElement('button');
           right.type = 'button';
@@ -456,17 +505,21 @@
           extraEdges.map(normalizeEdge).some(e => e.to   === selectedNodeId && isReverseMemberLabel(e.label));
         if (hasContains) synthesizeContainsFromReverse(selectedNodeId);
 
-        // Lazy fetch initial SOC members or Study SOCs if we know nothing yet
+        // Lazy fetch initial SOC members if we still don't know any
         if (socEndpoint && kind === 'soc' && !hasContains && !openedNodes[selectedNodeId]) {
           openedNodes[selectedNodeId] = true;
           $.getJSON(socEndpoint, { from: selectedNodeId, relation: 'contains', limit: PAGE_SIZE, offset: 0, debug: 1 })
             .done(data => {
-              mergeGraphPayload(data, selectedNodeId);
+              // Defensive cap for contains initial page
+              const slim = slimPayloadForLabel(data, selectedNodeId, 'contains', PAGE_SIZE);
+              mergeGraphPayload(slim, selectedNodeId);
               setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
             })
             .fail(() => { openedNodes[selectedNodeId] = false; });
           return;
         }
+
+        // Lazy fetch Study → SOCs (first page)
         const hasSOC = extraEdges.map(normalizeEdge).some(e =>
           e.from === selectedNodeId &&
           (e.label === 'hasSampleCollection' ||
