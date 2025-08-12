@@ -86,6 +86,12 @@ class Utils {
       case "annotationstem":
         $short = Constant::PREFIX_ANNOTATION_STEM;
         break;
+      case "component":
+        $short = Constant::PREFIX_COMPONENT;
+        break;
+      case "componentstem":
+        $short = Constant::PREFIX_COMPONENT_STEM;
+        break;
       case "codebook":
         $short = Constant::PREFIX_CODEBOOK;
         break;
@@ -398,6 +404,42 @@ class Utils {
     return $uri;
   }
 
+  public static function placeholderImage($url, $default_element = 'unknown', $divider = '#', ) {
+    if ($url === NULL) {
+      return NULL;
+    }
+
+    $pos = strrpos($url, $divider);
+    $placeholder = $pos === FALSE
+      ? ''
+      : strtolower(substr($url, $pos + strlen($divider)));
+
+    // FALLBACK TO DEFAULT ELEMENT IF NO PLACEHOLDER FOUND
+    $pos = strrpos($url, '#');
+    $placeholder = $pos === FALSE
+      ? ''
+      : strtolower(substr($url, $pos + strlen('#')));
+
+    $module_path = \Drupal::service('extension.list.module')->getPath('rep');
+
+    $fs_path = DRUPAL_ROOT . '/'
+            . $module_path
+            . '/images/placeholders/'
+            . $placeholder . '_placeholder.png';
+
+    if (!file_exists($fs_path)) {
+      $placeholder = $default_element;
+      $fs_path = DRUPAL_ROOT . '/'
+              . $module_path
+              . '/images/placeholders/'.$default_element.'_placeholder.png';
+    }
+
+    return base_path()
+        . $module_path
+        . '/images/placeholders/'
+        . $placeholder . '_placeholder.png';
+  }
+
   public static function repUriLink($uri) {
     $root_url = \Drupal::request()->getBaseUrl();
     $uriFinal = Utils::namespaceUri($uri);
@@ -546,15 +588,39 @@ class Utils {
   public static function trimAutoCompleteString($content, $uri)
   {
     $maxLength = 127;
-    $uriLength = strlen($uri) + 4; // Inclui os colchetes e o espaço
+    $uriLength = strlen($uri) + 4;
     $availableLength = $maxLength - $uriLength;
     if (strlen($content) > $availableLength) {
-      $value = substr($content, 0, $availableLength - 4) . '... ['. $uri .']'; // Trunca e adiciona "..."
+      $value = substr($content, 0, $availableLength - 4) . '... ['. $uri .']';
     } else {
       $value = $content;
     }
 
     return $value;
+  }
+
+  public static function trimPreserveBracket(string $input, int $maxLength = 127): string
+  {
+      if (mb_strlen($input, 'UTF-8') <= $maxLength) {
+          return $input;
+      }
+
+      $bracketStart = mb_strpos($input, '[', 0, 'UTF-8');
+      if ($bracketStart === false) {
+          return mb_substr($input, 0, $maxLength, 'UTF-8');
+      }
+
+      $bracketPart = mb_substr($input, $bracketStart, null, 'UTF-8');
+      $bracketLen  = mb_strlen($bracketPart, 'UTF-8');
+
+      if ($bracketLen > $maxLength) {
+          return "";
+      }
+
+      $prefixMaxLen = $maxLength - $bracketLen;
+      $prefix = mb_substr($input, 0, min($bracketStart, $prefixMaxLen), 'UTF-8');
+
+      return $prefix . $bracketPart;
   }
 
   /**
@@ -1352,6 +1418,11 @@ class Utils {
     else {
       return '';
     }
+  }
+
+  // remove @XXXX from the end of the text
+  public static function sanitizeString($text) {
+    return preg_replace('/@.*$/', '', $text);
   }
 
 }

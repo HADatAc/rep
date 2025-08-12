@@ -170,4 +170,53 @@ class Deployment {
 
   }
 
+  public static function generateCardOutput($list) {
+
+    // ROOT URL
+    $root_url = \Drupal::request()->getBaseUrl();
+
+    $output = array();
+    foreach ($list as $element) {
+      $uri = ' ';
+      if ($element->uri != NULL) {
+        $uri = $element->uri;
+      }
+      $uri = Utils::namespaceUri($uri);
+      $label = ' ';
+      if ($element->label != NULL) {
+        $label = $element->label;
+      }
+      $platformInstance = ' ';
+      if (isset($element->platformInstance) && isset($element->platformInstance->label)) {
+        $platformInstance = $element->platformInstance->label;
+      }
+      $instrumentInstance = ' ';
+      if (isset($element->instrumentInstance) && isset($element->instrumentInstance->label)) {
+        $instrumentInstance = $element->instrumentInstance->label;
+      }
+      $designedAt = ' ';
+      if (isset($element->designedAt)) {
+        $designedAtRaw = new \DateTime($element->designedAt);
+        $designedAt = $designedAtRaw->format('F j, Y \a\t g:i A');
+      }
+      $startedAt = ' ';
+      if (isset($element->startedAt)) {
+        $startedAtRaw = new \DateTime($element->startedAt);
+        $startedAt = $startedAtRaw->format('F j, Y \a\t g:i A');
+      }
+
+      $output[$element->uri] = [
+        'element_uri' => t('<a  target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+        'element_designedAt' => $designedAt,
+        'element_startedAt' => $startedAt,
+        'element_platform_instance' => $platformInstance,
+        'element_instrument_instance' => $instrumentInstance,
+        'element_image' => $element->hasImageUri,
+        'element_hascotypeuri' => $element->hascoTypeUri
+      ];
+    }
+    return $output;
+
+  }
+
 }
