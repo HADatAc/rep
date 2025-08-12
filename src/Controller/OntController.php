@@ -181,14 +181,23 @@ class OntController extends ControllerBase {
   }
 
   public function injest() {
+    $messenger = \Drupal::messenger();
+    /** @var \Drupal\rep\ApiConnector $api */
     $api = \Drupal::service('rep.api_connector');
-    $result = $api->uploadOntologyFile();
-    $obj = json_decode($result);
-    if ($obj->isSuccessful) {
-      $this->messenger()->addStatus($this->t('Ontology file uploaded successfully.'));
+    $rep_ns = \Drupal::config('rep.settings')->get('repository_namespace_prefix');
+    $res = $api->uploadOntology();
+
+    if (!$res || $res->getStatusCode() >= 400) {
+      $messenger->addError($this->t('Failed to ingest ontology: @message', [
+        '@message' => $res ? $res->getReasonPhrase() : 'Unknown error',
+      ]));
     } else {
-      $this->messenger()->addError($this->t('Failed to upload ontology file: @message', ['@message' => $obj->body]));
+      $messenger->addStatus($this->t('Applied ontology successfully: @message', [
+        '@message' => $res->getReasonPhrase(),
+      ]));
     }
-    return $this->redirect('rep.ont_edit');
+
+    // Redirecta para onde fizer sentido:
+    return $this->redirect('rep.ont_edit', ['filename' => $rep_ns.'.ttl']);
   }
 }
