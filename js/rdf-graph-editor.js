@@ -16,7 +16,7 @@ import debounce from 'https://cdn.jsdelivr.net/npm/lodash-es@4.17.21/debounce.js
         matchBrackets: true,
       });
 
-      ta._cm.setSize(null, '60vh');
+      ta._cm.setSize(null, '45vh');
 
       // 2) Função que faz fetch + inicial render
       const loadAndRender = () => {
