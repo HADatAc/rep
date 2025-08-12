@@ -496,3 +496,12 @@ rep.api.save:
   methods: ['POST']
   options:
     no_cache: TRUE
+
+rep.graph.expand:
+  path: '/rep/graph/expand'
+  defaults:
+    _controller: '\Drupal\rep\Controller\GraphController::expand'
+  requirements:
+    _permission: 'access content'
+  methods: [GET]
+

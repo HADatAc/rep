@@ -138,7 +138,6 @@ class DescribeHeaderForm extends FormBase {
       ];
 
       $typeUri = $this->getElement()->typeUri;
-
       if ($typeUri) {
         $form['element_type'] = [
           '#type' => 'inline_template',
