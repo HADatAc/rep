@@ -429,3 +429,4 @@ rep.tree.entry_point_mappings:
     _controller: '\Drupal\rep\Controller\TreeController::getEntryPointMappings'
   requirements:
     _role: 'content_editor'
+
