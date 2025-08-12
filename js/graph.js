@@ -14,16 +14,11 @@
  *     maxMembersPerSOC, pageSize, maxLiveNodes, autoShowOnFetch
  *   }
  *
- * This version unifies the submenu logic: EVERY label opens the same
- * paginated submenu (like "contains"), with « / » navigation and
- * incremental fetch (limit/offset) from the backend.
- * Additionally, we apply a defensive client-side cap ("slim") so that even if
- * the backend returns thousands of items, we only merge PAGE_SIZE per fetch.
- *
- * Important in this build:
- * - `hascoTypeUri` and `typeUri` are handled as different, independent labels everywhere.
- * - The external toggle (.graph-toggle) can target a specific label using data-label="...".
- *   If no data-label is provided, it falls back to the legacy behavior (toggle all edges to/from the node).
+ * In this build:
+ * - `hascoTypeUri` and `typeUri` are distinct labels everywhere.
+ * - Submenu toggles are scoped to the specific edge (from,to,label), not to the node.
+ * - External eyes (.graph-toggle) can target a specific label via data-label and
+ *   are optionaly scoped by data-from to a single edge.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -34,7 +29,7 @@
       if (typeof vis === 'undefined') return;
       container.dataset.loaded = 'true';
 
-      // ----- Config & limits (with safe defaults) -----
+      // ----- Config & limits -----
       const socEndpoint =
         (drupalSettings && drupalSettings.rep && drupalSettings.rep.socObjectsEndpoint) ||
         (window.Drupal && Drupal.url ? Drupal.url('rep/graph/expand') : '/rep/graph/expand');
@@ -54,6 +49,9 @@
       const edges = new vis.DataSet(base.edges || []);
       const extraNodes = base.extraNodes || [];
       let   extraEdges = base.extraEdges || [];
+
+      // keep the very first node id (root) so we never remove it by mistake
+      const initialRootId = (nodes.getIds && nodes.getIds()[0]) || null;
 
       // ----- Normalize CURIE -> IRI -----
       const AHEAD = 'http://hadatac.org/ont/arrowhead/';
@@ -124,7 +122,7 @@
       };
       const network = new vis.Network(container, { nodes, edges }, options);
 
-      // Minor affordance: add "➕" line to existing labels so users know they can expand
+      // Small affordance: add "➕" line to show a node can be expanded
       nodes.get().forEach(n => {
         if (!n.label?.includes('➕')) {
           nodes.update({ id: n.id, label: `${n.label}\n➕`, font: { size: 14 } });
@@ -158,11 +156,11 @@
       // ----- Utilities -----
       function edgeIdOf(e) {
         const from = expandCurie(e.from);
-        the_to = expandCurie(e.to);
-        return e.id || `${from}_${the_to}_${e.label}`;
+        const to   = expandCurie(e.to);
+        return e.id || `${from}_${to}_${e.label}`;
       }
       function ensureNodeStyle(n) {
-        // Provide safe label + colors if missing
+        // provide safe label + colors if missing
         if (!n.label || !n.label.trim()) {
           const p = (n.id || '').split('/');
           n.label = p[p.length - 1] || (n.id || '');
@@ -181,20 +179,18 @@
         return n;
       }
       function isDisplayableLabel(label) {
-        // Hide purely textual/meta predicates from the menu
         if (!label) return false;
         if (label === 'hasCollection') return false; // normalized below
         const blacklist = new Set(['label','comment','body','hasImageUri','hasWebDocument','hasStatus','id']);
         return !blacklist.has(label);
       }
       function buildLabelEdgesMap(relEdges) {
-        // Build: label -> [{ edge, id, normalized }]
+        // Map: label -> [{ edge, id, normalized }]
         const map = new Map();
         relEdges.forEach(e => {
           const E = normalizeEdge(e);
           const target = extraNodes.find(n => n.id === E.to);
           let lbl = e.label;
-
           // Normalize generic hasCollection into specific labels based on target.typeUri
           if (lbl === 'hasCollection' && target) {
             const tu = (target.typeUri || '');
@@ -203,7 +199,6 @@
             else if (tu.includes('/hasco/TimeCollection')) lbl = 'hasTimeCollection';
             else if (tu.includes('/hasco/SubjectGroup') || tu.includes('/hasco/StudyObjectCollection')) lbl = 'hasSubjectCollection';
           }
-
           const obj = { edge: { ...E, label: lbl }, id: edgeIdOf({ ...E, label: lbl }), normalized: lbl };
           if (!map.has(lbl)) map.set(lbl, []);
           map.get(lbl).push(obj);
@@ -215,7 +210,7 @@
       const isReverseMemberLabel = (lbl) =>
         lbl === 'isMemberOf' || lbl === 'memberOf' || lbl === 'isObjectOf';
 
-      // Create synthetic "contains" edges from reverse membership if present
+      // Synthesize "contains" edges from reverse membership if present
       function synthesizeContainsFromReverse(nodeId) {
         const rev = extraEdges
           .map(normalizeEdge)
@@ -233,19 +228,17 @@
         const current = nodes.length ? nodes.length : nodes.getIds().length;
         return (current + addCount) <= MAX_LIVE_NODES;
       }
-      function warnNodeCap() {
-        alert(`Node limit reached (${MAX_LIVE_NODES}). Hide some items before loading more.`);
-      }
+      function warnNodeCap() { alert(`Node limit reached (${MAX_LIVE_NODES}). Hide some items before loading more.`); }
 
       // ---------- Defensive cap: keep only PAGE_SIZE items per fetch ----------
       function slimPayloadForLabel(data, nodeId, label, maxKeep) {
         const normNodes = (data.nodes || []).map(normalizeNode);
         const normEdges = (data.edges || []).map(normalizeEdge);
 
-        // Accept only edges for the requested label (or normalized "contains")
+        // Accept edges for the requested label (or normalized "contains")
         const accept = (e) => {
           if (e.from !== nodeId) return false;
-          if (label === 'contains') return isMemberLabel(e.label); // normalize to 'contains'
+          if (label === 'contains') return isMemberLabel(e.label);
           if (label === 'hascoTypeUri') return e.label === 'hascoTypeUri';
           if (label === 'typeUri') return e.label === 'typeUri';
           return e.label === label;
@@ -267,9 +260,8 @@
         return { nodes: keptNodes, edges: keptEdges, meta: data.meta || {} };
       }
 
-      // ---------- Unified submenu helpers (EVERY label uses this) ----------
+      // ---------- Unified submenu helpers ----------
       function itemsForLabel(nodeId, label) {
-        // Build current cached edges for this label from "nodeId"
         const norms = extraEdges.map(normalizeEdge);
         if (label === 'contains') {
           return norms
@@ -283,19 +275,15 @@
       }
 
       function fetchMoreForLabel(nodeId, label, state, rightBtn, after) {
-        // Request next page for this label (server-side)
-        if (!socEndpoint) return;
-
         // Type edges are singletons; do not fetch/paginate them.
         if (label === 'hascoTypeUri' || label === 'typeUri') {
           state.hasMoreServer = false;
           after(0);
           return;
         }
-
+        if (!socEndpoint) return;
         const params = { from: nodeId, limit: PAGE_SIZE, offset: state.fetched, debug: 1 };
-        if (label === 'contains') params.relation = 'contains';
-        else params.label = label;
+        if (label === 'contains') params.relation = 'contains'; else params.label = label;
 
         const prev = rightBtn.textContent;
         rightBtn.disabled = true; rightBtn.textContent = '…';
@@ -318,14 +306,8 @@
 
             after(returned);
           })
-          .fail(() => {
-            state.hasMoreServer = false;
-            after(0);
-          })
-          .always(() => {
-            rightBtn.textContent = prev;
-            rightBtn.disabled = false;
-          });
+          .fail(() => { state.hasMoreServer = false; after(0); })
+          .always(() => { rightBtn.textContent = prev; rightBtn.disabled = false; });
       }
 
       function openLabelSubmenu(opt, nodeId, label) {
@@ -333,7 +315,6 @@
         if (submenu) { submenu.remove(); return; }
         closeAllSubmenus();
 
-        // Initialize paging state for (node,label) if missing
         const key = `${nodeId}:${label}`;
         if (!pageState[key]) {
           const now = itemsForLabel(nodeId, label).length;
@@ -360,7 +341,6 @@
         const renderPage = () => {
           submenu.innerHTML = '';
 
-          // Current cached rows for this label
           const list = itemsForLabel(nodeId, label);
           const totalFetched = list.length;
 
@@ -369,42 +349,32 @@
           if (fetchable && totalFetched === 0 && !state.prefetchTried) {
             state.prefetchTried = true;
             state.hasMoreServer = true;
-            fetchMoreForLabel(nodeId, label, state, { textContent:'', disabled:false }, () => {
-              renderPage();
-            });
+            fetchMoreForLabel(nodeId, label, state, { textContent:'', disabled:false }, () => { renderPage(); });
             const loading = document.createElement('div');
             loading.style.cssText = "padding:6px 4px; opacity:.7;";
             loading.textContent = 'Loading...';
             submenu.appendChild(loading);
-            return; // defer actual render until fetch returns
+            return;
           }
 
-          // Pagination window within cached items
           const start = Math.max(0, Math.min(state.offset, Math.max(0, totalFetched - MAX_MEMBERS_PER_SOC)));
           const end = Math.min(start + MAX_MEMBERS_PER_SOC, totalFetched);
           const page = list.slice(start, end);
 
-          // Rows — IMPORTANT: toggle state is per-edge (not per-node)
           page.forEach(({ edge: e, id }) => {
             let child = extraNodes.find(n => n.id === e.to);
             if (!child) {
-              child = normalizeNode({
-                id: e.to,
-                label: (e.to.split('/').pop() || e.to),
-                shape: 'box'
-              });
+              child = normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
               extraNodes.push(child);
             }
 
             const displayLabel = (child.label && String(child.label).trim())
               ? child.label
               : (child.id?.split('/').pop() || child.id || '(no label)');
-            if (!child.label || !String(child.label).trim()) {
-              child.label = displayLabel;
-            }
+            if (!child.label || !String(child.label).trim()) child.label = displayLabel;
 
             const edgeId = id || edgeIdOf({ ...e, label });
-            const edgeVisible = !!edges.get(edgeId);   // <-- check the edge, not the node
+            const edgeOn = !!edges.get(edgeId); // <<< KEY: toggle reflects EDGE, not NODE
 
             const row = document.createElement("div");
             row.style.cssText = `
@@ -417,30 +387,38 @@
             s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
 
             const toggle = document.createElement("span");
-            toggle.innerHTML = edgeVisible ? eyeOffSVG : eyeSVG;
+            toggle.innerHTML = edgeOn ? eyeOffSVG : eyeSVG;
             toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
 
-            // Submenu toggle adds/removes ONLY the selected (node,label) edge.
+            // Submenu toggle: add/remove ONLY this (nodeId -> child, label) edge
             toggle.addEventListener("click", (ev) => {
               ev.stopPropagation();
 
-              const visibleNow = !!edges.get(edgeId);
-              if (!visibleNow) {
-                // Add ONLY this edge; keep typeUri and hascoTypeUri independent
-                if (!nodes.get(child.id)) {
-                  if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
-                  nodes.add(ensureNodeStyle({ ...child }));
+              if (!edges.get(edgeId)) {
+                // Turn ON: ensure node + edge
+                if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
+                if (!nodes.get(child.id)) nodes.add(ensureNodeStyle({ ...child }));
+                if (!nodes.get(nodeId))  nodes.add(ensureNodeStyle({ id: nodeId, label: (nodeId.split('/').pop()||nodeId), shape:'box'}));
+                edges.add({ ...e, id: edgeId, label });
+
+                // Reposition: spread current visible neighbors (including the new child)
+                const neighborIds = edges.get()
+                  .filter(ed => ed.from === nodeId)
+                  .map(ed => ed.to)
+                  .filter((v, i, arr) => arr.indexOf(v) === i);
+                if (neighborIds.length) {
+                  freezeAllNodes(nodes);
+                  placeAround(network, nodeId, neighborIds, 140);
+                  network.redraw();
+                  unfreezeNodes(nodes, neighborIds);
                 }
-                if (!edges.get(edgeId)) edges.add({ ...e, id: edgeId, label });
+
                 toggle.innerHTML = eyeOffSVG;
               } else {
-                // Remove ONLY this edge
+                // Turn OFF: remove just this edge; drop node only if isolated (and not the root)
                 edges.remove(edgeId);
-
-                // If the child became isolated, remove it to keep the canvas clean
-                const stillConnected = edges.get().some(x => x.from === child.id || x.to === child.id);
-                if (!stillConnected) nodes.remove(child.id);
-
+                const still = edges.get().some(x => x.from === child.id || x.to === child.id);
+                if (!still && child.id !== initialRootId) nodes.remove(child.id);
                 toggle.innerHTML = eyeSVG;
               }
             });
@@ -455,10 +433,8 @@
           footer.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:8px;";
 
           const left = document.createElement('button');
-          left.type = 'button';
-          left.className = 'btn btn-sm btn-light';
-          left.textContent = '«';
-          left.disabled = (state.offset <= 0);
+          left.type = 'button'; left.className = 'btn btn-sm btn-light';
+          left.textContent = '«'; left.disabled = (state.offset <= 0);
           left.onclick = (e3) => { e3.stopPropagation(); state.offset = Math.max(0, state.offset - MAX_MEMBERS_PER_SOC); renderPage(); };
 
           const info = document.createElement('span');
@@ -473,9 +449,7 @@
           info.textContent = `Page ${pageNum} / ${totalPagesTxt} — showing ${page.length} of ${totalCountTxt}`;
 
           const right = document.createElement('button');
-          right.type = 'button';
-          right.className = 'btn btn-sm btn-light';
-          right.textContent = '»';
+          right.type = 'button'; right.className = 'btn btn-sm btn-light'; right.textContent = '»';
 
           const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
           const canFetchMore = !!state.hasMoreServer && (label !== 'hascoTypeUri' && label !== 'typeUri');
@@ -506,7 +480,7 @@
         renderPage();
       }
 
-      // ----- Node click -> build floating menu and wire submenu for each label -----
+      // ----- Node click -> floating menu -----
       network.on("click", function (params) {
         expandMenu.style.display = "none";
         closeAllSubmenus();
@@ -530,13 +504,13 @@
         }
         const kind = nodeKindByTypeUri(selectedNode?.typeUri);
 
-        // If reverse membership is cached, synthesize "contains" edges
+        // synthesize "contains" from reverse links if needed
         const hasContains =
           extraEdges.map(normalizeEdge).some(e => e.from === selectedNodeId && isMemberLabel(e.label)) ||
           extraEdges.map(normalizeEdge).some(e => e.to   === selectedNodeId && isReverseMemberLabel(e.label));
         if (hasContains) synthesizeContainsFromReverse(selectedNodeId);
 
-        // Lazy fetch initial SOC members if unknown
+        // Lazy fetch SOC members
         if (socEndpoint && kind === 'soc' && !hasContains && !openedNodes[selectedNodeId]) {
           openedNodes[selectedNodeId] = true;
           $.getJSON(socEndpoint, { from: selectedNodeId, relation: 'contains', limit: PAGE_SIZE, offset: 0, debug: 1 })
@@ -549,7 +523,7 @@
           return;
         }
 
-        // Lazy fetch Study → SOCs (first page)
+        // Lazy fetch Study → SOCs
         const hasSOC = extraEdges.map(normalizeEdge).some(e =>
           e.from === selectedNodeId &&
           (e.label === 'hasSampleCollection' ||
@@ -571,12 +545,10 @@
 
         // Build available labels for this node from cached edges
         const relatedEdges = extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId);
-        const labelEdgesMap = buildLabelEdgesMap(
-          relatedEdges.filter(e => extraNodes.some(n => n.id === e.to))
-        );
+        const labelEdgesMap = buildLabelEdgesMap(relatedEdges.filter(e => extraNodes.some(n => n.id === e.to)));
         let labels = Array.from(labelEdgesMap.keys()).filter(isDisplayableLabel);
 
-        // Ensure BOTH type labels appear independently when available
+        // Make sure BOTH type labels appear independently when present
         const hasHascoType = extraEdges.map(normalizeEdge).some(e =>
           e.label === 'hascoTypeUri' && e.from === selectedNodeId && extraNodes.find(n => n.id === e.to)
         );
@@ -588,7 +560,7 @@
 
         if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
 
-        // Render floating menu (each label opens the same unified submenu)
+        // Render floating menu
         expandMenu.innerHTML = '';
         closeAllSubmenus();
 
@@ -681,14 +653,11 @@
       const baseNodeId = nodes.getIds()[0];
       if (baseNodeId) {
         network.selectNodes([baseNodeId]);
-        network.once("afterDrawing", () => {
-          if (network.emit) network.emit("click", { nodes: [baseNodeId] });
-        });
+        network.once("afterDrawing", () => { if (network.emit) network.emit("click", { nodes: [baseNodeId] }); });
       }
 
       // ---------- External toggle buttons (.graph-toggle) ----------
-      // Each eye can target a specific label via data-label (e.g., "typeUri" or "hascoTypeUri").
-      // If data-label is missing, we fallback to the legacy behavior (toggle the node and all its edges).
+      // Targets a specific (from -> node, label). If label is missing, legacy behavior (whole node).
       document.body.addEventListener("click", function (event) {
         const toggleWrapper = event.target.closest(".graph-toggle");
         if (!toggleWrapper) return;
@@ -696,10 +665,10 @@
         const nodeId = expandCurie(toggleWrapper.getAttribute("data-node") || "");
         if (!nodeId) return;
 
-        // Optional: restrict to a specific label (e.g., "typeUri" / "hascoTypeUri")
-        const onlyLabel = (toggleWrapper.getAttribute("data-label") || "").trim();
+        const onlyLabel = (toggleWrapper.getAttribute("data-label") || "").trim();  // "typeUri" | "hascoTypeUri" | ...
+        const fromIdRaw = toggleWrapper.getAttribute("data-from") || "";
+        const fromId = fromIdRaw ? expandCurie(fromIdRaw) : "";
 
-        // Helper: make sure a node is on canvas before adding edges to/from it
         function ensureVisibleNode(id) {
           if (!id) return;
           if (nodes.get(id)) return;
@@ -712,66 +681,77 @@
           nodes.add(ensureNodeStyle({ ...n }));
         }
 
-        // Determine current "active" state *for this label*:
-        // - If onlyLabel is given: active = at least one visible edge of that label touches the node.
-        // - Otherwise: active = the node itself is visible (legacy).
-        const hasEdgesForLabel = () => edges.get().some(ed =>
-          (ed.from === nodeId || ed.to === nodeId) && (!onlyLabel || ed.label === onlyLabel)
-        );
-        const isNodeVisible = !!nodes.get(nodeId);
-        const isActive = onlyLabel ? hasEdgesForLabel() : isNodeVisible;
+        const isActive = (() => {
+          if (onlyLabel) {
+            if (fromId) {
+              return edges.get().some(ed => ed.from === fromId && ed.to === nodeId && ed.label === onlyLabel);
+            }
+            return edges.get().some(ed => (ed.from === nodeId || ed.to === nodeId) && ed.label === onlyLabel);
+          }
+          return !!nodes.get(nodeId); // legacy
+        })();
 
         if (!isActive) {
-          // ---- ACTIVATE: show the node and only the requested label edges (if provided)
+          // ACTIVATE
           if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
           ensureVisibleNode(nodeId);
+          if (fromId) ensureVisibleNode(fromId);
 
           const related = extraEdges
             .map(normalizeEdge)
-            .filter(e => (e.to === nodeId || e.from === nodeId) && (!onlyLabel || e.label === onlyLabel));
+            .filter(e => {
+              if (onlyLabel) {
+                if (fromId) return e.from === fromId && e.to === nodeId && e.label === onlyLabel;
+                return (e.from === nodeId || e.to === nodeId) && e.label === onlyLabel;
+              }
+              return (e.to === nodeId || e.from === nodeId);
+            });
 
           related.forEach(e => {
-            const other = (e.from === nodeId) ? e.to : e.from;
-            ensureVisibleNode(other);
+            ensureVisibleNode(e.from);
+            ensureVisibleNode(e.to);
             const id = edgeIdOf(e);
-            if (!edges.get(id) && nodes.get(e.from) && nodes.get(e.to)) {
-              edges.add({ ...e, id });
-            }
+            if (!edges.get(id) && nodes.get(e.from) && nodes.get(e.to)) edges.add({ ...e, id });
           });
 
           toggleWrapper.innerHTML = eyeOffSVG;
         } else {
-          // ---- DEACTIVATE
+          // DEACTIVATE
           if (onlyLabel) {
-            // Remove only edges of that label touching this node
-            const toRemove = edges.get().filter(ed =>
-              (ed.from === nodeId || ed.to === nodeId) && ed.label === onlyLabel
-            );
-            const orphanCheck = new Set();
-            toRemove.forEach(ed => {
-              orphanCheck.add(ed.from);
-              orphanCheck.add(ed.to);
-              edges.remove(ed.id);
+            const removed = [];
+            edges.get().forEach(ed => {
+              const match = fromId
+                ? (ed.from === fromId && ed.to === nodeId && ed.label === onlyLabel)
+                : ((ed.from === nodeId || ed.to === nodeId) && ed.label === onlyLabel);
+              if (match) removed.push(ed);
             });
+            removed.forEach(ed => edges.remove(ed.id));
 
-            // Remove this node if it became isolated
-            const stillHas = edges.get().some(ed => ed.from === nodeId || ed.to === nodeId);
-            if (!stillHas) nodes.remove(nodeId);
-
-            // Optionally remove other endpoints that also became isolated
-            orphanCheck.forEach(nid => {
-              if (nid === nodeId) return;
+            const candidates = new Set();
+            removed.forEach(ed => { candidates.add(ed.from); candidates.add(ed.to); });
+            candidates.forEach(nid => {
+              if (nid === initialRootId) return;
               if (!nodes.get(nid)) return;
               const hasAny = edges.get().some(ed => ed.from === nid || ed.to === nid);
               if (!hasAny) nodes.remove(nid);
             });
           } else {
-            // Legacy: remove the node entirely and all edges touching it
-            nodes.remove(nodeId);
-            const ids = edges.getIds().filter(id =>
-              id.startsWith(`${nodeId}_`) || id.includes(`_${nodeId}_`)
-            );
-            edges.remove(ids);
+            // Legacy: keep the root; otherwise remove node + orphans
+            if (nodeId === initialRootId) {
+              const ids = edges.get().filter(ed => ed.from === nodeId || ed.to === nodeId).map(ed => ed.id);
+              edges.remove(ids);
+            } else {
+              const neighbors = edges.get().filter(ed => ed.from === nodeId || ed.to === nodeId)
+                .map(ed => (ed.from === nodeId ? ed.to : ed.from));
+              const ids = edges.get().filter(ed => ed.from === nodeId || ed.to === nodeId).map(ed => ed.id);
+              edges.remove(ids);
+              if (nodes.get(nodeId)) nodes.remove(nodeId);
+              neighbors.forEach(nid => {
+                if (nid === initialRootId) return;
+                const still = edges.get().some(ed => ed.from === nid || ed.to === nid);
+                if (!still && nodes.get(nid)) nodes.remove(nid);
+              });
+            }
           }
 
           toggleWrapper.innerHTML = eyeSVG;
