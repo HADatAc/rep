@@ -137,19 +137,28 @@ class VisGraphBaseForm extends FormBase {
 
     // Type edge for the base element (menu key must be 'hascoTypeUri').
     $typeUriValue = $element->typeUri ?? ($element->hascoTypeUri ?? null);
-    if (!empty($typeUriValue)) {
-      $typeUri   = $expandCurie($typeUriValue);
-      $typeLabel = $element->hascoTypeLabel ?? $element->typeLabel ?? 'Type';
+    // ----- Type edges for the base element (mostrar ambos) -----
+if (!empty($element->hascoTypeUri)) {
+  $typeHasco = $expandCurie($element->hascoTypeUri);
+  $typeHascoLbl = $element->hascoTypeLabel ?? 'HASCO Type';
+  $linkedNodes[] = Utils::buildNode($typeHasco, ucfirst($typeHascoLbl), $typeHasco);
+  $linkedEdges[] = [
+    'from' => $baseUri, 'to' => $typeHasco,
+    'label' => 'hascoTypeUri', 'arrows' => 'to',
+    'font' => ['align' => 'middle'],
+  ];
+}
+if (!empty($element->typeUri)) {
+  $typeStd = $expandCurie($element->typeUri);
+  $typeStdLbl = $element->typeLabel ?? 'Type';
+  $linkedNodes[] = Utils::buildNode($typeStd, ucfirst($typeStdLbl), $typeStd);
+  $linkedEdges[] = [
+    'from' => $baseUri, 'to' => $typeStd,
+    'label' => 'typeUri', 'arrows' => 'to',
+    'font' => ['align' => 'middle'],
+  ];
+}
 
-      $linkedNodes[] = Utils::buildNode($typeUri, ucfirst($typeLabel), $typeUri);
-      $linkedEdges[] = [
-        'from'   => $baseUri,
-        'to'     => $typeUri,
-        'label'  => 'hascoTypeUri',
-        'arrows' => 'to',
-        'font'   => ['align' => 'middle'],
-      ];
-    }
 
     // Determine base type once.
     $baseType = ($element->hascoTypeUri ?? $element->typeUri ?? '');
