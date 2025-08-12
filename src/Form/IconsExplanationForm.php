@@ -6,6 +6,8 @@ namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
 
 final class IconsExplanationForm extends FormBase {
 
@@ -23,6 +25,7 @@ final class IconsExplanationForm extends FormBase {
 
     $header = [
       ['data' => $this->t('Icon')],
+      ['data' => $this->t('Type URI')],
       ['data' => $this->t('Name')],
       ['data' => $this->t('Explanation')],
     ];
@@ -71,76 +74,128 @@ final class IconsExplanationForm extends FormBase {
       'STR' => 'str_placeholder.png',
     ];
 
-    $rows_data = [
-      ['name' => 'Funding Schemes', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Projects', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Organizations', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Persons', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Places', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Postal Adresses', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'DAs', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Studies', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Study Roles', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Virtual Columns', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Object Collections', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Study Objects', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Process Stems', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Processes', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Data Dictionary', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Semantic Data Dictionary', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'SV', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Entity', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Attribute', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Unit', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Component', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Component Stem', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Codebooks', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Response Options', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Annotation Stems', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Annotations', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Platform', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Platform Instances', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Instrument', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Instrument Instances', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Detector Instances', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Actuator Instances', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Deployments', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'Message Streams', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'File Streams', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'INS', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'DSG', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'DD',  'desc' => 'Represents a property/relation.'],
-      ['name' => 'SDD', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'DP2', 'desc' => 'Represents a property/relation.'],
-      ['name' => 'STR', 'desc' => 'Represents a property/relation.'],
+    $map_uri = [
+      'Funding Schemes' => '',
+      'Projects' => 'https://schema.org/Project',
+      'Organizations' => 'https://schema.org/GovernmentOrganization',
+      'Persons' => '',
+      'Places' => 'https://schema.org/City',
+      'Postal Adresses' => 'https://schema.org/PostalAddress',
+      'DAs' => '',
+      'Studies' => 'http://hadatac.org/ont/hasco/Study',
+      'Study Roles' => '',
+      'Virtual Columns' => 'http://hadatac.org/ont/hasco/VirtualColumn',
+      'Object Collections' => '',
+      'Study Objects' => '',
+      'Process Stems' => '',
+      'Processes' => '',
+      'Data Dictionary' => '',
+      'Semantic Data Dictionary' => '',
+      'SV' => '',
+      'Entity' => '',
+      'Attribute' => '',
+      'Unit' => '',
+      'Component' => '',
+      'Component Stem' => '',
+      'Codebooks' => '',
+      'Response Options' => '',
+      'Annotation Stems' => '',
+      'Annotations' => '',
+      'Platform' => '',
+      'Platform Instances' => 'http://hadatac.org/ont/vstoi#Platform',
+      'Instrument' => '',
+      'Instrument Instances' => 'http://hadatac.org/ont/vstoi#Instrument',
+      'Detector Instances' => 'http://hadatac.org/ont/vstoi#Detector',
+      'Actuator Instances' => 'http://hadatac.org/ont/vstoi#Actuator',
+      'Deployments' => 'http://hadatac.org/ont/vstoi#Deployment',
+      'Message Streams' => '',
+      'File Streams' => '',
+      'INS' => '',
+      'DSG' => 'http://hadatac.org/ont/hasco/DSG',
+      'DD'  => '',
+      'SDD' => '',
+      'DP2' => '',
+      'STR' => '',
     ];
 
-$rows = [];
-foreach ($rows_data as $r) {
-  $img = $map_img[$r['name']] ?? null;
-  $style = $img ? "background-image: url('{$placeholder_base}{$img}');" : '';
+    $rows_data = [
+      ['name' => 'Funding Schemes', 'desc' => 'NOT FOUND'],
+      ['name' => 'Projects', 'desc' => 'An enterprise (potentially individual but typically collaborative), planned to achieve a particular aim. Use properties from [[Organization]], [[subOrganization]]/[[parentOrganization]] to indicate project sub-structures.'],
+      ['name' => 'Organizations', 'desc' => 'A governmental organization or agency.'],
+      ['name' => 'Persons', 'desc' => 'NOT FOUND'],
+      ['name' => 'Places', 'desc' => 'NOT FOUND'],
+      ['name' => 'Postal Adresses', 'desc' => 'The mailing address.'],
+      ['name' => 'DAs', 'desc' => 'NOT FOUND'],
+      ['name' => 'Studies', 'desc' => 'NOT FOUND'],
+      ['name' => 'Study Roles', 'desc' => 'NOT FOUND'],
+      ['name' => 'Virtual Columns', 'desc' => 'NOT FOUND'],
+      ['name' => 'Object Collections', 'desc' => 'NOT FOUND'],
+      ['name' => 'Study Objects', 'desc' => 'NOT FOUND'],
+      ['name' => 'Process Stems', 'desc' => 'NOT FOUND'],
+      ['name' => 'Processes', 'desc' => 'NOT FOUND'],
+      ['name' => 'Data Dictionary', 'desc' => 'NOT FOUND'],
+      ['name' => 'Semantic Data Dictionary', 'desc' => 'NOT FOUND'],
+      ['name' => 'SV', 'desc' => 'NOT FOUND'],
+      ['name' => 'Entity', 'desc' => 'NOT FOUND'],
+      ['name' => 'Attribute', 'desc' => 'NOT FOUND'],
+      ['name' => 'Unit', 'desc' => 'NOT FOUND'],
+      ['name' => 'Component', 'desc' => 'NOT FOUND'],
+      ['name' => 'Component Stem', 'desc' => 'NOT FOUND'],
+      ['name' => 'Codebooks', 'desc' => 'NOT FOUND'],
+      ['name' => 'Response Options', 'desc' => 'NOT FOUND'],
+      ['name' => 'Annotation Stems', 'desc' => 'NOT FOUND'],
+      ['name' => 'Annotations', 'desc' => 'NOT FOUND'],
+      ['name' => 'Platform', 'desc' => 'NOT FOUND'],
+      ['name' => 'Platform Instances', 'desc' => 'A surface onto which instruments are deployed to collect data.'],
+      ['name' => 'Instrument', 'desc' => 'A device or mechanism that is used to achire attribute values of entities of interest. An instrument does not necessarily require a way to store its measured quantity (e.g, a hard disk).'],
+      ['name' => 'Instrument Instances', 'desc' => 'NOT FOUND'],
+      ['name' => 'Detector Instances', 'desc' => 'A device which detects measurements, such as temperature or wind velocity, and cointains a codebook.'],
+      ['name' => 'Actuator Instances', 'desc' => 'A device that puts into action values that are fed into it.'],
+      ['name' => 'Deployments', 'desc' => 'A platform is deployed during a certain duration of time and over a certain spacial domain. The platform has instruments on it within the scope of this deployment. For example, a boat will carry certain instruments during a deployment, and those instruments will be removed once the deployment is completed. A stationary deployment can last a much longer time, even decades, with the same instrument.'],
+      ['name' => 'Message Streams', 'desc' => 'NOT FOUND'],
+      ['name' => 'File Streams', 'desc' => 'NOT FOUND'],
+      ['name' => 'INS', 'desc' => 'NOT FOUND'],
+      ['name' => 'DSG', 'desc' => 'NOT FOUND'],
+      ['name' => 'DD',  'desc' => 'NOT FOUND'],
+      ['name' => 'SDD', 'desc' => 'NOT FOUND'],
+      ['name' => 'DP2', 'desc' => 'NOT FOUND'],
+      ['name' => 'STR', 'desc' => 'NOT FOUND'],
+    ];
 
-  $button = [
-    '#type' => 'html_tag',
-    '#tag' => 'button',
-    '#value' => '', 
-    '#attributes' => [
-      'type' => 'button',
-      'class' => ['element-icon-button', 'kg-col-icon'],
-      'style' => $style,
-      'title' => $this->t($r['name']),
-      'aria-label' => $this->t($r['name']),
-      'onclick' => 'return false;',
-    ],
-    '#attached' => [],
-  ];
+    $rows = [];
+    foreach ($rows_data as $r) {
+      $img = $map_img[$r['name']] ?? null;
+      $style = $img ? "background-image: url('{$placeholder_base}{$img}');" : '';
 
-  $rows[] = [
-    ['data' => $button],
-    ['data' => (string) $r['name']],
-    ['data' => (string) $r['desc']],
-  ];
-}
+      $button = [
+        '#type' => 'html_tag',
+        '#tag' => 'button',
+        '#value' => '',
+        '#attributes' => [
+          'type' => 'button',
+          'class' => ['element-icon-button', 'kg-col-icon'],
+          'style' => $style,
+          'title' => $this->t($r['name']),
+          'aria-label' => $this->t($r['name']),
+          'onclick' => 'return false;',
+        ],
+      ];
+
+      $uri = $map_uri[$r['name']] ?? null;
+      $uriCell = $uri
+        ? Link::fromTextAndUrl(
+            $uri,
+            Url::fromUri($uri, ['attributes' => ['target' => '_blank', 'rel' => 'noopener']])
+          )->toRenderable()
+        : ['#markup' => '—'];
+
+      $rows[] = [
+        ['data' => $button],          // Icon
+        ['data' => $uriCell],         // Type URI (link)
+        ['data' => (string) $r['name']], // Name
+        ['data' => (string) $r['desc']], // Explanation
+      ];
+    }
 
     $form['icons_table'] = [
       '#type' => 'table',
