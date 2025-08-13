@@ -20,6 +20,8 @@
  * - External eyes (.graph-toggle) can target a specific label via data-label and
  *   optionally scope to one origin via data-from.
  * - Class nodes (type resources) render as GREEN boxes; instances stay BLUE; literals are GREEN ellipses.
+ * - Pagination footer (« ») is hidden when a menu has <= MAX_MEMBERS_PER_SOC items and the server
+ *   doesn’t have more pages.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -380,14 +382,11 @@
           const end = Math.min(start + MAX_MEMBERS_PER_SOC, totalFetched);
           const page = list.slice(start, end);
 
+          // Render rows
           page.forEach(({ edge: e, id }) => {
             let child = extraNodes.find(n => n.id === e.to);
             if (!child) {
-              child = normalizeNode({
-                id: e.to,
-                label: (e.to.split('/').pop() || e.to),
-                shape: 'box'
-              });
+              child = normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
               // If this submenu is for a type label, mark child as a CLASS node (typeUri == id)
               if (label === 'typeUri' || label === 'hascoTypeUri') {
                 child.typeUri = child.id;
@@ -455,49 +454,58 @@
             submenu.appendChild(row);
           });
 
-          // Footer with « and » controls
+          // ----- Footer with pagination (hide arrows when not needed) -----
           const footer = document.createElement('div');
           footer.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:8px;";
 
-          const left = document.createElement('button');
-          left.type = 'button'; left.className = 'btn btn-sm btn-light';
-          left.textContent = '«'; left.disabled = (state.offset <= 0);
-          left.onclick = (e3) => { e3.stopPropagation(); state.offset = Math.max(0, state.offset - MAX_MEMBERS_PER_SOC); renderPage(); };
+          // Show pager only if there is more than one page locally OR server indicates more pages
+          const showPager = (totalFetched > MAX_MEMBERS_PER_SOC) || !!state.hasMoreServer;
 
           const info = document.createElement('span');
           info.style.cssText = "font-size:12px; opacity:.8;";
-          const pageNum = Math.floor(state.offset / MAX_MEMBERS_PER_SOC) + 1;
 
-          const knownTotal = (typeof state.totalGuess === 'number') ? state.totalGuess : null;
-          const totalPagesKnown = knownTotal ? Math.max(1, Math.ceil(knownTotal / MAX_MEMBERS_PER_SOC)) : null;
-          const totalPagesTxt = totalPagesKnown ?? (state.hasMoreServer ? '…' : Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC)));
-          const totalCountTxt = knownTotal ?? (totalFetched + (state.hasMoreServer ? '+' : ''));
+          if (showPager) {
+            const pageNum = Math.floor(state.offset / MAX_MEMBERS_PER_SOC) + 1;
+            const knownTotal = (typeof state.totalGuess === 'number') ? state.totalGuess : null;
+            const totalPagesKnown = knownTotal ? Math.max(1, Math.ceil(knownTotal / MAX_MEMBERS_PER_SOC)) : null;
+            const totalPagesTxt = totalPagesKnown ?? (state.hasMoreServer ? '…' : Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC)));
+            const totalCountTxt = knownTotal ?? (totalFetched + (state.hasMoreServer ? '+' : ''));
 
-          info.textContent = `Page ${pageNum} / ${totalPagesTxt} — showing ${page.length} of ${totalCountTxt}`;
+            info.textContent = `Page ${pageNum} / ${totalPagesTxt} — showing ${page.length} of ${totalCountTxt}`;
 
-          const right = document.createElement('button');
-          right.type = 'button'; right.className = 'btn btn-sm btn-light'; right.textContent = '»';
+            const left = document.createElement('button');
+            left.type = 'button'; left.className = 'btn btn-sm btn-light';
+            left.textContent = '«'; left.disabled = (state.offset <= 0);
+            left.onclick = (e3) => { e3.stopPropagation(); state.offset = Math.max(0, state.offset - MAX_MEMBERS_PER_SOC); renderPage(); };
 
-          const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
-          const canFetchMore = !!state.hasMoreServer && (label !== 'hascoTypeUri' && label !== 'typeUri');
-          right.disabled = !canAdvanceCached && !canFetchMore;
+            const right = document.createElement('button');
+            right.type = 'button'; right.className = 'btn btn-sm btn-light'; right.textContent = '»';
 
-          right.onclick = (e3) => {
-            e3.stopPropagation();
-            if (canAdvanceCached) {
-              state.offset += MAX_MEMBERS_PER_SOC;
-              renderPage();
-            } else if (canFetchMore) {
-              fetchMoreForLabel(nodeId, label, state, right, (returned) => {
-                if (returned > 0) state.offset += MAX_MEMBERS_PER_SOC;
+            const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
+            const canFetchMore = !!state.hasMoreServer && (label !== 'hascoTypeUri' && label !== 'typeUri');
+            right.disabled = !canAdvanceCached && !canFetchMore;
+
+            right.onclick = (e3) => {
+              e3.stopPropagation();
+              if (canAdvanceCached) {
+                state.offset += MAX_MEMBERS_PER_SOC;
                 renderPage();
-              });
-            }
-          };
+              } else if (canFetchMore) {
+                fetchMoreForLabel(nodeId, label, state, right, (returned) => {
+                  if (returned > 0) state.offset += MAX_MEMBERS_PER_SOC;
+                  renderPage();
+                });
+              }
+            };
 
-          footer.appendChild(left);
-          footer.appendChild(info);
-          footer.appendChild(right);
+            footer.append(left, info, right);
+          } else {
+            // No pagination needed — show a compact summary (or omit footer if preferred)
+            const plural = totalFetched === 1 ? '' : 's';
+            info.textContent = `Showing ${totalFetched} item${plural}`;
+            footer.appendChild(info);
+          }
+
           submenu.appendChild(footer);
 
           // Keep menu positioned with the node
