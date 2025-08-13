@@ -14,25 +14,19 @@ use EasyRdf\Parser\Turtle;
 
 class OntController extends ControllerBase {
 
-  public function load($filename) {
-    // Validação básica: só aceitar nomes tipo "algo.ttl", sem traversal.
-    if (!preg_match('/^[a-zA-Z0-9_\-]+\.ttl$/', $filename)) {
-      throw new NotFoundHttpException('File name invalid.');
-    }
+  public function view() {
+    // Define the filename to be served.
+    $filename = \Drupal::config('rep.settings')->get('repository_namespace_prefix').'.ttl';
 
-    // Monta o URI privado. Ajusta se o teu ficheiro estiver noutra subpasta.
     $uri = 'private://ont/' . $filename;
 
-    // Resolve caminho físico.
     $file_system = \Drupal::service('file_system');
     $real_path = $file_system->realpath($uri);
     if (!$real_path || !is_file($real_path)) {
       throw new NotFoundHttpException('No file on Private Path.');
     }
 
-    // Cria a resposta.
     $response = new BinaryFileResponse($real_path);
-    // TTL é Turtle/RDF; usa o MIME adequado.
     $response->headers->set('Content-Type', 'text/turtle');
 
     $disposition = $response->headers->makeDisposition(
@@ -47,11 +41,10 @@ class OntController extends ControllerBase {
     return $response;
   }
 
-  public function modify($filename) {
-    // Validate filename format.
-    if (!preg_match('/^[A-Za-z0-9_\-]+\.ttl$/', $filename)) {
-      throw new NotFoundHttpException('Invalid filename.');
-    }
+  public function modify() {
+
+    // Define the filename to be served.
+    $filename = \Drupal::config('rep.settings')->get('repository_namespace_prefix').'.ttl';
 
     // Resolve private URI to real path.
     $uri = 'private://ont/' . $filename;
@@ -192,9 +185,7 @@ class OntController extends ControllerBase {
         '@message' => $res ? $res->getReasonPhrase() : 'Unknown error',
       ]));
     } else {
-      $messenger->addStatus($this->t('Applied ontology successfully: @message', [
-        '@message' => $res->getReasonPhrase(),
-      ]));
+      $messenger->addStatus($this->t('Application Ontology Successfully Submitted'));
     }
 
     // Redirecta para onde fizer sentido:

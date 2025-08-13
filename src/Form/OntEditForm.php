@@ -21,7 +21,9 @@ class OntEditForm extends FormBase {
   /**
    * Builds the RDF editor form.
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $filename = NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state) {
+
+    $filename = \Drupal::config('rep.settings')->get('repository_namespace_prefix').'.ttl';
 
     $form['#attached']['library'][] = 'rep/rdf_graph_editor';
 
@@ -56,7 +58,7 @@ class OntEditForm extends FormBase {
     $form['injest_button']['view_application_ontology'] = [
       '#type' => 'link',
       '#title' => $this->t('View Application Ontology'),
-      '#url' => Url::fromRoute('rep.ont_load', ['filename' => $filename]),
+      '#url' => Url::fromRoute('rep.ont_view'),
       '#attributes' => [
         'class' => ['btn', 'button', 'button--primary', 'view-button', 'text-align-center', 'mx-2'],
         'target' => '_new',
