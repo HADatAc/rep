@@ -12,7 +12,7 @@ use Exception;
 use Symfony\Component\HttpFoundation\Response;
 use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
+use Psr\Http\Message\ResponseInterface;
 
 class FusekiAPIConnector {
   private $client;
@@ -2739,59 +2739,60 @@ class FusekiAPIConnector {
   }
 
   // POST    /hascoapi/api/repo/namespace/app/          org.hascoapi.console.controllers.restapi.RepoPage.ingestAppOnt(request: play.mvc.Http.Request)
-  public function uploadOntologyFile() {
-    // 1) Resolve the physical file path
-    /** @var FileSystemInterface $file_system */
+  public function uploadOntology(): ?ResponseInterface {
+    $logger = \Drupal::logger('rep_upload');
     $file_system = \Drupal::service('file_system');
-    $private_uri = 'private://ont/hadatac.ttl';
+    $config = \Drupal::config('rep.settings');
+    $guesser = \Drupal::service('file.mime_type.guesser');
+
+    $ns = (string) $config->get('repository_namespace_prefix');
+    $private_uri = 'private://ont/' . $ns . '.ttl';
     $path = $file_system->realpath($private_uri);
 
-    if (!file_exists($path)) {
-      \Drupal::logger('REP')->error('File not found at @path', ['@path' => $path]);
-      \Drupal::messenger()->addError(t('Ontology file not found at %path.', ['%path' => $path]));
-      return FALSE;
+    if ($path === FALSE || !file_exists($path)) {
+      $logger->error('Ontology file not found or realpath failed: {uri}', ['uri' => $private_uri]);
+      return null;
     }
 
-    // 2) Prepare filename and read contents
-    $filename = basename($path);
-    $file_content = file_get_contents($path);
+    $file_content = @file_get_contents($path);
     if ($file_content === FALSE) {
-      \Drupal::messenger()->addError(t('Unable to read file contents from %path.', ['%path' => $path]));
-      return FALSE;
+      $logger->error('Unable to read file contents: {path}', ['path' => $path]);
+      return null;
     }
 
-    // 3) Determine MIME type
-    $guesser   = \Drupal::service('file.mime_type.guesser');
-    // use guessMimeType(), not guess()
-    $mime_type = $guesser->guessMimeType($path) ?: 'application/octet-stream';
+    $mime_type = $guesser->guessMimeType($path) ?: 'text/turtle; charset=UTF-8';
+    $url = rtrim($this->getApiUrl(), '/') . '/hascoapi/api/repo/namespace/app';
 
-    // 4) Build API endpoint URL
-    $endpoint = '/repo/namespace/app/';
+    $authHeader = $this->bearer ?? '';
+    if ($authHeader !== '' && stripos($authHeader, 'Bearer ') !== 0) {
+      $authHeader = 'Bearer ' . $authHeader;
+    }
 
-    // 5) Send POST request via Guzzle
-    $api_url = $this->getApiUrl();
-    $client = new Client();
+    $client = new Client([
+      'timeout' => 20,
+      'connect_timeout' => 10,
+      'http_errors' => false, // keep 4xx/5xx as responses, not exceptions
+    ]);
 
     try {
-      $response = $client->post($api_url . $endpoint, [
+      $response = $client->post($url, [
         'headers' => [
           'Content-Type'  => $mime_type,
-          'Authorization' => $this->bearer,
+          'Content-Disposition' => 'attachment; filename="'.$ns . '.ttl"',
+          'Accept'        => 'application/json, text/plain;q=0.5, */*;q=0.1',
+          'Authorization' => $authHeader,
         ],
         'body' => $file_content,
       ]);
-    }
-    catch (ConnectException $e) {
-      \Drupal::messenger()->addError(t('Connection error: @msg', ['@msg' => $e->getMessage()]));
-      return NULL;
-    }
-    catch (ClientException $e) {
-      $res = $e->getResponse();
-      $status = $res ? $res->getStatusCode() : 'n/a';
-      \Drupal::messenger()->addError(t('Upload failed. HTTP status code: @code', ['@code' => $status]));
-      return NULL;
-    }
 
-    return $response->getBody()->getContents();
+      return $response; // <-- devolve o ResponseInterface “cru”
+    } catch (RequestException $e) {
+      $logger->error('Upload exception: {msg}', ['msg' => $e->getMessage()]);
+      // If the server returned a response, you can still return it:
+      if ($e->hasResponse()) {
+        return $e->getResponse();
+      }
+      return null;
+    }
   }
 }

@@ -11,6 +11,7 @@
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\Core\Url;
  use Drupal\rep\Constant;
+ use Drupal\Core\File\FileSystemInterface;
 
 
  class REPSettingsForm extends ConfigFormBase {
@@ -302,6 +303,63 @@
         $config->set("api_url", $form_state->getValue('api_url'));
         $config->set("jwt_secret", $form_state->getValue('jwt_secret'));
         $config->save();
+
+        // --- Ensure private://ont directory and hasco.ttl exist --------------------
+
+        /** @var \Drupal\Core\File\FileSystemInterface $fs */
+        $fs = \Drupal::service('file_system');
+        $logger = \Drupal::logger('rep');
+        $messenger = \Drupal::messenger();
+
+        $dir_uri  = 'private://ont';
+        $file_uri = $dir_uri . '/'.$config->get('repository_namespace_prefix').'.ttl';
+
+        try {
+          // 1) Ensure the directory exists (create if missing).
+          //    prepareDirectory() will create the directory for stream wrappers.
+          $created = $fs->prepareDirectory($dir_uri, FileSystemInterface::CREATE_DIRECTORY);
+          if (!$created) {
+            // Directory may already exist; check realpath to confirm.
+            $dir_real = $fs->realpath($dir_uri);
+            if ($dir_real === FALSE || !is_dir($dir_real)) {
+              $logger->error('Could not create or access directory {dir}', ['dir' => $dir_uri]);
+              // Not fatal for the form, but we notify the user.
+              $messenger->addError($this->t('Could not create/access the directory %dir.', ['%dir' => $dir_uri]));
+            }
+          }
+
+          // 2) Try to enforce 0755 on the directory (no-op on Windows).
+          $dir_real = $fs->realpath($dir_uri);
+          if ($dir_real && is_dir($dir_real)) {
+            // On Windows this may have no effect; do not treat failure as fatal.
+            @chmod($dir_real, 0755);
+          }
+
+          // 3) Ensure the file exists; if missing, create an empty TTL file.
+          $file_real = $fs->realpath($file_uri);
+          if ($file_real === FALSE || !file_exists($file_real)) {
+            // saveData() creates a file for stream wrappers; write empty content.
+            $saved_uri = $fs->saveData('', $file_uri, FileSystemInterface::EXISTS_ERROR);
+            if ($saved_uri === FALSE) {
+              $logger->error('Failed to create file {file}', ['file' => $file_uri]);
+              $messenger->addError($this->t('Failed to create %file.', ['%file' => $file_uri]));
+            } else {
+              // Optional: set 0644 on the file (again, no-op on Windows).
+              $file_real = $fs->realpath($file_uri);
+              if ($file_real) {
+                @chmod($file_real, 0644);
+              }
+              $logger->notice('Created ontology file at {file}', ['file' => $file_uri]);
+              // You may show a gentle info message if you want:
+              // $messenger->addStatus($this->t('Created %file.', ['%file' => $file_uri]));
+            }
+          }
+        }
+        catch (\Throwable $e) {
+          // Catch-all to avoid breaking the submit flow.
+          $logger->error('Error ensuring private://ont and hasco.ttl: {msg}', ['msg' => $e->getMessage()]);
+          $messenger->addError($this->t('Error preparing ontology storage: %msg', ['%msg' => $e->getMessage()]));
+        }
 
         //site name
         $configdrupal = \Drupal::service('config.factory')->getEditable('system.site');

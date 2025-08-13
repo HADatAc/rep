@@ -14,25 +14,19 @@ use EasyRdf\Parser\Turtle;
 
 class OntController extends ControllerBase {
 
-  public function load($filename) {
-    // Validação básica: só aceitar nomes tipo "algo.ttl", sem traversal.
-    if (!preg_match('/^[a-zA-Z0-9_\-]+\.ttl$/', $filename)) {
-      throw new NotFoundHttpException('File name invalid.');
-    }
+  public function view() {
+    // Define the filename to be served.
+    $filename = \Drupal::config('rep.settings')->get('repository_namespace_prefix').'.ttl';
 
-    // Monta o URI privado. Ajusta se o teu ficheiro estiver noutra subpasta.
     $uri = 'private://ont/' . $filename;
 
-    // Resolve caminho físico.
     $file_system = \Drupal::service('file_system');
     $real_path = $file_system->realpath($uri);
     if (!$real_path || !is_file($real_path)) {
       throw new NotFoundHttpException('No file on Private Path.');
     }
 
-    // Cria a resposta.
     $response = new BinaryFileResponse($real_path);
-    // TTL é Turtle/RDF; usa o MIME adequado.
     $response->headers->set('Content-Type', 'text/turtle');
 
     $disposition = $response->headers->makeDisposition(
@@ -47,11 +41,10 @@ class OntController extends ControllerBase {
     return $response;
   }
 
-  public function modify($filename) {
-    // Validate filename format.
-    if (!preg_match('/^[A-Za-z0-9_\-]+\.ttl$/', $filename)) {
-      throw new NotFoundHttpException('Invalid filename.');
-    }
+  public function modify() {
+
+    // Define the filename to be served.
+    $filename = \Drupal::config('rep.settings')->get('repository_namespace_prefix').'.ttl';
 
     // Resolve private URI to real path.
     $uri = 'private://ont/' . $filename;
@@ -181,14 +174,21 @@ class OntController extends ControllerBase {
   }
 
   public function injest() {
+    $messenger = \Drupal::messenger();
+    /** @var \Drupal\rep\ApiConnector $api */
     $api = \Drupal::service('rep.api_connector');
-    $result = $api->uploadOntologyFile();
-    $obj = json_decode($result);
-    if ($obj->isSuccessful) {
-      $this->messenger()->addStatus($this->t('Ontology file uploaded successfully.'));
+    $rep_ns = \Drupal::config('rep.settings')->get('repository_namespace_prefix');
+    $res = $api->uploadOntology();
+
+    if (!$res || $res->getStatusCode() >= 400) {
+      $messenger->addError($this->t('Failed to ingest ontology: @message', [
+        '@message' => $res ? $res->getReasonPhrase() : 'Unknown error',
+      ]));
     } else {
-      $this->messenger()->addError($this->t('Failed to upload ontology file: @message', ['@message' => $obj->body]));
+      $messenger->addStatus($this->t('Application Ontology Successfully Submitted'));
     }
-    return $this->redirect('rep.ont_edit');
+
+    // Redirecta para onde fizer sentido:
+    return $this->redirect('rep.ont_edit', ['filename' => $rep_ns.'.ttl']);
   }
 }

@@ -32,9 +32,9 @@ class Tables {
     return $results;
   }
 
-  public function getTopClasses($abbrev) {
+  public function getTopClasses() {
     $APIservice = \Drupal::service('rep.api_connector');
-    $topClasses = $APIservice->parseObjectResponse($APIservice->repoTopClassNamespaces($abbrev), 'repoTopClassNamespaces');
+    $topClasses = $APIservice->parseObjectResponse($APIservice->repoTopClassNamespaces('https://hadatac.org/ont/hadatac#'), 'repoTopClassNamespaces');
     if ($topClasses == NULL) {
       return NULL;
     }
