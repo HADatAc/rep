@@ -1249,3 +1249,8 @@ form.rep-form-namespace legend {
   cursor: not-allowed;
   pointer-events: auto;
 }
+
+#current-tree .jstree-anchor.root-node {
+  cursor: default;
+  font-weight: 600; /* or any style you prefer */
+}

@@ -4,24 +4,23 @@ namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\rep\Entity\Tables;
-use Drupal\rep\EntryPoints;
 use Drupal\Component\Utility\Html;
-use Drupal\Core\Ajax\AjaxResponse;
-use Drupal\Core\Ajax\HtmlCommand;
-use Drupal\Core\Ajax\SettingsCommand;
+use Drupal\rep\Entity\Tables;
 
 /**
- * Form to map Entry Points to Ontology nodes.
+ * Form to browse an ontology and save a mapping.
  *
  * Left column:
- *   - select an entry-point constant
- *   - display its current mapping tree
+ *   - Loads the current ontology tree from the module settings root.
  *
  * Right column:
- *   - select an ontology namespace (6-column width)
- *   - enter an ontology entry-point class label (3-column)
- *   - load & browse the ontology tree from that point (3-column)
+ *   - Choose an ontology namespace and load/browse its tree.
+ *   - Select a node to be saved as the mapping target.
+ *
+ * On submit, we save a single mapping:
+ *   [entry point URI] -> [selected node URI]
+ * where entry point defaults to the left-tree root (settings value) or
+ * any node the user selects on the left tree.
  */
 class MapEntryPointsForm extends FormBase {
 
@@ -34,102 +33,80 @@ class MapEntryPointsForm extends FormBase {
 
   /**
    * {@inheritdoc}
-   *
-   * Build the mapping form.
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    // 1) Services & constants
+    // Load namespaces from DB/service.
     $tables     = new Tables(\Drupal::database());
     $namespaces = $tables->getNamespaces();
 
-    if ($namespaces === NULL) {
+    if (!$namespaces) {
       $this->messenger()->addError($this->t('No namespaces found.'));
       return [];
     }
 
-    $constant_uri = \Drupal::config('rep.settings')->get('repository_namespace_url');
+    // Root URI for the LEFT tree, coming from settings.
+    $root_from_settings = (string) \Drupal::config('rep.settings')->get('repository_namespace_url');
+    $root_label         = (string) \Drupal::config('rep.settings')->get('repository_namespace_prefix') ?: $root_from_settings;
+    if ($root_label === '') {
+      $root_label = $this->t('Root');
+    }
+    if ($root_from_settings === '') {
+      $this->messenger()->addError($this->t('Missing "repository_namespace_url" in rep.settings.'));
+      return [];
+    }
 
-    // 3) Namespace dropdown options
+    // Build <select> options for namespaces (value = base URI, label = name).
     $ns_options  = array_combine(array_values($namespaces), array_keys($namespaces));
-
-    // preserve current or default to first namespace
     $selected_ns = $form_state->getValue('namespace') ?: '';
-    // key($ns_options)
 
-    // 4) Messages placeholder
     $form['messages'] = ['#type' => 'status_messages'];
 
-    // 5) Outer wrapper for AJAX
     $form['row'] = [
-      '#type'       => 'container',
+      '#type' => 'container',
       '#attributes' => [
         'class' => ['row', 'mt-0'],
         'id'    => 'map-entry-points-form-wrapper',
       ],
     ];
 
-    // 6) LEFT COLUMN: entry-point + current mapping tree
+    // LEFT column: current tree, always starts from settings root.
     $form['row']['left_col'] = [
-      '#type'       => 'container',
+      '#type' => 'container',
       '#attributes' => [
         'class' => ['col-md-6', 'border-end', 'border-4'],
         'id'    => 'left-col-wrapper',
       ],
     ];
-    // $form['row']['left_col']['entry_point'] = [
-    //   '#type'               => 'select',
-    //   '#title'              => $this->t('Entry Point'),
-    //   '#options'            => $namespaces,
-    //   '#default_value'      => $selected_ep_key,
-    //   '#attributes'         => ['class' => ['map-entry-point-select']],
-    //   '#options_attributes' => (function () use ($entry_root_uris) {
-    //     $attrs = [];
-    //     foreach ($entry_root_uris as $key => $uri) {
-    //       // now this uses the DB‐override URI (or constant if no override)
-    //       $attrs[$key] = ['data-root-uri' => $uri];
-    //     }
-    //     return $attrs;
-    //   })(),
-    //   // '#ajax' => [
-    //   //   'callback' => '::ajaxRefreshLeft',
-    //   //   'wrapper'  => 'left-col-wrapper',
-    //   //   'progress' => [
-    //   //     'type'     => 'none',      // <— desliga o progress indicator
-    //   //   ],
-    //   // ],
-    // ];
-
     $form['row']['left_col']['current_tree'] = [
       '#type'   => 'markup',
-      '#markup' => '<div id="current-tree" '
-        . 'data-root-uri="' . Html::escape($constant_uri) . '" '
-        . 'class="border border-1 p-2" style="min-height:300px"></div>',
+      '#markup' => '<div id="current-tree"'
+        . ' data-root-uri="' . Html::escape($root_from_settings) . '"'
+        . ' data-root-label="' . Html::escape($root_label) . '"'
+        . ' class="border border-1 p-2" style="min-height:300px"></div>',
     ];
 
-
-    // 7) RIGHT COLUMN: namespace + custom root + load + tree
+    // RIGHT column: namespace selector + load button + tree.
     $form['row']['right_col'] = [
-      '#type'       => 'container',
+      '#type' => 'container',
       '#attributes' => [
         'class' => ['col-md-6', 'row', 'align-self-start'],
         'id'    => 'right-col-wrapper',
         'style' => 'margin-top:0!important;',
       ],
     ];
-    // a) Namespace dropdown (6 cols)
+
     $form['row']['right_col']['namespace'] = [
-      '#type'               => 'select',
-      '#title'              => $this->t('Ontology Namespace'),
-      '#description'        => $this->t('Select the Namespace from the list.'),
-      '#empty_option'       => $this->t('Select please'),
-      '#options'            => $ns_options,
-      '#default_value'      => $selected_ns,
-      '#attributes'         => ['class' => ['map-ontology-select']],
-      '#prefix'             => '<div class="col-md-5">',
-      '#suffix'             => '</div>',
+      '#type'          => 'select',
+      '#title'         => $this->t('Ontology Namespace'),
+      '#description'   => $this->t('Select the base namespace to explore on the right.'),
+      '#empty_option'  => $this->t('Select…'),
+      '#options'       => $ns_options,
+      '#default_value' => $selected_ns,
+      '#attributes'    => ['class' => ['map-ontology-select']],
+      '#prefix'        => '<div class="col-md-5">',
+      '#suffix'        => '</div>',
     ];
 
-    // c) Load-tree button (3 cols)
     $form['row']['right_col']['load_tree'] = [
       '#type'       => 'button',
       '#value'      => $this->t('Load Ontology Tree'),
@@ -140,12 +117,8 @@ class MapEntryPointsForm extends FormBase {
       ],
       '#prefix'     => '<div class="col-md-3 align-self-center">',
       '#suffix'     => '</div>',
-      // '#ajax'       => [
-      //   'callback' => '::ajaxRefreshRight',
-      //   'wrapper'  => 'right-col-wrapper',
-      // ],
     ];
-    // d) Tree container (full width)
+
     $form['row']['right_col']['ontology_tree'] = [
       '#type'   => 'markup',
       '#markup' => '<div id="ontology-tree" class="border p-2" style="min-height:300px"></div>',
@@ -153,120 +126,64 @@ class MapEntryPointsForm extends FormBase {
       '#suffix' => '</div>',
     ];
 
-    // 8) Attach libraries & pass settings to JS
+    // Attach JS library and pass endpoints/settings to JS.
     $base = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
-    // $form['#attached']['library'][] = 'rep/rep_tree';
     $form['#attached']['library'][] = 'rep/map_entry_points';
     $form['#attached']['drupalSettings']['repMap'] = [
       'apiTopClassEndpoint' => $base . '/rep/gettopclass?_format=json',
-      'apiEndpoint'     => $base . '/rep/getchildren?_format=json',
-      'childParam'      => 'nodeUri',
-      // the constant URI root for the currently selected entry point
-      'currentRootUri' => $constant_uri,
-      // 'mappedNodes'    => $mapped_nodes,
-      // map of select‐option keys → constant URIs (never overridden)
-      // 'entryConstants'  => array_combine(
-      //   array_map('strtolower', array_keys($constants)),
-      //   array_values($constants)
-      // ),
-      'namespaceBaseUris'=> $namespaces,
+      'apiEndpoint'         => $base . '/rep/getchildren?_format=json',
+      'childParam'          => 'nodeUri',
+      'currentRootUri'      => $root_from_settings,
+      'currentRootLabel'    => $root_label, // <— pass label to JS
     ];
 
-    // 9) Hidden node + Save button
+    // Hidden fields used on submit.
     $form['selected_node'] = [
       '#type' => 'hidden',
-      '#default_value' => $constant_uri,
-      // this gives it name="selected_node" so Form API picks it up
+      '#default_value' => '',
       '#attributes' => ['id' => 'edit-selected-node'],
-      // you *can* set default_value here, but it’s not required
     ];
 
+    // Entry point to save under: defaults to the LEFT root,
+    // but can be updated by clicking a node on the LEFT tree.
     $form['selected_entry_point'] = [
       '#type' => 'hidden',
-      '#default_value' => $constant_uri,    // inicializa com o root padrão
+      '#default_value' => $root_from_settings,
       '#attributes' => ['id' => 'edit-selected-entry-point'],
     ];
 
     $form['row']['actions'] = [
-      '#type'       => 'container',
+      '#type' => 'container',
       '#attributes' => ['class' => ['col-12', 'mt-3', 'pb-5']],
     ];
     $form['row']['actions']['submit'] = [
       '#type'        => 'submit',
       '#value'       => $this->t('Save Mappings'),
       '#button_type' => 'primary',
-      // '#ajax'        => [
-      //   'callback' => '::ajaxSubmit',
-      //   'wrapper'  => 'map-entry-points-form-wrapper',
-      // ],
     ];
 
     return $form;
   }
 
   /**
-   * AJAX callback: refresh only the right column.
-   */
-  public function ajaxRefreshRight(array $form, FormStateInterface $form_state) {
-    return $form['row']['right_col'];
-  }
-
-  /**
-   * AJAX callback: refresh only the left column.
-   */
-  public function ajaxRefreshLeft(array $form, FormStateInterface $form_state) {
-    // 1) Rebuild todo o form para recomputar drupalSettings
-    $new_form = $this->buildForm([], $form_state);
-
-    // 2) Renderizar apenas a coluna da esquerda
-    /** @var \Drupal\Core\Render\RendererInterface $renderer */
-    $renderer = \Drupal::service('renderer');
-    $left_html = $renderer->renderRoot($new_form['row']['left_col']);
-
-    // 3) Pegar as novas configurações que montamos em buildForm()
-    //    aqui repMap contém o novo currentRootUri e mappedNodes para o EP selecionado
-    $new_settings = $new_form['#attached']['drupalSettings']['repMap'];
-
-    // 4) Construir a resposta AJAX
-    $response = new AjaxResponse();
-    // — substituir o HTML antigo pelo novo
-    $response->addCommand(new HtmlCommand('#left-col-wrapper', $left_html));
-    // — empurrar o novo drupalSettings.repMap para o JS
-    $response->addCommand(new SettingsCommand(['repMap' => $new_settings]));
-
-    return $response;
-  }
-
-  /**
-   * AJAX submit: save mapping, then rebuild the form.
-   */
-  public function ajaxSubmit(array $form, FormStateInterface $form_state) {
-    $this->submitForm($form, $form_state);
-    return $this->buildForm($form, $form_state);
-  }
-
-  /**
    * {@inheritdoc}
-   *
-   * On final submit, persist the selected node URI under the chosen entry point.
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $reflection = new \ReflectionClass(EntryPoints::class);
-    $constants  = $reflection->getConstants();
-    $tables     = new Tables(\Drupal::database());
+    $tables = new Tables(\Drupal::database());
 
-    $epUri = $form_state->getValue('selected_entry_point');
-    $selectedNodeUri = $form_state->getValue('selected_node');
+    $entry_point_uri  = (string) $form_state->getValue('selected_entry_point'); // from LEFT tree
+    $selected_node_uri = (string) $form_state->getValue('selected_node');       // from RIGHT tree
 
-    // dpm($selectedNodeUri);return false;
+    if ($selected_node_uri === '') {
+      $this->messenger()->addWarning($this->t('No node selected on the right tree.'));
+      return;
+    }
 
-    // Persist exactly one node per entry point.
-    $tables->saveMapping($epUri, $selectedNodeUri);
+    $tables->saveMapping($entry_point_uri, $selected_node_uri);
 
     $this->messenger()->addStatus($this->t(
-      'Saved @node under @ep',
-      ['@node' => $selectedNodeUri, '@ep' => $epUri]
+      'Saved @node under @ep.',
+      ['@node' => $selected_node_uri, '@ep' => $entry_point_uri]
     ));
   }
-
 }
