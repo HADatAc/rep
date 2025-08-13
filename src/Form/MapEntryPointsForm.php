@@ -41,58 +41,13 @@ class MapEntryPointsForm extends FormBase {
     // 1) Services & constants
     $tables     = new Tables(\Drupal::database());
     $namespaces = $tables->getNamespaces();
-    // $namespaces = $tables->getTopClasses('hasco');
 
-    // kint($namespaces, 'Namespaces');
     if ($namespaces === NULL) {
       $this->messenger()->addError($this->t('No namespaces found.'));
       return [];
     }
 
-    $reflection = new \ReflectionClass(EntryPoints::class);
-    $constants  = $reflection->getConstants();
-
-    // 1a) Load any saved mapping so we can override the default constant URI.
-    //     getAllMappings() returns [ entry_point_uri => node_uri, … ].
-    $all_mappings = $tables->getAllMappings();
-
-    // Build a key=>uri map for drupalSettings
-    $entry_root_uris = [];
-    foreach ($constants as $const => $uri) {
-      $key = strtolower($const);
-      // if you’ve saved something in DB, use that; else use the constant
-      $entry_root_uris[$key] = $all_mappings[$uri] ?? $uri;
-    }
-
-    // 2) Entry-point dropdown options
-    $entry_options = [];
-    foreach ($constants as $const => $uri) {
-      $entry_options[strtolower($const)] = $this->t(
-        ucwords(strtolower(str_replace('_', ' ', $const)))
-      );
-    }
-
-    // pick up the user’s selection if it exists; else default to the very first constant
-    if ($form_state->hasValue('entry_point') && $form_state->getValue('entry_point') !== NULL) {
-      $selected_ep_key = $form_state->getValue('entry_point');
-    }
-    else {
-      // $selected_ep_key = key($entry_options);
-      $selected_ep_key = '';
-    }
-
-    // now derive the constant URI and DB mappings for *that* key
-    $constant_uri    = $constants[strtoupper($selected_ep_key)];
-    $mapped_nodes    = $tables->getMappingsForEntryPoint($constant_uri);
-
-    // dpm($mapped_nodes);
-
-
-    // debug temporário
-    // \Drupal::logger('rep')->debug('Mapped nodes for @ep: <pre>@nodes</pre>', [
-    //   '@ep'    => $constant_uri,
-    //   '@nodes' => print_r($mapped_nodes, TRUE),
-    // ]);
+    $constant_uri = \Drupal::config('rep.settings')->get('repository_namespace_url');
 
     // 3) Namespace dropdown options
     $ns_options  = array_combine(array_values($namespaces), array_keys($namespaces));
@@ -121,29 +76,28 @@ class MapEntryPointsForm extends FormBase {
         'id'    => 'left-col-wrapper',
       ],
     ];
-    $form['row']['left_col']['entry_point'] = [
-      '#type'               => 'select',
-      '#title'              => $this->t('Entry Point'),
-      '#empty_option'       => $this->t('Select please'),
-      '#options'            => $namespaces,
-      '#default_value'      => $selected_ep_key,
-      '#attributes'         => ['class' => ['map-entry-point-select']],
-      '#options_attributes' => (function () use ($entry_root_uris) {
-        $attrs = [];
-        foreach ($entry_root_uris as $key => $uri) {
-          // now this uses the DB‐override URI (or constant if no override)
-          $attrs[$key] = ['data-root-uri' => $uri];
-        }
-        return $attrs;
-      })(),
-      // '#ajax' => [
-      //   'callback' => '::ajaxRefreshLeft',
-      //   'wrapper'  => 'left-col-wrapper',
-      //   'progress' => [
-      //     'type'     => 'none',      // <— desliga o progress indicator
-      //   ],
-      // ],
-    ];
+    // $form['row']['left_col']['entry_point'] = [
+    //   '#type'               => 'select',
+    //   '#title'              => $this->t('Entry Point'),
+    //   '#options'            => $namespaces,
+    //   '#default_value'      => $selected_ep_key,
+    //   '#attributes'         => ['class' => ['map-entry-point-select']],
+    //   '#options_attributes' => (function () use ($entry_root_uris) {
+    //     $attrs = [];
+    //     foreach ($entry_root_uris as $key => $uri) {
+    //       // now this uses the DB‐override URI (or constant if no override)
+    //       $attrs[$key] = ['data-root-uri' => $uri];
+    //     }
+    //     return $attrs;
+    //   })(),
+    //   // '#ajax' => [
+    //   //   'callback' => '::ajaxRefreshLeft',
+    //   //   'wrapper'  => 'left-col-wrapper',
+    //   //   'progress' => [
+    //   //     'type'     => 'none',      // <— desliga o progress indicator
+    //   //   ],
+    //   // ],
+    // ];
 
     $form['row']['left_col']['current_tree'] = [
       '#type'   => 'markup',
@@ -174,16 +128,7 @@ class MapEntryPointsForm extends FormBase {
       '#prefix'             => '<div class="col-md-5">',
       '#suffix'             => '</div>',
     ];
-    // // b) Entry-point textfield (3 cols)
-    // $form['row']['right_col']['custom_root'] = [
-    //   '#type'          => 'textfield',
-    //   '#title'         => $this->t('Entry Point'),
-    //   '#description'   => $this->t('Type only the class label (e.g. "Agent").'),
-    //   '#default_value' => $form_state->getValue('custom_root') ?: '',
-    //   '#attributes'    => ['id' => 'edit-custom-root'],
-    //   '#prefix'        => '<div class="col-md-4">',
-    //   '#suffix'        => '</div>',
-    // ];
+
     // c) Load-tree button (3 cols)
     $form['row']['right_col']['load_tree'] = [
       '#type'       => 'button',
@@ -218,22 +163,14 @@ class MapEntryPointsForm extends FormBase {
       'childParam'      => 'nodeUri',
       // the constant URI root for the currently selected entry point
       'currentRootUri' => $constant_uri,
-      'mappedNodes'    => $mapped_nodes,
+      // 'mappedNodes'    => $mapped_nodes,
       // map of select‐option keys → constant URIs (never overridden)
-      'entryConstants'  => array_combine(
-        array_map('strtolower', array_keys($constants)),
-        array_values($constants)
-      ),
+      // 'entryConstants'  => array_combine(
+      //   array_map('strtolower', array_keys($constants)),
+      //   array_values($constants)
+      // ),
       'namespaceBaseUris'=> $namespaces,
     ];
-
-    // Depois de definir drupalSettings['repMap']…
-    $entryMappings = [];
-    foreach ($constants as $const => $uri) {
-      $key = strtolower($const);
-      $entryMappings[$key] = $tables->getMappingsForEntryPoint($uri);
-    }
-    $form['#attached']['drupalSettings']['repMap']['entryMappings'] = $entryMappings;
 
     // 9) Hidden node + Save button
     $form['selected_node'] = [

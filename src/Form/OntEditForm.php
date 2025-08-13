@@ -26,6 +26,7 @@ class OntEditForm extends FormBase {
     $filename = \Drupal::config('rep.settings')->get('repository_namespace_prefix').'.ttl';
 
     $form['#attached']['library'][] = 'rep/rdf_graph_editor';
+    $form['#attached']['library'][] = 'rep/ont_editor_states';
 
     $form['#attached']['drupalSettings']['repRdfEditor'] = [
       'filename' => $filename,
@@ -49,12 +50,19 @@ class OntEditForm extends FormBase {
       '#value' => $filename,
     ];
 
+    // Hidden flag para estados do formulário (0 = limpo, 1 = alterado)
+    $form['is_dirty'] = [
+      '#type' => 'hidden',
+      '#value' => '0',
+    ];
+
     $form['injest_button'] = [
       '#type' => 'container',
       '#attributes' => [
         'class' => ['d-flex', 'justify-content-end', 'mb-3'],
       ],
     ];
+
     $form['injest_button']['view_application_ontology'] = [
       '#type' => 'link',
       '#title' => $this->t('View Application Ontology'),
@@ -65,11 +73,13 @@ class OntEditForm extends FormBase {
         'rel' => 'noopener noreferrer',
       ],
     ];
+
     $form['injest_button']['injest_application_ontology'] = [
       '#type' => 'link',
       '#title' => $this->t('Injest Application Ontology'),
       '#url' => Url::fromRoute('rep.ont_injest'),
       '#attributes' => [
+        'id' => 'rep-ont-ingest', // <-- ID para o JS
         'class' => ['btn', 'button', 'button--warning', 'ingest_mt-button', 'text-align-center'],
       ],
     ];
@@ -77,6 +87,7 @@ class OntEditForm extends FormBase {
     $form['rdf_editor_textarea'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Ontology (Turtle)'),
+      '#default_value' => $content,
       '#attributes' => [
         'id'    => 'rdf-editor-textarea',
         'rows'  => 25,
@@ -93,7 +104,13 @@ class OntEditForm extends FormBase {
       '#value' => $this->t('Save Application ontology File'),
       '#button_type' => 'primary',
       '#attributes' => [
+        'id' => 'rep-ont-save',      // <-- ID para o JS
         'class' => ['mb-5', 'save-button'],
+      ],
+      '#states' => [
+        'disabled' => [
+          ':input[name="is_dirty"]' => ['value' => '0'],
+        ],
       ],
     ];
 

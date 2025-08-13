@@ -10,7 +10,7 @@
       attach(context) {
 
         function sanitizeForId(str) {
-          return str.replace(/[^A-Za-z0-9_-]/g, '_');
+          return String(str || '').replace(/[^A-Za-z0-9_-]/g, '_');
         }
 
         // only run once on full document load
@@ -31,6 +31,21 @@
 
         const $epSelect = $('.map-entry-point-select');
         const $nsSelect = $('.map-ontology-select');
+
+        function resolveInitialRoot() {
+          // prioridade: data-root-uri do DIV → drupalSettings → <select> (se existir)
+          return (
+            $left.data('root-uri') ||
+            (drupalSettings.repMap && drupalSettings.repMap.currentRootUri) ||
+            ($epSelect.length ? $epSelect.find(':selected').data('root-uri') : '') ||
+            ''
+          );
+        }
+
+        function resolveEpKey() {
+          // chave para entryMappings quando não há select
+          return $epSelect.length ? $epSelect.val() : 'current';
+        }
 
         // 2) helper: extract local name from a URI
         function extractLabel(uri) {
@@ -157,7 +172,12 @@
          */
         function drawTree($el, rootUri, toOpen = []) {
 
-          if ($el === null || $el === '') return;
+          if (!$el || !$el.length) return;
+          if (!rootUri) {
+            console.warn('[repMap] No rootUri to draw tree');
+            $el.empty().append('<div class="text-danger small">Was not possible to determin root node for ontology.</div>');
+            return;
+          }
 
           // console.log('[repMap] drawTree →', rootUri, toOpen);
           const base = $nsSelect.val() || '';
@@ -207,22 +227,18 @@
         }
 
         // 5) annotate EP <option>s with their root URIs
-        $('.map-entry-point-select option').each((_, o) => {
-          const key = o.value;
-          const uri = entryConstants[key] || '';
-          $(o).attr('data-root-uri', uri);
-        });
+        // $('.map-entry-point-select option').each((_, o) => {
+        //   const key = o.value;
+        //   const uri = entryConstants[key] || '';
+        //   $(o).attr('data-root-uri', uri);
+        // });
 
         // 7) initialize LEFT tree once
         const $left = $('#current-tree');
         if (!$left.data('initialized')) {
           $left.data('initialized', true);
-          const initialKey  = $epSelect.val();
-          const initialRoot = $epSelect.find(':selected').data('root-uri');
-          const initialOpen = entryMappings[initialKey] || [];
-          // console.log('[repMap] initial EP key:', initialKey);
-          // console.log('[repMap] initial root URI:', initialRoot);
-          // console.log('[repMap] initial mapped URIs:', initialOpen);
+          const initialRoot = resolveInitialRoot();
+          const initialOpen = entryMappings[resolveEpKey()] || [];
           drawTree($left, initialRoot, initialOpen);
         }
 
@@ -252,13 +268,15 @@
         });
 
         // 8) when EP changes, redraw LEFT tree
-        $epSelect.off('change').on('change', () => {
-          const key     = $epSelect.val();
-          const root    = $epSelect.find(':selected').data('root-uri');
-          const toOpen  = entryMappings[key] || [];
-          // console.log('[repMap] EP changed →', key, root, toOpen);
-          drawTree($left, root, toOpen);
-        });
+        if ($epSelect.length) {
+          $epSelect.off('change').on('change', () => {
+            const key     = $epSelect.val();
+            const root    = $epSelect.find(':selected').data('root-uri');
+            const toOpen  = entryMappings[key] || [];
+            // console.log('[repMap] EP changed →', key, root, toOpen);
+            drawTree($left, root, toOpen);
+          });
+        }
 
         // 9) Load RIGHT tree on button click
         $('#edit-load-tree')
