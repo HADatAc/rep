@@ -181,19 +181,33 @@ final class IconsExplanationForm extends FormBase {
         ],
       ];
 
-      $uri = $map_uri[$r['name']] ?? null;
-      $uriCell = $uri
-        ? Link::fromTextAndUrl(
-            $uri,
-            Url::fromUri($uri, ['attributes' => ['target' => '_blank', 'rel' => 'noopener']])
-          )->toRenderable()
-        : ['#markup' => '—'];
+    $uri = $map_uri[$r['name']] ?? null;
+
+if ($uri) {
+  $label = $uri;
+
+  $b64 = base64_encode($uri);
+
+  $describe_path = '/rep/uri/';
+  if (class_exists('\repGUI') && defined('\repGUI::DESCRIBE_PAGE')) {
+    $describe_path = \repGUI::DESCRIBE_PAGE; 
+    if ($describe_path[0] !== '/') { $describe_path = '/' . $describe_path; }
+  }
+
+  $url = \Drupal\Core\Url::fromUserInput($describe_path . $b64, [
+    'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
+  ]);
+
+  $uriCell = \Drupal\Core\Link::fromTextAndUrl($label, $url)->toRenderable();
+} else {
+  $uriCell = ['#markup' => '—'];
+}
 
       $rows[] = [
-        ['data' => $button],          // Icon
-        ['data' => $uriCell],         // Type URI (link)
-        ['data' => (string) $r['name']], // Name
-        ['data' => (string) $r['desc']], // Explanation
+        ['data' => $button],               // Icon
+        ['data' => $uriCell],              // Type URI (link)
+        ['data' => (string) $r['name']],   // Name
+        ['data' => (string) $r['desc']],   // Explanation
       ];
     }
 
