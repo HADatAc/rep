@@ -147,3 +147,17 @@ fontawesome:
   css:
     theme:
       https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css: { type: external }
+
+qr_code_assets:
+  version: 1.x
+  js:
+    https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js: { type: external }
+    js/qr_code_generator.js: {} 
+  css:
+    theme:
+      css/qr_code_generator.css: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/drupalSettings
+    - core/once

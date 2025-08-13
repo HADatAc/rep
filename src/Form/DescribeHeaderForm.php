@@ -5,6 +5,8 @@ namespace Drupal\rep\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\rep\Utils;
+use Drupal\rep\Vocabulary\REPGUI;
+use Drupal\rep\Vocabulary\VSTOI;
 
 /**
  * Build the top "describe" header for a single element page.
@@ -38,12 +40,14 @@ class DescribeHeaderForm extends FormBase {
 
   public function buildForm(array $form, FormStateInterface $form_state) {
 
+
     // --- Resolve the element URI from the path (encoded in the 4th segment) ---
     $request = \Drupal::request();
     $pathInfo = $request->getPathInfo();
     $pathElements = explode('/', $pathInfo);
     $elementuri = null;
     if (count($pathElements) >= 4) {
+
       $elementuri = $pathElements[3];
     }
 
@@ -61,20 +65,24 @@ class DescribeHeaderForm extends FormBase {
         '#type' => 'item',
         '#title' => t("<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>"),
       ];
+      
       $form['type'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<h3>(UNKNOWN TYPE)</h3><br>"),
       ];
+
       $form['element_uri'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<b>URI</b>: " . $full_uri . "<br><br>"),
       ];
+
       $form['element_type'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<b>Type</b>: NONE<br><br>"),
       ];
       return $form;
     }
+
 
     // --- Compute a human-friendly type label (fallback logic kept as in original) ---
     if (
@@ -143,85 +151,90 @@ class DescribeHeaderForm extends FormBase {
       '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
     ];
 
-    // --- Type URI block (with external graph toggle) ---
-    // IMPORTANT: We add data-label="typeUri" so the JS only toggles edges with label "typeUri".
-    $typeUri = $this->getElement()->typeUri;
-    if ($typeUri) {
-      $form['element_type'] = [
-        '#type' => 'inline_template',
-        '#template' => '<b>Type URI</b>: <a href="{{ uri }}" target="_blank">{{ uri }}</a>
-          <span class="graph-toggle"
-                data-node="{{ uri }}"
-                data-label="typeUri"
-                style="cursor:pointer;"
-                title="Show/Hide typeUri edge">
-            <i class="fa fa-eye"></i>
-          </span><br><br>',
-        '#context' => [
-          'uri' => $this->getElement()->typeUri,
-        ],
-      ];
-    }
-
-    // --- If there is no standard type URI but a HASCO type exists, show link-only fallback ---
-    if (!$typeUri && $this->getElement()->hascoTypeUri) {
-      $form['element_hascoType_link'] = [
-        '#type' => 'markup',
-        '#markup' => $this->t("<b>HascoType URI</b>: " . Utils::link($this->getElement()->hascoTypeLabel, $this->getElement()->hascoTypeUri) . "<br><br>"),
-      ];
-    }
-
-    // --- HASCO Type URI block (with external graph toggle) ---
-    // IMPORTANT: We add data-label="hascoTypeUri" so the JS only toggles edges with that label.
-    if ($this->getElement()->hascoTypeUri) {
-      $form['element_hascoType'] = [
-        '#type' => 'inline_template',
-        '#template' => '<b>HascoType URI</b>: <a href="{{ uri }}" target="_blank">{{ uri }}</a>
-          <span class="graph-toggle"
-                data-node="{{ uri }}"
-                data-label="hascoTypeUri"
-                style="cursor:pointer;"
-                title="Show/Hide hascoTypeUri edge">
-            <i class="fa fa-eye"></i>
-          </span><br><br>',
-        '#context' => [
-          'uri' => $this->getElement()->hascoTypeUri,
-        ],
-      ];
-    }
-
-    // --- Optional "super" relation link ---
-    if (!empty($this->getElement()->superUri)) {
-      $form['element_super'] = [
-        '#type' => 'markup',
-        '#markup' => $this->t("<b>Super URI</b>: " . Utils::link($this->getElement()->superUri, $this->getElement()->superUri) . "<br><br>"),
-      ];
-    }
-
-    // --- Optional title/description/comment area ---
-    if (isset($this->getElement()->title)) {
-      $form['element_title'] = [
-        '#type' => 'markup',
-        '#markup' => $this->t("<b>Title</b>: " . UTILS::sanitizeString($this->getElement()->title) . "<br><br>"),
-      ];
-    }
-
-    if (isset($this->getElement()->description) || isset($this->getElement()->comment)) {
-      if (!empty($this->getElement()->description) && !empty($this->getElement()->comment)) {
-        $descmarkup = "<b>From RDF Comment</b>: " . $this->getElement()->comment
-          . "<b>From DCTerms Description</b>: " . $this->getElement()->description;
-      } else if (!empty($this->getElement()->description)) {
-        $descmarkup = "<b>Description</b>: " . $this->getElement()->description;
-      } else if (!empty($this->getElement()->comment)) {
-        $descmarkup = "<b>Comment</b>: " . $this->getElement()->comment;
-      } else {
-        $descmarkup = "";
+      if ($this->getElement()->hascoTypeLabel === 'Organization') {
+        $form['name'] = [
+          '#type' => 'markup',
+          '#markup' => $this->t("<h5>" . $this->getElement()->name . "</h5><br>"),
+        ];
       }
 
-      if ($descmarkup !== "") {
-        $form['element_short_name'] = [
+      $form['type'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("<h3>" . ucfirst($type) . "</h3><br>"),
+      ];
+
+      $form['element_uri'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("<b>URI</b>: " . $this->getElement()->uri . "<br><br>"),
+      ];
+
+      $typeUri = $this->getElement()->typeUri;
+      if ($typeUri) {
+        $form['element_type'] = [
+          '#type' => 'inline_template',
+          '#template' => '<b>Type URI</b>: <a href="{{ uri }}" target="_blank">{{ typeUri }}</a>
+          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
+            <i class="fa fa-eye"></i>
+          </span><br><br>',
+          '#context' => [
+            'uri' => ($root_url.REPGUI::DESCRIBE_PAGE.base64_encode($this->getElement()->typeUri)),
+            'typeUri' => rawurldecode($this->getElement()->typeUri),
+          ],
+        ];
+      }
+
+      if ($this->getElement()->hascoTypeUri) {
+        $form['element_hascoType'] = [
+          '#type' => 'inline_template',
+          '#template' => '<b>HascoType URI</b>: <a href="{{ uri }}" target="_new">{{ hascoTypeUri }}</a>
+          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
+            <i class="fa fa-eye"></i>
+          </span><br><br>',
+          '#context' => [
+            'uri' => ($root_url.REPGUI::DESCRIBE_PAGE.base64_encode($this->getElement()->hascoTypeUri)),
+            'hascoTypeUri' => rawurldecode($this->getElement()->hascoTypeUri),
+          ],
+        ];
+      }
+
+      if ($this->getElement()->superUri) {
+        $form['element_super'] = [
+          '#type' => 'inline_template',
+          '#template' => '<b>Super URI</b>: <a href="{{ uri }}" target="_new">{{ superUri }}</a>
+          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
+            <i class="fa fa-eye"></i>
+          </span><br><br>',
+          '#context' => [
+            'uri' => ($root_url.REPGUI::DESCRIBE_PAGE.base64_encode($this->getElement()->superUri)),
+            'superUri' => rawurldecode($this->getElement()->superUri),
+          ],
+        ];
+      }
+
+      if (isset($this->getElement()->title)) {
+        $form['element_title'] = [
           '#type' => 'markup',
-          '#markup' => UTILS::sanitizeString($descmarkup),
+          '#markup' => $this->t("<b>Title</b>: " . $this->getElement()->title . "<br><br>"),
+        ];
+      }
+
+     // QR Code logic using JS
+      if($this->getElement()->hascoTypeUri===VSTOI::INSTRUMENT_INSTANCE ||
+         $this->getElement()->hascoTypeUri===VSTOI::DETECTOR_INSTANCE ||
+         $this->getElement()->hascoTypeUri===VSTOI::PLATFORM_INSTANCE ||
+         $this->getElement()->hascoTypeUri===VSTOI::ACTUATOR_INSTANCE ){
+        $form['qr_code'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'id' => 'qr-output',
+            'data-uri' => $this->getElement()->uri,
+            'style' => 'margin-top:10px;',
+          ],
+          '#attached' => [
+            'library' => [
+              'rep/qr_code_assets',
+            ],
+          ],
         ];
       }
     }
@@ -232,5 +245,4 @@ class DescribeHeaderForm extends FormBase {
   public function validateForm(array &$form, FormStateInterface $form_state) {}
 
   public function submitForm(array &$form, FormStateInterface $form_state) {}
-
 }
