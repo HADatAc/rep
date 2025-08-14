@@ -414,7 +414,7 @@
                 'acc_repo_instance' => $repo_instance,
                 'acc_name' => $user->getDisplayName(),
                 'acc_email' => $user->getEmail(),
-                'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $user->id(),
+                'acc_user_uri' => (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . '/user/' . $user->id(),
                 'acc_cellphone' => $user->hasField('field_cellphone') && !$user->get('field_cellphone')->isEmpty()
                     ? (int) $user->get('field_cellphone')->value
                     : null,
