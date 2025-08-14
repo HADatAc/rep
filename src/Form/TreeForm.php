@@ -311,7 +311,8 @@ class TreeForm extends FormBase {
 
     $tables = new Tables;
 
-    $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    // $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    $base_url = Url::fromRoute('<front>', [], ['absolute' => TRUE, 'https' => TRUE])->toString() . \Drupal::request()->getBaseUrl();
     // kint(\Drupal::request()->getSchemeAndHttpHost());
     dpm($base_url, 'Debug $base_url'); // See the base URL being used
     $form['#attached']['drupalSettings']['rep_tree'] = [
