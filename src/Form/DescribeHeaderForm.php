@@ -65,7 +65,7 @@ class DescribeHeaderForm extends FormBase {
         '#type' => 'item',
         '#title' => t("<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>"),
       ];
-      
+
       $form['type'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<h3>(UNKNOWN TYPE)</h3><br>"),
@@ -237,7 +237,6 @@ class DescribeHeaderForm extends FormBase {
           ],
         ];
       }
-    }
 
     return $form;
   }
