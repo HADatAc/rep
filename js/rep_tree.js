@@ -1079,7 +1079,6 @@
         //     or does a normal search.
         // --------------------------------------------------------------
         function initializeJstree() {
-          console.log(drupalSettings.rep_tree);
           // console.log("[tree] initializeJstree() called");
           $treeRoot.jstree({
             core: {
