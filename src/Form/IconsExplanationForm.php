@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
@@ -11,12 +9,11 @@ use Drupal\Core\Url;
 
 final class IconsExplanationForm extends FormBase {
 
-  public function getFormId(): string {
+  public function getFormId() {
     return 'rep_icons_explanation_form';
   }
 
-  public function buildForm(array $form, FormStateInterface $form_state): array {
-
+  public function buildForm(array $form, FormStateInterface $form_state) {
     $form['#attached']['library'][] = 'rep/mtsearch_icons';
 
     $module_path = \Drupal::service('extension.list.module')->getPath('rep');
@@ -24,7 +21,8 @@ final class IconsExplanationForm extends FormBase {
     $placeholder_base = $base_url . '/' . $module_path . '/images/placeholders/';
 
     $header = [
-      ['data' => $this->t('Icon')],
+      ['data' => $this->t('Class')],
+      ['data' => $this->t('Instance')],
       ['data' => $this->t('Type URI')],
       ['data' => $this->t('Name')],
       ['data' => $this->t('Explanation')],
@@ -101,17 +99,15 @@ final class IconsExplanationForm extends FormBase {
       'Response Options' => '',
       'Annotation Stems' => '',
       'Annotations' => '',
-      'Platform' => '',
-      'Platform Instances' => 'http://hadatac.org/ont/vstoi#Platform',
-      'Instrument' => '',
-      'Instrument Instances' => 'http://hadatac.org/ont/vstoi#Instrument',
+      'Platform' => 'http://hadatac.org/ont/vstoi#Platform',
+      'Instrument' => 'http://hadatac.org/ont/vstoi#Instrument',
       'Detector Instances' => 'http://hadatac.org/ont/vstoi#Detector',
       'Actuator Instances' => 'http://hadatac.org/ont/vstoi#Actuator',
       'Deployments' => 'http://hadatac.org/ont/vstoi#Deployment',
       'Message Streams' => '',
       'File Streams' => '',
       'INS' => '',
-      'DSG' => 'http://hadatac.org/ont/hasco/DSG',
+      'DSG' => '',
       'DD'  => '',
       'SDD' => '',
       'DP2' => '',
@@ -145,10 +141,8 @@ final class IconsExplanationForm extends FormBase {
       ['name' => 'Response Options', 'desc' => 'NOT FOUND'],
       ['name' => 'Annotation Stems', 'desc' => 'NOT FOUND'],
       ['name' => 'Annotations', 'desc' => 'NOT FOUND'],
-      ['name' => 'Platform', 'desc' => 'NOT FOUND'],
-      ['name' => 'Platform Instances', 'desc' => 'A surface onto which instruments are deployed to collect data.'],
+      ['name' => 'Platform', 'desc' => 'A surface onto which instruments are deployed to collect data.'],
       ['name' => 'Instrument', 'desc' => 'A device or mechanism that is used to achire attribute values of entities of interest. An instrument does not necessarily require a way to store its measured quantity (e.g, a hard disk).'],
-      ['name' => 'Instrument Instances', 'desc' => 'NOT FOUND'],
       ['name' => 'Detector Instances', 'desc' => 'A device which detects measurements, such as temperature or wind velocity, and cointains a codebook.'],
       ['name' => 'Actuator Instances', 'desc' => 'A device that puts into action values that are fed into it.'],
       ['name' => 'Deployments', 'desc' => 'A platform is deployed during a certain duration of time and over a certain spacial domain. The platform has instruments on it within the scope of this deployment. For example, a boat will carry certain instruments during a deployment, and those instruments will be removed once the deployment is completed. A stationary deployment can last a much longer time, even decades, with the same instrument.'],
@@ -160,6 +154,11 @@ final class IconsExplanationForm extends FormBase {
       ['name' => 'SDD', 'desc' => 'NOT FOUND'],
       ['name' => 'DP2', 'desc' => 'NOT FOUND'],
       ['name' => 'STR', 'desc' => 'NOT FOUND'],
+    ];
+
+    $map_instance_of = [
+      'Platform' => 'Platform Instances',
+      'Instrument' => 'Instrument Instances',
     ];
 
     $rows = [];
@@ -181,31 +180,52 @@ final class IconsExplanationForm extends FormBase {
         ],
       ];
 
-    $uri = $map_uri[$r['name']] ?? null;
+      $instance_cell = ['#markup' => ''];
+      if (isset($map_instance_of[$r['name']])) {
+        $instance_name = $map_instance_of[$r['name']];
+        if (!empty($map_img[$instance_name])) {
+          $i_img = $map_img[$instance_name];
+          $i_style = "background-image: url('{$placeholder_base}{$i_img}');";
+          $instance_cell = [
+            '#type' => 'html_tag',
+            '#tag' => 'button',
+            '#value' => '',
+            '#attributes' => [
+              'type' => 'button',
+              'class' => ['element-icon-button', 'kg-col-icon'],
+              'style' => $i_style,
+              'title' => $this->t($instance_name),
+              'aria-label' => $this->t($instance_name),
+              'onclick' => 'return false;',
+            ],
+          ];
+        }
+      }
 
-if ($uri) {
-  $label = $uri;
+      $uri = $map_uri[$r['name']] ?? null;
+      if ($uri) {
+        $label = $uri;
+        $b64 = base64_encode($uri);
 
-  $b64 = base64_encode($uri);
+        $describe_path = '/rep/uri/';
+        if (class_exists('\repGUI') && defined('\repGUI::DESCRIBE_PAGE')) {
+          $describe_path = \repGUI::DESCRIBE_PAGE;
+          if ($describe_path[0] !== '/') { $describe_path = '/' . $describe_path; }
+        }
 
-  $describe_path = '/rep/uri/';
-  if (class_exists('\repGUI') && defined('\repGUI::DESCRIBE_PAGE')) {
-    $describe_path = \repGUI::DESCRIBE_PAGE; 
-    if ($describe_path[0] !== '/') { $describe_path = '/' . $describe_path; }
-  }
-
-  $url = \Drupal\Core\Url::fromUserInput($describe_path . $b64, [
-    'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
-  ]);
-
-  $uriCell = \Drupal\Core\Link::fromTextAndUrl($label, $url)->toRenderable();
-} else {
-  $uriCell = ['#markup' => '—'];
-}
+        $url = Url::fromUserInput($describe_path . $b64, [
+          'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
+        ]);
+        $uriCell = Link::fromTextAndUrl($label, $url)->toRenderable();
+      }
+      else {
+        $uriCell = ['#markup' => '—'];
+      }
 
       $rows[] = [
-        ['data' => $button],               // Icon
-        ['data' => $uriCell],              // Type URI (link)
+        ['data' => $button],               // Class
+        ['data' => $instance_cell],        // Instance
+        ['data' => $uriCell],              // Type URI
         ['data' => (string) $r['name']],   // Name
         ['data' => (string) $r['desc']],   // Explanation
       ];
@@ -227,5 +247,6 @@ if ($uri) {
     return $form;
   }
 
-  public function submitForm(array &$form, FormStateInterface $form_state): void {}
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+  }
 }
