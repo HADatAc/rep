@@ -83,52 +83,30 @@ class LandingPage extends FormBase {
           $rows = [
             // Row 1
             [
-<<<<<<< HEAD
               ['project', 'Project(s)', null, 'fa-list-check', 'icon'],
               ['instrument', 'Instrument(s)', null, 'instrument', 'image'],
               ['instrumentinstance', 'Instrument instance(s)', null, 'instrument_instance', 'image'],
               ['study', 'Study(ies)', null, 'fa-graduation-cap', 'icon'],
               ['entity', 'Entity Type(s)', null, '', 'images'],
               ['stream', 'Datafile Stream(s)', null, 'datafile_stream', 'images'],
-=======
-              ['project', 'Project(s)', null, 'fa-diagram-project', 'icon'],
-              ['instrument', 'Instrument(s)', null, 'instrument', 'image'],
-              ['instrumentinstance', 'Instrument instance(s)', null, 'instrument_instance', 'image'],
-              ['study', 'Study(ies)', null, 'fa-graduation-cap', 'icon'],
-              ['entity', 'Entity Type(s)', null, 'fa-cubes', 'icon'],
-              ['stream', 'Datafile Stream(s)', null, 'fa-file-contract', 'icon'],
->>>>>>> origin/mrg_qrcode_0.9.3
             ],
             // Row 2
             [
               ['organization', 'Organization(s)', null, 'fa-building', 'icon'],
               ['component', 'Component(s)', null, 'fa-puzzle-piece', 'icon'],
               ['componentinstance', 'Component Instance(s)', null, 'component_instance', 'image'],
-<<<<<<< HEAD
               ['objectcollection', 'object Collection(s)', null, 'studyobjectcollection', 'images'],
               ['variable', 'Variable(s)', null, 'variable', 'images'],
               ['stream', 'Message Stream(s)', null, 'message_stream', 'images'],
-=======
-              ['objectcollection', 'Object Collection(s)', 'studyobjectcollection', 'fa-boxes-stacked', 'icon'],
-              ['variable', 'Variable(s)', null, 'fa-square-root-variable', 'icon'],
-              ['stream', 'Message Stream(s)', null, 'fa-envelope', 'icon'],
->>>>>>> origin/mrg_qrcode_0.9.3
             ],
             // Row 3
             [
               ['person', 'Person(s)', null, 'fa-user', 'icon'],
               ['codebook', 'Codebook(s)', null, 'fa-book', 'icon'],
-<<<<<<< HEAD
               ['deployment', 'Deployment(s)', null, 'deployment', 'images'],
               ['object', 'Object(s)', 'studyobject', 'studyobject', 'images'],
               ['semanticvariable', 'Semantic Variable(s)', null, 'semanticvariable', 'images'],
               ['value', 'Value(s)', null, 'value', 'images'],
-=======
-              ['deployment', 'Deployment(s)', null, 'fa-rocket', 'icon'],
-              ['object', 'Object(s)', 'studyobject', 'fa-cube', 'icon'],
-              ['semanticvariable', 'Semantic Variable(s)', null, 'fa-language', 'icon'],
-              ['value', 'Value(s)', null, 'fa-equals', 'icon'],
->>>>>>> origin/mrg_qrcode_0.9.3
             ],
           ];
 
@@ -202,11 +180,7 @@ class LandingPage extends FormBase {
                     'src'   => $image_uri,
                     'alt'   => $label,
                     'class' => ['img-responsive'],
-<<<<<<< HEAD
                     'style' => 'width: 80px; height: 80px; display: inline-flex; align-items: center; justify-content: center;',
-=======
-                    'style' => 'max-width: 80px; max-height: 80px;',
->>>>>>> origin/mrg_qrcode_0.9.3
                   ],
                 ];
               }
