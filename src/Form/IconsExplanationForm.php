@@ -106,12 +106,12 @@ final class IconsExplanationForm extends FormBase {
       'Deployments' => 'http://hadatac.org/ont/vstoi#Deployment',
       'Message Streams' => '',
       'File Streams' => '',
-      'INS' => '',
-      'DSG' => '',
-      'DD'  => '',
-      'SDD' => '',
-      'DP2' => '',
-      'STR' => '',
+      'INS' => 'http://hadatac.org/ont/hasco/INS',
+      'DSG' => 'http://hadatac.org/ont/hasco/DSG',
+      'DD'  => 'http://hadatac.org/ont/hasco/DD',
+      'SDD' => 'http://hadatac.org/ont/hasco/SDD',
+      'DP2' => 'http://hadatac.org/ont/hasco/DP2',
+      'STR' => 'http://hadatac.org/ont/hasco/STR',
     ];
 
     $rows_data = [
