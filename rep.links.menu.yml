@@ -31,6 +31,16 @@ rep.uri_describe:
   requirements:
     _permission: 'access content'
 
+rep.icons_explanation:
+  title: 'Icons Explanation'
+  description: 'Explanation of Knowledge Graph icons'
+  route_name: rep.icons_explanation
+  parent: rep.kg
+  menu_name: main
+  weight: 110
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
 
 #
 # REPOSITORY
@@ -187,20 +197,20 @@ rep.social_status:
     _permission: 'access content'
     _role: 'authenticated'
 
-rep.socialm_manageConsumer:
-  title: Social KG Manage Consumer Organization
-  description: Social KG Manage Consumer Organization
-  route_name: socialm.select_consumer_element
-  route_parameters:
-    elementtype: 'consumer'
-    page: '1'
-    pagesize: '9'
-  parent: rep.socialkg
-  menu_name: main
-  weight: 25
-  requirements:
-    _permission: 'access content'
-    _role: 'authenticated'
+#rep.socialm_manageConsumer:
+ # title: Social KG Manage Consumer Organization
+  #description: Social KG Manage Consumer Organization
+  #route_name: socialm.select_consumer_element
+  #route_parameters:
+   # elementtype: 'consumer'
+    #page: '1'
+    #pagesize: '9'
+  #parent: rep.socialkg
+  #menu_name: main
+  #weight: 25
+  #requirements:
+   # _permission: 'access content'
+    #_role: 'authenticated'
 #
 # REVIEWER
 #
@@ -212,6 +222,17 @@ reviewer.top_level:
   menu_name: main
   weight: 100
   requirements:
+    _role: 'content_editor'
+
+reviewer.searchMT:
+  title: Search MT
+  description: ''
+  menu_name: main
+  route_name: rep.mt_list_element
+  parent: reviewer.top_level
+  weight: 10
+  requirements:
+    _permission: 'access content'
     _role: 'content_editor'
 
 reviewer.uploadingest_review:

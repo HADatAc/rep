@@ -76,3 +76,15 @@ map_entry_points:
     - core/jquery
     - core/drupalSettings
     - core/drupal.ajax
+
+mtsearch_icons:
+  version: 1.x
+  css:
+    theme:
+      css/mtsearch_icons.css: {}
+
+mtlist_styles:
+  version: 1.x
+  css:
+    theme:
+      css/rep.css: {}
