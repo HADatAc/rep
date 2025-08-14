@@ -159,8 +159,8 @@ class TreeController extends ControllerBase {
     $nodeUri = $request->query->get('nodeUri');
     $topNode = $api->parseObjectResponse($api->getUri($nodeUri), 'getUri');
     // kint($topNode, 'Top Node');
-    $abbrev = strstr($topNode->uriNamespace, ':', true);
-    $children = $api->parseObjectResponse($api->repoTopClassNamespaces($abbrev), 'repoTopClassNamespaces');
+    // $abbrev = strstr($topNode->uriNamespace, ':', true);
+    $children = $api->parseObjectResponse($api->repoTopClassNamespaces($nodeUri), 'repoTopClassNamespaces');
     if (!is_array($children)) {
       $children = [];
     }

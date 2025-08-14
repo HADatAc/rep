@@ -1249,4 +1249,14 @@ form.rep-form-namespace legend {
   color: white !important;
   border-radius: 6px;
   border: 2px solid rgb(0, 56, 0) !important; 
+
+.ingest_mt-button.is-disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+#current-tree .jstree-anchor.root-node {
+  cursor: default;
+  font-weight: 600; /* or any style you prefer */
 }

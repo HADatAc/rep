@@ -19,7 +19,6 @@ class AssocStudy {
     /*
     *    PLACE's VIRTUAL COLUMNS
     */
-   // PLACE's VIRTUAL COLUMNS
     $rawVCs = $api->getStudyVCs($element->uri);
     if ($rawVCs != NULL) {
       $vcs = $api->parseObjectResponse($rawVCs, 'getStudyVCs');
@@ -36,7 +35,7 @@ class AssocStudy {
           $form['virtualcolumns'][$propertyName] = [
             '#type' => 'markup',
             '#markup' => '<li>' . Utils::link($label, $uri)
-              . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Mostrar/Ocultar nó'><i class='fa fa-eye'></i></span></li>",
+              . " <span class='graph-toggle' data-node='{$nodeId}' style='cursor:pointer;' title='Show/Hide node'><i class='fa fa-eye'></i></span></li>",
           ];
         }
         $form['virtualcolumns']['endVCs'] = [
@@ -56,9 +55,6 @@ class AssocStudy {
         $totalsocs = $api->parseTotalResponse($api->getTotalStudySOCs($element->uri),'getTotalStudySOCs');
 
         $socMap = AssocStudy::sortSOCs($socs);
-
-        //dpm($socs);
-        //dpm($socMap);
 
         /*
          *    SUBJECT SOCs
@@ -301,7 +297,7 @@ class AssocStudy {
           $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
             Utils::namespaceUri($soc->uri).'</a>'),
-            'soc_label' => $soc->label,
+            'soc_label' => ['data' => ['#markup' => $soc->label . " <span class='graph-toggle' data-node='" . $soc->uri . "' style='cursor:pointer;' title='Show/Hide node'><i class='fa fa-eye'></i></span>"]],
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
             'soc_role_label' => $soc->virtualColumn->label,
@@ -338,7 +334,8 @@ class AssocStudy {
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
               Utils::namespaceUri($soc->uri).'</a>'),
-            'soc_label' => $soc->label,
+            'soc_label' => ['data' => ['#markup' => $soc->label . " <span class='graph-toggle' data-node='" . $soc->uri . "' style='cursor:pointer;' title='Show/Hide node'><i class='fa fa-eye'></i></span>"]],
+
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
             'soc_role_label' => $soc->virtualColumn->label,
@@ -372,7 +369,7 @@ class AssocStudy {
             $output[$soc->uri] = [
             'soc_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($soc->uri).'">'.
               Utils::namespaceUri($soc->uri).'</a>'),
-            'soc_label' => $soc->label,
+            'soc_label' => ['data' => ['#markup' => $soc->label . " <span class='graph-toggle' data-node='" . $soc->uri . "' style='cursor:pointer;' title='Show/Hide node'><i class='fa fa-eye'></i></span>"]],
             'soc_grounding_label' => $soc->virtualColumn->groundingLabel,
             'soc_reference' => $soc->virtualColumn->socreference,
             'soc_role_label' => $soc->virtualColumn->label,

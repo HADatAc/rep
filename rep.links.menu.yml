@@ -291,24 +291,20 @@ rep.map_entry_points:
 rep.view_app_ontology:
   title: 'View Application Ontologiy'
   description: ''
-  route_name: rep.ont_load
-  route_parameters:
-    filename: 'hadatac.ttl'
+  route_name: rep.ont_view
   parent: rep.ontologies_root
   menu_name: main
   weight: 2
   options:
     attributes:
       target: '_blank'
-  requirements:
-    _role: 'content_editor'
+  # requirements:
+  #   _role: 'content_editor'
 
 rep.edit_app_ontology:
   title: 'Edit Application Ontologiy'
   description: ''
   route_name: rep.ont_edit
-  route_parameters:
-    filename: 'hadatac.ttl'
   parent: rep.ontologies_root
   menu_name: main
   weight: 3

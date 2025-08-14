@@ -438,30 +438,20 @@ rep.tree.entry_point_mappings:
     _role: 'content_editor'
 
 # ONT
-rep.ont_load:
-  path: '/ont/{filename}'
+rep.ont_view:
+  path: '/ont'
   defaults:
-    _controller: '\Drupal\rep\Controller\OntController::load'
+    _controller: '\Drupal\rep\Controller\OntController::view'
   requirements:
     _permission: 'access content'
   options:
     no_cache: TRUE
 
 rep.ont_edit:
-  path: '/ont/edit/{filename}'
+  path: '/ont/edit'
   defaults:
     _form: '\Drupal\rep\Form\OntEditForm'
     _title: 'Edit Application Ontology File'
-  requirements:
-    _permission: 'access content'
-  options:
-    no_cache: TRUE
-
-rep.ont_modify:
-  path: '/ont/modify/{filename}'
-  defaults:
-    _controller: '\Drupal\rep\Controller\OntController::modify'
-    _title: 'Modify Application Ontology File'
   requirements:
     _permission: 'access content'
   options:
@@ -527,3 +517,10 @@ rep.icons_explanation:
   requirements:
     _permission: 'access content'
 
+rep.graph.expand:
+  path: '/rep/graph/expand'
+  defaults:
+    _controller: '\Drupal\rep\Controller\GraphController::expand'
+  requirements:
+    _permission: 'access content'
+  methods: [GET]
