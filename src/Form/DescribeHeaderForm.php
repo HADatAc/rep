@@ -9,16 +9,15 @@ use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Vocabulary\VSTOI;
 
 /**
- * Build the top "describe" header for a single element page.
+ * Builds the top "describe" header for a single element page.
  *
- * Notes for the graph integration:
- * - We render external "eye" toggles with the class .graph-toggle.
- * - Each toggle now carries:
- *     data-node  = the URI of the node to show/hide on the canvas
- *     data-label = OPTIONAL label filter to only toggle edges of that label
- *                  (we use "typeUri" or "hascoTypeUri" here)
- * - The JS handler (graph.js) reads data-label and only adds/removes edges
- *   for that label, keeping typeUri and hascoTypeUri independent.
+ * Graph integration notes:
+ * - External eye toggles use the .graph-toggle class.
+ * - We now pass:
+ *     data-node  = target node IRI to toggle on the canvas (MUST be the RDF URI)
+ *     data-label = optional label filter (e.g., "typeUri" or "hascoTypeUri")
+ *     data-from  = optional origin IRI to scope the toggle to a single edge
+ * - The JS (graph.js) looks at these attributes and toggles only that edge.
  */
 class DescribeHeaderForm extends FormBase {
 
@@ -39,7 +38,8 @@ class DescribeHeaderForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
-
+    // Base URL for internal links to Describe pages (used only for <a href>, not for graph data-node).
+    $root_url = \Drupal::request()->getSchemeAndHttpHost();
 
     // --- Resolve the element URI from the path (encoded in the 4th segment) ---
     $request = \Drupal::request();
@@ -47,7 +47,6 @@ class DescribeHeaderForm extends FormBase {
     $pathElements = explode('/', $pathInfo);
     $elementuri = null;
     if (count($pathElements) >= 4) {
-
       $elementuri = $pathElements[3];
     }
 
@@ -63,26 +62,22 @@ class DescribeHeaderForm extends FormBase {
     if ($this->getElement() == NULL || $this->getElement() == "") {
       $form['message'] = [
         '#type' => 'item',
-        '#title' => t("<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>"),
+        '#title' => $this->t("<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>"),
       ];
-      
       $form['type'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<h3>(UNKNOWN TYPE)</h3><br>"),
       ];
-
       $form['element_uri'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<b>URI</b>: " . $full_uri . "<br><br>"),
       ];
-
       $form['element_type'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<b>Type</b>: NONE<br><br>"),
       ];
       return $form;
     }
-
 
     // --- Compute a human-friendly type label (fallback logic kept as in original) ---
     if (
@@ -91,13 +86,13 @@ class DescribeHeaderForm extends FormBase {
     ) {
       $parts = explode('/', (string) $this->getElement()->typeUri);
       $type = end($parts);
-    } else if ($this->getElement()->typeLabel === NULL) {
+    } elseif ($this->getElement()->typeLabel === NULL) {
       $type = $this->getElement()->hascoTypeLabel;
-    } else if ($this->getElement()->hascoTypeLabel === NULL) {
+    } elseif ($this->getElement()->hascoTypeLabel === NULL) {
       $type = $this->getElement()->typeLabel;
-    } else if ($this->getElement()->typeLabel == $this->getElement()->hascoTypeLabel) {
+    } elseif ($this->getElement()->typeLabel == $this->getElement()->hascoTypeLabel) {
       $type = $this->getElement()->typeLabel;
-    } else if ($this->getElement()->typeLabel && $this->getElement()->hascoTypeLabel) {
+    } elseif ($this->getElement()->typeLabel && $this->getElement()->hascoTypeLabel) {
       $type = $this->getElement()->typeLabel . " (" . $this->getElement()->hascoTypeLabel . ")";
     } else {
       $type = $this->getElement()->typeLabel;
@@ -145,100 +140,113 @@ class DescribeHeaderForm extends FormBase {
       ];
     }
 
-    // --- Always show the element's own URI ---
+    // --- Element's own URI (display once) ---
     $form['element_uri'] = [
       '#type' => 'markup',
       '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
     ];
 
-      if ($this->getElement()->hascoTypeLabel === 'Organization') {
-        $form['name'] = [
-          '#type' => 'markup',
-          '#markup' => $this->t("<h5>" . $this->getElement()->name . "</h5><br>"),
-        ];
-      }
+    // --- Type (nice title) ---
+    $form['type'] = [
+      '#type' => 'markup',
+      '#markup' => $this->t("<h3>" . ucfirst($type) . "</h3><br>"),
+    ];
 
-      $form['type'] = [
-        '#type' => 'markup',
-        '#markup' => $this->t("<h3>" . ucfirst($type) . "</h3><br>"),
+    // --- Type URI (with external eye that targets ONLY typeUri edge) ---
+    $typeUri = $this->getElement()->typeUri;
+    if ($typeUri) {
+      $form['element_type'] = [
+        '#type' => 'inline_template',
+        // IMPORTANT: href uses Describe page URL; data-node uses the *raw RDF IRI*.
+        '#template' => '<b>Type URI</b>: <a href="{{ href }}" target="_blank">{{ typeUri }}</a>
+          <span class="graph-toggle"
+                data-node="{{ node }}"
+                data-from="{{ from }}"
+                data-label="typeUri"
+                style="cursor:pointer;"
+                title="Show/Hide this type edge">
+            <i class="fa fa-eye"></i>
+          </span><br><br>',
+        '#context' => [
+          'href'    => $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($this->getElement()->typeUri),
+          'typeUri' => rawurldecode($this->getElement()->typeUri),
+          'node'    => $this->getElement()->typeUri,         // IRI used by the graph
+          'from'    => $this->getElement()->uri,             // origin of the edge (the current element)
+        ],
       ];
+    }
 
-      $form['element_uri'] = [
-        '#type' => 'markup',
-        '#markup' => $this->t("<b>URI</b>: " . $this->getElement()->uri . "<br><br>"),
+    // --- HascoType URI (independent from Type URI, with its own eye) ---
+    if ($this->getElement()->hascoTypeUri) {
+      $form['element_hascoType'] = [
+        '#type' => 'inline_template',
+        '#template' => '<b>HascoType URI</b>: <a href="{{ href }}" target="_blank">{{ hascoTypeUri }}</a>
+          <span class="graph-toggle"
+                data-node="{{ node }}"
+                data-from="{{ from }}"
+                data-label="hascoTypeUri"
+                style="cursor:pointer;"
+                title="Show/Hide this hascoType edge">
+            <i class="fa fa-eye"></i>
+          </span><br><br>',
+        '#context' => [
+          'href'         => $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($this->getElement()->hascoTypeUri),
+          'hascoTypeUri' => rawurldecode($this->getElement()->hascoTypeUri),
+          'node'         => $this->getElement()->hascoTypeUri, // IRI used by the graph
+          'from'         => $this->getElement()->uri,          // origin of the edge
+        ],
       ];
+    }
 
-      $typeUri = $this->getElement()->typeUri;
-      if ($typeUri) {
-        $form['element_type'] = [
-          '#type' => 'inline_template',
-          '#template' => '<b>Type URI</b>: <a href="{{ uri }}" target="_blank">{{ typeUri }}</a>
-          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
+    // --- Super URI () ---
+    if ($this->getElement()->superUri) {
+      $form['element_super'] = [
+        '#type' => 'inline_template',
+        '#template' => '<b>Super URI</b>: <a href="{{ href }}" target="_blank">{{ superUri }}</a>
+          <span class="graph-toggle"
+                data-node="{{ node }}"
+                data-from="{{ from }}"
+                style="cursor:pointer;"
+                title="Show/Hide node">
             <i class="fa fa-eye"></i>
           </span><br><br>',
-          '#context' => [
-            'uri' => ($root_url.REPGUI::DESCRIBE_PAGE.base64_encode($this->getElement()->typeUri)),
-            'typeUri' => rawurldecode($this->getElement()->typeUri),
-          ],
-        ];
-      }
+        '#context' => [
+          'href'     => $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($this->getElement()->superUri),
+          'superUri' => rawurldecode($this->getElement()->superUri),
+          'node'     => $this->getElement()->superUri,
+          'from'     => $this->getElement()->uri,
+        ],
+      ];
+    }
 
-      if ($this->getElement()->hascoTypeUri) {
-        $form['element_hascoType'] = [
-          '#type' => 'inline_template',
-          '#template' => '<b>HascoType URI</b>: <a href="{{ uri }}" target="_new">{{ hascoTypeUri }}</a>
-          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
-            <i class="fa fa-eye"></i>
-          </span><br><br>',
-          '#context' => [
-            'uri' => ($root_url.REPGUI::DESCRIBE_PAGE.base64_encode($this->getElement()->hascoTypeUri)),
-            'hascoTypeUri' => rawurldecode($this->getElement()->hascoTypeUri),
-          ],
-        ];
-      }
+    if (isset($this->getElement()->title)) {
+      $form['element_title'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("<b>Title</b>: " . $this->getElement()->title . "<br><br>"),
+      ];
+    }
 
-      if ($this->getElement()->superUri) {
-        $form['element_super'] = [
-          '#type' => 'inline_template',
-          '#template' => '<b>Super URI</b>: <a href="{{ uri }}" target="_new">{{ superUri }}</a>
-          <span class="graph-toggle" data-node="{{ uri }}" style="cursor:pointer;" title="Mostrar/Ocultar nó">
-            <i class="fa fa-eye"></i>
-          </span><br><br>',
-          '#context' => [
-            'uri' => ($root_url.REPGUI::DESCRIBE_PAGE.base64_encode($this->getElement()->superUri)),
-            'superUri' => rawurldecode($this->getElement()->superUri),
+    // --- QR Code (via attached JS library) ---
+    if (
+      $this->getElement()->hascoTypeUri === VSTOI::INSTRUMENT_INSTANCE ||
+      $this->getElement()->hascoTypeUri === VSTOI::DETECTOR_INSTANCE  ||
+      $this->getElement()->hascoTypeUri === VSTOI::PLATFORM_INSTANCE  ||
+      $this->getElement()->hascoTypeUri === VSTOI::ACTUATOR_INSTANCE
+    ) {
+      $form['qr_code'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'id' => 'qr-output',
+          'data-uri' => $this->getElement()->uri,
+          'style' => 'margin-top:10px;',
+        ],
+        '#attached' => [
+          'library' => [
+            'rep/qr_code_assets',
           ],
-        ];
-      }
-
-      if (isset($this->getElement()->title)) {
-        $form['element_title'] = [
-          '#type' => 'markup',
-          '#markup' => $this->t("<b>Title</b>: " . $this->getElement()->title . "<br><br>"),
-        ];
-      }
-
-     // QR Code logic using JS
-      if($this->getElement()->hascoTypeUri===VSTOI::INSTRUMENT_INSTANCE ||
-         $this->getElement()->hascoTypeUri===VSTOI::DETECTOR_INSTANCE ||
-         $this->getElement()->hascoTypeUri===VSTOI::PLATFORM_INSTANCE ||
-         $this->getElement()->hascoTypeUri===VSTOI::ACTUATOR_INSTANCE ){
-        $form['qr_code'] = [
-          '#type' => 'container',
-          '#attributes' => [
-            'id' => 'qr-output',
-            'data-uri' => $this->getElement()->uri,
-            'style' => 'margin-top:10px;',
-          ],
-          '#attached' => [
-            'library' => [
-              'rep/qr_code_assets',
-            ],
-          ],
-        ];
-      }
-    
-      
+        ],
+      ];
+    }
 
     return $form;
   }
@@ -247,4 +255,3 @@ class DescribeHeaderForm extends FormBase {
 
   public function submitForm(array &$form, FormStateInterface $form_state) {}
 }
- 
