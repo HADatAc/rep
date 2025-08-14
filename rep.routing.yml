@@ -1,4 +1,3 @@
-
 # Landing page
 
 rep.home:
@@ -487,6 +486,37 @@ rep.api.save:
   options:
     no_cache: TRUE
 
+rep.search_mt:
+  path: '/rep/search-mt'
+  defaults:
+    _form: '\Drupal\rep\Form\MTSearchForm'
+    _title: 'Search MT'
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+
+rep.mt_list_element:
+  path: 'rep/mtlist/{elementtype}/{keyword}/{page}/{pagesize}'
+  defaults:
+    _form: '\Drupal\rep\Form\MTListForm'
+    elementtype: 'ins'
+    keyword: ''
+    page: 1
+    pagesize: 9
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'
+  options:
+    no_cache: 'TRUE'
+
+rep.icons_explanation:
+  path: 'rep/icons-explanation'
+  defaults:
+    _form: '\Drupal\rep\Form\IconsExplanationForm'
+    _title: 'Icons Explanation'
+  requirements:
+    _permission: 'access content'
+
 rep.graph.expand:
   path: '/rep/graph/expand'
   defaults:
@@ -494,4 +524,3 @@ rep.graph.expand:
   requirements:
     _permission: 'access content'
   methods: [GET]
-

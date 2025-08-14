@@ -1,0 +1,25 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - rep
+    - system
+  theme:
+    - hasco_barrio
+id: mtsearchformblock
+theme: hasco_barrio
+region: sidebar_first
+weight: 0
+plugin: rep_mtsearch_block
+settings:
+  id: rep_mtsearch_block
+  label: 'MT Search Form'
+  label_display: visible
+  provider: rep
+visibility:
+  request_path:
+    id: request_path
+    negate: false
+    pages: |
+      /rep/mtlist/*
+      /rep/mtlist

@@ -1244,6 +1244,12 @@ form.rep-form-namespace legend {
   width: fit-content;
 }
 
+.selected-button {
+  background-color: rgb(0, 100, 0) !important;
+  color: white !important;
+  border-radius: 6px;
+  border: 2px solid rgb(0, 56, 0) !important; 
+
 .ingest_mt-button.is-disabled {
   opacity: .5;
   cursor: not-allowed;
