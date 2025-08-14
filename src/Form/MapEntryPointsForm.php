@@ -204,7 +204,7 @@ class MapEntryPointsForm extends FormBase {
 
     // 8) Attach libraries & pass settings to JS
     // $base = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
-    $base_url = Url::fromRoute('<front>', [], ['absolute' => TRUE, 'https' => TRUE])->toString() . \Drupal::request()->getBaseUrl();
+    $base_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
     // $form['#attached']['library'][] = 'rep/rep_tree';
     $form['#attached']['library'][] = 'rep/map_entry_points';
     $form['#attached']['drupalSettings']['repMap'] = [
