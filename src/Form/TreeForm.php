@@ -312,13 +312,13 @@ class TreeForm extends FormBase {
     $tables = new Tables;
 
     // $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
-     dpm(\Drupal::request()->headers->get('x-forwarded-proto')); // deve ser 'https'
-     dpm(\Drupal::request()->getScheme()); // deve dar 'https'
-    dpm(\Drupal::request()->isSecure(), 'Debug isSecure'); // Check if the request is secure
+    //  dpm(\Drupal::request()->headers->get('x-forwarded-proto')); // deve ser 'https'
+    //  dpm(\Drupal::request()->getScheme()); // deve dar 'https'
+    // dpm(\Drupal::request()->isSecure(), 'Debug isSecure'); // Check if the request is secure
 
 
 
-    $base_url = (\Drupal::request()->isSecure() ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
+    $base_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
     dpm($base_url, 'Debug $base_url'); // See the base URL being used
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'baseUrl' => $base_url,
