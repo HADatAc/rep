@@ -31,7 +31,7 @@ final class IconsExplanationForm extends FormBase {
     $map_img = [
       'Funding Schemes' => 'fundingschemes_placeholder.png',
       'Projects' => 'projects_placeholder.png',
-      'Organizations' => 'organizations_placeholder.png',
+      'Organizations' => 'organization_placeholder.png',
       'Persons' => 'persons_placeholder.png',
       'Places' => 'places_placeholder.png',
       'Postal Adresses' => 'postaladresses_placeholder.png',
@@ -73,10 +73,10 @@ final class IconsExplanationForm extends FormBase {
     ];
 
     $map_uri = [
-      'Funding Schemes' => '',
+      'Funding Schemes' => 'https://schema.org/FundingScheme',
       'Projects' => 'https://schema.org/Project',
       'Organizations' => 'https://schema.org/GovernmentOrganization',
-      'Persons' => '',
+      'Persons' => 'https://schema.org/Person',
       'Places' => 'https://schema.org/City',
       'Postal Adresses' => 'https://schema.org/PostalAddress',
       'DAs' => '',
@@ -155,6 +155,10 @@ final class IconsExplanationForm extends FormBase {
       ['name' => 'DP2', 'desc' => 'NOT FOUND'],
       ['name' => 'STR', 'desc' => 'NOT FOUND'],
     ];
+
+    usort($rows_data, function($a, $b) {
+    return strcasecmp($a['name'], $b['name']);
+    });
 
     $map_instance_of = [
       'Platform' => 'Platform Instances',
