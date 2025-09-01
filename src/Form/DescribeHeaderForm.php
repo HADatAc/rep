@@ -40,6 +40,7 @@ class DescribeHeaderForm extends FormBase {
 
   public function buildForm(array $form, FormStateInterface $form_state) {
 
+    $root_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
 
     // --- Resolve the element URI from the path (encoded in the 4th segment) ---
     $request = \Drupal::request();
