@@ -323,7 +323,7 @@ class TreeForm extends FormBase {
 
     $tables = new Tables;
 
-    $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    $base_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'baseUrl' => $base_url,
       'username' => \Drupal::currentUser()->getAccountName(),

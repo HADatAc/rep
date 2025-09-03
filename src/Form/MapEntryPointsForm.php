@@ -6,6 +6,10 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\Html;
 use Drupal\rep\Entity\Tables;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\HtmlCommand;
+use Drupal\Core\Ajax\SettingsCommand;
+use Drupal\Core\Url;
 
 /**
  * Form to browse an ontology and save a mapping.
@@ -126,15 +130,23 @@ class MapEntryPointsForm extends FormBase {
       '#suffix' => '</div>',
     ];
 
-    // Attach JS library and pass endpoints/settings to JS.
-    $base = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    // 8) Attach libraries & pass settings to JS
+    // $base = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    $base_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
+    // $form['#attached']['library'][] = 'rep/rep_tree';
     $form['#attached']['library'][] = 'rep/map_entry_points';
     $form['#attached']['drupalSettings']['repMap'] = [
-      'apiTopClassEndpoint' => $base . '/rep/gettopclass?_format=json',
-      'apiEndpoint'         => $base . '/rep/getchildren?_format=json',
-      'childParam'          => 'nodeUri',
-      'currentRootUri'      => $root_from_settings,
-      'currentRootLabel'    => $root_label, // <— pass label to JS
+      'apiEndpoint'     => $base_url . '/rep/getchildren?_format=json',
+      'childParam'      => 'nodeUri',
+      // the constant URI root for the currently selected entry point
+      'currentRootUri' => $constant_uri,
+      'mappedNodes'    => $mapped_nodes,
+      // map of select‐option keys → constant URIs (never overridden)
+      'entryConstants'  => array_combine(
+        array_map('strtolower', array_keys($constants)),
+        array_values($constants)
+      ),
+      'namespaceBaseUris'=> $namespaces,
     ];
 
     // Hidden fields used on submit.
