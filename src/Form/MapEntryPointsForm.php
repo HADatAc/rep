@@ -10,6 +10,7 @@ use Drupal\Component\Utility\Html;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\SettingsCommand;
+use Drupal\Core\Url;
 
 /**
  * Form to map Entry Points to Ontology nodes.
@@ -202,11 +203,12 @@ class MapEntryPointsForm extends FormBase {
     ];
 
     // 8) Attach libraries & pass settings to JS
-    $base = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
+    // $base = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    $base_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
     // $form['#attached']['library'][] = 'rep/rep_tree';
     $form['#attached']['library'][] = 'rep/map_entry_points';
     $form['#attached']['drupalSettings']['repMap'] = [
-      'apiEndpoint'     => $base . '/rep/getchildren?_format=json',
+      'apiEndpoint'     => $base_url . '/rep/getchildren?_format=json',
       'childParam'      => 'nodeUri',
       // the constant URI root for the currently selected entry point
       'currentRootUri' => $constant_uri,
