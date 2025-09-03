@@ -1007,9 +1007,64 @@ class FusekiAPIConnector {
    *    TASKS
    */
 
-  // TODOPP
-  // End-Point da API para salvar os instrumentos nas tasks
+  public function taskSetRequiredInstruments(array $payload) {
+    $endpoint = "/hascoapi/api/task/instruments";
+    $method   = "POST";
+    $api_url = $this->getApiUrl();
 
+    if ($this->bearer === NULL) {
+        $this->bearer = "Bearer " . JWT::jwt();
+    }
+
+    $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
+
+    $data = [
+        'headers' => [
+            'Content-Type'  => 'application/json',
+            'Authorization' => $this->bearer,
+        ],
+        'body'    => $json,
+    ];
+
+    try {
+        // $ch = curl_init($url);
+        // curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        // curl_setopt($ch, CURLOPT_HTTPHEADER, array_map(
+        //     fn($k, $v) => "$k: $v",
+        //     array_keys($options['headers']),
+        //     $options['headers']
+        // ));
+        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        // curl_setopt($ch, CURLOPT_POSTFIELDS, $options['body']);
+
+        // $resp     = curl_exec($ch);
+        // $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        // $curlErr  = curl_error($ch);
+        // curl_close($ch);
+
+        // $decoded = json_decode($resp, true);
+
+        // return $decoded;
+        $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
+
+        return $response;
+    }
+    catch (\Exception $e) {
+        \Drupal::logger('rep')->error('Exception em taskSetRequiredInstruments(): @msg', [
+          '@msg' => $e->getMessage()
+        ]);
+        throw $e;
+    }
+  }
+
+  // POST /hascoapi/api/task/deletewithtasks/$taskUri<[^/]+> org.hascoapi.console.controllers.restapi.TaskAPI.deleteWithTasks(taskUri:String)
+  public function taskDeleteWithTasks($taskUri) {
+    $endpoint = "/hascoapi/api/task/deletewithtasks/".rawurlencode($taskUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
 
   /**
    *    PROJECTS
@@ -1959,6 +2014,20 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function repoReloadSelectedNamespaceTriples(array $namespaces) {
+    $endpoint = '/hascoapi/api/repo/ont/reload';
+    $url      = $this->getApiUrl() . $endpoint;
+
+    $jsonBody = ['namespaceUris' => $namespaces];
+    $headers = $this->getHeader();
+    $options = [
+      'headers' => $headers,
+      'json'    => $jsonBody,
+    ];
+
+    return $this->perform_http_request('POST', $url, $options);
+  }
+
   public function repoDeleteSelectedNamespace($abbreviation) {
     $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($abbreviation);
     $method = "GET";
@@ -2147,46 +2216,49 @@ class FusekiAPIConnector {
    *  If anything goes wrong, this method will return NULL and issue a Drupal error message fowrarding the message provided by
    *  the HASCO API.
    */
-  // public function parseObjectResponse($response, $methodCalled) {
-  //   if ($this->error != NULL) {
-  //     if ($this->error == 'CON') {
-  //       \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
-  //     } else {
-  //       \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
-  //     }
-  //     return NULL;
-  //   }
-  //   if ($response == NULL || $response == "") {
-  //       \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
-  //       return NULL;
-  //   }
+//   public function parseObjectResponse($response, $methodCalled) {
+//     if ($this->error != NULL) {
+//       if ($this->error == 'CON') {
+//         \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
+//       } else {
+//         \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
+//       }
+//       return NULL;
+//     }
+//     if ($response == NULL || $response == "") {
+//         \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
+//         return NULL;
+//     }
 
-  //   // Se já veio um array (já decodificado), devolve-o logo
-  //   if (is_array($response)) {
-  //     return $response;
-  //   }
+//     // Se já veio um array (já decodificado), devolve-o logo
+//     if (is_array($response)) {
+//       return $response;
+//     }
 
-  //   // Caso venha um Stream ou outro objecto com __toString(), força string
-  //   if (!is_string($response) && method_exists($response, '__toString')) {
-  //     $response = (string) $response;
-  //   }
+//     // 4) If it's a stream or other object with __toString(), cast to string.
+//     // if (!is_string($response) && method_exists($response, '__toString')) {
+//     //   $response = (string) $response;
+//     // }
+//     if (!is_string($response) && is_object($response) && method_exists($response, '__toString')) {
+//       $response = (string) $response;
+//     }
 
-  //   $obj = json_decode($response);
-  //   if ($obj == NULL) {
-  //     \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
-  //     return NULL;
-  //   }
-  //   if ($obj->isSuccessful) {
-  //     return $obj->body;
-  //   }
-  //   $message = $obj->body;
-  //   if ($message != NULL && is_string($message) &&
-  //       str_starts_with($message,"No") && str_ends_with($message,"has been found")) {
-  //     return array();
-  //   }
-  //   \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
-  //   return NULL;
-  // }
+//     $obj = json_decode($response);
+//     if ($obj == NULL) {
+//       \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
+//       return NULL;
+//     }
+//     if ($obj->isSuccessful) {
+//       return $obj->body;
+//     }
+//     $message = $obj->body;
+//     if ($message != NULL && is_string($message) &&
+//         str_starts_with($message,"No") && str_ends_with($message,"has been found")) {
+//       return array();
+//     }
+//     \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
+//     return NULL;
+//   }
 
   public function parseObjectResponse($response, $methodCalled) {
     // 1) Any prior connection or HTTP error?
@@ -2217,7 +2289,10 @@ class FusekiAPIConnector {
     }
 
     // 4) If it's a stream or other object with __toString(), cast to string.
-    if (!is_string($response) && method_exists($response, '__toString')) {
+    // if (!is_string($response) && method_exists($response, '__toString')) {
+    //   $response = (string) $response;
+    // }
+    if (!is_string($response) && is_object($response) && method_exists($response, '__toString')) {
       $response = (string) $response;
     }
 
@@ -2285,6 +2360,15 @@ class FusekiAPIConnector {
   // Return List of Component elements from Instrument to Fill on Process
   public function componentListFromInstrument($instrumentUri) {
     $endpoint = "/hascoapi/api/instrument/components/".rawurlencode($instrumentUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // Return List of Component Containerslots to fill the Process Tasks
+  public function containersListFromInstrument($instrumentUri) {
+    $endpoint = "/hascoapi/api/instrument/containerslots/".rawurlencode($instrumentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

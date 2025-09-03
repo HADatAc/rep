@@ -23,6 +23,8 @@ class Constant {
   const PREFIX_ACTUATOR_STEM              = "ACS";
   const PREFIX_ACTUATOR                   = "ACT";
   const PREFIX_ACTUATOR_INSTANCE          = "ACI";
+  const PREFIX_COMPONENT_STEM             = "CSM";
+  const PREFIX_COMPONENT                  = "COM";
   const PREFIX_DETECTOR_STEM              = "DSM";
   const PREFIX_DETECTOR                   = "DTC";
   const PREFIX_DETECTOR_INSTANCE          = "DTI";

@@ -129,6 +129,9 @@
             && $propertyName !== 'hasWebDocument'
             && $propertyName !== 'hasStatus'
             && $propertyName !== 'hasStreamStatus'
+            && $propertyName !== 'description'
+            && $propertyName !== 'superUri'
+            && $propertyName !== 'comment'
             ) {
 
           $form[$propertyName] = [

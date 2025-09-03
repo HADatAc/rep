@@ -77,13 +77,22 @@
             $type = $this->getElement()->typeLabel;
           } else if ($this->getElement()->typeLabel == $this->getElement()->hascoTypeLabel) {
             $type = $this->getElement()->typeLabel;
-          } else {
+          } else if ($this->getElement()->typeLabel && $this->getElement()->hascoTypeLabel) {
             $type = $this->getElement()->typeLabel . " (" . $this->getElement()->hascoTypeLabel . ")";
+          } else {
+            $type = $this->getElement()->typeLabel;
           }
 
           if ( isset($this->getElement()->hasImageUri) ) {
             // hascoTypeLabel
-            $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/'.strtolower($type).'_placeholder.png';
+            // if ($this->getElement()->typeLabel)
+            //   $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->typeLabel));
+            // else if ($this->getElement()->hascoTypeLabel)
+            //   $elementPlaceholder = str_replace(' ', '_', strtolower($this->getElement()->hascoTypeLabel));
+            // else
+            $placeholder_image = UTILS::placeholderImage($this->getElement()->hascoTypeUri,$this->getElement()->typeLabel, '/');
+
+            // $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/'.$elementPlaceholder.'_placeholder.png';
             $hasImageUri = (isset($this->getElement()->hasImageUri) && !empty($this->getElement()->hasImageUri))
                             ? Utils::getAPIImage($this->getElement()->uri, $this->getElement()->hasImageUri, $placeholder_image)
                             : $placeholder_image;
@@ -110,25 +119,26 @@
 
           $form['label'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<br /><h1>" . $this->getElement()->label . "</h1>"),
+            '#markup' => $this->t("<br /><h1>" . UTILS::sanitizeString($this->getElement()->label) . "</h1><br />"),
           ];
 
         if ($this->getElement()->hascoTypeLabel === 'Organization')
-          $form['name'] = [
+          $form['organization'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<h5>" . $this->getElement()->name . "</h5><br>"),
+            '#markup' => $this->t("<h5>" . UTILS::sanitizeString($this->getElement()->name) . "</h5><br>"),
           ];
 
-          $form['type'] = [
-            '#type' => 'markup',
-            '#markup' => $this->t("<h3>" . ucfirst($type) . "</h3><br>"),
-          ];
+          // $form['type'] = [
+          //   '#type' => 'markup',
+          //   '#markup' => $this->t("<h3>" . UTILS::sanitizeString(ucfirst($type)) . "</h3><br>"),
+          // ];
 
           $form['element_uri'] = [
             '#type' => 'markup',
-            '#markup' => $this->t("<b>URI</b>: " . $this->getElement()->uri . "<br><br>"),
+            '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
           ];
 
+          // kint($this->getElement());
           $typeUri = $this->getElement()->typeUri;
 
           if ($typeUri)
@@ -137,10 +147,38 @@
               '#markup' => $this->t("<b>Type URI</b>: " . Utils::link($typeUri,$typeUri) . "<br><br>"),
             ];
 
+          if ($this->getElement()->hascoTypeUri)
+            $form['element_hascoType'] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>HascoType URI</b>: " . Utils::link($this->getElement()->hascoTypeUri,$this->getElement()->hascoTypeUri) . "<br><br>"),
+            ];
+
+          if ($this->getElement()->superUri)
+            $form['element_super'] = [
+              '#type' => 'markup',
+              '#markup' => $this->t("<b>Super URI</b>: " . Utils::link($this->getElement()->superUri,$this->getElement()->superUri) . "<br><br>"),
+            ];
+
           if (isset($this->getElement()->title)) {
             $form['element_title'] = [
               '#type' => 'markup',
-              '#markup' => $this->t("<b>Title</b>: " . $this->getElement()->title . "<br><br>"),
+              '#markup' => $this->t("<b>Title</b>: " . UTILS::sanitizeString($this->getElement()->title) . "<br><br>"),
+            ];
+          }
+
+          if (isset($this->getElement()->description) || isset($this->getElement()->comment)) {
+
+            if ($this->getElement()->description !== "" && $this->getElement()->comment !== "")
+              $descmarkup = "<b>From RDF Comment</b>: ". $this->getElement()->comment
+                ."<b>From DCTerms Description</b>: " . $this->getElement()->description;
+            else if ($this->getElement()->description !== "")
+              $descmarkup = "<b>Description</b>: " . $this->getElement()->description;
+            else if ($this->getElement()->comment !== "")
+              $descmarkup = "<b>Comment</b>: ". $this->getElement()->comment;
+
+            $form['element_short_name'] = [
+              '#type' => 'markup',
+              '#markup' => UTILS::sanitizeString($descmarkup),
             ];
           }
 

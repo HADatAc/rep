@@ -10,7 +10,8 @@
  use Drupal\Core\Form\ConfigFormBase;
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\Core\Url;
- use Drupal\rep\Entity\Ontology;
+use Drupal\devel\Plugin\Devel\Dumper\Kint;
+use Drupal\rep\Entity\Ontology;
  use Drupal\rep\Entity\Tables;
  use Drupal\rep\Utils;
 
@@ -69,63 +70,92 @@
         $header = Ontology::generateHeader();
         $output = Ontology::generateOutput($this->getList());
 
+        $form['actions_wrapper'] = [
+          '#type'       => 'container',
+          '#attributes' => ['class' => ['row', 'gx-3', 'gy-3', 'mb-4']],
+        ];
+
+        $form['actions_wrapper']['col_ontology'] = [
+          '#type'       => 'container',
+          '#attributes' => ['class' => ['col-md-4']],
+        ];
+        $form['actions_wrapper']['col_ontology']['namespace_actions'] = [
+          '#type'       => 'fieldset',
+          '#title'      => $this->t('Ontology Actions'),
+          '#attributes' => ['class' => ['p-3', 'border', 'rounded', 'w-100']],
+        ];
+        $form['actions_wrapper']['col_ontology']['namespace_actions']['add_ontology'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Add'),
+          '#name'       => 'add_ontology',
+          '#attributes' => ['class' => ['btn', 'btn-primary', 'mb-2', 'add-element-button']],
+        ];
+        $form['actions_wrapper']['col_ontology']['namespace_actions']['update_namespace'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Update Selected'),
+          '#name'       => 'upd_selected',
+          '#attributes' => ['class' => ['btn', 'btn-warning', 'mb-2', 'save-button']],
+        ];
+        $form['actions_wrapper']['col_ontology']['namespace_actions']['delete_namespace'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Delete Selected'),
+          '#name'       => 'del_selected',
+          '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-button']],
+        ];
+
+        // --------------------------------------------------------------------------
+        // COLUMN 2: All Triples Actions
+        // --------------------------------------------------------------------------
+        $form['actions_wrapper']['col_all_triples'] = [
+          '#type'       => 'container',
+          '#attributes' => ['class' => ['col-md-4']],
+        ];
+        // Reload Triples from All Ontologies with URL (primary)
+        $form['actions_wrapper']['col_all_triples']['triples_all_actions'] = [
+          '#type'       => 'fieldset',
+          '#title'      => $this->t('All Ontologies Triples Actions'),
+          '#attributes' => ['class' => ['p-3', 'border', 'rounded', 'w-100']],
+        ];
+        $form['actions_wrapper']['col_all_triples']['triples_all_actions']['reload_triples_submit'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Reload with URL'),
+          '#name'       => 'reload',
+          '#attributes' => ['class' => ['btn', 'btn-primary', 'mb-2', 'reload-button']],
+        ];
+        $form['actions_wrapper']['col_all_triples']['triples_all_actions']['delete_triples_submit'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Delete with URL'),
+          '#name'       => 'delete',
+          '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-button']],
+        ];
+
+        // --------------------------------------------------------------------------
+        // COLUMN 3: Selected Triples Actions
+        // --------------------------------------------------------------------------
+       $form['actions_wrapper']['col_selected_triples'] = [
+          '#type'       => 'container',
+          '#attributes' => ['class' => ['col-md-4',]],
+        ];
+        // Reload Triples from Selected Ontologies (primary)
+        $form['actions_wrapper']['col_selected_triples']['triples_selected_actions'] = [
+          '#type'       => 'fieldset',
+          '#title'      => $this->t('Selected Triples Ontologies Actions'),
+          '#attributes' => ['class' => ['p-3', 'border', 'rounded', 'w-100']],
+        ];
+        $form['actions_wrapper']['col_selected_triples']['triples_selected_actions']['reload_triples_selected_submit'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Reload from Selected'),
+          '#name'       => 'reload_selected',
+          '#attributes' => ['class' => ['btn', 'btn-primary', 'mb-2', 'arrow-button']],
+        ];
+        $form['actions_wrapper']['col_selected_triples']['triples_selected_actions']['delete_triples_selected'] = [
+          '#type'       => 'submit',
+          '#value'      => $this->t('Delete from Selected'),
+          '#name'       => 'delete_selected',
+          '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-button']],
+        ];
+
         $form['filler_1'] = [
-            '#type' => 'item',
-            '#title' => $this->t('<br>'),
-        ];
-
-        $form['reload_triples_submit'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Reload Triples from All Ontologies with URL'),
-            '#name' => 'reload',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'reload-button'],
-            ],
-        ];
-
-        $form['delete_triples_submit'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Delete Triples from All Ontologies with URL'),
-            '#name' => 'delete',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'delete-element-button'],
-            ],
-        ];
-
-        $form['add_ontology'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Add Ontology'),
-            '#name' => 'add_ontology',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'add-element-button'],
-            ],
-        ];
-
-        $form['update_namespace'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Update Selected Ontology'),
-            '#name' => 'upd_selected',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'save-button'],
-            ],
-        ];
-
-        $form['delete_namespace'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Delete Selected Ontologies'),
-            '#name' => 'del_selected',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'delete-element-button'],
-            ],
-        ];
-
-        //$form['reset_namespace'] = [
-        //    '#type' => 'submit',
-        //    '#value' => $this->t('Reset Ontologies'),
-        //    '#name' => 'reset',
-        //];
-
-        $form['filler_2'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
         ];
@@ -134,11 +164,12 @@
             '#type' => 'tableselect',
             '#header' => $header,
             '#options' => $output,
+            '#multiple' => TRUE,
             '#js_select' => FALSE,
             '#empty' => t('No Ontology found'),
         ];
 
-        $form['filler_3'] = [
+        $form['filler_2'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
         ];
@@ -152,7 +183,7 @@
             ],
         ];
 
-        $form['filler_4'] = [
+        $form['filler_3'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
         ];
@@ -182,6 +213,46 @@
         // RETRIEVE TRIGGERING BUTTON
         $triggering_element = $form_state->getTriggeringElement();
         $button_name = $triggering_element['#name'];
+
+        if ($button_name === 'reload_selected') {
+          $selected = array_filter($form_state->getValue('element_table'));
+          $abbrevs  = array_keys($selected);
+
+          if (empty($abbrevs)) {
+            \Drupal::messenger()->addWarning($this->t('Please select at least one item on the table.'));
+            return;
+          }
+
+          $namespaces = [];
+          foreach ($abbrevs as $abbr) {
+            foreach ($this->getList() as $nsObj) {
+              if ($nsObj->label === $abbr) {
+                $namespaces[] = $nsObj->uri;
+                break;
+              }
+            }
+          }
+
+          if (empty($namespaces)) {
+            \Drupal::messenger()->addWarning($this->t('Please select at least one namespace.'));
+          }
+          else {
+            $api = \Drupal::service('rep.api_connector');
+            // kint($namespaces);
+            $response = $api->repoReloadSelectedNamespaceTriples($namespaces);
+            if (!empty($message)) {
+              \Drupal::messenger()->addMessage(
+                $this->t('@msg', ['@msg' => $message])
+              );
+            }
+            else {
+              \Drupal::messenger()
+                ->addWarning($this->t('No response received from the API.'));
+            }
+            $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+          }
+          return;
+        }
 
         // RETRIEVE SELECTED ROWS, IF ANY
         $selected_rows = $form_state->getValue('element_table');
