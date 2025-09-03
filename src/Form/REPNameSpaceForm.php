@@ -79,8 +79,9 @@ use Drupal\rep\Entity\Ontology;
           '#type'       => 'container',
           '#attributes' => ['class' => ['col-md-4']],
         ];
-        $form['actions_wrapper']['col_ontology']['namespace_actions'] = [
-          '#type'       => 'fieldset',
+      $form['actions_wrapper']['col_ontology']['namespace_actions'] = [
+
+  '#type'       => 'fieldset',
           '#title'      => $this->t('Ontology Actions'),
           '#attributes' => ['class' => ['p-3', 'border', 'rounded', 'w-100']],
         ];
@@ -210,131 +211,120 @@ use Drupal\rep\Entity\Ontology;
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
 
-        // RETRIEVE TRIGGERING BUTTON
-        $triggering_element = $form_state->getTriggeringElement();
-        $button_name = $triggering_element['#name'];
+      // RETRIEVE TRIGGERING BUTTON
+      $triggering_element = $form_state->getTriggeringElement();
+      $button_name = $triggering_element['#name'];
 
-        if ($button_name === 'reload_selected') {
-          $selected = array_filter($form_state->getValue('element_table'));
-          $abbrevs  = array_keys($selected);
-
-          if (empty($abbrevs)) {
-            \Drupal::messenger()->addWarning($this->t('Please select at least one item on the table.'));
-            return;
+      $namespaces = [];
+      foreach ($abbrevs as $abbr) {
+        foreach ($this->getList() as $nsObj) {
+          if ($nsObj->label === $abbr) {
+            $namespaces[] = $nsObj->uri;
+            break;
           }
+        }
+      }
 
-          $namespaces = [];
-          foreach ($abbrevs as $abbr) {
-            foreach ($this->getList() as $nsObj) {
-              if ($nsObj->label === $abbr) {
-                $namespaces[] = $nsObj->uri;
-                break;
+      if (empty($namespaces)) {
+        \Drupal::messenger()->addWarning($this->t('Please select at least one namespace.'));
+      }
+      else {
+        $api = \Drupal::service('rep.api_connector');
+        // kint($namespaces);
+        $response = $api->repoReloadSelectedNamespaceTriples($namespaces);
+        if (!empty($message)) {
+          \Drupal::messenger()->addMessage(
+            $this->t('@msg', ['@msg' => $message])
+          );
+        }
+        else {
+          \Drupal::messenger()
+            ->addWarning($this->t('No response received from the API.'));
+        }
+        $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+      }
+
+      // RETRIEVE SELECTED ROWS, IF ANY
+      $selected_rows = $form_state->getValue('element_table');
+      $rows = [];
+      foreach ($selected_rows as $index => $selected) {
+          if ($selected) {
+              $rows[$index] = $index;
+          }
+      }
+
+      // BUTTON ACTIONS
+
+      if ($button_name === 'back') {
+        $form_state->setRedirectUrl(Url::fromRoute('rep.admin_settings_custom'));
+        return;
+      }
+
+      $APIservice = \Drupal::service('rep.api_connector');
+
+      if ($button_name === 'reload') {
+        $message = $APIservice->parseObjectResponse($APIservice->repoReloadNamespaceTriples(),'repoReloadNamespaceTriples');
+        \Drupal::messenger()->addMessage(t($message));
+        $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+        return;
+      }
+
+      if ($button_name === 'delete') {
+        $message = $APIservice->parseObjectResponse($APIservice->repoDeleteNamespaceTriples(),'repoDeleteNamespaceTriples');
+        \Drupal::messenger()->addMessage(t($message));
+        $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+        return;
+      }
+
+      if ($button_name === 'add_ontology') {
+        $uid = \Drupal::currentUser()->id();
+        $previousUrl = Url::fromRoute('rep.admin_namespace_settings_custom')->toString();
+        Utils::trackingStoreUrls($uid, $previousUrl, 'rep.admin_namespace_settings_custom');
+        $url = Url::fromRoute('rep.add_ontologies');
+        $form_state->setRedirectUrl($url);
+        return;
+
+      }
+
+      if ($button_name === 'upd_selected') {
+          if (sizeof($rows) != 1) {
+              \Drupal::messenger()->addWarning(t("Select the exact Ontology to be updated."));
+          } else {
+              $firstKey = array_key_first($rows);
+              $abbrev = $rows[$firstKey];
+              //dpm($abbrev);
+              $url = Url::fromRoute('rep.update_namespace_settings_custom', ['abbreviation' => $abbrev]);
+              $form_state->setRedirectUrl($url);
+              return;
+          }
+      }
+
+      if ($button_name === 'del_selected') {
+          if (sizeof($rows) <= 0) {
+              \Drupal::messenger()->addWarning(t("At least one Ontology needs to be selected for deletion."));
+          } else {
+              foreach($rows as $abbrev) {
+                  if ($form['element_table']['#options'][$abbrev]['ontology_in_memory'] == 'yes') {
+                      \Drupal::messenger()->addWarning(t("An in-memory ontology cannot be deleted."));
+                      return;
+                  } else {
+                      $message = ' ';
+                      $message = $APIservice->parseObjectResponse($APIservice->repoDeleteSelectedNamespace($abbrev),'repoDeleteSelectedNamespace');
+                      \Drupal::messenger()->addMessage(t($message));
+                  }
               }
-            }
+              $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+              return;
           }
+      }
 
-          if (empty($namespaces)) {
-            \Drupal::messenger()->addWarning($this->t('Please select at least one namespace.'));
-          }
-          else {
-            $api = \Drupal::service('rep.api_connector');
-            // kint($namespaces);
-            $response = $api->repoReloadSelectedNamespaceTriples($namespaces);
-            if (!empty($message)) {
-              \Drupal::messenger()->addMessage(
-                $this->t('@msg', ['@msg' => $message])
-              );
-            }
-            else {
-              \Drupal::messenger()
-                ->addWarning($this->t('No response received from the API.'));
-            }
-            $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
-          }
-          return;
-        }
-
-        // RETRIEVE SELECTED ROWS, IF ANY
-        $selected_rows = $form_state->getValue('element_table');
-        $rows = [];
-        foreach ($selected_rows as $index => $selected) {
-            if ($selected) {
-                $rows[$index] = $index;
-            }
-        }
-
-        // BUTTON ACTIONS
-
-        if ($button_name === 'back') {
-          $form_state->setRedirectUrl(Url::fromRoute('rep.admin_settings_custom'));
-          return;
-        }
-
-        $APIservice = \Drupal::service('rep.api_connector');
-
-        if ($button_name === 'reload') {
-          $message = $APIservice->parseObjectResponse($APIservice->repoReloadNamespaceTriples(),'repoReloadNamespaceTriples');
-          \Drupal::messenger()->addMessage(t($message));
-          $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
-          return;
-        }
-
-        if ($button_name === 'delete') {
-          $message = $APIservice->parseObjectResponse($APIservice->repoDeleteNamespaceTriples(),'repoDeleteNamespaceTriples');
-          \Drupal::messenger()->addMessage(t($message));
-          $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
-          return;
-        }
-
-        if ($button_name === 'add_ontology') {
-          $uid = \Drupal::currentUser()->id();
-          $previousUrl = Url::fromRoute('rep.admin_namespace_settings_custom')->toString();
-          Utils::trackingStoreUrls($uid, $previousUrl, 'rep.admin_namespace_settings_custom');
-          $url = Url::fromRoute('rep.add_ontologies');
-          $form_state->setRedirectUrl($url);
-          return;
-
-        }
-
-        if ($button_name === 'upd_selected') {
-            if (sizeof($rows) != 1) {
-                \Drupal::messenger()->addWarning(t("Select the exact Ontology to be updated."));
-            } else {
-                $firstKey = array_key_first($rows);
-                $abbrev = $rows[$firstKey];
-                //dpm($abbrev);
-                $url = Url::fromRoute('rep.update_namespace_settings_custom', ['abbreviation' => $abbrev]);
-                $form_state->setRedirectUrl($url);
-                return;
-            }
-        }
-
-        if ($button_name === 'del_selected') {
-            if (sizeof($rows) <= 0) {
-                \Drupal::messenger()->addWarning(t("At least one Ontology needs to be selected for deletion."));
-            } else {
-                foreach($rows as $abbrev) {
-                    if ($form['element_table']['#options'][$abbrev]['ontology_in_memory'] == 'yes') {
-                        \Drupal::messenger()->addWarning(t("An in-memory ontology cannot be deleted."));
-                        return;
-                    } else {
-                        $message = ' ';
-                        $message = $APIservice->parseObjectResponse($APIservice->repoDeleteSelectedNamespace($abbrev),'repoDeleteSelectedNamespace');
-                        \Drupal::messenger()->addMessage(t($message));
-                    }
-                }
-                $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
-                return;
-            }
-        }
-
-        //if ($button_name === 'reset') {
-        //    $message = ' ';
-        //    $message = $APIservice->parseObjectResponse($APIservice->repoResetNamespaces(),'repoResetNamespaces');
-        //    \Drupal::messenger()->addMessage(t($message));
-        //    $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
-        //    return;
-        //}
+      //if ($button_name === 'reset') {
+      //    $message = ' ';
+      //    $message = $APIservice->parseObjectResponse($APIservice->repoResetNamespaces(),'repoResetNamespaces');
+      //    \Drupal::messenger()->addMessage(t($message));
+      //    $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+      //    return;
+      //}
 
     }
 

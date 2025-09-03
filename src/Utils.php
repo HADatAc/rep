@@ -15,6 +15,7 @@ use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\Component\Render\Markup;
 use Drupal\Component\Utility\Html;
+use Drupal\rep\Vocabulary\OWL;
 
 class Utils {
 
@@ -1386,7 +1387,7 @@ class Utils {
       return '';
     }
 
-    // Se o valor já for uma URL completa, retorna diretamente.
+    // If the value is already a full URL, return it directly.
     if (strpos($apiDocument, 'http') === 0) {
       return $apiDocument;
     }
@@ -1398,17 +1399,17 @@ class Utils {
       $file_content = $response->getContent();
       $original_content_type = $response->headers->get('Content-Type');
 
-      // Verifica a extensão do arquivo com base no nome.
+      // Check the file extension based on the name.
       $extension = strtolower(pathinfo($apiDocument, PATHINFO_EXTENSION));
 
       if ($extension === 'pdf') {
-        // Se for PDF, force o Content-Type para application/pdf.
+        // If it is a PDF, force the Content-Type to application/pdf.
         $content_type = 'application/pdf';
         $response->headers->set('Content-Type', $content_type);
         $response->headers->set('Content-Disposition', 'inline; filename="' . $apiDocument . '"');
       }
       else {
-        // Para outros tipos de arquivo, usa o Content-Type original.
+        // For other file types, use the original Content-Type.
         $content_type = $original_content_type;
       }
 
@@ -1420,9 +1421,150 @@ class Utils {
     }
   }
 
-  // remove @XXXX from the end of the text
-  public static function sanitizeString($text) {
-    return preg_replace('/@.*$/', '', $text);
+  // 🔁 Builds nodes and edges from an array of data (converted visElement)
+  public static function buildGraphFromArray($data, $resolver = null) {
+  $nodes = [];
+  $edges = [];
+
+  $createNode = function ($id, $label, $typeUri = null) {
+    $label = self::sanitizeString($label); // ✅ sanitizes
+    $shape = 'box';
+    $color = ['background' => '#007bff', 'border' => '#0056b3'];
+    $font = ['color' => 'white'];
+
+    if ($typeUri === 'http://www.w3.org/2002/07/owl#Class') {
+      $shape = 'ellipse';
+      $color = ['background' => '#28a745', 'border' => '#1e7e34'];
+      $font = ['color' => 'black'];
+    }
+
+    return [
+      'id' => $id,
+      'label' => $label,
+      'shape' => $shape,
+      'color' => $color,
+      'font' => $font,
+    ];
+  };
+
+  $walkSequence = function ($item) use (&$walkSequence, &$nodes, &$edges, $createNode, $resolver) {
+    while ($item) {
+      $id = $item->uri ?? uniqid('node_');
+      $label = self::sanitizeString($item->label ?? 'Unnamed');
+      $typeUri = $item->typeUri ?? null;
+      $nodes[] = $createNode($id, $label, $typeUri);
+
+      if (isset($item->component)) {
+        $comp = $item->component;
+        $compId = $comp->uri ?? uniqid('comp_');
+        $nodes[] = $createNode($compId, self::sanitizeString($comp->label ?? 'Component'), $comp->typeUri ?? null);
+        $edges[] = ['from' => $id, 'to' => $compId, 'label' => 'hasComponent', 'arrows' => 'to'];
+      }
+
+      if (isset($item->detectorStem)) {
+        $stem = $item->detectorStem;
+        $stemId = $stem->uri ?? uniqid('stem_');
+        $nodes[] = $createNode($stemId, self::sanitizeString($stem->label ?? 'Stem'), $stem->typeUri ?? null);
+        $edges[] = ['from' => $item->component->uri ?? $id, 'to' => $stemId, 'label' => 'hasDetectorStem', 'arrows' => 'to'];
+      }
+
+      if (isset($item->hasNext)) {
+        $next = is_object($item->hasNext) ? $item->hasNext : ($resolver ? call_user_func($resolver, $item->hasNext) : null);
+        if ($next && is_object($next)) {
+          $edges[] = ['from' => $id, 'to' => $next->uri ?? uniqid(), 'label' => 'hasNext', 'arrows' => 'to'];
+          $item = $next;
+        } else break;
+      } else break;
+    }
+  };
+
+  if (isset($data['hasFirst']) && is_object($data['hasFirst'])) {
+    $walkSequence($data['hasFirst']);
   }
 
+  if (isset($data['typeURL']) && is_object($data['typeURL'])) {
+    $nodes[] = $createNode($data['typeURL']->uri ?? uniqid(), self::sanitizeString($data['typeURL']->label ?? 'Type'), $data['typeURL']->typeUri ?? null);
+  }
+
+  if (!empty($data['hascoTypeUri']) && is_string($data['hascoTypeUri'])) {
+    $hascoTypeUri = $data['hascoTypeUri'];
+    if (!isset($data['typeUri']) || $data['typeUri'] !== $hascoTypeUri) {
+      $label = preg_match('/#([^#\/]+)$/', $hascoTypeUri, $m) ? $m[1] : basename($hascoTypeUri);
+      $label = self::sanitizeString($label);
+      $nodes[] = $createNode($hascoTypeUri, $label);
+      $edges[] = [
+        'from' => $data['uri'] ?? 'root',
+        'to' => $hascoTypeUri,
+        'label' => 'hascoTypeUri',
+        'arrows' => 'to',
+      ];
+    }
+  }
+
+  return ['nodes' => $nodes, 'edges' => $edges];
 }
+
+// ✅ Removes @lang or @type from the end
+public static function sanitizeString($text) {
+  return preg_replace('/@.*$/', '', $text);
+}
+
+// ✅ Renders the graph canvas panel with all necessary data
+public static function buildGraphCanvas(array $baseNodes, array $extraNodes, array $extraEdges, array $baseEdges): array {
+  return [
+    'graph_canvas_block' => [
+      '#type' => 'inline_template',
+      '#template' => <<<'EOT'
+<div class="graph-canvas-block" style="margin: 20px auto; padding: 20px; max-width: 100%; border: 2px solid #ccc; border-radius: 12px; background: #fff;">
+  <h2 style="margin-bottom: 15px;">Graph Visualization</h2>
+  <div id="my-network" style="width: 100%; height: 700px; border: 2px solid #007bff; background: white; border-radius: 6px;"></div>
+</div>
+EOT,
+      '#context' => [
+        'nodes' => json_encode($baseNodes),
+        'edges' => json_encode($baseEdges),
+        'extraNodes' => json_encode($extraNodes),
+        'extraEdges' => json_encode($extraEdges),
+      ],
+      '#attached' => [
+        'library' => ['rep/vis_graph_panel'], // ✅ includes new JS library
+        'drupalSettings' => [
+          'graphData' => [
+            'nodes' => $baseNodes,
+            'edges' => $baseEdges,
+            'extraNodes' => $extraNodes,
+            'extraEdges' => $extraEdges,
+          ],
+        ],
+      ],
+      '#cache' => ['max-age' => 0], // ✅ disables caching
+    ],
+  ];
+}
+
+// 🧱 Basic creation of a node with visual formatting
+public static function buildNode($uri, $label, $typeUri = null, $shape = 'box', $size = 20) {
+  $label = self::sanitizeString($label); // ✅ sanitizes the label
+  $color = ['background' => '#007bff', 'border' => '#0056b3'];
+  $fontColor = 'white';
+
+  if ($typeUri === 'http://www.w3.org/2002/07/owl#Class') {
+    $color = ['background' => '#28a745', 'border' => '#1e7e34'];
+    $fontColor = 'black';
+  }
+
+  return [
+    'id' => $uri,
+    'label' => $label,
+    'shape' => $shape,
+    'color' => $color,
+    'font' => ['color' => $fontColor, 'size' => $size],
+    'typeUri' => $typeUri,
+  ];
+}
+
+}
+
+
+
+

@@ -10,3 +10,5 @@ version: '0.9.1'
 configure: rep.admin_settings
 libraries:
   - rep/rep_js_css
+  - rep/qr_code_assets
+  

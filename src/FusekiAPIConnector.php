@@ -12,7 +12,7 @@ use Exception;
 use Symfony\Component\HttpFoundation\Response;
 use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
+use Psr\Http\Message\ResponseInterface;
 
 class FusekiAPIConnector {
   private $client;
@@ -255,7 +255,6 @@ class FusekiAPIConnector {
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
-
 
   public function getHascoType($uri) {
     $endpoint = "/hascoapi/api/hascotype/".rawurlencode($uri);
@@ -777,6 +776,31 @@ class FusekiAPIConnector {
       "/delete/" .
       rawurlencode($elementUri);
     $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/:elementtype/bysoc/:socuri/:pageSize/:offset                                  org.hascoapi.console.controllers.restapi.StudyObjectCollectionAPI.getElementsBySOC(socuri : String, elementtype: String, pageSize : Integer, offset : Integer)
+  public function listElementsBySOC($elementType, $socuri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/bysoc/".
+      rawurlencode($socuri)."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/:elementtype/bysoc/total/:socuri                                              org.hascoapi.console.controllers.restapi.StudyObjectCollectionAPI.getTotalElementsBySOC(socuri : String, elementtype : String)
+  public function listSizeElementsBySOC($elementType, $socuri) {
+    $endpoint = "/hascoapi/api/".
+      $elementType .
+      "/bysoc/total/" .
+      rawurlencode($socuri);
+    $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -2052,6 +2076,15 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // GET     /hascoapi/api/repo/namespace/topclasses/:abbreviation org.hascoapi.console.controllers.restapi.RepoPage.getTopClasses(abbreviation : String)
+  public function repoTopClassNamespaces($abbreviation) {
+    $endpoint = "/hascoapi/api/repo/namespace/topclasses/".rawurlencode($abbreviation);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**************************************************************************
    *
    *                     E R R O R     M E T H O D S
@@ -2289,9 +2322,6 @@ class FusekiAPIConnector {
     }
 
     // 4) If it's a stream or other object with __toString(), cast to string.
-    // if (!is_string($response) && method_exists($response, '__toString')) {
-    //   $response = (string) $response;
-    // }
     if (!is_string($response) && is_object($response) && method_exists($response, '__toString')) {
       $response = (string) $response;
     }
@@ -2706,5 +2736,63 @@ class FusekiAPIConnector {
       '@s' => $status ?? 'none',
     ]);
     return NULL;
+  }
+
+  // POST    /hascoapi/api/repo/namespace/app/          org.hascoapi.console.controllers.restapi.RepoPage.ingestAppOnt(request: play.mvc.Http.Request)
+  public function uploadOntology(): ?ResponseInterface {
+    $logger = \Drupal::logger('rep_upload');
+    $file_system = \Drupal::service('file_system');
+    $config = \Drupal::config('rep.settings');
+    $guesser = \Drupal::service('file.mime_type.guesser');
+
+    $ns = (string) $config->get('repository_namespace_prefix');
+    $private_uri = 'private://ont/' . $ns . '.ttl';
+    $path = $file_system->realpath($private_uri);
+
+    if ($path === FALSE || !file_exists($path)) {
+      $logger->error('Ontology file not found or realpath failed: {uri}', ['uri' => $private_uri]);
+      return null;
+    }
+
+    $file_content = @file_get_contents($path);
+    if ($file_content === FALSE) {
+      $logger->error('Unable to read file contents: {path}', ['path' => $path]);
+      return null;
+    }
+
+    $mime_type = $guesser->guessMimeType($path) ?: 'text/turtle; charset=UTF-8';
+    $url = rtrim($this->getApiUrl(), '/') . '/hascoapi/api/repo/namespace/app';
+
+    $authHeader = $this->bearer ?? '';
+    if ($authHeader !== '' && stripos($authHeader, 'Bearer ') !== 0) {
+      $authHeader = 'Bearer ' . $authHeader;
+    }
+
+    $client = new Client([
+      'timeout' => 20,
+      'connect_timeout' => 10,
+      'http_errors' => false, // keep 4xx/5xx as responses, not exceptions
+    ]);
+
+    try {
+      $response = $client->post($url, [
+        'headers' => [
+          'Content-Type'  => $mime_type,
+          'Content-Disposition' => 'attachment; filename="'.$ns . '.ttl"',
+          'Accept'        => 'application/json, text/plain;q=0.5, */*;q=0.1',
+          'Authorization' => $authHeader,
+        ],
+        'body' => $file_content,
+      ]);
+
+      return $response; // <-- devolve o ResponseInterface “cru”
+    } catch (RequestException $e) {
+      $logger->error('Upload exception: {msg}', ['msg' => $e->getMessage()]);
+      // If the server returned a response, you can still return it:
+      if ($e->hasResponse()) {
+        return $e->getResponse();
+      }
+      return null;
+    }
   }
 }

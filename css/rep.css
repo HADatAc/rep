@@ -261,6 +261,7 @@ button.manage_slotelements-button {
   transform: translateY(-50%);
 }
 
+a.ingest_mt-button,
 button.ingest_mt-button {
   position: relative;
   padding-left: 2.1rem;
@@ -395,6 +396,7 @@ button.check-button.top-icon {
   text-align: center;
   padding-left: 12px;
 }
+
 button.check-button.top-icon::before {
   content: "\f00c";
   font-family: "Font Awesome 6 Free";
@@ -1235,10 +1237,20 @@ body.path-sem div.details-wrapper {
   word-break: break-all;
 }
 
-
 /* NAMESPACE FORM */
 form.rep-form-namespace legend {
   padding: 0 5px;
   float: none;
   width: fit-content;
+}
+
+.ingest_mt-button.is-disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+#current-tree .jstree-anchor.root-node {
+  cursor: default;
+  font-weight: 600; /* or any style you prefer */
 }

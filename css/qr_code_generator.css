@@ -1,0 +1,6 @@
+#qr-output {
+  margin-top: 10px;
+}
+#qr-output canvas {
+  border: 1px solid #ccc;
+}

@@ -25,4 +25,3 @@ services:
     class: Drupal\rep\EventSubscriber\BlockConfigUpdateSubscriber
     tags:
       - { name: event_subscriber }
-
