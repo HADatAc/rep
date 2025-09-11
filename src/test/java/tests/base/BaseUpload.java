@@ -34,10 +34,11 @@ public abstract class BaseUpload {
         System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--remote-allow-origins=*");
-        options.addArguments("--headless=new"); // novo modo headless mais estável
+        options.addArguments("--headless=new"); 
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
+        options.addArguments("--disable-setuid-sandbox");
         options.addArguments("--ignore-certificate-errors");
 
         driver = new ChromeDriver(options);
