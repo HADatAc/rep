@@ -43,13 +43,14 @@ public abstract class BaseUpload {
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-
+        System.out.println("Navigating to login page: " + LOGIN_URL);
         driver.get(LOGIN_URL);
         driver.findElement(By.id("edit-name")).sendKeys(USERNAME);
         driver.findElement(By.id("edit-pass")).sendKeys(PASSWORD);
-
+        System.out.println("Credentials entered.");
         // Robust click for login
         clickElementRobust(By.id("edit-submit"));
+        System.out.println("Login submitted.");
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(
                 By.cssSelector("#toolbar-item-user")));
