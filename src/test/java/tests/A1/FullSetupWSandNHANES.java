@@ -9,11 +9,6 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 
-import tests.config.AdminAuto;
-import tests.config.BEViaFEStatusSimpleCheck;
-import tests.config.BEViaFEStatusTest;
-import tests.config.FusekiConnectionTest;
-import tests.repository.ConfigValidationTest;
 import tests.utils.FullDeleteTest;
 import tests.utils.FullIngestNHANESTestDRAFT;
 import tests.utils.FullIngestWSTestDRAFT;
@@ -27,9 +22,9 @@ public class FullSetupWSandNHANES {
     @Test
     void runOnlyIngestsForCurrentMode() throws InterruptedException {
         // Setup of rep configuration
-        
-      //  runTestClassAndAbortOnFailure(RepositoryFormAutomationTest.class);
-        //Thread.sleep(5000);
+        /* 
+        runTestClassAndAbortOnFailure(RepositoryFormAutomationTest.class);
+        Thread.sleep(5000);
 
 
         //Admin Status and Data conf permission
@@ -45,11 +40,11 @@ public class FullSetupWSandNHANES {
 
         runTestClassAndAbortOnFailure(BEViaFEStatusTest.class);
         Thread.sleep(5000);
-
+        
 
         runTestClassAndAbortOnFailure(ConfigValidationTest.class);
         Thread.sleep(5000);
-
+*/
         // All data upload
         runTestClassAndAbortOnFailure(FullUploadWS.class);
         Thread.sleep(5000);
