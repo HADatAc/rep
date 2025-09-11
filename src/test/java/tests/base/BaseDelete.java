@@ -37,12 +37,12 @@ public abstract class BaseDelete {
     void setup() {
         System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
         ChromeOptions options = new ChromeOptions();
-        //options.addArguments("--remote-allow-origins=*");
+        options.addArguments("--remote-allow-origins=*");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
-        options.setAcceptInsecureCerts(true);
+        //options.setAcceptInsecureCerts(true);
         options.addArguments("--ignore-certificate-errors");
 
         driver = new ChromeDriver(options);

@@ -25,12 +25,12 @@ public abstract class BaseTest {
     @BeforeEach
     public void setUp() throws InterruptedException {
 ChromeOptions options = new ChromeOptions();
-        //options.addArguments("--remote-allow-origins=*");
+        options.addArguments("--remote-allow-origins=*");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
-        options.setAcceptInsecureCerts(true);
+       // options.setAcceptInsecureCerts(true);
         options.addArguments("--ignore-certificate-errors");
 
         driver = new ChromeDriver(options);
