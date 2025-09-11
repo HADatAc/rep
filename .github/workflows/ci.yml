@@ -3,7 +3,10 @@ name: Run Selenium Tests
 on:
   push:
     branches:
-      - stream_topics
+      - DEV_V0.9.3
+  pull_request:
+    branches:
+      - DEV_V0.9.3
 
 jobs:
   run-selenium-tests:
@@ -11,16 +14,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Java
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: maven
 
-      - name: Install unzip
-        run: sudo apt-get install -y unzip
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y unzip xvfb
 
       - name: Prepare /var/data permissions and download chromedriver
         run: |
@@ -32,26 +36,17 @@ jobs:
 
           unzip -q chromedriver-linux64.zip || (echo "Unzip failed!" && exit 3)
 
-          mv chromedriver-linux64/chromedriver ./
+          mv chromedriver-linux64/chromedriver ./chromedriver
           chmod +x chromedriver
 
           rm -rf chromedriver-linux64.zip chromedriver-linux64
-
-      - name: Install Xvfb
-        run: sudo apt-get install -y xvfb
+          echo "/var/data/chromedriver" >> $GITHUB_PATH
 
       - name: Start Xvfb
         run: |
           Xvfb :99 -screen 0 1920x1080x24 &
-          export DISPLAY=:99
+          echo "DISPLAY=:99" >> $GITHUB_ENV
           sleep 3
-
-      - name: Compile all Java test files
-        run: |
-          find tests/A1 -name "*.java" > sources.txt
-          LIBS=$(find tests/selenium-java-4.26.0 -name "*.jar" | tr '\n' ':')
-          CLASSPATH=".:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar"
-          javac -cp "$CLASSPATH" @sources.txt
 
       - name: Wait for hascogui to be ready
         run: |
@@ -60,18 +55,15 @@ jobs:
             sleep 5
           done
 
-      - name: Run Regression Test
-        run: |
-          LIBS=$(find tests/selenium-java-4.26.0 -name "*.jar" | tr '\n' ':')
-          CLASSPATH=".:${LIBS}tests/junit-platform-console-standalone-1.8.2.jar:tests"
-          java -cp "$CLASSPATH" org.junit.platform.console.ConsoleLauncher --select-class "tests.A1.RegressionTEST"
+      - name: Run Maven tests (specific test class)
+        run: mvn -B -ntp test -Dtest=tests.A1.FullSetupWSandNHANES
 
       - name: Notify on failure
         if: failure()
         uses: actions/github-script@v6
         with:
           script: |
-            const prAuthor = context.payload.pull_request.user.login;
+            const prAuthor = context.payload.pull_request?.user?.login || "unknown";
             const message = `❌ The tests have failed! @${prAuthor}, please check the logs and fix the problems before merging.`;
 
             github.rest.issues.createComment({
