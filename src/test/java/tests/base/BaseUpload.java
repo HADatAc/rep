@@ -30,11 +30,11 @@ public abstract class BaseUpload {
     protected WebDriverWait wait;
 
     @BeforeAll
-    void setup() throws InterruptedException{
+    void setup() {
         System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--remote-allow-origins=*");
-        options.addArguments("--headless");
+        options.addArguments("--headless=new"); // novo modo headless mais estável
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
@@ -42,22 +42,25 @@ public abstract class BaseUpload {
 
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
-        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+
         System.out.println("Navigating to login page: " + LOGIN_URL);
         driver.get(LOGIN_URL);
-        Thread.sleep(3000);
-        driver.findElement(By.id("edit-name")).sendKeys(USERNAME);
-        Thread.sleep(3000);
-        driver.findElement(By.id("edit-pass")).sendKeys(PASSWORD);
-        Thread.sleep(3000);
-        System.out.println("Credentials entered.");
-        // Robust click for login
+
+        // Espera e preenche login
+        WebElement usernameField = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-name")));
+        usernameField.sendKeys(USERNAME);
+
+        WebElement passwordField = driver.findElement(By.id("edit-pass"));
+        passwordField.sendKeys(PASSWORD);
+
+        // Clique robusto para login
         clickElementRobust(By.id("edit-submit"));
         System.out.println("Login submitted.");
-        Thread.sleep(3000);
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.cssSelector("#toolbar-item-user")));
+        // Aguarda toolbar do usuário aparecer
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
+        System.out.println("Login successful.");
     }
 
     protected void navigateToUploadPage(String type) {
@@ -84,7 +87,6 @@ public abstract class BaseUpload {
             ((JavascriptExecutor) driver).executeScript(
                     "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", fileInput);
 
-            Thread.sleep(2000);
             System.out.println("File uploaded: " + file.getAbsolutePath());
 
         } catch (Exception e) {
@@ -95,7 +97,6 @@ public abstract class BaseUpload {
     protected void submitFormAndVerifySuccess() {
         try {
             By saveButtonLocator = By.xpath("//button[contains(text(), 'Save')]");
-            Thread.sleep(2000); // Ensure button is ready
             clickElementRobust(saveButtonLocator);
 
             boolean confirmationAppeared = wait.until(driver ->
@@ -105,7 +106,7 @@ public abstract class BaseUpload {
 
             assertTrue(confirmationAppeared, "No confirmation message found after upload.");
         } catch (Exception e) {
-            fail("Failed to upload the file: " + e.getMessage());
+            fail("Failed to submit form: " + e.getMessage());
         }
     }
 
@@ -144,7 +145,7 @@ public abstract class BaseUpload {
         }
 
         try {
-            Thread.sleep(300); // Allow page processing
+            Thread.sleep(300); // small pause to allow page processing
         } catch (InterruptedException ignored) {}
     }
 
