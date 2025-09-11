@@ -14,9 +14,9 @@ import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -41,14 +41,13 @@ public abstract class BaseIngest {
 
     @BeforeAll
     void setup() {
-    System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
+        System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--remote-allow-origins=*");
-       options.addArguments("--headless");
+        options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
-        //options.setAcceptInsecureCerts(true);
         options.addArguments("--ignore-certificate-errors");
 
         driver = new ChromeDriver(options);
@@ -58,7 +57,7 @@ public abstract class BaseIngest {
         driver.get(LOGIN_URL);
         driver.findElement(By.id("edit-name")).sendKeys(USERNAME);
         driver.findElement(By.id("edit-pass")).sendKeys(PASSWORD);
-        driver.findElement(By.id("edit-submit")).click();
+        clickElementRobust(By.id("edit-submit"));
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
@@ -86,7 +85,7 @@ public abstract class BaseIngest {
                 if ("UNPROCESSED".equalsIgnoreCase(status)) {
                     try {
                         WebElement checkbox = cells.get(0).findElement(By.cssSelector("input[type='checkbox']"));
-                        checkbox.click();
+                        clickElementRobust(checkbox);
                         selectedRows.put(rowKey, true);
                         selectedCount++;
                         System.out.println("Selected row: " + rowKey);
@@ -108,12 +107,7 @@ public abstract class BaseIngest {
 
         try {
             WebElement ingestButton = wait.until(ExpectedConditions.elementToBeClickable(By.name(buttonName)));
-
-            try {
-                ingestButton.click();
-            } catch (WebDriverException e) {
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", ingestButton);
-            }
+            clickElementRobust(ingestButton);
 
             try {
                 wait.until(ExpectedConditions.alertIsPresent());
@@ -136,7 +130,6 @@ public abstract class BaseIngest {
             Thread.sleep(WAIT_INTERVAL_MS);
             driver.navigate().refresh();
             Thread.sleep(3000); // Wait for UI to update
-            //wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
 
             List<WebElement> updatedRows = driver.findElements(By.xpath("//table//tbody//tr"));
             processedCount = 0;
@@ -165,6 +158,7 @@ public abstract class BaseIngest {
         assertEquals(selectedCount, processedCount,
                 "Not all selected entries were processed.");
     }
+
     protected void ingestSpecificINS(String fileName) throws InterruptedException {
         String type = "ins";
         driver.get(FILES_URL + type + "/table/1/9/none");
@@ -178,17 +172,17 @@ public abstract class BaseIngest {
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 5) {
-                String name = cells.get(2).getText().trim(); // A coluna 2 é "Name"
-                String status = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim(); // Remove <b><font>
+                String name = cells.get(2).getText().trim(); // column 2 is "Name"
+                String status = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim(); // remove <b><font>
 
                 if (name.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
                     try {
                         WebElement checkbox = row.findElement(By.cssSelector("input[type='checkbox']"));
-                        checkbox.click();
+                        clickElementRobust(checkbox);
                         selectedRows.put(name, true);
                         selectedCount++;
                         System.out.println("Selected file: " + name);
-                        break; // Apenas um
+                        break; // only one
                     } catch (Exception e) {
                         fail("Could not click checkbox for file: " + name + ". Error: " + e.getMessage());
                     }
@@ -202,12 +196,7 @@ public abstract class BaseIngest {
 
         try {
             WebElement ingestButton = wait.until(ExpectedConditions.elementToBeClickable(By.name(buttonName)));
-
-            try {
-                ingestButton.click();
-            } catch (WebDriverException e) {
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", ingestButton);
-            }
+            clickElementRobust(ingestButton);
 
             try {
                 wait.until(ExpectedConditions.alertIsPresent());
@@ -254,6 +243,7 @@ public abstract class BaseIngest {
 
         fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
+
     protected void ingestSpecificSDD(String fileName) throws InterruptedException {
         String type = "sdd";
         driver.get(FILES_URL + type + "/table/1/9/none");
@@ -267,17 +257,17 @@ public abstract class BaseIngest {
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 5) {
-                String name = cells.get(2).getText().trim(); // A coluna 2 é "Name"
-                String status = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim(); // Remove <b><font>
+                String name = cells.get(2).getText().trim(); // column 2 is "Name"
+                String status = cells.get(4).getText().replaceAll("\\<.*?\\>", "").trim();
 
                 if (name.equalsIgnoreCase(fileName) && status.equalsIgnoreCase("UNPROCESSED")) {
                     try {
                         WebElement checkbox = row.findElement(By.cssSelector("input[type='checkbox']"));
-                        checkbox.click();
+                        clickElementRobust(checkbox);
                         selectedRows.put(name, true);
                         selectedCount++;
                         System.out.println("Selected file: " + name);
-                        break; // Apenas um
+                        break; // only one
                     } catch (Exception e) {
                         fail("Could not click checkbox for file: " + name + ". Error: " + e.getMessage());
                     }
@@ -291,12 +281,7 @@ public abstract class BaseIngest {
 
         try {
             WebElement ingestButton = wait.until(ExpectedConditions.elementToBeClickable(By.name(buttonName)));
-
-            try {
-                ingestButton.click();
-            } catch (WebDriverException e) {
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", ingestButton);
-            }
+            clickElementRobust(ingestButton);
 
             try {
                 wait.until(ExpectedConditions.alertIsPresent());
@@ -343,7 +328,6 @@ public abstract class BaseIngest {
 
         fail("File '" + fileName + "' was not processed after " + MAX_ATTEMPTS + " attempts.");
     }
-
 
     public String getIngestMode() {
         return ingestMode;
@@ -358,5 +342,44 @@ public abstract class BaseIngest {
         if (driver != null) {
             driver.quit();
         }
+    }
+
+    // ===== Robust Click Helpers =====
+
+    protected void clickElementRobust(By locator) {
+        int maxAttempts = 5;
+        int attempt = 0;
+
+        System.out.println("Robust click started for locator: " + locator);
+        while (attempt < maxAttempts) {
+            attempt++;
+            try {
+                WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+                clickElementRobust(element);
+                System.out.println("Robust click finished at attempt " + attempt);
+                return;
+            } catch (StaleElementReferenceException sere) {
+                System.out.println("Stale element, retry " + attempt);
+            } catch (Exception e) {
+                System.out.println("Error at attempt " + attempt + ": " + e.getMessage());
+                if (attempt == maxAttempts) {
+                    throw new RuntimeException("Failed to click after " + maxAttempts + " attempts", e);
+                }
+            }
+        }
+    }
+
+    protected void clickElementRobust(WebElement element) {
+        try {
+            element.click();
+            System.out.println("Standard click succeeded");
+        } catch (Exception e) {
+            System.out.println("Standard click failed, using JS click: " + e.getMessage());
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+        }
+
+        try {
+            Thread.sleep(300); // Allow page processing
+        } catch (InterruptedException ignored) {}
     }
 }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -30,14 +31,13 @@ public abstract class BaseUpload {
 
     @BeforeAll
     void setup() {
-System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
+        System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--remote-allow-origins=*");
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
-        //options.setAcceptInsecureCerts(true);
         options.addArguments("--ignore-certificate-errors");
 
         driver = new ChromeDriver(options);
@@ -47,7 +47,9 @@ System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriv
         driver.get(LOGIN_URL);
         driver.findElement(By.id("edit-name")).sendKeys(USERNAME);
         driver.findElement(By.id("edit-pass")).sendKeys(PASSWORD);
-        driver.findElement(By.id("edit-submit")).click();
+
+        // Robust click for login
+        clickElementRobust(By.id("edit-submit"));
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(
                 By.cssSelector("#toolbar-item-user")));
@@ -86,38 +88,60 @@ System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriv
     }
 
     protected void submitFormAndVerifySuccess() {
-         try {
-        WebElement saveButton = driver.findElement(By.xpath("//button[contains(text(), 'Save')]"));
-        Thread.sleep(2000); // Ensure button is clickable
-        saveButton.click();
+        try {
+            By saveButtonLocator = By.xpath("//button[contains(text(), 'Save')]");
+            Thread.sleep(2000); // Ensure button is ready
+            clickElementRobust(saveButtonLocator);
 
-        boolean confirmationAppeared = wait.until(driver ->
-                driver.findElements(By.cssSelector(".messages.status, .alert-success")).size() > 0 ||
-                        driver.getPageSource().toLowerCase().contains("successfully")
-        );
-  
+            boolean confirmationAppeared = wait.until(driver ->
+                    driver.findElements(By.cssSelector(".messages.status, .alert-success")).size() > 0 ||
+                            driver.getPageSource().toLowerCase().contains("successfully")
+            );
 
-
-        assertTrue(confirmationAppeared, "No confirmation message found after upload.");
-          } catch (Exception e) {
+            assertTrue(confirmationAppeared, "No confirmation message found after upload.");
+        } catch (Exception e) {
             fail("Failed to upload the file: " + e.getMessage());
         }
     }
 
-    /**
-     * Navega para a página do Semantic Data Dictionary e extrai o URI do primeiro checkbox na tabela.
-     * @return String com o URI extraído.
+    // ===== Robust Click Helpers =====
 
-    protected String extractUriFromSDD() {
-        driver.get("http://34.245.157.211/sem/select/semanticdatadictionary/1/9");
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("edit-element-table")));
-        WebElement checkbox = driver.findElement(By.cssSelector("input.form-checkbox.form-check-input"));
-        String uri = checkbox.getAttribute("value");
-        System.out.println("URI extracted: " + uri);
+    protected void clickElementRobust(By locator) {
+        int maxAttempts = 5;
+        int attempt = 0;
 
-        return uri;
+        System.out.println("Robust click started for locator: " + locator);
+        while (attempt < maxAttempts) {
+            attempt++;
+            try {
+                WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+                clickElementRobust(element);
+                System.out.println("Robust click finished at attempt " + attempt);
+                return;
+            } catch (StaleElementReferenceException sere) {
+                System.out.println("Stale element, retry " + attempt);
+            } catch (Exception e) {
+                System.out.println("Error at attempt " + attempt + ": " + e.getMessage());
+                if (attempt == maxAttempts) {
+                    throw new RuntimeException("Failed to click after " + maxAttempts + " attempts", e);
+                }
+            }
+        }
     }
-     */
+
+    protected void clickElementRobust(WebElement element) {
+        try {
+            element.click();
+            System.out.println("Standard click succeeded");
+        } catch (Exception e) {
+            System.out.println("Standard click failed, using JS click: " + e.getMessage());
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+        }
+
+        try {
+            Thread.sleep(300); // Allow page processing
+        } catch (InterruptedException ignored) {}
+    }
 
     @AfterAll
     void teardown() {

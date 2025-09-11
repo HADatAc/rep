@@ -11,8 +11,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -25,6 +27,7 @@ import static tests.config.EnvConfig.FILES_URL;
 import static tests.config.EnvConfig.LOGIN_URL;
 import static tests.config.EnvConfig.PASSWORD;
 import static tests.config.EnvConfig.USERNAME;
+
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class BaseDelete {
     protected WebDriver driver;
@@ -42,7 +45,6 @@ public abstract class BaseDelete {
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
-        //options.setAcceptInsecureCerts(true);
         options.addArguments("--ignore-certificate-errors");
 
         driver = new ChromeDriver(options);
@@ -52,7 +54,7 @@ public abstract class BaseDelete {
         driver.get(LOGIN_URL);
         driver.findElement(By.id("edit-name")).sendKeys(USERNAME);
         driver.findElement(By.id("edit-pass")).sendKeys(PASSWORD);
-        driver.findElement(By.id("edit-submit")).click();
+        clickElementRobust(By.id("edit-submit"));
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
     }
@@ -69,25 +71,21 @@ public abstract class BaseDelete {
         List<WebElement> rows = driver.findElements(By.xpath("//table//tbody//tr"));
         int selectedCount = 0;
         System.out.println("Total table rows found: " + rows.size());
+        selectedRows.clear();
 
-        selectedRows.clear(); // limpar mapa antes
-
-        // Encontrar a linha com fileName e marcar checkbox
         for (WebElement row : rows) {
             List<WebElement> cells = row.findElements(By.tagName("td"));
             if (cells.size() >= 3) {
-                String name = cells.get(2).getText().trim(); // coluna do nome, ajustar se necessário
+                String name = cells.get(2).getText().trim();
 
                 if (name.equals(fileName)) {
                     try {
                         WebElement checkbox = cells.get(0).findElement(By.cssSelector("input[type='checkbox']"));
-                        if (!checkbox.isSelected()) {
-                            checkbox.click();
-                        }
+                        clickElementRobust(checkbox);
                         selectedRows.put(name, true);
                         selectedCount++;
                         System.out.println("Selected checkbox for file: " + name);
-                        break; // achou o arquivo e marcou, sai do loop
+                        break;
                     } catch (Exception e) {
                         System.out.println("Failed to select checkbox: " + e.getMessage());
                         fail("Failed to select checkbox for file: " + fileName);
@@ -101,11 +99,10 @@ public abstract class BaseDelete {
             return;
         }
 
-        // Clicar no botão delete
         try {
             String buttonId = "edit-delete-selected-element";
             WebElement deleteButton = driver.findElement(By.id(buttonId));
-            deleteButton.click();
+            clickElementRobust(deleteButton);
 
             wait.until(ExpectedConditions.alertIsPresent());
             Alert alert = driver.switchTo().alert();
@@ -117,7 +114,6 @@ public abstract class BaseDelete {
             fail("Expected confirmation alert not shown.");
         }
 
-        // Esperar e verificar se o arquivo sumiu da tabela
         int attempts = 0;
         boolean stillExists = true;
 
@@ -141,12 +137,12 @@ public abstract class BaseDelete {
             }
 
             System.out.println("Attempt " + (attempts + 1) + ": File still exists? " + stillExists);
-
             attempts++;
         }
 
         assertEquals(false, stillExists, "File '" + fileName + "' was not deleted.");
     }
+
     protected void deleteAllFiles(String type) throws InterruptedException {
         driver.get(FILES_URL + type + "/table/1/9/none");
 
@@ -159,7 +155,6 @@ public abstract class BaseDelete {
         List<WebElement> rows = driver.findElements(By.xpath("//table//tbody//tr"));
         int selectedCount = 0;
         System.out.println("Total table rows found: " + rows.size());
-
         selectedRows.clear();
 
         for (WebElement row : rows) {
@@ -169,9 +164,7 @@ public abstract class BaseDelete {
 
                 try {
                     WebElement checkbox = cells.get(0).findElement(By.cssSelector("input[type='checkbox']"));
-                    if (!checkbox.isSelected()) {
-                        checkbox.click();
-                    }
+                    clickElementRobust(checkbox);
                     selectedRows.put(name, true);
                     selectedCount++;
                     System.out.println("Selected for deletion: " + name);
@@ -189,7 +182,7 @@ public abstract class BaseDelete {
         try {
             String buttonId = "edit-delete-selected-element";
             WebElement deleteButton = driver.findElement(By.id(buttonId));
-            deleteButton.click();
+            clickElementRobust(deleteButton);
 
             wait.until(ExpectedConditions.alertIsPresent());
             Alert alert = driver.switchTo().alert();
@@ -201,7 +194,6 @@ public abstract class BaseDelete {
             fail("Expected confirmation alert not shown.");
         }
 
-        // Verificar se todos foram realmente apagados
         int attempts = 0;
         boolean someStillExist = true;
 
@@ -231,10 +223,48 @@ public abstract class BaseDelete {
         assertEquals(false, someStillExist, "Some files were not deleted.");
     }
 
-
     public void quit() {
         if (driver != null) {
             driver.quit();
         }
+    }
+
+    // ===== Robust Click Helpers =====
+
+    protected void clickElementRobust(By locator) {
+        int maxAttempts = 5;
+        int attempt = 0;
+
+        System.out.println("Robust click started for locator: " + locator);
+        while (attempt < maxAttempts) {
+            attempt++;
+            try {
+                WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+                clickElementRobust(element);
+                System.out.println("Robust click finished at attempt " + attempt);
+                return;
+            } catch (StaleElementReferenceException sere) {
+                System.out.println("Stale element, retry " + attempt);
+            } catch (Exception e) {
+                System.out.println("Error at attempt " + attempt + ": " + e.getMessage());
+                if (attempt == maxAttempts) {
+                    throw new RuntimeException("Failed to click after " + maxAttempts + " attempts", e);
+                }
+            }
+        }
+    }
+
+    protected void clickElementRobust(WebElement element) {
+        try {
+            element.click();
+            System.out.println("Standard click succeeded");
+        } catch (Exception e) {
+            System.out.println("Standard click failed, using JS click: " + e.getMessage());
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+        }
+
+        try {
+            Thread.sleep(300); // Allow page processing
+        } catch (InterruptedException ignored) {}
     }
 }
