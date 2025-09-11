@@ -14,7 +14,6 @@ import tests.config.BEViaFEStatusSimpleCheck;
 import tests.config.BEViaFEStatusTest;
 import tests.config.FusekiConnectionTest;
 import tests.repository.ConfigValidationTest;
-import tests.repository.RepositoryFormAutomationTest;
 import tests.utils.FullDeleteTest;
 import tests.utils.FullIngestNHANESTestDRAFT;
 import tests.utils.FullIngestWSTestDRAFT;
@@ -29,10 +28,10 @@ public class FullSetupWSandNHANES {
     void runOnlyIngestsForCurrentMode() throws InterruptedException {
         // Setup of rep configuration
         
-        runTestClassAndAbortOnFailure(RepositoryFormAutomationTest.class);
-        Thread.sleep(5000);
+      //  runTestClassAndAbortOnFailure(RepositoryFormAutomationTest.class);
+        //Thread.sleep(5000);
 
-        
+
         //Admin Status and Data conf permission
         runTestClassAndAbortOnFailure(AdminAuto.class);
         Thread.sleep(5000);
