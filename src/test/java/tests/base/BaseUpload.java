@@ -30,7 +30,7 @@ public abstract class BaseUpload {
     protected WebDriverWait wait;
 
     @BeforeAll
-    void setup() {
+    void setup() throws InterruptedException{
         System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--remote-allow-origins=*");
@@ -45,12 +45,16 @@ public abstract class BaseUpload {
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         System.out.println("Navigating to login page: " + LOGIN_URL);
         driver.get(LOGIN_URL);
+        Thread.sleep(3000);
         driver.findElement(By.id("edit-name")).sendKeys(USERNAME);
+        Thread.sleep(3000);
         driver.findElement(By.id("edit-pass")).sendKeys(PASSWORD);
+        Thread.sleep(3000);
         System.out.println("Credentials entered.");
         // Robust click for login
         clickElementRobust(By.id("edit-submit"));
         System.out.println("Login submitted.");
+        Thread.sleep(3000);
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(
                 By.cssSelector("#toolbar-item-user")));
