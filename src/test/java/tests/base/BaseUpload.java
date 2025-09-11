@@ -47,6 +47,8 @@ public abstract class BaseUpload {
         "--disable-background-timer-throttling",
         "--disable-renderer-backgrounding",
         "--disable-infobars"
+
+        
     );
 
         driver = new ChromeDriver(options);
