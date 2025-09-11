@@ -1,13 +1,18 @@
 package tests.config;
 
-import org.junit.jupiter.api.*;
-import tests.base.BaseRep;
-
 import java.net.URI;
-import java.net.http.*;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+
+import tests.base.BaseRep;
 import static tests.config.EnvConfig.FUSEKI_URL;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
