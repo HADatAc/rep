@@ -96,29 +96,22 @@
     <plugins>
       <!-- Plugin que roda testes com JUnit 5 -->
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.2.2</version>
-        <configuration>
-          <useModulePath>false</useModulePath>
-          <systemPropertyVariables>
-            <webdriver.chrome.driver>/var/data/chromedriver/chromedriver</webdriver.chrome.driver>
-          </systemPropertyVariables>
-          <argLine>-Xmx3g -XX:+UseG1GC -XX:+DisableExplicitGC -XX:G1HeapRegionSize=16m</argLine>
-          <forkCount>1</forkCount>
-          <reuseForks>false</reuseForks>
-          <parallel>none</parallel>
-          <testFailureIgnore>false</testFailureIgnore>
-          <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
-          <forkedProcessExitTimeoutInSeconds>60</forkedProcessExitTimeoutInSeconds>
-          <shutdown>kill</shutdown>
-          <redirectTestOutputToFile>true</redirectTestOutputToFile>
-          <reportFormat>plain</reportFormat>
-          <consoleOutputReporter>
-            <disable>false</disable>
-          </consoleOutputReporter>
-        </configuration>
-      </plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-surefire-plugin</artifactId>
+  <version>3.2.2</version>
+  <configuration>
+    <useModulePath>false</useModulePath>
+    <systemPropertyVariables>
+      <webdriver.chrome.driver>/var/data/chromedriver/chromedriver</webdriver.chrome.driver>
+    </systemPropertyVariables>
+    <argLine>-Xmx3g -XX:+UseG1GC -XX:+DisableExplicitGC -XX:G1HeapRegionSize=16m</argLine>
+    <forkCount>1</forkCount>
+    <reuseForks>false</reuseForks>
+    <redirectTestOutputToFile>false</redirectTestOutputToFile> <!-- Mostra logs no console -->
+    <testFailureIgnore>false</testFailureIgnore>
+    <trimStackTrace>false</trimStackTrace>
+  </configuration>
+</plugin>
       
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

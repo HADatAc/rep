@@ -56,51 +56,20 @@ jobs:
             sleep 5
           done'
 
+
       - name: Run Maven test (specific class)
         timeout-minutes: 45
         run: |
           export DISPLAY=:99
           export MAVEN_OPTS="-Xmx4g -XX:+UseG1GC -XX:+DisableExplicitGC"
 
-          # Start ChromeDriver log tailing
-          mkdir -p logs
-          CHROMEDRIVER_LOG=logs/chromedriver.log
-          chromedriver --port=9515 --verbose > $CHROMEDRIVER_LOG 2>&1 &
-          CHROMEDRIVER_PID=$!
-          tail -f $CHROMEDRIVER_LOG &
-          TAIL_PID=$!
-
-          # Monitoring em background
-          (while true; do
-            echo "=== $(date) - Memory Usage ==="
-            free -h
-            echo "=== Process List ==="
-            ps aux | grep -E "(java|chrome)" | head -10
-            echo "=== Disk Usage ==="
-            df -h
-            sleep 30
-          done) &
-          MONITOR_PID=$!
-
-          # Run Maven tests with verbose output
+          # Run Maven tests with real-time output
           mvn test -Dtest=tests.A1.FullSetupWSandNHANES \
             -Dmaven.test.failure.ignore=false \
             -Dsurefire.timeout=3600 \
             -Dsurefire.rerunFailingTestsCount=0 \
             -Dfile.encoding=UTF-8 \
-            -Djava.awt.headless=true \
-            -X \
-            --errors \
-            --fail-at-end
-
-          TEST_EXIT_CODE=$?
-
-          # Stop monitoring and tail
-          kill $MONITOR_PID 2>/dev/null || true
-          kill $CHROMEDRIVER_PID 2>/dev/null || true
-          kill $TAIL_PID 2>/dev/null || true
-
-          exit $TEST_EXIT_CODE
+            -Djava.awt.headless=true
 
 
       - name: Notify on failure
