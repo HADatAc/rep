@@ -25,13 +25,27 @@ public abstract class BaseTest {
     @BeforeEach
     public void setUp() throws InterruptedException {
 ChromeOptions options = new ChromeOptions();
-        options.addArguments("--remote-allow-origins=*");
-        options.addArguments("--headless");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
-        options.addArguments("--disable-gpu");
-       // options.setAcceptInsecureCerts(true);
-        options.addArguments("--ignore-certificate-errors");
+options.addArguments(
+    "--headless=new",                     // Use new headless mode (Chrome 109+)
+    "--no-sandbox",                       // Required for Docker/VM environments
+    "--disable-dev-shm-usage",            // Avoid /dev/shm full issues
+    "--disable-gpu",                      // Disable GPU (headless mode)
+    "--remote-allow-origins=*",           // Required for Selenium 4.26+ with Chrome 125
+    "--disable-setuid-sandbox",           // Security/sandbox reinforcement
+    "--disable-extensions",               // Disable Chrome extensions
+    "--disable-background-networking",    // Avoid background network calls
+    "--disable-sync",                     // Disable sync
+    "--disable-translate",                // Disable auto-translate
+    "--disable-background-timer-throttling", // Prevent background throttling
+    "--disable-renderer-backgrounding",      // Keep renderer active in background
+    "--disable-infobars",                 // Remove "Chrome is being controlled" info bar
+    "--disable-popup-blocking",           // Avoid popup blocking
+    "--disable-notifications",            // Disable notifications
+    "--disable-default-apps",             // Avoid default apps
+    "--disable-logging",                  // Reduce unnecessary logs
+    "--disable-automation",               // Remove automation banner
+    "--window-size=1920,1080"             // Set window size for consistent element visibility
+);
 
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
