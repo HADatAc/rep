@@ -90,7 +90,6 @@
       <version>${selenium.version}</version>
       <scope>test</scope>
     </dependency>
-
   </dependencies>
 
   <build>
@@ -105,11 +104,19 @@
           <systemPropertyVariables>
             <webdriver.chrome.driver>/var/data/chromedriver/chromedriver</webdriver.chrome.driver>
           </systemPropertyVariables>
-          <argLine>-Xmx2g -XX:+UseG1GC</argLine>
+          <argLine>-Xmx3g -XX:+UseG1GC -XX:+DisableExplicitGC -XX:G1HeapRegionSize=16m</argLine>
           <forkCount>1</forkCount>
           <reuseForks>false</reuseForks>
           <parallel>none</parallel>
           <testFailureIgnore>false</testFailureIgnore>
+          <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
+          <forkedProcessExitTimeoutInSeconds>60</forkedProcessExitTimeoutInSeconds>
+          <shutdown>kill</shutdown>
+          <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <reportFormat>plain</reportFormat>
+          <consoleOutputReporter>
+            <disable>false</disable>
+          </consoleOutputReporter>
         </configuration>
       </plugin>
       

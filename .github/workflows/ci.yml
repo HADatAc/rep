@@ -56,20 +56,38 @@ jobs:
             sleep 5
           done'
 
-      - name: Compile tests first (with debug info)
-        run: |
-          export MAVEN_OPTS="-Xmx2g -XX:+UseG1GC"
-          mvn -B -X test-compile
-
       - name: Run Maven test (specific class)
         timeout-minutes: 45  # Timeout específico para os testes
         run: |
           export DISPLAY=:99
-          export MAVEN_OPTS="-Xmx2g -XX:+UseG1GC"
+          export MAVEN_OPTS="-Xmx4g -XX:+UseG1GC -XX:+DisableExplicitGC"
+          
+          # Monitoring em background
+          (while true; do
+            echo "=== $(date) - Memory Usage ==="
+            free -h
+            echo "=== Process List ==="
+            ps aux | grep -E "(java|chrome)" | head -10
+            echo "=== Disk Usage ==="
+            df -h
+            sleep 30
+          done) &
+          MONITOR_PID=$!
+          
+          # Executa os testes
           mvn -B test -Dtest=tests.A1.FullSetupWSandNHANES \
             -Dmaven.test.failure.ignore=false \
-            -Dsurefire.timeout=2700 \
-            -Dsurefire.rerunFailingTestsCount=0
+            -Dsurefire.timeout=3600 \
+            -Dsurefire.rerunFailingTestsCount=0 \
+            -Dfile.encoding=UTF-8 \
+            -Djava.awt.headless=true
+          
+          TEST_EXIT_CODE=$?
+          
+          # Para o monitoring
+          kill $MONITOR_PID 2>/dev/null || true
+          
+          exit $TEST_EXIT_CODE
 
       - name: Notify on failure
         if: failure()
