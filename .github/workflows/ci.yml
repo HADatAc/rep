@@ -57,7 +57,7 @@ jobs:
       - name: Compile Selenium tests
         run: |
           mkdir -p target/classes
-          javac -d target/classes -cp ".:tests/selenium-java-4.26.0/*:junit4/*" tests/A1/FullSetupWSandNHANES.java
+          javac -d target/classes -cp ".:tests/selenium-java-4.26.0/*:junit4/*" src/test/java/tests/A1/FullSetupWSandNHANES.java
 
       - name: Run Selenium tests
         run: |
