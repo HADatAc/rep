@@ -83,12 +83,12 @@
       <version>${selenium.version}</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.seleniumhq.selenium</groupId>
-      <artifactId>selenium-devtools-v1</artifactId>
-      <version>${selenium.version}</version>
-      <scope>test</scope>
-    </dependency>
+<!-- https://mvnrepository.com/artifact/org.seleniumhq.selenium/selenium-devtools-v137 -->
+<dependency>
+    <groupId>org.seleniumhq.selenium</groupId>
+    <artifactId>selenium-devtools-v137</artifactId>
+    <version>4.35.0</version>
+</dependency>
 
   </dependencies>
 
