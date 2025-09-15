@@ -56,11 +56,16 @@ jobs:
             sleep 5
           done'
 
+      - name: Compile tests first (with debug info)
+        run: |
+          export MAVEN_OPTS="-Xmx2g -XX:+UseG1GC"
+          mvn -B -X test-compile
+
       - name: Run Maven test (specific class)
         timeout-minutes: 45  # Timeout específico para os testes
         run: |
           export DISPLAY=:99
-          export MAVEN_OPTS="-Xmx2g -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions"
+          export MAVEN_OPTS="-Xmx2g -XX:+UseG1GC"
           mvn -B test -Dtest=tests.A1.FullSetupWSandNHANES \
             -Dmaven.test.failure.ignore=false \
             -Dsurefire.timeout=2700 \
