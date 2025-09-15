@@ -21,10 +21,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y unzip xvfb
+      - name: Install Xvfb only
+        run: sudo apt-get update && sudo apt-get install -y xvfb
 
       - name: Prepare /var/data permissions and download chromedriver
         run: |
@@ -55,8 +54,14 @@ jobs:
             sleep 5
           done
 
-      - name: Run Maven tests (specific test class)
-        run: mvn -B -ntp test -Dtest=tests.A1.FullSetupWSandNHANES
+      - name: Compile Selenium tests
+        run: |
+          mkdir -p target/classes
+          javac -d target/classes -cp ".:tests/selenium-java-4.26.0/*:junit4/*" tests/A1/FullSetupWSandNHANES.java
+
+      - name: Run Selenium tests
+        run: |
+          java -cp "target/classes:tests/selenium-java-4.26.0/*:junit4/*" org.junit.runner.JUnitCore tests.A1.FullSetupWSandNHANES
 
       - name: Notify on failure
         if: failure()
