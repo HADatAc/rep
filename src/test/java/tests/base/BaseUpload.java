@@ -27,6 +27,7 @@ import static tests.config.EnvConfig.USERNAME;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class BaseUpload {
 
+    
     protected WebDriver driver;
     protected WebDriverWait wait;
 
