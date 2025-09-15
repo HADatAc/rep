@@ -91,13 +91,6 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- Chrome DevTools - versão compatível com Selenium 4.26.0 -->
-    <dependency>
-      <groupId>org.seleniumhq.selenium</groupId>
-      <artifactId>selenium-devtools-v125</artifactId>
-      <version>4.26.0</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
