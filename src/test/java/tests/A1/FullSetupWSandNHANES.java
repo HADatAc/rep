@@ -22,7 +22,7 @@ public class FullSetupWSandNHANES {
     @Test
     void runOnlyIngestsForCurrentMode() throws InterruptedException {
         // Setup of rep configuration
-        /* 
+         /*
         runTestClassAndAbortOnFailure(RepositoryFormAutomationTest.class);
         Thread.sleep(5000);
 
@@ -30,7 +30,7 @@ public class FullSetupWSandNHANES {
         //Admin Status and Data conf permission
         runTestClassAndAbortOnFailure(AdminAuto.class);
         Thread.sleep(5000);
-
+        
         // All data upload
         runTestClassAndAbortOnFailure(FusekiConnectionTest.class);
         Thread.sleep(5000);
@@ -61,9 +61,7 @@ public class FullSetupWSandNHANES {
         // All data ingest
         runTestClassAndAbortOnFailure(FullIngestNHANESTestDRAFT.class);
         Thread.sleep(5000);
-
         
-
         // All data Regression Test
         runTestClassAndAbortOnFailure(FullRegressionTest.class);
         Thread.sleep(5000);
