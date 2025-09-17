@@ -6,6 +6,10 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\Html;
 use Drupal\rep\Entity\Tables;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\HtmlCommand;
+use Drupal\Core\Ajax\SettingsCommand;
+use Drupal\Core\Url;
 
 /**
  * Form to browse an ontology and save a mapping.
@@ -127,7 +131,7 @@ class MapEntryPointsForm extends FormBase {
     ];
 
     // Attach JS library and pass endpoints/settings to JS.
-    $base = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    $base = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
     $form['#attached']['library'][] = 'rep/map_entry_points';
     $form['#attached']['drupalSettings']['repMap'] = [
       'apiTopClassEndpoint' => $base . '/rep/gettopclass?_format=json',

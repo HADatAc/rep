@@ -40,6 +40,7 @@ class DescribeHeaderForm extends FormBase {
 
   public function buildForm(array $form, FormStateInterface $form_state) {
 
+    $root_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
 
     // --- Resolve the element URI from the path (encoded in the 4th segment) ---
     $request = \Drupal::request();
@@ -65,7 +66,7 @@ class DescribeHeaderForm extends FormBase {
         '#type' => 'item',
         '#title' => t("<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>"),
       ];
-      
+
       $form['type'] = [
         '#type' => 'markup',
         '#markup' => $this->t("<h3>(UNKNOWN TYPE)</h3><br>"),
@@ -237,7 +238,6 @@ class DescribeHeaderForm extends FormBase {
           ],
         ];
       }
-    }
 
     return $form;
   }
