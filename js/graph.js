@@ -19,6 +19,8 @@
  * - If the server only returns `typeUri`, the "hascoTypeUri" submenu still shows the target class,
  *   and toggling there creates a **hascoTypeUri** edge (not reusing the typeUri edge).
  * - If both type edges exist for the same (from,to), they are drawn with opposite curves.
+ * - NEW: Every node menu has a top-right "Copy URI" button for that node.
+ *        Every submenu row has its own "Copy URI" button for that target.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -163,7 +165,7 @@
       expandMenu.style.cssText = `
         position:absolute;z-index:1000;background:#f8f9fa;border:1px solid #ccc;
         padding:6px 10px;border-radius:5px;box-shadow:2px 2px 6px rgba(0,0,0,0.1);
-        display:none; pointer-events:auto;
+        display:none; pointer-events:auto; min-width: 260px;
       `;
       document.body.appendChild(expandMenu);
 
@@ -179,6 +181,47 @@
         const topOffset = window.scrollY + rect.top;
         expandMenu.style.left = `${rect.left + canvasPos.x + 30}px`;
         expandMenu.style.top  = `${topOffset + canvasPos.y - 10}px`;
+      }
+
+      // ----- Clipboard helpers -----
+      // Copy text to clipboard with fallback for older browsers
+      function copyToClipboard(text, onDone) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(onDone).catch(() => fallbackCopy(text, onDone));
+        } else {
+          fallbackCopy(text, onDone);
+        }
+      }
+      function fallbackCopy(text, onDone) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:absolute; left:-9999px; top:-9999px;';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        if (onDone) onDone();
+      }
+      function makeCopyLink(labelText, valueSupplier) {
+        // valueSupplier can be a string or a function returning a string
+        const link = document.createElement('span');
+        link.textContent = labelText;
+        link.style.cssText = `
+          cursor:pointer; font-size:12px; color:#007bff; white-space:nowrap;
+          padding:2px 6px; border-radius:4px;
+        `;
+        link.title = 'Copy to clipboard';
+        link.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const val = (typeof valueSupplier === 'function') ? valueSupplier() : valueSupplier;
+          copyToClipboard(val, () => {
+            const old = link.textContent;
+            link.textContent = 'Copied!';
+            setTimeout(() => { link.textContent = old; }, 900);
+          });
+        });
+        return link;
       }
 
       // ----- Utilities -----
@@ -324,7 +367,6 @@
         let list = (map.get(label) || []);
 
         // Fallback: if hascoTypeUri has no items yet, reuse typeUri *for display only*.
-        // The submenu will still create a **hascoTypeUri** edge when toggling.
         if (label === 'hascoTypeUri' && list.length === 0) {
           list = (map.get('typeUri') || []);
         }
@@ -362,7 +404,6 @@
             mergeGraphPayload(slim, nodeId);
 
             if (isType) {
-              // treat as singleton for UI purposes
               finish(returned, false, slim.meta);
               if (returned === 0 && !state.triedGeneric) {
                 state.triedGeneric = true;
@@ -424,7 +465,7 @@
           position:absolute; left:140px; top:0; background:#f1f1f1;
           border:1px solid #ccc; padding:6px; border-radius:4px;
           box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
-          max-height: 340px; overflow:auto; min-width: 320px; pointer-events:auto;
+          max-height: 340px; overflow:auto; min-width: 360px; pointer-events:auto;
         `;
         opt.appendChild(submenu);
 
@@ -452,7 +493,6 @@
 
           // Render rows
           page.forEach(({ edge: e, id: actualEdgeIdMaybe }) => {
-            // real edge returned by cache/server (may be 'typeUri' or 'hascoTypeUri')
             const actualEdge = e;
             let child = extraNodes.find(n => n.id === actualEdge.to);
             if (!child) {
@@ -466,45 +506,46 @@
               : (child.id?.split('/').pop() || child.id || '(no label)');
             if (!child.label || !String(child.label).trim()) child.label = displayLabel;
 
-            // We compute the "desired" edge for THIS menu label.
             const desiredEdge = { from: nodeId, to: child.id, label }; // label is the submenu label
             const desiredEdgeId = edgeIdOf(desiredEdge);
-
-            // Icon reflects presence of the **desired** edge
             const edgeOn = !!edges.get(desiredEdgeId);
 
             const row = document.createElement("div");
             row.style.cssText = `
               display:flex; align-items:center; justify-content:space-between;
-              gap:12px; padding:4px 6px; min-width:300px; cursor:default;
+              gap:12px; padding:4px 6px; min-width:340px; cursor:default;
             `;
+
+            const leftWrap = document.createElement('div');
+            leftWrap.style.cssText = 'display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 auto;';
 
             const s = document.createElement("span");
             s.textContent = displayLabel;
-            s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+            s.style.cssText = "flex:1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+
+            const copyChild = makeCopyLink('Copy URI', () => child.id);
+            copyChild.style.marginLeft = '4px';
+
+            leftWrap.appendChild(s);
+            leftWrap.appendChild(copyChild);
 
             const toggle = document.createElement("span");
             toggle.innerHTML = edgeOn ? eyeOffSVG : eyeSVG;
-            toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
+            toggle.style.cssText = "cursor:pointer; padding:2px 6px; display:inline-block;";
 
             toggle.addEventListener("click", (ev) => {
               ev.stopPropagation();
 
               if (!edges.get(desiredEdgeId)) {
-                // Ensure nodes visible
-                if (!canAddMoreVisibleNodes(0)) { /* only edge */ }
                 if (!nodes.get(child.id)) nodes.add(ensureNodeStyle({ ...child }));
                 if (!nodes.get(nodeId))  nodes.add(ensureNodeStyle({ id: nodeId, label: (nodeId.split('/').pop()||nodeId), shape:'box'}));
 
-                // If this edge is not yet cached, cache it so future menus see it
                 if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === desiredEdgeId)) {
                   extraEdges.push({ ...desiredEdge, id: desiredEdgeId });
                 }
 
-                // Add visible edge with curve logic
                 addEdgeVisible({ ...desiredEdge, id: desiredEdgeId });
 
-                // Reposition neighbors around source
                 const neighborIds = edges.get()
                   .filter(ed => ed.from === nodeId)
                   .map(ed => ed.to)
@@ -518,17 +559,14 @@
 
                 toggle.innerHTML = eyeOffSVG;
               } else {
-                // Remove only the desired edge; keep the other type edge if present
                 edges.remove(desiredEdgeId);
-
                 const still = edges.get().some(x => x.from === child.id || x.to === child.id);
                 if (!still && child.id !== initialRootId) nodes.remove(child.id);
-
                 toggle.innerHTML = eyeSVG;
               }
             });
 
-            row.appendChild(s);
+            row.appendChild(leftWrap);
             row.appendChild(toggle);
             submenu.appendChild(row);
           });
@@ -714,6 +752,24 @@
         // Render menu
         expandMenu.innerHTML = '';
         closeAllSubmenus();
+
+        // Header with node label (left) and "Copy URI" (right)
+        const header = document.createElement('div');
+        header.style.cssText = `
+          display:flex; align-items:center; justify-content:space-between;
+          gap:8px; padding:2px 0 6px 0; border-bottom:1px dashed #ddd; margin-bottom:6px;
+        `;
+        const title = document.createElement('div');
+        title.textContent = selectedNode.label ? String(selectedNode.label).replace(/\n?➕$/, '') : (selectedNode.id.split('/').pop() || selectedNode.id);
+        title.style.cssText = 'font-weight:600; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+        title.title = selectedNode.id;
+
+        const copyNode = makeCopyLink('Copy URI', () => selectedNode.id);
+        copyNode.style.alignSelf = 'flex-start';
+
+        header.appendChild(title);
+        header.appendChild(copyNode);
+        expandMenu.appendChild(header);
 
         labels.forEach(label => {
           const opt = document.createElement("div");
