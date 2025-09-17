@@ -501,8 +501,26 @@ class REPSelectMTForm extends FormBase {
   protected function buildCardView(array &$form, FormStateInterface $form_state, $header, $output)
   {
 
-    // IMAGE PLACEHOLDER
-    $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/semVar_placeholder.png';
+    switch ($this->element_type) {
+      case 'ins':
+        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/ins_placeholder.png';
+        break;
+      case 'dsg':
+        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/dsg_placeholder.png';
+        break;
+      case 'dd':
+        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/dd_placeholder.png';
+        break;
+      case 'sdd':
+        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/sdd_placeholder.png';
+        break;
+      case 'dp2':
+        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/dp2_placeholder.png';
+        break;
+      case 'str':
+        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/str_placeholder.png';
+        break;
+    }
 
     $form['element_cards_wrapper'] = [
       '#type' => 'container',

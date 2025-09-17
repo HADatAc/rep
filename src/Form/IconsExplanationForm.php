@@ -31,7 +31,7 @@ final class IconsExplanationForm extends FormBase {
     $map_img = [
       'Funding Schemes' => 'fundingschemes_placeholder.png',
       'Projects' => 'projects_placeholder.png',
-      'Organizations' => 'organizations_placeholder.png',
+      'Organizations' => 'organization_placeholder.png',
       'Persons' => 'persons_placeholder.png',
       'Places' => 'places_placeholder.png',
       'Postal Adresses' => 'postaladresses_placeholder.png',
@@ -73,18 +73,18 @@ final class IconsExplanationForm extends FormBase {
     ];
 
     $map_uri = [
-      'Funding Schemes' => '',
+      'Funding Schemes' => 'https://schema.org/FundingScheme',
       'Projects' => 'https://schema.org/Project',
       'Organizations' => 'https://schema.org/GovernmentOrganization',
-      'Persons' => '',
+      'Persons' => 'https://schema.org/Person',
       'Places' => 'https://schema.org/City',
       'Postal Adresses' => 'https://schema.org/PostalAddress',
       'DAs' => '',
       'Studies' => 'http://hadatac.org/ont/hasco/Study',
       'Study Roles' => '',
       'Virtual Columns' => 'http://hadatac.org/ont/hasco/VirtualColumn',
-      'Object Collections' => '',
-      'Study Objects' => '',
+      'Object Collections' => 'http://hadatac.org/ont/hasco/ObjectCollection',
+      'Study Objects' => 'http://hadatac.org/ont/hasco/StudyObject',
       'Process Stems' => '',
       'Processes' => '',
       'Data Dictionary' => '',
@@ -95,10 +95,10 @@ final class IconsExplanationForm extends FormBase {
       'Unit' => '',
       'Component' => '',
       'Component Stem' => '',
-      'Codebooks' => '',
-      'Response Options' => '',
-      'Annotation Stems' => '',
-      'Annotations' => '',
+      'Codebooks' => 'http://hadatac.org/ont/vstoi#Codebook',
+      'Response Options' => 'http://hadatac.org/ont/vstoi#ResponseOption',
+      'Annotation Stems' => 'http://hadatac.org/ont/vstoi#AnnotationStem',
+      'Annotations' => 'http://hadatac.org/ont/vstoi#Annotation',
       'Platform' => 'http://hadatac.org/ont/vstoi#Platform',
       'Instrument' => 'http://hadatac.org/ont/vstoi#Instrument',
       'Detector Instances' => 'http://hadatac.org/ont/vstoi#Detector',
@@ -155,6 +155,10 @@ final class IconsExplanationForm extends FormBase {
       ['name' => 'DP2', 'desc' => 'NOT FOUND'],
       ['name' => 'STR', 'desc' => 'NOT FOUND'],
     ];
+
+    usort($rows_data, function($a, $b) {
+    return strcasecmp($a['name'], $b['name']);
+    });
 
     $map_instance_of = [
       'Platform' => 'Platform Instances',
