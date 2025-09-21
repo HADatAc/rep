@@ -16,11 +16,13 @@
  *
  * This build ensures:
  * - `hascoTypeUri` and `typeUri` are independent menu options.
- * - If the server only returns `typeUri`, the "hascoTypeUri" submenu still shows the target class,
+ * - If the server only returns `typeUri`, the "hascoTypeUri" submenu still shows the target class
  *   and toggling there creates a **hascoTypeUri** edge (not reusing the typeUri edge).
  * - If both type edges exist for the same (from,to), they are drawn with opposite curves.
- * - NEW: Every node menu has a top-right "Copy URI" button for that node.
- *        Every submenu row has its own "Copy URI" button for that target.
+ * - "Copy URI" copies a local proxy link:  <origin>/rep/uri/<base64url(IRI)>
+ * - NEW: "Make it bold" promotes a node to be the **graph root** and performs a **real navigation**
+ *        to that node’s page, but the graph is snapshotted in sessionStorage and restored on load
+ *        so the visualization stays exactly as it was (no losses).
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -45,14 +47,46 @@
       const eyeSVG = `<i class="fa fa-eye"></i>`;
       const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
 
+      // ---------- Restore graph from session (if coming from "Make it bold") ----------
+      function parseIriFromLocation() {
+        const m = (window.location.pathname || '').match(/\/rep\/uri\/([^\/#?]+)/);
+        if (!m) return null;
+        try {
+          const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+          const padded = b64 + '==='.slice((b64.length + 3) % 4);
+          return decodeURIComponent(escape(window.atob(padded)));
+        } catch (e) { return null; }
+      }
+      const arrivingIri = parseIriFromLocation();
+
+      let restore = null;
+      try {
+        const raw = sessionStorage.getItem('repGraphState');
+        if (raw) {
+          const obj = JSON.parse(raw);
+          // Optional sanity check: only restore if it matches the page we're opening
+          if (!obj.targetIri || obj.targetIri === arrivingIri) restore = obj;
+        }
+      } catch (e) { /* ignore */ }
+
       // ----- Data caches -----
       const base = drupalSettings.graphData || {};
+      if (restore) {
+        // Replace base data with the saved snapshot
+        base.nodes      = Array.isArray(restore.nodes) ? restore.nodes : (base.nodes || []);
+        base.edges      = Array.isArray(restore.edges) ? restore.edges : (base.edges || []);
+        base.extraNodes = Array.isArray(restore.extraNodes) ? restore.extraNodes : (base.extraNodes || []);
+        base.extraEdges = Array.isArray(restore.extraEdges) ? restore.extraEdges : (base.extraEdges || []);
+      }
+
       const nodes = new vis.DataSet(base.nodes || []);
       const edges = new vis.DataSet(base.edges || []);
       const extraNodes = base.extraNodes || [];
       let   extraEdges = base.extraEdges || [];
 
-      const initialRootId = (nodes.getIds && nodes.getIds()[0]) || null;
+      // Initial root and current root (promoted by "Make it bold")
+      const firstNodeId = (nodes.getIds && nodes.getIds()[0]) || null;
+      let currentRootId = restore?.currentRootId || firstNodeId;
 
       // ----- Normalize CURIE -> IRI -----
       const AHEAD = 'http://hadatac.org/ont/arrowhead/';
@@ -78,7 +112,6 @@
       // Guards & paging state
       const openedNodes = {};
       const primedNodes = {};
-      // `${nodeId}:${label}` -> { offset, fetched, hasMoreServer, totalGuess, prefetchTried, triedGeneric }
       const pageState = Object.create(null);
 
       // ----- Layout helpers -----
@@ -159,13 +192,24 @@
       }
       nodes.get().forEach(n => nodes.update(ensureNodeStyle({ ...n })));
 
+      // Root style handling (highlight current root)
+      function applyRootStyle(id, on) {
+        const n = nodes.get(id);
+        if (!n) return;
+        const base = ensureNodeStyle({ ...n });
+        const upd = on
+          ? { borderWidth: 4, color: { ...(base.color || {}), border: '#ffc107' }, font: { ...(base.font||{}), bold: true, size: 16 } }
+          : { borderWidth: 1, color: { ...(base.color || {}), border: (isClassNode(base) ? '#1e7e34' : '#0056b3') }, font: { ...(base.font||{}), bold: false, size: 14 } };
+        nodes.update({ id, ...upd });
+      }
+
       // ----- Floating menu -----
       const expandMenu = document.createElement("div");
       expandMenu.id = "expand-menu";
       expandMenu.style.cssText = `
         position:absolute;z-index:1000;background:#f8f9fa;border:1px solid #ccc;
         padding:6px 10px;border-radius:5px;box-shadow:2px 2px 6px rgba(0,0,0,0.1);
-        display:none; pointer-events:auto; min-width: 260px;
+        display:none; pointer-events:auto; min-width: 340px;
       `;
       document.body.appendChild(expandMenu);
 
@@ -183,8 +227,22 @@
         expandMenu.style.top  = `${topOffset + canvasPos.y - 10}px`;
       }
 
-      // ----- Clipboard helpers -----
-      // Copy text to clipboard with fallback for older browsers
+      // ----- Clipboard helpers (Copy URI -> local /rep/uri/<b64url>) -----
+      function encodeBase64Url(str) {
+        const b64 = window.btoa(unescape(encodeURIComponent(str)));
+        return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+      }
+      function buildLocalUriLink(iri) {
+        if (!iri) return '';
+        if (/\/rep\/uri\//.test(iri)) return iri;
+        const b64 = encodeBase64Url(iri);
+        let base = (window.Drupal && Drupal.url) ? Drupal.url('rep/uri') : '/rep/uri';
+        if (!base) base = '/rep/uri';
+        if (!base.endsWith('/')) base += '/';
+        const origin = window.location && window.location.origin ? window.location.origin : '';
+        const full = /^https?:\/\//i.test(base) ? (base + b64) : (origin + base + b64);
+        return full;
+      }
       function copyToClipboard(text, onDone) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text).then(onDone).catch(() => fallbackCopy(text, onDone));
@@ -204,7 +262,6 @@
         if (onDone) onDone();
       }
       function makeCopyLink(labelText, valueSupplier) {
-        // valueSupplier can be a string or a function returning a string
         const link = document.createElement('span');
         link.textContent = labelText;
         link.style.cssText = `
@@ -214,7 +271,8 @@
         link.title = 'Copy to clipboard';
         link.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          const val = (typeof valueSupplier === 'function') ? valueSupplier() : valueSupplier;
+          const valRaw = (typeof valueSupplier === 'function') ? valueSupplier() : valueSupplier;
+          const val = buildLocalUriLink(valRaw);
           copyToClipboard(val, () => {
             const old = link.textContent;
             link.textContent = 'Copied!';
@@ -242,7 +300,6 @@
           const E = normalizeEdge(e);
           const target = extraNodes.find(n => n.id === E.to);
           let lbl = e.label;
-          // Normalize generic hasCollection
           if (lbl === 'hasCollection' && target) {
             const tu = (target.typeUri || '');
             if (tu.includes('/hasco/SampleCollection')) lbl = 'hasSampleCollection';
@@ -284,11 +341,9 @@
       function seedTypeEdgesForNode(node) {
         if (!node) return;
         const nid = expandCurie(node.id);
-
         function ensureTypeEdge(label, typeId) {
           if (!typeId) return;
           const tid = expandCurie(typeId);
-
           if (!extraNodes.find(n => n.id === tid)) {
             extraNodes.push({ id: tid, label: (tid.split('/').pop() || tid), typeUri: tid, shape: 'box' });
           }
@@ -298,7 +353,6 @@
             extraEdges.push({ ...e, id });
           }
         }
-
         ensureTypeEdge('typeUri', node.typeUri);
         ensureTypeEdge('hascoTypeUri', node.hascoTypeUri);
       }
@@ -365,16 +419,13 @@
         const rel = norms.filter(e => e.from === nodeId);
         const map = buildLabelEdgesMap(rel);
         let list = (map.get(label) || []);
-
-        // Fallback: if hascoTypeUri has no items yet, reuse typeUri *for display only*.
         if (label === 'hascoTypeUri' && list.length === 0) {
           list = (map.get('typeUri') || []);
         }
-
         return list;
       }
 
-      // ---------- Fetch more (types: try labeled; fallback to generic once if needed) ----------
+      // ---------- Fetch more ----------
       function fetchMoreForLabel(nodeId, label, state, rightBtn, after) {
         const isType = (label === 'hascoTypeUri' || label === 'typeUri');
         if (!socEndpoint) return;
@@ -475,7 +526,6 @@
           const list = itemsForLabel(nodeId, label);
           const totalFetched = list.length;
 
-          // Prefetch for ALL labels (types included)
           if (totalFetched === 0 && !state.prefetchTried) {
             state.prefetchTried = true;
             state.hasMoreServer = true;
@@ -491,8 +541,7 @@
           const end = Math.min(start + MAX_MEMBERS_PER_SOC, totalFetched);
           const page = list.slice(start, end);
 
-          // Render rows
-          page.forEach(({ edge: e, id: actualEdgeIdMaybe }) => {
+          page.forEach(({ edge: e }) => {
             const actualEdge = e;
             let child = extraNodes.find(n => n.id === actualEdge.to);
             if (!child) {
@@ -506,7 +555,7 @@
               : (child.id?.split('/').pop() || child.id || '(no label)');
             if (!child.label || !String(child.label).trim()) child.label = displayLabel;
 
-            const desiredEdge = { from: nodeId, to: child.id, label }; // label is the submenu label
+            const desiredEdge = { from: nodeId, to: child.id, label };
             const desiredEdgeId = edgeIdOf(desiredEdge);
             const edgeOn = !!edges.get(desiredEdgeId);
 
@@ -561,7 +610,7 @@
               } else {
                 edges.remove(desiredEdgeId);
                 const still = edges.get().some(x => x.from === child.id || x.to === child.id);
-                if (!still && child.id !== initialRootId) nodes.remove(child.id);
+                if (!still && child.id !== currentRootId) nodes.remove(child.id);
                 toggle.innerHTML = eyeSVG;
               }
             });
@@ -666,6 +715,43 @@
         }
       }
 
+      // ----- Snapshot & Navigation helpers -----
+      function snapshotGraph(targetIri) {
+        try {
+          const snap = {
+            version: 1,
+            currentRootId,
+            targetIri: targetIri || null,
+            nodes: nodes.get().map(n => ({ ...n })),   // shallow copy
+            edges: edges.get().map(e => ({ ...e })),
+            extraNodes: extraNodes.map(n => ({ ...n })),
+            extraEdges: extraEdges.map(e => ({ ...e }))
+          };
+          sessionStorage.setItem('repGraphState', JSON.stringify(snap));
+        } catch (e) {
+          // If storage fails we simply won't persist, but we still navigate.
+        }
+      }
+
+      // ----- Promote to ROOT (Make it bold) -----
+      function promoteToRoot(newRootId) {
+        if (!newRootId || newRootId === currentRootId) return;
+        if (currentRootId && nodes.get(currentRootId)) applyRootStyle(currentRootId, false);
+        currentRootId = newRootId;
+        if (nodes.get(currentRootId)) applyRootStyle(currentRootId, true);
+
+        // Smooth focus just for feedback
+        try {
+          const pos = network.getPositions([currentRootId])[currentRootId];
+          if (pos) network.focus(currentRootId, { scale: 1.0, animation: { duration: 250, easingFunction: 'easeInOutQuad' } });
+        } catch (e) {}
+
+        // Build link, snapshot graph, and navigate for real
+        const link = buildLocalUriLink(currentRootId);
+        snapshotGraph(currentRootId);
+        window.location.assign(link);
+      }
+
       // ----- Click handler -----
       network.on("click", function (params) {
         expandMenu.style.display = "none";
@@ -753,7 +839,7 @@
         expandMenu.innerHTML = '';
         closeAllSubmenus();
 
-        // Header with node label (left) and "Copy URI" (right)
+        // Header with node label (left) + actions (right)
         const header = document.createElement('div');
         header.style.cssText = `
           display:flex; align-items:center; justify-content:space-between;
@@ -761,14 +847,30 @@
         `;
         const title = document.createElement('div');
         title.textContent = selectedNode.label ? String(selectedNode.label).replace(/\n?➕$/, '') : (selectedNode.id.split('/').pop() || selectedNode.id);
-        title.style.cssText = 'font-weight:600; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+        title.style.cssText = 'font-weight:600; max-width:230px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
         title.title = selectedNode.id;
+
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display:flex; align-items:center; gap:10px;';
 
         const copyNode = makeCopyLink('Copy URI', () => selectedNode.id);
         copyNode.style.alignSelf = 'flex-start';
 
+        // "Make it bold" -> promote to root and navigate, restoring the graph on next page
+        const makeBold = document.createElement('span');
+        makeBold.textContent = 'Make it bold';
+        makeBold.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
+        makeBold.title = 'Promote this node to be the graph root and open its page';
+        makeBold.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          promoteToRoot(selectedNodeId);
+        });
+
+        actions.appendChild(copyNode);
+        actions.appendChild(makeBold);
+
         header.appendChild(title);
-        header.appendChild(copyNode);
+        header.appendChild(actions);
         expandMenu.appendChild(header);
 
         labels.forEach(label => {
@@ -812,11 +914,12 @@
         }
       });
 
-      // Auto-open first node
-      const baseNodeId = nodes.getIds()[0];
-      if (baseNodeId) {
-        network.selectNodes([baseNodeId]);
-        network.once("afterDrawing", () => { if (network.emit) network.emit("click", { nodes: [baseNodeId] }); });
+      // Auto-open first node (or restored root) and highlight it
+      if (currentRootId) applyRootStyle(currentRootId, true);
+      const toSelect = currentRootId || firstNodeId;
+      if (toSelect) {
+        network.selectNodes([toSelect]);
+        network.once("afterDrawing", () => { if (network.emit) network.emit("click", { nodes: [toSelect] }); });
       }
 
       // ---------- External toggles (.graph-toggle) ----------
@@ -843,7 +946,6 @@
           nodes.add(ensureNodeStyle({ ...n }));
         }
 
-        // Determine current active state for this control
         const isActive = (() => {
           if (onlyLabel) {
             if (fromId) {
@@ -855,7 +957,6 @@
         })();
 
         if (!isActive) {
-          // ACTIVATE
           if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
           ensureVisibleNode(nodeId);
           if (fromId) ensureVisibleNode(fromId);
@@ -879,7 +980,6 @@
 
           toggleWrapper.innerHTML = eyeOffSVG;
         } else {
-          // DEACTIVATE
           if (onlyLabel) {
             const removed = [];
             edges.get().forEach(ed => {
@@ -893,13 +993,13 @@
             const candidates = new Set();
             removed.forEach(ed => { candidates.add(ed.from); candidates.add(ed.to); });
             candidates.forEach(nid => {
-              if (nid === initialRootId) return;
+              if (nid === currentRootId) return;
               if (!nodes.get(nid)) return;
               const hasAny = edges.get().some(ed => ed.from === nid || ed.to === nid);
               if (!hasAny) nodes.remove(nid);
             });
           } else {
-            if (nodeId === initialRootId) {
+            if (nodeId === currentRootId) {
               const ids = edges.get().filter(ed => ed.from === nodeId || ed.to === nodeId).map(ed => ed.id);
               edges.remove(ids);
             } else {
@@ -909,7 +1009,7 @@
               edges.remove(ids);
               if (nodes.get(nodeId)) nodes.remove(nodeId);
               neighbors.forEach(nid => {
-                if (nid === initialRootId) return;
+                if (nid === currentRootId) return;
                 const still = edges.get().some(ed => ed.from === nid || ed.to === nid);
                 if (!still && nodes.get(nid)) nodes.remove(nid);
               });
@@ -926,11 +1026,17 @@
       });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllSubmenus(); });
 
+      // If we restored from session, clear the one-shot snapshot
+      if (restore) {
+        try { sessionStorage.removeItem('repGraphState'); } catch (e) {}
+      }
+
       // Debug globals
       window.graphNodes = nodes;
       window.graphEdges = edges;
       window.extraGraphNodes = extraNodes;
       window.extraGraphEdges = extraEdges;
+      window.repPromoteToRoot = promoteToRoot; // handy for manual tests
     }
   };
 })(jQuery, Drupal, drupalSettings);
