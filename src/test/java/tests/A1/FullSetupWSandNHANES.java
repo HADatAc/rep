@@ -54,7 +54,7 @@ public class FullSetupWSandNHANES {
             runTestClassAndAbortOnFailure(ConfigValidationTest.class);
             Thread.sleep(5000);
 
-            /*// Upload WS files
+            // Upload WS files
             runTestClassAndAbortOnFailure(FullUploadWS.class);
             Thread.sleep(5000);
 
