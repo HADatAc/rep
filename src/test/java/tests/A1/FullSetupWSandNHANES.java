@@ -9,6 +9,10 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 
+import tests.config.BEViaFEStatusSimpleCheck;
+import tests.config.BEViaFEStatusTest;
+import tests.config.FusekiConnectionTest;
+import tests.repository.ConfigValidationTest;
 import tests.utils.FullDeleteTest;
 import tests.utils.FullIngestNHANESTestDRAFT;
 import tests.utils.FullIngestWSTestDRAFT;
@@ -30,7 +34,9 @@ public class FullSetupWSandNHANES {
         //Admin Status and Data conf permission
         runTestClassAndAbortOnFailure(AdminAuto.class);
         Thread.sleep(5000);
-        
+
+
+          */
         // All data upload
         runTestClassAndAbortOnFailure(FusekiConnectionTest.class);
         Thread.sleep(5000);
@@ -44,7 +50,7 @@ public class FullSetupWSandNHANES {
 
         runTestClassAndAbortOnFailure(ConfigValidationTest.class);
         Thread.sleep(5000);
-*/
+
 
         // All data upload
         runTestClassAndAbortOnFailure(FullUploadWS.class);
