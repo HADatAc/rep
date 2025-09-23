@@ -10,6 +10,16 @@ import java.time.Duration;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BackendUPTest extends BaseTest{
 
+    private WebDriver driver;
+    private WebDriverWait wait;
+
+    @BeforeAll
+    void setUp() {
+        driver = new ChromeDriver();
+        driver.manage().window().maximize();
+        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+    }
+
     @Test
     void testBackendIsRunning() {
         try {
