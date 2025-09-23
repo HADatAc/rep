@@ -8,17 +8,7 @@ import org.openqa.selenium.support.ui.*;
 import java.time.Duration;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class BackendUPTest {
-
-    private WebDriver driver;
-    private WebDriverWait wait;
-
-    @BeforeAll
-    void setUp() {
-        driver = new ChromeDriver();
-        driver.manage().window().maximize();
-        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-    }
+public class BackendUPTest extends BaseTest{
 
     @Test
     void testBackendIsRunning() {

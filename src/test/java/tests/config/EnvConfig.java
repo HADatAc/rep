@@ -8,7 +8,7 @@ public class EnvConfig {
 
     // Base URLs
     public static final String FRONTEND_URL = "http://18.203.69.17";
-    public static final String BACKEND_URL = "http://34.244.13.53:9000";
+    public static final String BACKEND_URL = "http://localhost:9000";
     //public static final String BACKEND_API_URL = BACKEND_URL + "/api";
     public static final String FUSEKI_URL = "http://localhost:3030";
     public static final String YASGUI_ENDPOINT = "http://localhost:8888";
