@@ -43,6 +43,7 @@ public class FullSetupWSandNHANES {
             runTestClassAndAbortOnFailure(BEViaFEStatusSimpleCheck.class);
             Thread.sleep(5000);
 
+
             /*
             runTestClassAndAbortOnFailure(BEViaFEStatusTest.class);
             Thread.sleep(5000);
