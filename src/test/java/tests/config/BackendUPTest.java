@@ -8,7 +8,7 @@ import org.openqa.selenium.support.ui.*;
 import java.time.Duration;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class BackendUPTest extends BaseTest{
+public class BackendUPTest {
 
     private WebDriver driver;
     private WebDriverWait wait;
