@@ -36,8 +36,8 @@ public abstract class BaseIngest {
     public static String ingestMode = "current"; // default
     String buttonName = "ingest_mt_" + ingestMode;
     protected final Map<String, Boolean> selectedRows = new HashMap<>();
-    protected static final int MAX_ATTEMPTS = 60;
-    protected static final int WAIT_INTERVAL_MS = 5000;
+    protected static final int MAX_ATTEMPTS = 30;
+    protected static final int WAIT_INTERVAL_MS = 2500;
 
     @BeforeAll
     void setup() {
@@ -330,7 +330,12 @@ options.addArguments(
                         break;
                     }
                 }
+                if (attempts == 30) {
+                    fail("Final attempt reached, Test Failed.");
+                    break;
+                }
             }
+
 
             if (processed) {
                 System.out.println("File '" + fileName + "' was successfully processed.");
