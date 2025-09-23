@@ -18,7 +18,6 @@ class REPSearchForm extends FormBase {
   public function getFormId() {
     return 'rep_search_form';
   }
-  // teste
 
   protected $elementtype;
 
