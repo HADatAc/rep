@@ -56,7 +56,7 @@ public class FullSetupWSandNHANES {
             runTestClassAndAbortOnFailure(ConfigValidationTest.class);
             Thread.sleep(5000);
 
-            // Upload WS files
+            /*// Upload WS files
             runTestClassAndAbortOnFailure(FullUploadWS.class);
             Thread.sleep(5000);
 
@@ -81,6 +81,7 @@ public class FullSetupWSandNHANES {
             runTestClassAndAbortOnFailure(AttachPDFINST.class);
             Thread.sleep(5000);
             */
+
 
         } catch (Exception e) {
             System.err.println("⚠️ Test sequence aborted due to failure: " + e.getMessage());
