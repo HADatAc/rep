@@ -14,14 +14,15 @@
  *     maxMembersPerSOC, pageSize, maxLiveNodes, autoShowOnFetch
  *   }
  *
- * In this build:
- * - `hascoTypeUri` and `typeUri` are treated as *different* labels everywhere.
- * - Submenu toggles are scoped to the specific edge (from,to,label) — you can open both.
- * - External eyes (.graph-toggle) can target a specific label via data-label and
- *   optionally scope to one origin via data-from.
- * - Class nodes (type resources) render as GREEN boxes; instances stay BLUE; literals are GREEN ellipses.
- * - Pagination footer (« ») is hidden when a menu has <= MAX_MEMBERS_PER_SOC items and the server
- *   doesn’t have more pages.
+ * This build ensures:
+ * - `hascoTypeUri` and `typeUri` are independent menu options.
+ * - If the server only returns `typeUri`, the "hascoTypeUri" submenu still shows the target class
+ *   and toggling there creates a **hascoTypeUri** edge (not reusing the typeUri edge).
+ * - If both type edges exist for the same (from,to), they are drawn with opposite curves.
+ * - "Copy URI" copies a local proxy link:  <origin>/rep/uri/<base64url(IRI)>
+ * - NEW: "Make it bold" promotes a node to be the **graph root** and performs a **real navigation**
+ *        to that node’s page, but the graph is snapshotted in sessionStorage and restored on load
+ *        so the visualization stays exactly as it was (no losses).
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -38,23 +39,54 @@
         (window.Drupal && Drupal.url ? Drupal.url('rep/graph/expand') : '/rep/graph/expand');
 
       const limits = (drupalSettings && drupalSettings.rep && drupalSettings.rep.graphLimits) || {};
-      const MAX_MEMBERS_PER_SOC = Number(limits.maxMembersPerSOC || 5); // submenu window size
-      const PAGE_SIZE           = Number(limits.pageSize         || 5); // server fetch size
+      const MAX_MEMBERS_PER_SOC = Number(limits.maxMembersPerSOC || 5);
+      const PAGE_SIZE           = Number(limits.pageSize         || 5);
       const MAX_LIVE_NODES      = Number(limits.maxLiveNodes     || 600);
       const AUTO_SHOW_ON_FETCH  = Number(limits.autoShowOnFetch  || 0);
 
       const eyeSVG = `<i class="fa fa-eye"></i>`;
       const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
 
+      // ---------- Restore graph from session (if coming from "Make it bold") ----------
+      function parseIriFromLocation() {
+        const m = (window.location.pathname || '').match(/\/rep\/uri\/([^\/#?]+)/);
+        if (!m) return null;
+        try {
+          const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+          const padded = b64 + '==='.slice((b64.length + 3) % 4);
+          return decodeURIComponent(escape(window.atob(padded)));
+        } catch (e) { return null; }
+      }
+      const arrivingIri = parseIriFromLocation();
+
+      let restore = null;
+      try {
+        const raw = sessionStorage.getItem('repGraphState');
+        if (raw) {
+          const obj = JSON.parse(raw);
+          // Optional sanity check: only restore if it matches the page we're opening
+          if (!obj.targetIri || obj.targetIri === arrivingIri) restore = obj;
+        }
+      } catch (e) { /* ignore */ }
+
       // ----- Data caches -----
       const base = drupalSettings.graphData || {};
+      if (restore) {
+        // Replace base data with the saved snapshot
+        base.nodes      = Array.isArray(restore.nodes) ? restore.nodes : (base.nodes || []);
+        base.edges      = Array.isArray(restore.edges) ? restore.edges : (base.edges || []);
+        base.extraNodes = Array.isArray(restore.extraNodes) ? restore.extraNodes : (base.extraNodes || []);
+        base.extraEdges = Array.isArray(restore.extraEdges) ? restore.extraEdges : (base.extraEdges || []);
+      }
+
       const nodes = new vis.DataSet(base.nodes || []);
       const edges = new vis.DataSet(base.edges || []);
       const extraNodes = base.extraNodes || [];
       let   extraEdges = base.extraEdges || [];
 
-      // keep the very first node id (root) so we never remove it by mistake
-      const initialRootId = (nodes.getIds && nodes.getIds()[0]) || null;
+      // Initial root and current root (promoted by "Make it bold")
+      const firstNodeId = (nodes.getIds && nodes.getIds()[0]) || null;
+      let currentRootId = restore?.currentRootId || firstNodeId;
 
       // ----- Normalize CURIE -> IRI -----
       const AHEAD = 'http://hadatac.org/ont/arrowhead/';
@@ -65,6 +97,7 @@
         n = { ...n };
         n.id = expandCurie(n.id);
         if (n.typeUri) n.typeUri = expandCurie(n.typeUri);
+        if (n.hascoTypeUri) n.hascoTypeUri = expandCurie(n.hascoTypeUri);
         return n;
       }
       function normalizeEdge(e) {
@@ -77,8 +110,8 @@
       for (let i = 0; i < extraEdges.length; i++) extraEdges[i] = normalizeEdge(extraEdges[i]);
 
       // Guards & paging state
-      const openedNodes = {};      // avoid double initial fetch per node
-      // `${nodeId}:${label}` -> { offset, fetched, hasMoreServer, totalGuess, prefetchTried }
+      const openedNodes = {};
+      const primedNodes = {};
       const pageState = Object.create(null);
 
       // ----- Layout helpers -----
@@ -125,17 +158,14 @@
       };
       const network = new vis.Network(container, { nodes, edges }, options);
 
-      // ---------- Styling helpers (green for classes, blue for instances, green ellipse for literals) ----------
+      // ---------- Styling helpers ----------
       function isClassNode(n) {
-        // A node is a "class" when its id == typeUri (this is how type nodes are built server-side)
         if (!n) return false;
-        const id = typeof n.id === 'string' ? expandCurie(n.id) : n.id;
-        const tu = typeof n.typeUri === 'string' ? expandCurie(n.typeUri) : n.typeUri;
+        const id = expandCurie(n.id);
+        const tu = n.typeUri && expandCurie(n.typeUri);
         return !!id && !!tu && id === tu;
       }
-
       function ensureNodeStyle(n) {
-        // Provide safe label
         if (!n.label || !String(n.label).trim()) {
           const p = (n.id || '').split('/');
           n.label = p[p.length - 1] || (n.id || '');
@@ -143,39 +173,43 @@
         if (!n.label.includes('➕')) n.label += '\n➕';
         n.font = n.font || { size: 14 };
 
-        // LITERAL: keep ellipse green with dark text
         if (n.shape === 'ellipse') {
           n.color = { background: '#28a745', border: '#1e7e34' };
           n.font  = { ...(n.font || {}), color: 'black' };
           return n;
         }
-
-        // CLASS: force green box if id === typeUri
         if (isClassNode(n)) {
           n.shape = 'box';
           n.color = { background: '#28a745', border: '#1e7e34' };
           n.font  = { ...(n.font || {}), color: 'white' };
           return n;
         }
-
-        // INSTANCE: default blue box
         if (!n.color) {
           n.color = { background: '#007bff', border: '#0056b3' };
           n.font  = { ...(n.font || {}), color: 'white' };
         }
         return n;
       }
-
-      // Normalize style for already-visible nodes (adds ➕ and class/instance colors)
       nodes.get().forEach(n => nodes.update(ensureNodeStyle({ ...n })));
 
-      // ----- Floating menu container -----
+      // Root style handling (highlight current root)
+      function applyRootStyle(id, on) {
+        const n = nodes.get(id);
+        if (!n) return;
+        const base = ensureNodeStyle({ ...n });
+        const upd = on
+          ? { borderWidth: 4, color: { ...(base.color || {}), border: '#ffc107' }, font: { ...(base.font||{}), bold: true, size: 16 } }
+          : { borderWidth: 1, color: { ...(base.color || {}), border: (isClassNode(base) ? '#1e7e34' : '#0056b3') }, font: { ...(base.font||{}), bold: false, size: 14 } };
+        nodes.update({ id, ...upd });
+      }
+
+      // ----- Floating menu -----
       const expandMenu = document.createElement("div");
       expandMenu.id = "expand-menu";
       expandMenu.style.cssText = `
         position:absolute;z-index:1000;background:#f8f9fa;border:1px solid #ccc;
         padding:6px 10px;border-radius:5px;box-shadow:2px 2px 6px rgba(0,0,0,0.1);
-        display:none; pointer-events:auto;
+        display:none; pointer-events:auto; min-width: 340px;
       `;
       document.body.appendChild(expandMenu);
 
@@ -193,6 +227,61 @@
         expandMenu.style.top  = `${topOffset + canvasPos.y - 10}px`;
       }
 
+      // ----- Clipboard helpers (Copy URI -> local /rep/uri/<b64url>) -----
+      function encodeBase64Url(str) {
+        const b64 = window.btoa(unescape(encodeURIComponent(str)));
+        return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+      }
+      function buildLocalUriLink(iri) {
+        if (!iri) return '';
+        if (/\/rep\/uri\//.test(iri)) return iri;
+        const b64 = encodeBase64Url(iri);
+        let base = (window.Drupal && Drupal.url) ? Drupal.url('rep/uri') : '/rep/uri';
+        if (!base) base = '/rep/uri';
+        if (!base.endsWith('/')) base += '/';
+        const origin = window.location && window.location.origin ? window.location.origin : '';
+        const full = /^https?:\/\//i.test(base) ? (base + b64) : (origin + base + b64);
+        return full;
+      }
+      function copyToClipboard(text, onDone) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(onDone).catch(() => fallbackCopy(text, onDone));
+        } else {
+          fallbackCopy(text, onDone);
+        }
+      }
+      function fallbackCopy(text, onDone) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:absolute; left:-9999px; top:-9999px;';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        if (onDone) onDone();
+      }
+      function makeCopyLink(labelText, valueSupplier) {
+        const link = document.createElement('span');
+        link.textContent = labelText;
+        link.style.cssText = `
+          cursor:pointer; font-size:12px; color:#007bff; white-space:nowrap;
+          padding:2px 6px; border-radius:4px;
+        `;
+        link.title = 'Copy to clipboard';
+        link.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const valRaw = (typeof valueSupplier === 'function') ? valueSupplier() : valueSupplier;
+          const val = buildLocalUriLink(valRaw);
+          copyToClipboard(val, () => {
+            const old = link.textContent;
+            link.textContent = 'Copied!';
+            setTimeout(() => { link.textContent = old; }, 900);
+          });
+        });
+        return link;
+      }
+
       // ----- Utilities -----
       function edgeIdOf(e) {
         const from = expandCurie(e.from);
@@ -201,18 +290,16 @@
       }
       function isDisplayableLabel(label) {
         if (!label) return false;
-        if (label === 'hasCollection') return false; // normalized below
+        if (label === 'hasCollection') return false;
         const blacklist = new Set(['label','comment','body','hasImageUri','hasWebDocument','hasStatus','id']);
         return !blacklist.has(label);
       }
       function buildLabelEdgesMap(relEdges) {
-        // Map: label -> [{ edge, id, normalized }]
         const map = new Map();
         relEdges.forEach(e => {
           const E = normalizeEdge(e);
           const target = extraNodes.find(n => n.id === E.to);
           let lbl = e.label;
-          // Normalize generic hasCollection into specific labels based on target.typeUri
           if (lbl === 'hasCollection' && target) {
             const tu = (target.typeUri || '');
             if (tu.includes('/hasco/SampleCollection')) lbl = 'hasSampleCollection';
@@ -231,7 +318,6 @@
       const isReverseMemberLabel = (lbl) =>
         lbl === 'isMemberOf' || lbl === 'memberOf' || lbl === 'isObjectOf';
 
-      // Synthesize "contains" edges from reverse membership if present
       function synthesizeContainsFromReverse(nodeId) {
         const rev = extraEdges
           .map(normalizeEdge)
@@ -251,12 +337,51 @@
       }
       function warnNodeCap() { alert(`Node limit reached (${MAX_LIVE_NODES}). Hide some items before loading more.`); }
 
-      // ---------- Defensive cap: keep only PAGE_SIZE items per fetch ----------
+      // ---------- Seed type edges from the node itself ----------
+      function seedTypeEdgesForNode(node) {
+        if (!node) return;
+        const nid = expandCurie(node.id);
+        function ensureTypeEdge(label, typeId) {
+          if (!typeId) return;
+          const tid = expandCurie(typeId);
+          if (!extraNodes.find(n => n.id === tid)) {
+            extraNodes.push({ id: tid, label: (tid.split('/').pop() || tid), typeUri: tid, shape: 'box' });
+          }
+          const e = { from: nid, to: tid, label };
+          const id = edgeIdOf(e);
+          if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === id)) {
+            extraEdges.push({ ...e, id });
+          }
+        }
+        ensureTypeEdge('typeUri', node.typeUri);
+        ensureTypeEdge('hascoTypeUri', node.hascoTypeUri);
+      }
+
+      // ---------- Add visible edge; curve twin type edges so both appear ----------
+      function addEdgeVisible(eRaw) {
+        const e = normalizeEdge(eRaw);
+        const id = edgeIdOf(e);
+        if (edges.get(id)) return;
+
+        let styled = { ...e, id };
+        const isType = (e.label === 'typeUri' || e.label === 'hascoTypeUri');
+        if (isType) {
+          const twinLabel = (e.label === 'typeUri') ? 'hascoTypeUri' : 'typeUri';
+          const twinId = edgeIdOf({ from: e.from, to: e.to, label: twinLabel });
+          if (edges.get(twinId)) {
+            styled.smooth = { type: 'curvedCW', roundness: 0.25 };
+            const twin = edges.get(twinId);
+            edges.update({ id: twin.id, smooth: { type: 'curvedCCW', roundness: 0.25 } });
+          }
+        }
+        edges.add(styled);
+      }
+
+      // ---------- Slim payload ----------
       function slimPayloadForLabel(data, nodeId, label, maxKeep) {
         const normNodes = (data.nodes || []).map(normalizeNode);
         const normEdges = (data.edges || []).map(normalizeEdge);
 
-        // Accept edges for the requested label (or normalized "contains")
         const accept = (e) => {
           if (e.from !== nodeId) return false;
           if (label === 'contains') return isMemberLabel(e.label);
@@ -281,54 +406,89 @@
         return { nodes: keptNodes, edges: keptEdges, meta: data.meta || {} };
       }
 
-      // ---------- Unified submenu helpers ----------
+      // ---------- Items for label (with fallback for hascoTypeUri) ----------
       function itemsForLabel(nodeId, label) {
         const norms = extraEdges.map(normalizeEdge);
+
         if (label === 'contains') {
           return norms
             .filter(e => e.from === nodeId && isMemberLabel(e.label))
-            .map(e => ({ edge: { ...e, label: 'contains' }, id: edgeIdOf({ ...e, label: 'contains' }) }))
-            .filter(obj => extraNodes.some(n => n.id === obj.edge.to));
+            .map(e => ({ edge: { ...e, label: 'contains' }, id: edgeIdOf({ ...e, label: 'contains' }) }));
         }
+
         const rel = norms.filter(e => e.from === nodeId);
         const map = buildLabelEdgesMap(rel);
-        return (map.get(label) || []).filter(({ edge }) => extraNodes.some(n => n.id === edge.to));
+        let list = (map.get(label) || []);
+        if (label === 'hascoTypeUri' && list.length === 0) {
+          list = (map.get('typeUri') || []);
+        }
+        return list;
       }
 
+      // ---------- Fetch more ----------
       function fetchMoreForLabel(nodeId, label, state, rightBtn, after) {
-        // Type edges are singletons; do not fetch/paginate them.
-        if (label === 'hascoTypeUri' || label === 'typeUri') {
-          state.hasMoreServer = false;
-          after(0);
-          return;
-        }
+        const isType = (label === 'hascoTypeUri' || label === 'typeUri');
         if (!socEndpoint) return;
-        const params = { from: nodeId, limit: PAGE_SIZE, offset: state.fetched, debug: 1 };
-        if (label === 'contains') params.relation = 'contains'; else params.label = label;
+
+        const paramsLabeled = { from: nodeId, limit: isType ? 6 : PAGE_SIZE, offset: state.fetched, debug: 1 };
+        if (label === 'contains') paramsLabeled.relation = 'contains';
+        else paramsLabeled.label = label;
 
         const prev = rightBtn.textContent;
         rightBtn.disabled = true; rightBtn.textContent = '…';
 
-        $.getJSON(socEndpoint, params)
-          .done(data => {
-            const slim = slimPayloadForLabel(data, nodeId, label, PAGE_SIZE);
-            const returned = slim.edges.length;
-
-            mergeGraphPayload(slim, nodeId);
-
-            state.fetched += returned;
-            const meta = slim.meta || {};
-            state.hasMoreServer = (typeof meta.totalGuess === 'number')
-              ? (state.fetched < meta.totalGuess)
-              : (returned === PAGE_SIZE);
-
+        const finish = (returned, hasMore, meta) => {
+          state.fetched += returned;
+          state.hasMoreServer = !!hasMore;
+          if (meta) {
             if (typeof meta.total === 'number') state.totalGuess = meta.total;
             else if (typeof meta.totalGuess === 'number') state.totalGuess = meta.totalGuess;
+          }
+          after(returned);
+          rightBtn.textContent = prev; rightBtn.disabled = false;
+        };
 
-            after(returned);
+        $.getJSON(socEndpoint, paramsLabeled)
+          .done(data => {
+            const slim = slimPayloadForLabel(data, nodeId, label, isType ? 6 : PAGE_SIZE);
+            const returned = slim.edges.length;
+            mergeGraphPayload(slim, nodeId);
+
+            if (isType) {
+              finish(returned, false, slim.meta);
+              if (returned === 0 && !state.triedGeneric) {
+                state.triedGeneric = true;
+                $.getJSON(socEndpoint, { from: nodeId, limit: 8, offset: 0, debug: 1 })
+                  .done(data2 => {
+                    const slim2 = slimPayloadForLabel(data2, nodeId, label, 8);
+                    const ret2 = slim2.edges.length;
+                    mergeGraphPayload(slim2, nodeId);
+                    finish(ret2, false, slim2.meta);
+                  })
+                  .fail(() => finish(0, false));
+              }
+            } else {
+              const meta = slim.meta || {};
+              const hasMore = (typeof meta.totalGuess === 'number') ? (state.fetched < meta.totalGuess)
+                                : (returned === PAGE_SIZE);
+              finish(returned, hasMore, meta);
+            }
           })
-          .fail(() => { state.hasMoreServer = false; after(0); })
-          .always(() => { rightBtn.textContent = prev; rightBtn.disabled = false; });
+          .fail(() => {
+            if (isType && !state.triedGeneric) {
+              state.triedGeneric = true;
+              $.getJSON(socEndpoint, { from: nodeId, limit: 8, offset: 0, debug: 1 })
+                .done(data2 => {
+                  const slim2 = slimPayloadForLabel(data2, nodeId, label, 8);
+                  const ret2 = slim2.edges.length;
+                  mergeGraphPayload(slim2, nodeId);
+                  finish(ret2, false, slim2.meta);
+                })
+                .fail(() => finish(0, false));
+            } else {
+              finish(0, false);
+            }
+          });
       }
 
       function openLabelSubmenu(opt, nodeId, label) {
@@ -344,7 +504,8 @@
             fetched: now,
             hasMoreServer: (now >= PAGE_SIZE),
             totalGuess: null,
-            prefetchTried: false
+            prefetchTried: false,
+            triedGeneric: false
           };
         }
         const state = pageState[key];
@@ -355,7 +516,7 @@
           position:absolute; left:140px; top:0; background:#f1f1f1;
           border:1px solid #ccc; padding:6px; border-radius:4px;
           box-shadow:1px 1px 4px rgba(0,0,0,0.2); z-index:1001;
-          max-height: 340px; overflow:auto; min-width: 320px; pointer-events:auto;
+          max-height: 340px; overflow:auto; min-width: 360px; pointer-events:auto;
         `;
         opt.appendChild(submenu);
 
@@ -365,9 +526,7 @@
           const list = itemsForLabel(nodeId, label);
           const totalFetched = list.length;
 
-          // Prefetch only for multi-item labels (skip both type labels)
-          const fetchable = (label !== 'hascoTypeUri' && label !== 'typeUri');
-          if (fetchable && totalFetched === 0 && !state.prefetchTried) {
+          if (totalFetched === 0 && !state.prefetchTried) {
             state.prefetchTried = true;
             state.hasMoreServer = true;
             fetchMoreForLabel(nodeId, label, state, { textContent:'', disabled:false }, () => { renderPage(); });
@@ -382,15 +541,12 @@
           const end = Math.min(start + MAX_MEMBERS_PER_SOC, totalFetched);
           const page = list.slice(start, end);
 
-          // Render rows
-          page.forEach(({ edge: e, id }) => {
-            let child = extraNodes.find(n => n.id === e.to);
+          page.forEach(({ edge: e }) => {
+            const actualEdge = e;
+            let child = extraNodes.find(n => n.id === actualEdge.to);
             if (!child) {
-              child = normalizeNode({ id: e.to, label: (e.to.split('/').pop() || e.to), shape: 'box' });
-              // If this submenu is for a type label, mark child as a CLASS node (typeUri == id)
-              if (label === 'typeUri' || label === 'hascoTypeUri') {
-                child.typeUri = child.id;
-              }
+              child = normalizeNode({ id: actualEdge.to, label: (actualEdge.to.split('/').pop() || actualEdge.to), shape: 'box' });
+              if (label === 'typeUri' || label === 'hascoTypeUri') child.typeUri = child.id;
               extraNodes.push(child);
             }
 
@@ -399,35 +555,46 @@
               : (child.id?.split('/').pop() || child.id || '(no label)');
             if (!child.label || !String(child.label).trim()) child.label = displayLabel;
 
-            const edgeId = id || edgeIdOf({ ...e, label });
-            const edgeOn = !!edges.get(edgeId); // toggle reflects EDGE, not NODE
+            const desiredEdge = { from: nodeId, to: child.id, label };
+            const desiredEdgeId = edgeIdOf(desiredEdge);
+            const edgeOn = !!edges.get(desiredEdgeId);
 
             const row = document.createElement("div");
             row.style.cssText = `
               display:flex; align-items:center; justify-content:space-between;
-              gap:12px; padding:4px 6px; min-width:300px; cursor:default;
+              gap:12px; padding:4px 6px; min-width:340px; cursor:default;
             `;
+
+            const leftWrap = document.createElement('div');
+            leftWrap.style.cssText = 'display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 auto;';
 
             const s = document.createElement("span");
             s.textContent = displayLabel;
-            s.style.cssText = "flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+            s.style.cssText = "flex:1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+
+            const copyChild = makeCopyLink('Copy URI', () => child.id);
+            copyChild.style.marginLeft = '4px';
+
+            leftWrap.appendChild(s);
+            leftWrap.appendChild(copyChild);
 
             const toggle = document.createElement("span");
             toggle.innerHTML = edgeOn ? eyeOffSVG : eyeSVG;
-            toggle.style.cssText = "cursor:pointer; padding:2px 4px; display:inline-block;";
+            toggle.style.cssText = "cursor:pointer; padding:2px 6px; display:inline-block;";
 
-            // Submenu toggle: add/remove ONLY this (nodeId -> child, label) edge
             toggle.addEventListener("click", (ev) => {
               ev.stopPropagation();
 
-              if (!edges.get(edgeId)) {
-                // Turn ON: ensure node + edge
-                if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
+              if (!edges.get(desiredEdgeId)) {
                 if (!nodes.get(child.id)) nodes.add(ensureNodeStyle({ ...child }));
                 if (!nodes.get(nodeId))  nodes.add(ensureNodeStyle({ id: nodeId, label: (nodeId.split('/').pop()||nodeId), shape:'box'}));
-                edges.add({ ...e, id: edgeId, label });
 
-                // Reposition: spread current visible neighbors (including the new child)
+                if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === desiredEdgeId)) {
+                  extraEdges.push({ ...desiredEdge, id: desiredEdgeId });
+                }
+
+                addEdgeVisible({ ...desiredEdge, id: desiredEdgeId });
+
                 const neighborIds = edges.get()
                   .filter(ed => ed.from === nodeId)
                   .map(ed => ed.to)
@@ -441,26 +608,22 @@
 
                 toggle.innerHTML = eyeOffSVG;
               } else {
-                // Turn OFF: remove just this edge; drop node only if isolated (and not the root)
-                edges.remove(edgeId);
+                edges.remove(desiredEdgeId);
                 const still = edges.get().some(x => x.from === child.id || x.to === child.id);
-                if (!still && child.id !== initialRootId) nodes.remove(child.id);
+                if (!still && child.id !== currentRootId) nodes.remove(child.id);
                 toggle.innerHTML = eyeSVG;
               }
             });
 
-            row.appendChild(s);
+            row.appendChild(leftWrap);
             row.appendChild(toggle);
             submenu.appendChild(row);
           });
 
-          // ----- Footer with pagination (hide arrows when not needed) -----
+          // Footer / pagination
           const footer = document.createElement('div');
           footer.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:8px;";
-
-          // Show pager only if there is more than one page locally OR server indicates more pages
           const showPager = (totalFetched > MAX_MEMBERS_PER_SOC) || !!state.hasMoreServer;
-
           const info = document.createElement('span');
           info.style.cssText = "font-size:12px; opacity:.8;";
 
@@ -480,11 +643,9 @@
 
             const right = document.createElement('button');
             right.type = 'button'; right.className = 'btn btn-sm btn-light'; right.textContent = '»';
-
             const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
-            const canFetchMore = !!state.hasMoreServer && (label !== 'hascoTypeUri' && label !== 'typeUri');
+            const canFetchMore = !!state.hasMoreServer;
             right.disabled = !canAdvanceCached && !canFetchMore;
-
             right.onclick = (e3) => {
               e3.stopPropagation();
               if (canAdvanceCached) {
@@ -500,22 +661,98 @@
 
             footer.append(left, info, right);
           } else {
-            // No pagination needed — show a compact summary (or omit footer if preferred)
             const plural = totalFetched === 1 ? '' : 's';
             info.textContent = `Showing ${totalFetched} item${plural}`;
             footer.appendChild(info);
           }
 
           submenu.appendChild(footer);
-
-          // Keep menu positioned with the node
           setTimeout(() => updateExpandMenuPosition(nodeId), 0);
         };
 
         renderPage();
       }
 
-      // ----- Node click -> floating menu -----
+      // ----- Merge payload -----
+      function mergeGraphPayload(payload, anchorNodeId) {
+        if (!payload) return;
+        const newNodes = (payload.nodes || []).map(normalizeNode);
+        const newEdges = (payload.edges || []).map(normalizeEdge);
+
+        newNodes.forEach(n => { if (!extraNodes.find(x => x.id === n.id)) extraNodes.push(n); });
+        newEdges.forEach(e => {
+          const id = edgeIdOf(e);
+          if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === id)) {
+            extraEdges.push({ ...e, id });
+          }
+        });
+
+        let autoShown = 0;
+        const existing = new Set(nodes.getIds());
+        const addedIds = [];
+        newNodes.forEach(n => {
+          if (AUTO_SHOW_ON_FETCH <= 0) return;
+          if (autoShown >= AUTO_SHOW_ON_FETCH) return;
+          if (!existing.has(n.id)) {
+            if (!canAddMoreVisibleNodes(1)) return;
+            nodes.add(ensureNodeStyle({ ...n }));
+            addedIds.push(n.id);
+            autoShown++;
+          }
+        });
+        newEdges.forEach(e => {
+          const id = edgeIdOf(e);
+          if (!edges.get(id) && nodes.get(e.from) && nodes.get(e.to)) {
+            addEdgeVisible({ ...e, id });
+          }
+        });
+
+        if (addedIds.length) {
+          freezeAllNodes(nodes);
+          placeAround(network, anchorNodeId, addedIds);
+          network.redraw();
+          unfreezeNodes(nodes, addedIds);
+        }
+      }
+
+      // ----- Snapshot & Navigation helpers -----
+      function snapshotGraph(targetIri) {
+        try {
+          const snap = {
+            version: 1,
+            currentRootId,
+            targetIri: targetIri || null,
+            nodes: nodes.get().map(n => ({ ...n })),   // shallow copy
+            edges: edges.get().map(e => ({ ...e })),
+            extraNodes: extraNodes.map(n => ({ ...n })),
+            extraEdges: extraEdges.map(e => ({ ...e }))
+          };
+          sessionStorage.setItem('repGraphState', JSON.stringify(snap));
+        } catch (e) {
+          // If storage fails we simply won't persist, but we still navigate.
+        }
+      }
+
+      // ----- Promote to ROOT (Make it bold) -----
+      function promoteToRoot(newRootId) {
+        if (!newRootId || newRootId === currentRootId) return;
+        if (currentRootId && nodes.get(currentRootId)) applyRootStyle(currentRootId, false);
+        currentRootId = newRootId;
+        if (nodes.get(currentRootId)) applyRootStyle(currentRootId, true);
+
+        // Smooth focus just for feedback
+        try {
+          const pos = network.getPositions([currentRootId])[currentRootId];
+          if (pos) network.focus(currentRootId, { scale: 1.0, animation: { duration: 250, easingFunction: 'easeInOutQuad' } });
+        } catch (e) {}
+
+        // Build link, snapshot graph, and navigate for real
+        const link = buildLocalUriLink(currentRootId);
+        snapshotGraph(currentRootId);
+        window.location.assign(link);
+      }
+
+      // ----- Click handler -----
       network.on("click", function (params) {
         expandMenu.style.display = "none";
         closeAllSubmenus();
@@ -524,6 +761,17 @@
         const selectedNodeId = params.nodes[0];
         const selectedNode   = nodes.get(selectedNodeId) || extraNodes.find(n => n.id === selectedNodeId);
         if (!selectedNode) return;
+
+        seedTypeEdgesForNode(selectedNode);
+
+        // Prime fetch once per node
+        if (socEndpoint && !primedNodes[selectedNodeId]) {
+          primedNodes[selectedNodeId] = true;
+          $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
+            .done(data => mergeGraphPayload(data, selectedNodeId))
+            .always(() => { setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0); });
+          return;
+        }
 
         function nodeKindByTypeUri(typeUri) {
           if (!typeUri) return 'other';
@@ -539,7 +787,6 @@
         }
         const kind = nodeKindByTypeUri(selectedNode?.typeUri);
 
-        // synthesize "contains" from reverse links if needed
         const hasContains =
           extraEdges.map(normalizeEdge).some(e => e.from === selectedNodeId && isMemberLabel(e.label)) ||
           extraEdges.map(normalizeEdge).some(e => e.to   === selectedNodeId && isReverseMemberLabel(e.label));
@@ -578,26 +825,53 @@
           return;
         }
 
-        // Build available labels for this node from cached edges
+        // Build labels from cached edges
         const relatedEdges = extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId);
-        const labelEdgesMap = buildLabelEdgesMap(relatedEdges.filter(e => extraNodes.some(n => n.id === e.to)));
+        const labelEdgesMap = buildLabelEdgesMap(relatedEdges);
         let labels = Array.from(labelEdgesMap.keys()).filter(isDisplayableLabel);
 
-        // Make sure BOTH type labels appear independently when present
-        const hasHascoType = extraEdges.map(normalizeEdge).some(e =>
-          e.label === 'hascoTypeUri' && e.from === selectedNodeId && extraNodes.find(n => n.id === e.to)
-        );
-        const hasStdType = extraEdges.map(normalizeEdge).some(e =>
-          e.label === 'typeUri' && e.from === selectedNodeId && extraNodes.find(n => n.id === e.to)
-        );
-        if (hasHascoType && !labels.includes('hascoTypeUri')) labels.push('hascoTypeUri');
-        if (hasStdType && !labels.includes('typeUri')) labels.push('typeUri');
+        // Always expose both type labels in the menu
+        labels = Array.from(new Set(labels.concat(['typeUri', 'hascoTypeUri'])));
 
         if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
 
-        // Render floating menu
+        // Render menu
         expandMenu.innerHTML = '';
         closeAllSubmenus();
+
+        // Header with node label (left) + actions (right)
+        const header = document.createElement('div');
+        header.style.cssText = `
+          display:flex; align-items:center; justify-content:space-between;
+          gap:8px; padding:2px 0 6px 0; border-bottom:1px dashed #ddd; margin-bottom:6px;
+        `;
+        const title = document.createElement('div');
+        title.textContent = selectedNode.label ? String(selectedNode.label).replace(/\n?➕$/, '') : (selectedNode.id.split('/').pop() || selectedNode.id);
+        title.style.cssText = 'font-weight:600; max-width:230px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+        title.title = selectedNode.id;
+
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display:flex; align-items:center; gap:10px;';
+
+        const copyNode = makeCopyLink('Copy URI', () => selectedNode.id);
+        copyNode.style.alignSelf = 'flex-start';
+
+        // "Make it bold" -> promote to root and navigate, restoring the graph on next page
+        const makeBold = document.createElement('span');
+        makeBold.textContent = 'Make it bold';
+        makeBold.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
+        makeBold.title = 'Promote this node to be the graph root and open its page';
+        makeBold.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          promoteToRoot(selectedNodeId);
+        });
+
+        actions.appendChild(copyNode);
+        actions.appendChild(makeBold);
+
+        header.appendChild(title);
+        header.appendChild(actions);
+        expandMenu.appendChild(header);
 
         labels.forEach(label => {
           const opt = document.createElement("div");
@@ -627,50 +901,6 @@
         setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
       });
 
-      // ----- Merge payload (respect limits, no auto-flood) -----
-      function mergeGraphPayload(payload, anchorNodeId) {
-        if (!payload) return;
-        const newNodes = (payload.nodes || []).map(normalizeNode);
-        const newEdges = (payload.edges || []).map(normalizeEdge);
-
-        // Cache merge (dedupe)
-        newNodes.forEach(n => { if (!extraNodes.find(x => x.id === n.id)) extraNodes.push(n); });
-        newEdges.forEach(e => {
-          const id = edgeIdOf(e);
-          if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === id)) {
-            extraEdges.push({ ...e, id });
-          }
-        });
-
-        // Optional preview auto-show
-        let autoShown = 0;
-        const existing = new Set(nodes.getIds());
-        const addedIds = [];
-        newNodes.forEach(n => {
-          if (AUTO_SHOW_ON_FETCH <= 0) return;
-          if (autoShown >= AUTO_SHOW_ON_FETCH) return;
-          if (!existing.has(n.id)) {
-            if (!canAddMoreVisibleNodes(1)) return;
-            nodes.add(ensureNodeStyle({ ...n }));
-            addedIds.push(n.id);
-            autoShown++;
-          }
-        });
-        newEdges.forEach(e => {
-          const id = edgeIdOf(e);
-          if (!edges.get(id) && nodes.get(e.from) && nodes.get(e.to)) {
-            edges.add({ ...e, id });
-          }
-        });
-
-        if (addedIds.length) {
-          freezeAllNodes(nodes);
-          placeAround(network, anchorNodeId, addedIds);
-          network.redraw();
-          unfreezeNodes(nodes, addedIds);
-        }
-      }
-
       // Keep menu positioned while dragging / drawing
       network.on("dragEnd", params => {
         if (expandMenu.style.display === "block" && params.nodes?.length) {
@@ -684,15 +914,15 @@
         }
       });
 
-      // Auto-open first node
-      const baseNodeId = nodes.getIds()[0];
-      if (baseNodeId) {
-        network.selectNodes([baseNodeId]);
-        network.once("afterDrawing", () => { if (network.emit) network.emit("click", { nodes: [baseNodeId] }); });
+      // Auto-open first node (or restored root) and highlight it
+      if (currentRootId) applyRootStyle(currentRootId, true);
+      const toSelect = currentRootId || firstNodeId;
+      if (toSelect) {
+        network.selectNodes([toSelect]);
+        network.once("afterDrawing", () => { if (network.emit) network.emit("click", { nodes: [toSelect] }); });
       }
 
-      // ---------- External toggle buttons (.graph-toggle) ----------
-      // Targets a specific (from -> node, label). If label is missing, legacy behavior (whole node).
+      // ---------- External toggles (.graph-toggle) ----------
       document.body.addEventListener("click", function (event) {
         const toggleWrapper = event.target.closest(".graph-toggle");
         if (!toggleWrapper) return;
@@ -700,7 +930,7 @@
         const nodeId = expandCurie(toggleWrapper.getAttribute("data-node") || "");
         if (!nodeId) return;
 
-        const onlyLabel = (toggleWrapper.getAttribute("data-label") || "").trim();  // "typeUri" | "hascoTypeUri" | ...
+        const onlyLabel = (toggleWrapper.getAttribute("data-label") || "").trim();  // e.g. "typeUri" | "hascoTypeUri"
         const fromIdRaw = toggleWrapper.getAttribute("data-from") || "";
         const fromId = fromIdRaw ? expandCurie(fromIdRaw) : "";
 
@@ -723,11 +953,10 @@
             }
             return edges.get().some(ed => (ed.from === nodeId || ed.to === nodeId) && ed.label === onlyLabel);
           }
-          return !!nodes.get(nodeId); // legacy
+          return !!nodes.get(nodeId);
         })();
 
         if (!isActive) {
-          // ACTIVATE
           if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
           ensureVisibleNode(nodeId);
           if (fromId) ensureVisibleNode(fromId);
@@ -746,12 +975,11 @@
             ensureVisibleNode(e.from);
             ensureVisibleNode(e.to);
             const id = edgeIdOf(e);
-            if (!edges.get(id) && nodes.get(e.from) && nodes.get(e.to)) edges.add({ ...e, id });
+            if (!edges.get(id) && nodes.get(e.from) && nodes.get(e.to)) addEdgeVisible({ ...e, id });
           });
 
           toggleWrapper.innerHTML = eyeOffSVG;
         } else {
-          // DEACTIVATE
           if (onlyLabel) {
             const removed = [];
             edges.get().forEach(ed => {
@@ -765,14 +993,13 @@
             const candidates = new Set();
             removed.forEach(ed => { candidates.add(ed.from); candidates.add(ed.to); });
             candidates.forEach(nid => {
-              if (nid === initialRootId) return;
+              if (nid === currentRootId) return;
               if (!nodes.get(nid)) return;
               const hasAny = edges.get().some(ed => ed.from === nid || ed.to === nid);
               if (!hasAny) nodes.remove(nid);
             });
           } else {
-            // Legacy: keep the root; otherwise remove node + orphans
-            if (nodeId === initialRootId) {
+            if (nodeId === currentRootId) {
               const ids = edges.get().filter(ed => ed.from === nodeId || ed.to === nodeId).map(ed => ed.id);
               edges.remove(ids);
             } else {
@@ -782,7 +1009,7 @@
               edges.remove(ids);
               if (nodes.get(nodeId)) nodes.remove(nodeId);
               neighbors.forEach(nid => {
-                if (nid === initialRootId) return;
+                if (nid === currentRootId) return;
                 const still = edges.get().some(ed => ed.from === nid || ed.to === nid);
                 if (!still && nodes.get(nid)) nodes.remove(nid);
               });
@@ -793,17 +1020,23 @@
         }
       });
 
-      // Close submenus globally (but only if click is outside the floating menu)
+      // Close submenus / shortcuts
       document.addEventListener("click", function (e) {
         if (!expandMenu.contains(e.target)) closeAllSubmenus();
       });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllSubmenus(); });
 
-      // Debug exports
+      // If we restored from session, clear the one-shot snapshot
+      if (restore) {
+        try { sessionStorage.removeItem('repGraphState'); } catch (e) {}
+      }
+
+      // Debug globals
       window.graphNodes = nodes;
       window.graphEdges = edges;
       window.extraGraphNodes = extraNodes;
       window.extraGraphEdges = extraEdges;
+      window.repPromoteToRoot = promoteToRoot; // handy for manual tests
     }
   };
 })(jQuery, Drupal, drupalSettings);
