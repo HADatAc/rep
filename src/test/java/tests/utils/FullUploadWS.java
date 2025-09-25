@@ -30,7 +30,7 @@ public class FullUploadWS {
         Thread.sleep(5000);
     }
     private void runTestClass(Class<?> testClass) {
-        System.out.println("===> Running: " + testClass.getSimpleName());
+        System.out.println("=========> Running: " + testClass.getSimpleName());
 
         launcher.execute(
             LauncherDiscoveryRequestBuilder.request()

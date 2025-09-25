@@ -34,7 +34,7 @@ public abstract class BaseUpload {
     @BeforeAll
     void setup() {
         System.out.println("=== STARTING SETUP ===");
-        logMemoryUsage("Before Chrome setup");
+        //logMemoryUsage("Before Chrome setup");
         
         try {
             System.setProperty("webdriver.chrome.driver", "/var/data/chromedriver/chromedriver");
@@ -74,7 +74,7 @@ public abstract class BaseUpload {
             wait = new WebDriverWait(driver, Duration.ofSeconds(20));
             System.out.println("ChromeDriver created successfully");
             
-            logMemoryUsage("After Chrome setup");
+            //logMemoryUsage("After Chrome setup");
 
             System.out.println("Navigating to login page: " + LOGIN_URL);
             driver.get(LOGIN_URL);
@@ -101,7 +101,7 @@ public abstract class BaseUpload {
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#toolbar-item-user")));
             System.out.println("Login successful.");
             
-            logMemoryUsage("After login");
+            //logMemoryUsage("After login");
             System.out.println("=== SETUP COMPLETED ===");
             
         } catch (Exception e) {
@@ -247,7 +247,7 @@ public abstract class BaseUpload {
     @AfterAll
     void teardown() {
         System.out.println("=== STARTING TEARDOWN ===");
-        logMemoryUsage("Before teardown");
+        //logMemoryUsage("Before teardown");
         
         if (driver != null) {
             try {
@@ -262,7 +262,7 @@ public abstract class BaseUpload {
         // Force garbage collection
         System.gc();
         
-        logMemoryUsage("After teardown");
+        //logMemoryUsage("After teardown");
         System.out.println("=== TEARDOWN COMPLETED ===");
     }
 }

@@ -39,7 +39,7 @@ public class FullIngestWSTestDRAFT {
     }
 
     private void runTestClass(Class<?> testClass) {
-        System.out.println("===> Running: " + testClass.getSimpleName());
+        System.out.println("=========> Running: " + testClass.getSimpleName());
 
         launcher.execute(
             LauncherDiscoveryRequestBuilder.request()
