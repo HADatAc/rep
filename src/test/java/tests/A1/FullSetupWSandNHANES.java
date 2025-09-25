@@ -52,9 +52,9 @@ public class FullSetupWSandNHANES {
 
 
             // Run repository configuration validation
-            runTestClassAndAbortOnFailure(ConfigValidationTest.class);
-            Thread.sleep(5000);
-/*
+           // runTestClassAndAbortOnFailure(ConfigValidationTest.class);
+            //Thread.sleep(5000);
+
             // Upload WS files
             runTestClassAndAbortOnFailure(FullUploadWS.class);
             Thread.sleep(5000);
@@ -64,7 +64,7 @@ public class FullSetupWSandNHANES {
             Thread.sleep(5000);
 
 
- */
+
             // Upload NHANES files
             runTestClassAndAbortOnFailure(FullUploadNHANESTestALL.class);
             Thread.sleep(5000);

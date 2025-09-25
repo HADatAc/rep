@@ -24,12 +24,12 @@ public class FullIngestWSTestDRAFT {
     void runOnlyIngestsForCurrentMode() throws InterruptedException {
 
 
-       /* // SDD
+        // SDD
         runTestClass(SDDIngestWSTest.class);
-        Thread.sleep(5000);
+        Thread.sleep(10000);
 
 
-        */
+
         // DSG
         runTestClass(DSGIngestTest.class);
         Thread.sleep(5000);
