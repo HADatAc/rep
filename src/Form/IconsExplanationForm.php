@@ -48,7 +48,7 @@ final class IconsExplanationForm extends FormBase {
       'Virtual Columns' => 'virtualcolumn_placeholder.png',
       'Object Collections' => 'studyobjectcollection_placeholder.png',
       'Study Objects' => 'studyobject_placeholder.png',
-      'Workflow Stems' => 'process_stem_placeholder.png',
+      'Workflow Stems' => 'processstem_placeholder.png',
       'Workflow' => 'process_placeholder.png',
       'Data Dictionary' => 'datadictionary_placeholder.png',
       'Semantic Data Dictionary' => 'semanticdatadictionary_placeholder.png',
