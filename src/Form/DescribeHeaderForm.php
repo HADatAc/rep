@@ -238,13 +238,10 @@ class DescribeHeaderForm extends FormBase {
         '#attributes' => [
           'id' => 'qr-output',
           'data-uri' => $this->getElement()->uri,
-          'style' => 'margin-top:10px;',
         ],
         '#attached' => [
-          'library' => [
-            'rep/qr_code_assets',
-          ],
-        ]
+          'library' => ['rep/qr_code_assets'],
+        ],
       ];
     }
 

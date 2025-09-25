@@ -87,7 +87,7 @@ class LandingPage extends FormBase {
               ['instrument', 'Instrument(s)', null, 'instrument', 'image'],
               ['instrumentinstance', 'Instrument instance(s)', null, 'instrument_instance', 'image'],
               ['study', 'Study(ies)', null, 'fa-graduation-cap', 'icon'],
-              ['entity', 'Entity Type(s)', null, '', 'images'],
+              ['entity', 'Entity Type(s)', null, 'entity', 'images'],
               ['stream', 'Datafile Stream(s)', null, 'datafile_stream', 'images'],
             ],
             // Row 2

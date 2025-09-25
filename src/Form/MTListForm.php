@@ -11,13 +11,13 @@ use Drupal\rep\Utils;
 use Drupal\rep\Entity\MetadataTemplate;
 use Drupal\rep\Vocabulary\VSTOI;
 
-class REPSelectMTForm extends FormBase {
+class MTListForm extends FormBase {
 
   /**
    * {@inheritdoc}
    */
   public function getFormId() {
-    return 'rep_select_mt_form';
+    return 'mt_list_form';
   }
 
   public $element_type;
@@ -94,6 +94,8 @@ class REPSelectMTForm extends FormBase {
     $session = \Drupal::request()->getSession();
     $view_type = $form_state->get('view_type') ?? $session->get('rep_select_mt_view_type') ?? 'table';
     $form_state->set('view_type', $view_type);
+    $table_active_class = ($view_type == 'table') ? ['selected-button'] : [];
+    $card_active_class = ($view_type == 'card') ? ['selected-button'] : [];
 
     if ($view_type == 'table') {
 
@@ -220,7 +222,7 @@ class REPSelectMTForm extends FormBase {
       '#name' => 'view_table',
       '#attributes' => [
         'style' => 'padding: 20px;',
-        'class' => ['table-view-button', 'fa-xl', 'mx-1'],
+        'class' => array_merge(['table-view-button', 'fa-xl', 'mx-1'], $table_active_class),
         'title' => $this->t('Table View'),
       ],
       '#submit' => ['::viewTableSubmit'],
@@ -233,20 +235,11 @@ class REPSelectMTForm extends FormBase {
       '#name' => 'view_card',
       '#attributes' => [
         'style' => 'padding: 20px;',
-        'class' => ['card-view-button', 'fa-xl'],
+        'class' => array_merge(['card-view-button', 'fa-xl'], $card_active_class),
         'title' => $this->t('Card View'),
       ],
       '#submit' => ['::viewCardSubmit'],
       '#limit_validation_errors' => [],
-    ];
-
-    $form['add_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Add New ' . $this->single_class_name),
-      '#name' => 'add_element',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'add-element-button'],
-      ],
     ];
 
     // RENDER BASED ON VIEW TYPE
@@ -309,18 +302,12 @@ class REPSelectMTForm extends FormBase {
       }
     }
 
-    $form['submit'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Back'),
-      '#name' => 'back',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'back-button'],
-      ],
-    ];
     $form['space2'] = [
       '#type' => 'item',
       '#markup' => '<br><br><br>',
     ];
+
+    $form['#attached']['library'][] = 'rep/mtlist_styles';
 
     return $form;
   }
@@ -366,61 +353,6 @@ class REPSelectMTForm extends FormBase {
         }
       }
     }
-
-    // Handle actions based on button name
-    if ($button_name === 'add_element') {
-      $this->performAdd($form_state);
-    } elseif ($button_name === 'edit_element') {
-      if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be edited."));
-      } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be edited simultaneously."));
-      } else {
-        $first = array_shift($rows);
-        $this->performEdit($first, $form_state);
-      }
-    } elseif ($button_name === 'delete_element') {
-      if (sizeof($rows) <= 0) {
-        \Drupal::messenger()->addWarning(t("At least one " . $this->single_class_name . " must be selected to delete."));
-      } else {
-        $this->performDelete($rows, $form_state);
-      }
-    } elseif ($button_name === 'ingest_mt') {
-      if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be ingested."));
-      } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be ingested simultaneously."));
-      } else {
-        $this->performIngest($rows, $form_state, "_");
-      }
-    } elseif ($button_name === 'ingest_mt_draft') {
-      if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be ingested."));
-      } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be ingested simultaneously."));
-      } else {
-        $this->performIngest($rows, $form_state, VSTOI::DRAFT);
-      }
-    } elseif ($button_name === 'ingest_mt_current') {
-      if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be ingested."));
-      } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be ingested simultaneously."));
-      } else {
-        $this->performIngest($rows, $form_state, VSTOI::CURRENT);
-      }
-    } elseif ($button_name === 'uningest_mt') {
-      if (sizeof($rows) < 1) {
-        \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be uningested."));
-      } else if ((sizeof($rows) > 1)) {
-        \Drupal::messenger()->addWarning(t("Not more than one " . $this->single_class_name . " can be uningested simultaneously."));
-      } else {
-        $this->performUningest($rows, $form_state);
-      }
-    } elseif ($button_name === 'back') {
-      $url = Url::fromRoute('std.search');
-      $form_state->setRedirectUrl($url);
-    }
   }
 
   /**
@@ -428,64 +360,8 @@ class REPSelectMTForm extends FormBase {
    */
   protected function buildTableView(array &$form, FormStateInterface $form_state, $header, $output)
   {
-    $form['edit_selected_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Edit ' . $this->single_class_name . ' Selected'),
-      '#name' => 'edit_element',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'edit-element-button'],
-      ],
-    ];
-    $form['delete_selected_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Delete ' . $this->plural_class_name . ' Selected'),
-      '#name' => 'delete_element',
-      '#attributes' => [
-        'onclick' => 'if(!confirm("Really Delete?")){return false;}',
-        'class' => ['btn', 'btn-primary', 'delete-element-button'],
-      ],
-    ];
-
     $uid = \Drupal::currentUser()->id();
     $user = \Drupal\user\Entity\User::load($uid);
-    if ($user && $user->hasRole('content_editor')) {
-      // $form['ingest_mt'] = [
-      //   '#type' => 'submit',
-      //   '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Draft'),
-      //   '#name' => 'ingest_mt_draft',
-      //   '#attributes' => [
-      //     'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-      //   ],
-      // ];
-      $form['ingest_mt'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected as Draft'),
-        '#name' => 'ingest_mt_draft',
-        '#attributes' => [
-          'onclick' => 'if(!confirm("Really Ingest file has DRAFT?")){return false;}',
-          'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-        ],
-      ];
-      $form['ingest_mt_current'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Current'),
-        '#name' => 'ingest_mt_current',
-        '#attributes' => [
-          'onclick' => 'if(!confirm("Really Ingest file has CURRENT?")){return false;}',
-          'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-        ],
-      ];
-
-      $form['uningest_mt'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Uningest ' . $this->plural_class_name . ' Selected'),
-        '#name' => 'uningest_mt',
-        '#attributes' => [
-          'class' => ['btn', 'btn-primary', 'uningest_mt-element-button'],
-        ],
-      ];
-    }
-
     $form['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
@@ -502,26 +378,7 @@ class REPSelectMTForm extends FormBase {
   {
 
     // IMAGE PLACEHOLDER
-    switch ($this->element_type) {
-      case 'ins':
-        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/ins_placeholder.png';
-        break;
-      case 'dsg':
-        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/dsg_placeholder.png';
-        break;
-      case 'dd':
-        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/dd_placeholder.png';
-        break;
-      case 'sdd':
-        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/sdd_placeholder.png';
-        break;
-      case 'dp2':
-        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/dp2_placeholder.png';
-        break;
-      case 'str':
-        $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/str_placeholder.png';
-        break;
-    }
+    $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/semVar_placeholder.png';
 
     $form['element_cards_wrapper'] = [
       '#type' => 'container',

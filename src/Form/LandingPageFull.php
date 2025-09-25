@@ -58,23 +58,23 @@ class LandingPageFull extends FormBase {
         $totalsSocial .= '<div class="row text-center">';
 
         $totalsSocial .= '<div class="col-md-3">' .
-                         ' <a href="' . Utils::selectBackUrl('organization')->toString() . '">Organization(s)</a><br>' . 
+                         ' <a href="' . Utils::selectBackUrl('organization')->toString() . '">Organization(s)</a><br>' .
                          About::total('organization') . '</div>';
-        
-        $totalsSocial .= '<div class="col-md-3">' .  
-                         ' <a href="' . Utils::selectBackUrl('person')->toString() . '">Person(s)</a><br>' . 
+
+        $totalsSocial .= '<div class="col-md-3">' .
+                         ' <a href="' . Utils::selectBackUrl('person')->toString() . '">Person(s)</a><br>' .
                          About::total('person') . '</div>';
-        
-        $totalsSocial .= '<div class="col-md-3">' .  
-                         ' <a href="' . Utils::selectBackUrl('place')->toString() . '">Place(s)</a><br>' . 
+
+        $totalsSocial .= '<div class="col-md-3">' .
+                         ' <a href="' . Utils::selectBackUrl('place')->toString() . '">Place(s)</a><br>' .
                          About::total('place') . '</div>';
-        
-        $totalsSocial .= '<div class="col-md-3">' .  
-                         ' <a href="' . Utils::selectBackUrl('postaladdress')->toString() . '">Postal Address(es)</a><br>' . 
+
+        $totalsSocial .= '<div class="col-md-3">' .
+                         ' <a href="' . Utils::selectBackUrl('postaladdress')->toString() . '">Postal Address(es)</a><br>' .
                          About::total('postaladdress') . '</div>';
-        
+
         $totalsSocial .= '</div>';
-        
+
 
         $form['row1']['column1'] = array(
             '#type' => 'container',

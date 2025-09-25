@@ -31,6 +31,16 @@ rep.uri_describe:
   requirements:
     _permission: 'access content'
 
+rep.icons_explanation:
+  title: 'Icons Explanation'
+  description: 'Explanation of Knowledge Graph icons'
+  route_name: rep.icons_explanation
+  parent: rep.kg
+  menu_name: main
+  weight: 110
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
 
 #
 # REPOSITORY
@@ -212,6 +222,17 @@ reviewer.top_level:
   menu_name: main
   weight: 100
   requirements:
+    _role: 'content_editor'
+
+reviewer.searchMT:
+  title: Search MT
+  description: ''
+  menu_name: main
+  route_name: rep.mt_list_element
+  parent: reviewer.top_level
+  weight: 10
+  requirements:
+    _permission: 'access content'
     _role: 'content_editor'
 
 reviewer.uploadingest_review:
