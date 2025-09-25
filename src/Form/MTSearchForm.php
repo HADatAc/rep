@@ -119,19 +119,19 @@ class MTSearchForm extends FormBase {
 
 
 $element_types = [
-  'ins' => ['label' => 'INS', 'image' => 'ins_placeholder.png'],
-  'dsg' => ['label' => 'DSG', 'image' => 'dsg_placeholder.png'],
-  'dd'  => ['label' => 'DD', 'image' => 'dd_placeholder.png'],
-  'sdd' => ['label' => 'SDD', 'image' => 'sdd_placeholder.png'],
-  'dp2' => ['label' => 'DP2', 'image' => 'dp2_placeholder.png'],
-  'str' => ['label' => 'STR', 'image' => 'str_placeholder.png'],
+  'ins' => ['label' => 'INS', 'image' => 'white/ins_placeholder.png'],
+  'dsg' => ['label' => 'DSG', 'image' => 'white/dsg_placeholder.png'],
+  'dd'  => ['label' => 'DD', 'image' => 'white/dd_placeholder.png'],
+  'sdd' => ['label' => 'SDD', 'image' => 'white/sdd_placeholder.png'],
+  'dp2' => ['label' => 'DP2', 'image' => 'white/dp2_placeholder.png'],
+  'str' => ['label' => 'STR', 'image' => 'white/str_placeholder.png'],
 ];
 
 foreach ($element_types as $type => $info) {
 
   $module_path = \Drupal::request()->getBaseUrl(). '/' . \Drupal::service('extension.list.module')->getPath('rep');
   $placeholder_image = $module_path . '/images/placeholders/' . $info['image'];
-  
+
   $button_classes = ['element-icon-button'];
 if ($type === $this->getElementType()) {
   $button_classes[] = 'selected';
@@ -140,7 +140,7 @@ if ($type === $this->getElementType()) {
   $form['element_icons']['grid'][$type] = [
     '#type' => 'submit',
     '#value' => '',
-    '#attributes' => [      
+    '#attributes' => [
     'class' => $button_classes,
     'style' => "background-image: url('$placeholder_image');",
     'title' => $this->t($info['label']),
