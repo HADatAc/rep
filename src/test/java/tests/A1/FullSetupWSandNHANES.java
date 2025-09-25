@@ -49,7 +49,6 @@ public class FullSetupWSandNHANES {
             Thread.sleep(5000);
             */
 
-
             // Run repository configuration validation
            // runTestClassAndAbortOnFailure(ConfigValidationTest.class);
             //Thread.sleep(5000);
