@@ -858,7 +858,7 @@
 
         // "Make it bold" -> promote to root and navigate, restoring the graph on next page
         const makeBold = document.createElement('span');
-        makeBold.textContent = 'Make it bold';
+        makeBold.textContent = 'Make it base';
         makeBold.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
         makeBold.title = 'Promote this node to be the graph root and open its page';
         makeBold.addEventListener('click', (ev) => {
