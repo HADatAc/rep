@@ -33,7 +33,7 @@ public class FullSetupWSandNHANES {
             //Admin Status and Data conf permission
             runTestClassAndAbortOnFailure(AdminAuto.class);
             Thread.sleep(5000);
-            */
+
 
             // Run Fuseki connection test
             runTestClassAndAbortOnFailure(FusekiConnectionTest.class);
