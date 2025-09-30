@@ -60,10 +60,13 @@ class MTSearchForm extends FormBase {
   }
 
   public function iconSubmitForm(array &$form, FormStateInterface $form_state) {
-  $clicked_button = $form_state->getTriggeringElement()['#name'];
-  $form_state->setValue('search_element_type', $clicked_button);
-  $form_state->setValue('search_keyword', '');
-}
+    $clicked_button = $form_state->getTriggeringElement()['#name'];
+    $form_state->setValue('search_element_type', $clicked_button);
+    $form_state->setValue('search_keyword', '');
+    // Keep pagination predictable when switching element type.
+    $this->setPage(1);
+    $this->setPageSize(12);
+  }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
     $form['#attached']['library'][] = 'rep/mtsearch_icons';
@@ -73,7 +76,7 @@ class MTSearchForm extends FormBase {
     $request = \Drupal::request();
     $pathInfo = $request->getPathInfo();
     $pathElements = (explode('/',$pathInfo));
-    $this->setElementType('platform');
+    $this->setElementType('ins');
     $this->setKeyword('');
     $this->setPage(1);
     $this->setPageSize(12);
@@ -102,6 +105,11 @@ class MTSearchForm extends FormBase {
 
       // PAGESIZE
       $this->setPageSize((int)$pathElements[6]);
+    }
+
+    // Ensure we never keep an empty element type; default to 'ins'.
+    if (!is_string($this->getElementType()) || $this->getElementType() === '') {
+      $this->setElementType('ins');
     }
 
     $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument');
