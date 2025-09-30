@@ -22,6 +22,8 @@ class MTListForm extends FormBase {
 
   public $element_type;
 
+  public $keyword;
+
   public $manager_email;
 
   public $manager_name;
@@ -65,7 +67,7 @@ class MTListForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $mode = NULL, $page=1, $pagesize=9, $studyuri = NULL)
+  public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $keyword = NULL, $mode = NULL, $page=1, $pagesize=9, $studyuri = NULL)
   {
     // STUDYURI OPTIONAL
     if ($studyuri == NULL) {
@@ -139,6 +141,9 @@ class MTListForm extends FormBase {
       $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, 1, $pagesize));
     }
 
+    // Store the incoming keyword (always as a trimmed string).
+    $this->keyword = is_string($keyword) ? trim($keyword) : '';
+
     $this->single_class_name = "";
     $this->plural_class_name = "";
     switch ($this->element_type) {
@@ -195,6 +200,38 @@ class MTListForm extends FormBase {
         $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
         return;
     }
+
+    // If a keyword is present, filter the output accordingly.
+    if ($this->keyword !== '') {
+      $filtered = $this->filterOutputByKeyword($output, $this->keyword);
+
+      if (empty($filtered)) {
+        // English message as requested (user-facing).
+        $no_results_msg = $this->t('No results were found for the searched term: "@term".', ['@term' => $this->keyword]);
+        // Keep a per-request message available for both table and card modes.
+        $form_state->set('empty_msg', $no_results_msg);
+        // Also replace $output with an empty array so builders can react accordingly.
+        $output = [];
+      } else {
+        $output = $filtered;
+      }
+    }
+
+    // kint([
+    //   "Keyword" => $keyword,
+    //   "element_type" => $this->element_type,
+    //   "manager_email" => $this->manager_email,
+    //   "manager_name" => $this->manager_name,
+    //   "studyuri" => $this->studyuri,
+    //   "mode" => $this->getMode(),
+    //   "list_size" => $this->getListSize(),
+    //   "page" => $page,
+    //   "pagesize" => $pagesize,
+    //   "form_page_size" => $form_state->get('page_size'),
+    //   "view_type" => $form_state->get('view_type'),
+    //   "current_page" => $form_state->get('current_page'),
+    //   "list_state" => $form_state->get('list_state'),
+    // ]);
 
     // START FORM
     $form['page_title'] = [
@@ -362,12 +399,17 @@ class MTListForm extends FormBase {
   {
     $uid = \Drupal::currentUser()->id();
     $user = \Drupal\user\Entity\User::load($uid);
+
+    // Choose an "empty" message. If a keyword was used and nothing matched, prefer that message.
+    $empty_msg = $form_state->get('empty_msg') ?? $this->t('No ' . $this->plural_class_name . ' found');
+
     $form['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
       '#options' => $output,
       '#js_select' => FALSE,
-      '#empty' => $this->t('No ' . $this->plural_class_name . ' found'),
+      // Must be in English per requirements.
+      '#empty' => $empty_msg,
     ];
   }
 
@@ -376,6 +418,20 @@ class MTListForm extends FormBase {
    */
   protected function buildCardView(array &$form, FormStateInterface $form_state, $header, $output)
   {
+    // If there are no cards to show, print a single English message and return early.
+    if (empty($output)) {
+      $msg = $form_state->get('empty_msg') ?? $this->t('No items were found.');
+      $form['element_cards_wrapper'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['row', 'mt-3']],
+        'no_results' => [
+          '#type' => 'item',
+          // Must be in English per requirements.
+          '#markup' => '<div class="alert alert-info" role="alert">' . $msg . '</div>',
+        ],
+      ];
+      return;
+    }
 
     // IMAGE PLACEHOLDER
     $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/semVar_placeholder.png';
@@ -408,7 +464,7 @@ class MTListForm extends FormBase {
         }
       }
 
-      // Definir a URL da imagem, usar placeholder se não houver imagem no item
+      // Define image URL with placeholder fallback.
       $image_uri = !empty($item['image']) ? $item['image'] : $placeholder_image;
 
       if (strlen($header_text) > 0) {
@@ -456,7 +512,7 @@ class MTListForm extends FormBase {
         ],
       ];
 
-      // Iterando sobre o conteúdo existente e adicionando-o à coluna de conteúdo
+      // Render all fields except "Name" (already in header).
       foreach ($header as $column_key => $column_label) {
         $value = isset($item[$column_key]) ? $item[$column_key] : '';
         if ($column_label == 'Name') {
@@ -488,7 +544,7 @@ class MTListForm extends FormBase {
         ];
       }
 
-      // Adicionando o rodapé na mesma coluna de conteúdo
+      // Footer with actions (unchanged)
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer'] = [
         '#type' => 'container',
         '#attributes' => [
@@ -497,7 +553,6 @@ class MTListForm extends FormBase {
         ],
       ];
 
-      // Adicionando os botões ao rodapé
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions'] = [
         '#type' => 'actions',
         '#attributes' => [
@@ -506,7 +561,7 @@ class MTListForm extends FormBase {
         ],
       ];
 
-      // Botão Editar
+      // Edit
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['edit'] = [
         '#type' => 'submit',
         '#value' => $this->t('Edit'),
@@ -519,7 +574,7 @@ class MTListForm extends FormBase {
         '#element_uri' => $key,
       ];
 
-      // Button Delete
+      // Delete
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['delete'] = [
         '#type' => 'submit',
         '#value' => $this->t('Delete'),
@@ -533,7 +588,7 @@ class MTListForm extends FormBase {
         '#element_uri' => $key,
       ];
 
-      // Button Ingest
+      // Ingest
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['ingest'] = [
         '#type' => 'submit',
         '#value' => $this->t('Ingest'),
@@ -546,7 +601,7 @@ class MTListForm extends FormBase {
         '#element_uri' => $key,
       ];
 
-      // Button Uningest
+      // Uningest
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['uningest'] = [
         '#type' => 'submit',
         '#value' => $this->t('Uningest'),
@@ -777,4 +832,39 @@ class MTListForm extends FormBase {
     }
     return $url;
   }
+
+  /**
+   * Filters the given $output rows by $keyword (case-insensitive).
+   * It searches across all scalar fields in each row, stripping HTML tags.
+   *
+   * @param array $output
+   * @param string $keyword
+   * @return array Filtered array preserving the original keys.
+   */
+  protected function filterOutputByKeyword(array $output, string $keyword): array
+  {
+    $needle = mb_strtolower($keyword);
+    $filtered = [];
+
+    foreach ($output as $row_key => $row) {
+      // Each $row is expected to be an associative array of column_key => string/renderable.
+      foreach ($row as $col_key => $value) {
+        // Convert value to plain string for matching.
+        if (is_array($value)) {
+          // If a render array slips in, try to get a string-ish representation.
+          $value_str = strip_tags((string) \Drupal::service('renderer')->renderPlain($value));
+        } else {
+          $value_str = strip_tags((string) $value);
+        }
+
+        if ($value_str !== '' && mb_stripos(mb_strtolower($value_str), $needle) !== false) {
+          $filtered[$row_key] = $row;
+          break; // Found a match in this row, move to next row.
+        }
+      }
+    }
+
+    return $filtered;
+  }
+
 }

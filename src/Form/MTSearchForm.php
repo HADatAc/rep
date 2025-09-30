@@ -117,46 +117,50 @@ class MTSearchForm extends FormBase {
       '#attributes' => ['class' => ['element-icons-grid']],
     ];
 
+    $element_types = [
+      'ins' => ['label' => 'INS', 'image' => 'white/ins_placeholder.png'],
+      'dsg' => ['label' => 'DSG', 'image' => 'white/dsg_placeholder.png'],
+      'dd'  => ['label' => 'DD', 'image' => 'white/dd_placeholder.png'],
+      'sdd' => ['label' => 'SDD', 'image' => 'white/sdd_placeholder.png'],
+      'dp2' => ['label' => 'DP2', 'image' => 'white/dp2_placeholder.png'],
+      'str' => ['label' => 'STR', 'image' => 'white/str_placeholder.png'],
+    ];
 
-$element_types = [
-  'ins' => ['label' => 'INS', 'image' => 'white/ins_placeholder.png'],
-  'dsg' => ['label' => 'DSG', 'image' => 'white/dsg_placeholder.png'],
-  'dd'  => ['label' => 'DD', 'image' => 'white/dd_placeholder.png'],
-  'sdd' => ['label' => 'SDD', 'image' => 'white/sdd_placeholder.png'],
-  'dp2' => ['label' => 'DP2', 'image' => 'white/dp2_placeholder.png'],
-  'str' => ['label' => 'STR', 'image' => 'white/str_placeholder.png'],
-];
+    foreach ($element_types as $type => $info) {
 
-foreach ($element_types as $type => $info) {
+      $module_path = \Drupal::request()->getBaseUrl(). '/' . \Drupal::service('extension.list.module')->getPath('rep');
+      $placeholder_image = $module_path . '/images/placeholders/' . $info['image'];
 
-  $module_path = \Drupal::request()->getBaseUrl(). '/' . \Drupal::service('extension.list.module')->getPath('rep');
-  $placeholder_image = $module_path . '/images/placeholders/' . $info['image'];
+      $button_classes = ['element-icon-button'];
+      if ($type === $this->getElementType()) {
+        $button_classes[] = 'selected';
+      }
 
-  $button_classes = ['element-icon-button'];
-if ($type === $this->getElementType()) {
-  $button_classes[] = 'selected';
-}
+      $form['element_icons']['grid'][$type] = [
+        '#type' => 'submit',
+        '#value' => '',
+        '#attributes' => [
+        'class' => $button_classes,
+        'style' => "background-image: url('$placeholder_image');",
+        'title' => $this->t($info['label']),
+        'aria-label' => $this->t($info['label']),
+        ],
+        '#name' => $type,
+        '#submit' => ['::iconSubmitForm'],
+        '#limit_validation_errors' => [],
+        '#ajax' => [
+        'callback' => '::ajaxSubmitForm',
+        'progress' => [
+          'type' => 'none',
+          ],
+        ],
+      ];
+    }
 
-  $form['element_icons']['grid'][$type] = [
-    '#type' => 'submit',
-    '#value' => '',
-    '#attributes' => [
-    'class' => $button_classes,
-    'style' => "background-image: url('$placeholder_image');",
-    'title' => $this->t($info['label']),
-    'aria-label' => $this->t($info['label']),
-],
-    '#name' => $type,
-    '#submit' => ['::iconSubmitForm'],
-    '#limit_validation_errors' => [],
-    '#ajax' => [
-    'callback' => '::ajaxSubmitForm',
-    'progress' => [
-    'type' => 'none',
-  ],
-],
-  ];
-}
+    $form['search_element_type'] = [
+      '#type' => 'hidden',
+      '#value' => $this->getElementType() ?: 'ins',
+    ];
 
     $form['search_keyword'] = [
       '#type' => 'textfield',
@@ -178,28 +182,54 @@ if ($type === $this->getElementType()) {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    if(strlen($form_state->getValue('search_element_type')) < 1) {
-      $form_state->setErrorByName('search_element_type', $this->t('Please select an element type'));
-    }
+    // if(strlen($form_state->getValue('search_element_type')) < 1) {
+    //   $form_state->setErrorByName('search_element_type', $this->t('Please select an element type'));
+    // }
   }
 
   /**
    * {@inheritdoc}
    */
   private function redirectUrl(FormStateInterface $form_state) {
-    $this->setKeyword($form_state->getValue('search_keyword'));
-    if ($this->getKeyword() == NULL || $this->getKeyword() == '') {
-      $this->setKeyword("_");
-    }
 
-    // IF ELEMENT TYPE IS INSTANCE
-    $url = Url::fromRoute('rep.mt_list_element');
-    $url->setRouteParameter('elementtype', $form_state->getValue('search_element_type'));
-    $url->setRouteParameter('keyword', $this->getKeyword());
-    $url->setRouteParameter('page', $this->getPage());
-    $url->setRouteParameter('pagesize', $this->getPageSize());
+    // Debug only, remove if you want.
+    // dpm($form_state->getValues());
+
+    // --- Resolve element type with safe fallbacks ---
+    // Prefer the value from the submitted form, then the current property, then default 'ins'.
+    $type = $form_state->getValue('search_element_type');
+    if (!is_string($type) || $type === '') {
+      $type = $this->getElementType();
+    }
+    if (!is_string($type) || $type === '') {
+      $type = 'ins'; // safe default
+    }
+    $this->setElementType($type);
+
+    // --- Normalize keyword for route segment ---
+    $kw = (string) $form_state->getValue('search_keyword');
+    $kw = trim($kw);
+    if ($kw === '' || strtolower($kw) === 'none') {
+      $kw = '_'; // we use "_" to mean "no keyword"
+    }
+    // Route path segment cannot contain slashes; replace them to keep "[^/]+"
+    $kw = str_replace('/', '-', $kw);
+    $this->setKeyword($kw);
+
+    // Keep paging defaults or current ones
+    $page = $this->getPage() ?: 1;
+    $pagesize = $this->getPageSize() ?: 12;
+
+    $url = Url::fromRoute('rep.mt_list_element', [
+      'elementtype' => $this->getElementType(),
+      'keyword'     => $this->getKeyword(),
+      'page'        => $page,
+      'pagesize'    => $pagesize,
+    ]);
+
     return $url;
   }
+
 
   /**
    * {@inheritdoc}
