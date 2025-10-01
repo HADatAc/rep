@@ -19,10 +19,10 @@
  * - If the server only returns `typeUri`, the "hascoTypeUri" submenu still shows the target class
  *   and toggling there creates a **hascoTypeUri** edge (not reusing the typeUri edge).
  * - If both type edges exist for the same (from,to), they are drawn with opposite curves.
- * - "Copy URI" copies a local proxy link:  <origin>/rep/uri/<base64url(IRI)>
- * - NEW: "Make it bold" promotes a node to be the **graph root** and performs a **real navigation**
- *        to that node’s page, but the graph is snapshotted in sessionStorage and restored on load
- *        so the visualization stays exactly as it was (no losses).
+ * - "Copy URI" copies the ORIGINAL IRI (e.g., https://hadatac.org/ont/hadatac#/PER...), not a local proxy.
+ * - "Make it base" promotes a node to be the **graph root** and performs a **real navigation**
+ *   to that node’s page, but the graph is snapshotted in sessionStorage and restored on load
+ *   so the visualization stays exactly as it was (no losses).
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -47,7 +47,7 @@
       const eyeSVG = `<i class="fa fa-eye"></i>`;
       const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
 
-      // ---------- Restore graph from session (if coming from "Make it bold") ----------
+      // ---------- Restore graph from session (if coming from "Make it base") ----------
       function parseIriFromLocation() {
         const m = (window.location.pathname || '').match(/\/rep\/uri\/([^\/#?]+)/);
         if (!m) return null;
@@ -84,7 +84,7 @@
       const extraNodes = base.extraNodes || [];
       let   extraEdges = base.extraEdges || [];
 
-      // Initial root and current root (promoted by "Make it bold")
+      // Initial root and current root (promoted by "Make it base")
       const firstNodeId = (nodes.getIds && nodes.getIds()[0]) || null;
       let currentRootId = restore?.currentRootId || firstNodeId;
 
@@ -227,7 +227,8 @@
         expandMenu.style.top  = `${topOffset + canvasPos.y - 10}px`;
       }
 
-      // ----- Clipboard helpers (Copy URI -> local /rep/uri/<b64url>) -----
+      // ----- Clipboard helpers -----
+      // NOTE: We keep base64/url helpers for navigation, but "Copy URI" now copies the ORIGINAL IRI raw.
       function encodeBase64Url(str) {
         const b64 = window.btoa(unescape(encodeURIComponent(str)));
         return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
@@ -272,7 +273,7 @@
         link.addEventListener('click', (ev) => {
           ev.stopPropagation();
           const valRaw = (typeof valueSupplier === 'function') ? valueSupplier() : valueSupplier;
-          const val = buildLocalUriLink(valRaw);
+          const val = String(valRaw ?? ''); // copy RAW IRI (not local proxy)
           copyToClipboard(val, () => {
             const old = link.textContent;
             link.textContent = 'Copied!';
@@ -733,7 +734,7 @@
         }
       }
 
-      // ----- Promote to ROOT (Make it bold) -----
+      // ----- Promote to ROOT (Make it base) -----
       function promoteToRoot(newRootId) {
         if (!newRootId || newRootId === currentRootId) return;
         if (currentRootId && nodes.get(currentRootId)) applyRootStyle(currentRootId, false);
@@ -746,7 +747,7 @@
           if (pos) network.focus(currentRootId, { scale: 1.0, animation: { duration: 250, easingFunction: 'easeInOutQuad' } });
         } catch (e) {}
 
-        // Build link, snapshot graph, and navigate for real
+        // Build link (local router), snapshot graph, and navigate for real
         const link = buildLocalUriLink(currentRootId);
         snapshotGraph(currentRootId);
         window.location.assign(link);
@@ -856,9 +857,9 @@
         const copyNode = makeCopyLink('Copy URI', () => selectedNode.id);
         copyNode.style.alignSelf = 'flex-start';
 
-        // "Make it bold" -> promote to root and navigate, restoring the graph on next page
+        // "Make it base" -> promote to root and navigate, restoring the graph on next page
         const makeBold = document.createElement('span');
-        makeBold.textContent = 'Make it bold';
+        makeBold.textContent = 'Make it base';
         makeBold.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
         makeBold.title = 'Promote this node to be the graph root and open its page';
         makeBold.addEventListener('click', (ev) => {
