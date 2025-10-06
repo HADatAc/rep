@@ -18,7 +18,7 @@ final class IconsExplanationForm extends FormBase {
 
     $module_path = \Drupal::service('extension.list.module')->getPath('rep');
     $base_url = \Drupal::request()->getBaseUrl();
-    $placeholder_base = $base_url . '/' . $module_path . '/images/placeholders/';
+    $placeholder_base = $base_url . '/' . $module_path . '/images/placeholders/white/';
 
     $concept_header = [
       ['data' => $this->t('Class')],
@@ -67,12 +67,9 @@ final class IconsExplanationForm extends FormBase {
       'Platform Instances' => 'platform_instance_placeholder.png',
       'Instrument' => 'instrument_placeholder.png',
       'Instrument Instances' => 'Instrument_instance_placeholder.png',
-      'Detector' => 'detector_placeholder.png',
-      'Detector Stem' => 'detector_stem_placeholder.png',
-      'Detector Instances' => 'detector_instance_placeholder.png',
-      'Actuator' => 'actuator_placeholder.png',
-      'Actuator Stem' => 'actuator_stem_placeholder.png',
-      'Actuator Instances' => 'actuator_instance_placeholder.png',
+      'Component' => 'component_placeholder.png',
+      'Component Instances' => 'component_instance_placeholder.png',
+      'Component Stem' => 'component_stem_placeholder.png',
       'Deployments' => 'deployment_placeholder.png',
       'Message Streams' => 'message_stream_placeholder.png',
       'File Streams' => 'datafile_stream_placeholder.png',
@@ -118,10 +115,8 @@ final class IconsExplanationForm extends FormBase {
       'Annotations' => 'http://hadatac.org/ont/vstoi#Annotation',
       'Platform' => 'http://hadatac.org/ont/vstoi#Platform',
       'Instrument' => 'http://hadatac.org/ont/vstoi#Instrument',
-      'Detector' => 'http://hadatac.org/ont/vstoi#Detector',
-      'Detector Stem' => 'http://hadatac.org/ont/vstoi#DetectorStem',
-      'Actuator' => 'http://hadatac.org/ont/vstoi#Actuator',
-      'Actuator Stem' => 'http://hadatac.org/ont/vstoi#ActuatorStem',
+      'Component' => 'http://hadatac.org/ont/vstoi#Component',
+      'Component Stem' => 'http://hadatac.org/ont/vstoi#ComponentStem',
       'Deployments' => 'http://hadatac.org/ont/vstoi#Deployment',
       'Message Streams' => '',
       'File Streams' => '',
@@ -157,10 +152,8 @@ final class IconsExplanationForm extends FormBase {
       ['name' => 'Annotations', 'desc' => 'NOT FOUND'],
       ['name' => 'Platform', 'desc' => 'A surface onto which instruments are deployed to collect data.'],
       ['name' => 'Instrument', 'desc' => 'A device or mechanism that is used to achire attribute values of entities of interest. An instrument does not necessarily require a way to store its measured quantity (e.g, a hard disk).'],
-      ['name' => 'Detector', 'desc' => 'A device which detects measurements, such as temperature or wind velocity, and cointains a codebook.'],
-      ['name' => 'Detector Stem', 'desc' => 'NOT FOUND'],
-      ['name' => 'Actuator', 'desc' => 'A device that puts into action values that are fed into it.'],
-      ['name' => 'Actuator Stem', 'desc' => 'NOT FOUND'],
+      ['name' => 'Component', 'desc' => 'A physical part of an instrument or component. A component can be a sensor, a circuit board, a housing, etc. A component can also be a collection of other components.'],
+      ['name' => 'Component Stem', 'desc' => 'NOT FOUND'],
       ['name' => 'Deployments', 'desc' => 'A platform is deployed during a certain duration of time and over a certain spacial domain. The platform has instruments on it within the scope of this deployment. For example, a boat will carry certain instruments during a deployment, and those instruments will be removed once the deployment is completed. A stationary deployment can last a much longer time, even decades, with the same instrument.'],
       ['name' => 'Message Streams', 'desc' => 'NOT FOUND'],
       ['name' => 'File Streams', 'desc' => 'NOT FOUND'],
@@ -190,8 +183,6 @@ final class IconsExplanationForm extends FormBase {
       'Platform' => 'Platform Instances',
       'Instrument' => 'Instrument Instances',
       'Component' => 'Component Instances',
-      'Detector' => 'Detector Instances',
-      'Actuator' => 'Actuator Instances',
     ];
 
     $concept_rows = [];

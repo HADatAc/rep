@@ -113,7 +113,7 @@ class MTSearchForm extends FormBase {
     }
 
     $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument');
-    $preferred_detector = \Drupal::config('rep.settings')->get('preferred_detector');
+    $preferred_component = \Drupal::config('rep.settings')->get('preferred_component') ?? 'Component';
 
     $form['element_icons'] = [
       '#type' => 'container',

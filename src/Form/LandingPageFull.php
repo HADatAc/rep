@@ -110,8 +110,8 @@ class LandingPageFull extends FormBase {
         $totalsInst .=  '<li> ' . About::total('ins') . ' <a href="'.Utils::selectBackUrl('ins')->toString().'">INS(s)</a> (MT)</li>';
         $totalsInst .=  '<li> ' . About::total('instrument') . ' <a href="'.Utils::selectBackUrl('instrument')->toString().'">instrument(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('processstem') . ' <a href="'.Utils::selectBackUrl('processstem')->toString().'">process stem(s)</a></li>';
-        $totalsInst .=  '<li> ' . About::total('detectorstem') . ' <a href="'.Utils::selectBackUrl('detectorstem')->toString().'">detector stem(s)</a></li>';
-        $totalsInst .=  '<li> ' . About::total('detector') . ' <a href="'.Utils::selectBackUrl('detector')->toString().'">detector(s)</a></li>';
+        $totalsInst .=  '<li> ' . About::total('componentstem') . ' <a href="'.Utils::selectBackUrl('componentstem')->toString().'">component stem(s)</a></li>';
+        $totalsInst .=  '<li> ' . About::total('component') . ' <a href="'.Utils::selectBackUrl('component')->toString().'">component(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('codebook') . ' <a href="'.Utils::selectBackUrl('codebook')->toString().'">codebook(s)</a></li>';
         $totalsInst .=  '<li> ' . About::total('process') . ' <a href="'.Utils::selectBackUrl('process')->toString().'">process(es)</a></li>';
         $totalsInst .=  '<li> ' . About::total('responseoption') . ' <a href="'.Utils::selectBackUrl('responseoption')->toString().'">response option(s)</a></li>';
@@ -199,7 +199,7 @@ class LandingPageFull extends FormBase {
         $totalsDeploy .=  '<li> ' . About::total('platform') . ' <a href="'.Utils::selectBackUrl('platform')->toString().'">platform(s)</a></li>';
         $totalsDeploy .=  '<li> ' . About::total('platforminstance') . ' <a href="'.Utils::selectBackUrl('platforminstance')->toString().'">platform instance(s)</a></li>';
         $totalsDeploy .=  '<li> ' . About::total('instrumentinstance') . ' <a href="'.Utils::selectBackUrl('instrumentinstance')->toString().'">instrument instance(s)</a></li>';
-        $totalsDeploy .=  '<li> ' . About::total('detectorinstance') . ' <a href="'.Utils::selectBackUrl('deploymentinstance')->toString().'">detector instance(s)</a></li>';
+        $totalsDeploy .=  '<li> ' . About::total('componentinstance') . ' <a href="'.Utils::selectBackUrl('deploymentinstance')->toString().'">component instance(s)</a></li>';
         $totalsDeploy .=  '<li> ' . About::total('deployment') . ' <a href="'.Utils::selectBackUrl('deployment')->toString().'">deployment(s)</a></li>';
         $totalsDeploy .=  '<li> ' . About::total('stream') . ' <a href="'.Utils::selectBackUrl('stream')->toString().'">stream(s)</a></li>';
         $totalsDeploy  .= '</ul>';
