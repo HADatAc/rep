@@ -265,27 +265,34 @@ class FusekiAPIConnector {
   }
 
   // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
-  public function listByKeywordAndLanguage($elementType, $keyword, $language, $pageSize, $offset) {
+  public function listByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/".
       rawurlencode($keyword)."/".
       rawurlencode($language)."/".
+      rawurlencode($type)."/".
+      rawurlencode($manageremail)."/".
+      rawurlencode($status)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+          // dpm($api_url.$endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
   // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
-  public function listSizeByKeywordAndLanguage($elementType, $keyword, $language) {
+  public function listSizeByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status) {
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/total/".
       rawurlencode($keyword)."/".
-      rawurlencode($language);
+      rawurlencode($language)."/".
+      rawurlencode($type)."/".
+      rawurlencode($manageremail)."/".
+      rawurlencode($status);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
