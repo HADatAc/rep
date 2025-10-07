@@ -312,7 +312,7 @@ function rep_user_update($account) {
   ]);
 
   try {
-    $response = \Drupal::httpClient()->post('http://192.168.1.169/sguser/account/update', [
+    $response = \Drupal::httpClient()->patch('http://192.168.1.169/sguser/account/update', [
       'headers' => [
         'Content-Type' => 'application/json',
         'Authorization' => "Bearer {$sagres_token}", // Adicionando o token aqui
