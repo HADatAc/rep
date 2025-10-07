@@ -257,7 +257,7 @@ function rep_user_insert($account) {
   }
 
   $user = \Drupal\user\Entity\User::load($account->id());
-  $cellphone = $user->get('cellphone')->value ?? 910000000;
+  $cellphone = $user->get('field_cellphone')->value ?? 910000000;
 
 
   $json_data = json_encode([
@@ -300,7 +300,7 @@ function rep_user_update($account) {
   }
 
   $user = \Drupal\user\Entity\User::load($account->id());
-  $cellphone = $user->get('cellphone')->value ?? 910000000;
+  $cellphone = $user->get('field_cellphone')->value ?? 910000000;
 
   $json_data = json_encode([
     'acc_id' => $account->id(),
