@@ -93,7 +93,7 @@ class TermsForm extends FormBase {
       $client = \Drupal::httpClient();
       $response = $client->post('http://192.168.1.169/sgcontract/account/accept-terms', [
         'json' => [
-          'acc_id' => $username,
+          'acc_id' => $current_user->id(),
           'acc_repo_instance' => $repo_instance,
           'project_id' => $project_id,
           'terms_version' => $form_state->get('terms_version'),

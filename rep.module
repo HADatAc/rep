@@ -373,7 +373,7 @@ function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
   try {
     $response = $client->get('http://192.168.1.169/sgcontract/account/terms-status', [
       'query' => [
-        'acc_id' => $username,
+        'acc_id' => $account->id(),
         'acc_repo_instance' => $repo_instance,
         'project_id' => $project_id,
       ],
