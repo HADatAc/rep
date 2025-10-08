@@ -35,7 +35,7 @@ class ListKeywordLanguagePage {
       $status = "_";
     }
 
-    // dpm("ListKeywordLanguagePage::exec: elementtype=$elementtype, keyword=$keyword, language=$language, type=$type, manageremail=$manageremail, status=$status, page=$page, pagesize=$pagesize");
+    dpm("ListKeywordLanguagePage::exec: elementtype=$elementtype, keyword=$keyword, language=$language, type=$type, manageremail=$manageremail, status=$status, page=$page, pagesize=$pagesize");
 
     $api = \Drupal::service('rep.api_connector');
     $elements = $api->parseObjectResponse($api->listByKeywordAndLanguage($elementtype,$keyword,$language,$type,$manageremail,$status,$pagesize,$offset),'listByKeywordAndLanguage');
