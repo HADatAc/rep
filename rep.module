@@ -381,7 +381,7 @@ function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
 
     $data = json_decode($response->getBody(), TRUE);
 
-    if (empty($data['accepted']) || !$data['accepted']) {
+    if ($data['status'] !== 'up_to_date') {
       \Drupal::messenger()->addWarning(t('Tem de aceitar os Termos de Uso para continuar.'));
       \Drupal::service('session')->set('terms_pending', TRUE);
     }
