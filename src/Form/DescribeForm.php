@@ -81,7 +81,7 @@
     $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
 
     // dpm($this->getElement());
-    kint($this->getElement());
+    // kint($this->getElement());
 
     $objectProperties = GenericObject::inspectObject($this->getElement());
 
