@@ -323,7 +323,7 @@ class TreeForm extends FormBase {
     {
       $form['title'] = [
           '#type' => 'markup',
-          '#markup' => '<h3 class="mt-4 mb-4">'.$elementName.' Graph Hierarchy</h3>',
+          '#markup' => '<h3 class="mb-4">Available <font style="color:DarkGreen;">'.$elementName.'</font> Graph Hierarchy</h3>',
       ];
     }
 
