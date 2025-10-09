@@ -368,6 +368,11 @@ function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
   $username = $user->getAccountName();
   $repo_instance = \Drupal::request()->getHost();
   $project_id = 'hascorepo';
+  $repo_instance = \Drupal::request()->getHost();
+
+  if (preg_match('/(localhost|\.local|192\.168\.)/i', $repo_instance)) {
+    return;
+  }
 
   $client = \Drupal::httpClient();
   try {
@@ -394,6 +399,11 @@ function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
  */
 function rep_page_top(&$page_top) {
   $current_user = \Drupal::currentUser();
+  $repo_instance = \Drupal::request()->getHost();
+
+  if (preg_match('/(localhost|\.local|192\.168\.)/i', $repo_instance)) {
+    return;
+  }
 
   if ($current_user->isAuthenticated()) {
     $session = \Drupal::service('session');
