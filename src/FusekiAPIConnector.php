@@ -279,7 +279,7 @@ class FusekiAPIConnector {
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    dpm($api_url.$endpoint);
+    // dpm($api_url.$endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
@@ -2354,7 +2354,7 @@ class FusekiAPIConnector {
     return $totalValue;
   }
 
-  // Return List of Component elements from Instrument to Fill on Process
+  // Return List of Component elements from Instrument to Fill on Workflow
   public function componentListFromInstrument($instrumentUri) {
     $endpoint = "/hascoapi/api/instrument/components/".rawurlencode($instrumentUri);
     $method = "GET";
@@ -2363,7 +2363,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // Return List of Component Containerslots to fill the Process Tasks
+  // Return List of Component Containerslots to fill the Workflow Tasks
   public function containersListFromInstrument($instrumentUri) {
     $endpoint = "/hascoapi/api/instrument/containerslots/".rawurlencode($instrumentUri);
     $method = "GET";

@@ -70,7 +70,7 @@
         }
         $form['preferred_process'] = [
             '#type' => 'textfield',
-            '#title' => $this->t("Process's preferred name"),
+            '#title' => $this->t("Workflow's preferred name"),
             '#default_value' => $proccess,
         ];
 

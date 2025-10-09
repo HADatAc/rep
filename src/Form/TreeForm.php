@@ -98,7 +98,7 @@ class TreeForm extends FormBase {
       'person' => ["Person", EntryPoints::PERSON],
       'place' => ["Place", EntryPoints::PLACE],
       'platform' => ["Platform", EntryPoints::PLATFORM],
-      'processstem' => ["Process Stem", EntryPoints::PROCESS_STEM],
+      'processstem' => ["Workflow Stem", EntryPoints::PROCESS_STEM],
       'questionnaire' => ["Questionnaire", EntryPoints::QUESTIONNAIRE],
       'responseoption' => ["Response Option", EntryPoints::RESPONSE_OPTION],
       'study' => ["Study", EntryPoints::STUDY],
@@ -179,7 +179,7 @@ class TreeForm extends FormBase {
       [
         'id' => 'processstem',
         'uri' => EntryPoints::PROCESS_STEM,
-        'label' => 'Process Stem',
+        'label' => 'Workflow Stem',
         'uriNamespace' => EntryPoints::PROCESS_STEM
       ],
       [
