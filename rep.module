@@ -245,182 +245,182 @@ function rep_page_attachments(array &$attachments) {
   $attachments['#attached']['library'][] = 'rep/rep_js_css';
 }
 
-/**
- * Helper para executar chamadas autenticadas ao Sagres com renovação automática do token.
- */
-function rep_sagres_request($method, $url, array $options = []) {
-  $session = \Drupal::request()->getSession();
-  $token = $session->get('oauth_access_token');
+// /**
+//  * Helper para executar chamadas autenticadas ao Sagres com renovação automática do token.
+//  */
+// function rep_sagres_request($method, $url, array $options = []) {
+//   $session = \Drupal::request()->getSession();
+//   $token = $session->get('oauth_access_token');
 
-  $refreshToken = function() use ($session) {
-    $controller = \Drupal::service('controller_resolver')
-      ->getControllerFromDefinition('Drupal\rep\Controller\OAuthController::getAccessToken');
-    $response = call_user_func($controller);
+//   $refreshToken = function() use ($session) {
+//     $controller = \Drupal::service('controller_resolver')
+//       ->getControllerFromDefinition('Drupal\rep\Controller\OAuthController::getAccessToken');
+//     $response = call_user_func($controller);
 
-    if ($response instanceof JsonResponse) {
-      $payload = json_decode($response->getContent(), TRUE);
-      if (!empty($payload['body']['access_token'])) {
-        $session->set('oauth_access_token', $payload['body']['access_token']);
-        return $payload['body']['access_token'];
-      }
-    }
-    throw new \Exception('Falha ao renovar token Sagres.', 401);
-  };
+//     if ($response instanceof JsonResponse) {
+//       $payload = json_decode($response->getContent(), TRUE);
+//       if (!empty($payload['body']['access_token'])) {
+//         $session->set('oauth_access_token', $payload['body']['access_token']);
+//         return $payload['body']['access_token'];
+//       }
+//     }
+//     throw new \Exception('Falha ao renovar token Sagres.', 401);
+//   };
 
-  if (empty($token)) {
-    $token = $refreshToken();
-  }
+//   if (empty($token)) {
+//     $token = $refreshToken();
+//   }
 
-  // Injeta o token no header
-  $options['headers']['Authorization'] = "Bearer {$token}";
-  $client = \Drupal::httpClient();
+//   // Injeta o token no header
+//   $options['headers']['Authorization'] = "Bearer {$token}";
+//   $client = \Drupal::httpClient();
 
-  try {
-    $response = $client->request($method, $url, $options);
-  }
-  catch (RequestException $e) {
-    if ($e->hasResponse() && $e->getResponse()->getStatusCode() === 401) {
-      \Drupal::logger('rep')->warning('Token Sagres expirado, a renovar.');
-      $newToken = $refreshToken();
-      $options['headers']['Authorization'] = "Bearer {$newToken}";
-      $response = $client->request($method, $url, $options);
-    }
-    else {
-      throw $e;
-    }
-  }
+//   try {
+//     $response = $client->request($method, $url, $options);
+//   }
+//   catch (RequestException $e) {
+//     if ($e->hasResponse() && $e->getResponse()->getStatusCode() === 401) {
+//       \Drupal::logger('rep')->warning('Token Sagres expirado, a renovar.');
+//       $newToken = $refreshToken();
+//       $options['headers']['Authorization'] = "Bearer {$newToken}";
+//       $response = $client->request($method, $url, $options);
+//     }
+//     else {
+//       throw $e;
+//     }
+//   }
 
-  return $response;
-}
+//   return $response;
+// }
 
-/**
- * Implementa hook_user_insert().
- * É chamado quando um novo usuário é criado no Drupal.
- */
-function rep_user_insert($account) {
-  $user = \Drupal\user\Entity\User::load($account->id());
-  $cellphone = $user->get('field_cellphone')->value ?? 910000000;
+// /**
+//  * Implementa hook_user_insert().
+//  * É chamado quando um novo usuário é criado no Drupal.
+//  */
+// function rep_user_insert($account) {
+//   $user = \Drupal\user\Entity\User::load($account->id());
+//   $cellphone = $user->get('field_cellphone')->value ?? 910000000;
 
-  $json_data = json_encode([
-    'acc_id'            => $account->id(),
-    'acc_repo_instance' => \Drupal::request()->getHost(),
-    'acc_name'          => $account->getDisplayName(),
-    'acc_email'         => $account->getEmail(),
-    'acc_user_uri'      => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
-    'acc_cellphone'     => $cellphone,
-  ]);
+//   $json_data = json_encode([
+//     'acc_id'            => $account->id(),
+//     'acc_repo_instance' => \Drupal::request()->getHost(),
+//     'acc_name'          => $account->getDisplayName(),
+//     'acc_email'         => $account->getEmail(),
+//     'acc_user_uri'      => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
+//     'acc_cellphone'     => $cellphone,
+//   ]);
 
-  $url = 'http://192.168.1.169/sguser/account/add';
-  $options = [
-    'headers' => ['Content-Type' => 'application/json'],
-    'body'    => $json_data,
-  ];
+//   $url = 'http://192.168.1.169/sguser/account/add';
+//   $options = [
+//     'headers' => ['Content-Type' => 'application/json'],
+//     'body'    => $json_data,
+//   ];
 
-  try {
-    $response = rep_sagres_request('POST', $url, $options);
-    if ($response->getStatusCode() == 201) {
-      \Drupal::logger('rep')->notice("Conta {$account->id()} enviada para sguser.");
-    }
-  }
-  catch (\Exception $e) {
-    \Drupal::logger('rep')->error("Erro ao enviar conta {$account->id()} para sguser: " . $e->getMessage());
-  }
-}
+//   try {
+//     $response = rep_sagres_request('POST', $url, $options);
+//     if ($response->getStatusCode() == 201) {
+//       \Drupal::logger('rep')->notice("Conta {$account->id()} enviada para sguser.");
+//     }
+//   }
+//   catch (\Exception $e) {
+//     \Drupal::logger('rep')->error("Erro ao enviar conta {$account->id()} para sguser: " . $e->getMessage());
+//   }
+// }
 
-/**
- * Implementa hook_user_update().
- * É chamado quando um usuário é atualizado no Drupal.
- */
-function rep_user_update($account) {
-  $user = \Drupal\user\Entity\User::load($account->id());
-  $cellphone = $user->get('field_cellphone')->value ?? 910000000;
+// /**
+//  * Implementa hook_user_update().
+//  * É chamado quando um usuário é atualizado no Drupal.
+//  */
+// function rep_user_update($account) {
+//   $user = \Drupal\user\Entity\User::load($account->id());
+//   $cellphone = $user->get('field_cellphone')->value ?? 910000000;
 
-  $json_data = json_encode([
-    'acc_id'            => $account->id(),
-    'acc_repo_instance' => \Drupal::request()->getHost(),
-    'acc_name'          => $account->getDisplayName(),
-    'acc_email'         => $account->getEmail(),
-    'acc_user_uri'      => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
-    'acc_cellphone'     => $cellphone,
-  ]);
+//   $json_data = json_encode([
+//     'acc_id'            => $account->id(),
+//     'acc_repo_instance' => \Drupal::request()->getHost(),
+//     'acc_name'          => $account->getDisplayName(),
+//     'acc_email'         => $account->getEmail(),
+//     'acc_user_uri'      => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $account->id(),
+//     'acc_cellphone'     => $cellphone,
+//   ]);
 
-  $url = 'http://192.168.1.169/sguser/account/update';
-  $options = [
-    'headers' => ['Content-Type' => 'application/json'],
-    'body'    => $json_data,
-  ];
+//   $url = 'http://192.168.1.169/sguser/account/update';
+//   $options = [
+//     'headers' => ['Content-Type' => 'application/json'],
+//     'body'    => $json_data,
+//   ];
 
-  try {
-    $response = rep_sagres_request('PATCH', $url, $options);
-    if ($response->getStatusCode() == 200) {
-      \Drupal::logger('rep')->notice("Conta {$account->id()} atualizada no sguser.");
-    }
-  }
-  catch (\Exception $e) {
-    \Drupal::logger('rep')->error("Erro ao atualizar conta {$account->id()} no sguser: " . $e->getMessage());
-  }
-}
+//   try {
+//     $response = rep_sagres_request('PATCH', $url, $options);
+//     if ($response->getStatusCode() == 200) {
+//       \Drupal::logger('rep')->notice("Conta {$account->id()} atualizada no sguser.");
+//     }
+//   }
+//   catch (\Exception $e) {
+//     \Drupal::logger('rep')->error("Erro ao atualizar conta {$account->id()} no sguser: " . $e->getMessage());
+//   }
+// }
 
-/**
- * Implementa hook_user_delete().
- * É chamado quando um usuário é removido no Drupal.
- */
-function rep_user_delete($account) {
-  $acc_repo_instance = \Drupal::request()->getHost();
-  $url = 'http://192.168.1.169/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
+// /**
+//  * Implementa hook_user_delete().
+//  * É chamado quando um usuário é removido no Drupal.
+//  */
+// function rep_user_delete($account) {
+//   $acc_repo_instance = \Drupal::request()->getHost();
+//   $url = 'http://192.168.1.169/sguser/account/delete/' . $account->id() . '/' . $acc_repo_instance;
 
-  try {
-    $response = rep_sagres_request('DELETE', $url);
-    if ($response->getStatusCode() == 200) {
-      \Drupal::logger('rep')->notice("Conta {$account->id()} removida do sguser.");
-    }
-  }
-  catch (\Exception $e) {
-    \Drupal::logger('rep')->error("Erro ao remover conta {$account->id()} do sguser: " . $e->getMessage());
-  }
-}
+//   try {
+//     $response = rep_sagres_request('DELETE', $url);
+//     if ($response->getStatusCode() == 200) {
+//       \Drupal::logger('rep')->notice("Conta {$account->id()} removida do sguser.");
+//     }
+//   }
+//   catch (\Exception $e) {
+//     \Drupal::logger('rep')->error("Erro ao remover conta {$account->id()} do sguser: " . $e->getMessage());
+//   }
+// }
 
-/**
- * Implements hook_user_login().
- */
-function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
-  $repo_instance = \Drupal::request()->getHost();
-  $url = 'http://192.168.1.169/sgcontract/account/terms-status';
-  $options = [
-    'query' => [
-      'acc_id' => $account->id(),
-      'acc_repo_instance' => $repo_instance,
-      'project_id' => 'hascorepo',
-    ],
-  ];
+// /**
+//  * Implements hook_user_login().
+//  */
+// function rep_user_login(\Drupal\Core\Session\AccountInterface $account) {
+//   $repo_instance = \Drupal::request()->getHost();
+//   $url = 'http://192.168.1.169/sgcontract/account/terms-status';
+//   $options = [
+//     'query' => [
+//       'acc_id' => $account->id(),
+//       'acc_repo_instance' => $repo_instance,
+//       'project_id' => 'hascorepo',
+//     ],
+//   ];
 
-  try {
-    $response = rep_sagres_request('GET', $url, $options);
-    $data = json_decode($response->getBody(), TRUE);
+//   try {
+//     $response = rep_sagres_request('GET', $url, $options);
+//     $data = json_decode($response->getBody(), TRUE);
 
-    if ($data['status'] !== 'up_to_date') {
-      \Drupal::messenger()->addWarning(t('Tem de aceitar os Termos de Uso para continuar.'));
-      \Drupal::service('session')->set('terms_pending', TRUE);
-    }
-  }
-  catch (\Exception $e) {
-    \Drupal::logger('rep')->error('Erro ao verificar aceitação dos termos: @msg', ['@msg' => $e->getMessage()]);
-  }
-}
-/**
- * Redirects to terms acceptance page if terms are pending.
- */
-function rep_page_top(&$page_top) {
-  $current_user = \Drupal::currentUser();
+//     if ($data['status'] !== 'up_to_date') {
+//       \Drupal::messenger()->addWarning(t('Tem de aceitar os Termos de Uso para continuar.'));
+//       \Drupal::service('session')->set('terms_pending', TRUE);
+//     }
+//   }
+//   catch (\Exception $e) {
+//     \Drupal::logger('rep')->error('Erro ao verificar aceitação dos termos: @msg', ['@msg' => $e->getMessage()]);
+//   }
+// }
+// /**
+//  * Redirects to terms acceptance page if terms are pending.
+//  */
+// function rep_page_top(&$page_top) {
+//   $current_user = \Drupal::currentUser();
 
-  if ($current_user->isAuthenticated()) {
-    $session = \Drupal::service('session');
-    $current_path = \Drupal::service('path.current')->getPath();
+//   if ($current_user->isAuthenticated()) {
+//     $session = \Drupal::service('session');
+//     $current_path = \Drupal::service('path.current')->getPath();
 
-    if ($session->get('terms_pending') === TRUE && $current_path !== '/terms-aceptance') {
-      $response = new \Symfony\Component\HttpFoundation\RedirectResponse('/terms-aceptance');
-      $response->send();
-      exit;
-    }
-  }
-}
+//     if ($session->get('terms_pending') === TRUE && $current_path !== '/terms-aceptance') {
+//       $response = new \Symfony\Component\HttpFoundation\RedirectResponse('/terms-aceptance');
+//       $response->send();
+//       exit;
+//     }
+//   }
+// }
