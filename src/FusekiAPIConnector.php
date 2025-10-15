@@ -264,28 +264,35 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
-  public function listByKeywordAndLanguage($elementType, $keyword, $language, $pageSize, $offset) {
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  public function listByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/".
       rawurlencode($keyword)."/".
       rawurlencode($language)."/".
+      rawurlencode($type)."/".
+      rawurlencode($manageremail)."/".
+      rawurlencode($status)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+    // dpm($api_url.$endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
-  public function listSizeByKeywordAndLanguage($elementType, $keyword, $language) {
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  public function listSizeByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status) {
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/total/".
       rawurlencode($keyword)."/".
-      rawurlencode($language);
+      rawurlencode($language)."/".
+      rawurlencode($type)."/".
+      rawurlencode($manageremail)."/".
+      rawurlencode($status);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -316,7 +323,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
   public function listByManagerEmail($elementType, $manageremail, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -330,7 +337,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
   public function listByReviewStatus($elementType, $status, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -344,7 +351,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
   public function listSizeByManagerEmail($elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
       $elementType .
@@ -370,7 +377,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
   public function listSizeByManagerEmailByStudy($studyuri, $elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
       $elementType .
@@ -994,24 +1001,24 @@ class FusekiAPIConnector {
     return $response;
   }
 
-  public function processInstrumentDel($processUri, $detectorUri) {
-    $endpoint = "/hascoapi/api/process/instrument/remove/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
+  public function processInstrumentDel($processUri, $componentUri) {
+    $endpoint = "/hascoapi/api/process/instrument/remove/".rawurlencode($processUri).'/'.rawurlencode($componentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function processDetectorAdd($processUri, $detectorUri) {
-    $endpoint = "/hascoapi/api/process/detector/add/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
+  public function processComponentAdd($processUri, $componentUri) {
+    $endpoint = "/hascoapi/api/process/component/add/".rawurlencode($processUri).'/'.rawurlencode($componentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function processDetectorDel($processUri, $instrumentUri) {
-    $endpoint = "/hascoapi/api/process/detector/remove/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
+  public function processComponentDel($processUri, $instrumentUri) {
+    $endpoint = "/hascoapi/api/process/component/remove/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1146,8 +1153,8 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function containerslotAttach($actuatorUri,$containerslotUri) {
-    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($actuatorUri)."/".rawurlencode($containerslotUri);
+  public function containerslotAttach($componentUri,$containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($componentUri)."/".rawurlencode($containerslotUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1221,67 +1228,27 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   ACTUATORS
+   *   COMPONENTS
    */
 
-   public function actuatorAdd($actuatorJson) {
-    $endpoint = "/hascoapi/api/actuator/create/".rawurlencode($actuatorJson);
+  public function componentAdd($componentJson) {
+    $endpoint = "/hascoapi/api/component/create/".rawurlencode($componentJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function actuatorDel($actuatorUri) {
-    $endpoint = "/hascoapi/api/actuator/delete/".rawurlencode($actuatorUri);
+  public function componentDel($componentUri) {
+    $endpoint = "/hascoapi/api/component/delete/".rawurlencode($componentUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  /**
-   *   ACTUATOR STEMS
-   */
-
-   public function actuatorStemAdd($actuatorStemJson) {
-    $endpoint = "/hascoapi/api/actuatorstem/create/".rawurlencode($actuatorStemJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
-
-  public function actuatorStemDel($actuatorStemUri) {
-    $endpoint = "/hascoapi/api/actuatorstem/delete/".rawurlencode($actuatorStemUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
-
-  /**
-   *   DETECTORS
-   */
-
-  public function detectorAdd($detectorJson) {
-    $endpoint = "/hascoapi/api/detector/create/".rawurlencode($detectorJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
-
-  public function detectorDel($detectorUri) {
-    $endpoint = "/hascoapi/api/detector/delete/".rawurlencode($detectorUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
-
-  public function detectorAttach($detectorUri,$containerslotUri) {
-    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($detectorUri)."/".rawurlencode($containerslotUri);
+  public function componentAttach($componentUri,$containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($componentUri)."/".rawurlencode($containerslotUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1289,19 +1256,19 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   DETECTOR STEMS
+   *   COMPONENT STEMS
    */
 
-   public function detectorStemAdd($detectorStemJson) {
-    $endpoint = "/hascoapi/api/detectorstem/create/".rawurlencode($detectorStemJson);
+   public function componentStemAdd($componentStemJson) {
+    $endpoint = "/hascoapi/api/componentstem/create/".rawurlencode($componentStemJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function detectorStemDel($detectorStemUri) {
-    $endpoint = "/hascoapi/api/detectorstem/delete/".rawurlencode($detectorStemUri);
+  public function componentStemDel($componentStemUri) {
+    $endpoint = "/hascoapi/api/componentstem/delete/".rawurlencode($componentStemUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -2387,7 +2354,7 @@ class FusekiAPIConnector {
     return $totalValue;
   }
 
-  // Return List of Component elements from Instrument to Fill on Process
+  // Return List of Component elements from Instrument to Fill on Workflow
   public function componentListFromInstrument($instrumentUri) {
     $endpoint = "/hascoapi/api/instrument/components/".rawurlencode($instrumentUri);
     $method = "GET";
@@ -2396,7 +2363,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // Return List of Component Containerslots to fill the Process Tasks
+  // Return List of Component Containerslots to fill the Workflow Tasks
   public function containersListFromInstrument($instrumentUri) {
     $endpoint = "/hascoapi/api/instrument/containerslots/".rawurlencode($instrumentUri);
     $method = "GET";

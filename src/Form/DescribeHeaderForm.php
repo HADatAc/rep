@@ -229,9 +229,8 @@ class DescribeHeaderForm extends FormBase {
     // --- QR Code (via attached JS library) ---
     if (
       $this->getElement()->hascoTypeUri === VSTOI::INSTRUMENT_INSTANCE ||
-      $this->getElement()->hascoTypeUri === VSTOI::DETECTOR_INSTANCE  ||
-      $this->getElement()->hascoTypeUri === VSTOI::PLATFORM_INSTANCE  ||
-      $this->getElement()->hascoTypeUri === VSTOI::ACTUATOR_INSTANCE
+      $this->getElement()->hascoTypeUri === VSTOI::COMPONENT_INSTANCE  ||
+      $this->getElement()->hascoTypeUri === VSTOI::PLATFORM_INSTANCE
     ) {
       $form['qr_code'] = [
         '#type' => 'container',
@@ -254,9 +253,8 @@ class DescribeHeaderForm extends FormBase {
 
      // QR Code logic using JS
       if($this->getElement()->hascoTypeUri===VSTOI::INSTRUMENT_INSTANCE ||
-         $this->getElement()->hascoTypeUri===VSTOI::DETECTOR_INSTANCE ||
-         $this->getElement()->hascoTypeUri===VSTOI::PLATFORM_INSTANCE ||
-         $this->getElement()->hascoTypeUri===VSTOI::ACTUATOR_INSTANCE ){
+         $this->getElement()->hascoTypeUri===VSTOI::COMPONENT_INSTANCE ||
+         $this->getElement()->hascoTypeUri===VSTOI::PLATFORM_INSTANCE ){
         $form['qr_code'] = [
           '#type' => 'container',
           '#attributes' => [

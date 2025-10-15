@@ -14,13 +14,10 @@ use Drupal\sir\Entity\Task;
 
     const ANNOTATION_STEM           = VSTOI::ANNOTATION_STEM;
     const ATTRIBUTE                 = SIO::ATTRIBUTE;
-    const ACTUATOR_ATTRIBUTE        = "http://purl.obolibrary.org/obo/UBERON_0000061"; // ITS MISSING THIS VALUE
     const CODEBOOK                  = VSTOI::CODEBOOK;
-    const DETECTOR_ATTRIBUTE        = "http://purl.obolibrary.org/obo/UBERON_0000061";
-    const DETECTOR_STEM             = VSTOI::DETECTOR_STEM;
-    const ACTUATOR_STEM             = VSTOI::ACTUATOR_STEM;
     const COMPONENT_STEM            = VSTOI::COMPONENT_STEM;
     const COMPONENT                 = VSTOI::COMPONENT;
+    const COMPONENT_ATTRIBUTE       = VSTOI::COMPONENT_ATTRIBUTE;
     const ENTITY                    = SIO::ENTITY;
     const GROUP                     = FOAF::GROUP;
     const INSTRUMENT                = VSTOI::INSTRUMENT;
