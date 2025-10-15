@@ -161,3 +161,27 @@ qr_code_assets:
     - core/jquery
     - core/drupalSettings
     - core/once
+
+mtsearch_icons:
+  version: 1.x
+  css:
+    theme:
+      css/mtsearch_icons.css: {}
+
+mtlist_styles:
+  version: 1.x
+  css:
+    theme:
+      css/rep.css: {}
+
+terms_modal:
+  version: 1.x
+  css:
+    theme:
+      css/webdoc_modal.css: {}
+  js:
+    js/terms_modal.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupal.dialog

@@ -13,7 +13,7 @@ class DataFile {
     return $header = [
       'element_uri' => t('URI'),
       'element_status' => t('Status'),
-      'element_last_time' => t('Last Process Time'),
+      'element_last_time' => t('Last Workflow Time'),
       'element_filename' => t('FileName'),
       'element_id' => t('FileId'),
       'element_log' => t('Log'),
