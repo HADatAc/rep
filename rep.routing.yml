@@ -495,3 +495,23 @@ rep.graph.expand:
     _permission: 'access content'
   methods: [GET]
 
+# Página principal do Workflow Canvas
+rep.workflow:
+  path: '/rep/workflow'
+  defaults:
+    _form: '\Drupal\rep\Form\VisWorkflowForm'
+    _title: 'Workflow Canvas'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: TRUE
+
+# Endpoint para lazy-loading ou persistência (usado pelo JS)
+rep.workflow.expand:
+  path: '/rep/workflow/expand'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WorkflowController::expand'
+  requirements:
+    _permission: 'access content'
+  methods: [GET, POST]
+

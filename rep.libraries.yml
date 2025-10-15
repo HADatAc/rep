@@ -161,3 +161,16 @@ qr_code_assets:
     - core/jquery
     - core/drupalSettings
     - core/once
+
+workflow_canvas:
+  version: 1.x
+  js:
+    js/vis-network.min.js: {}
+    js/workflow.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+
+
+
