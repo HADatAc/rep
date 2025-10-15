@@ -218,14 +218,14 @@ class AddMTForm extends FormBase {
         return;
       }
       $form['mt_filename'] = [
-        '#type' => 'managed_file',
+        '#type' => 'file',
         '#title' => $this->t('File Upload'),
-        '#description' => $this->t('Upload a file.'),
-        '#upload_location' => $upload_path,
-        '#upload_validators' => [
-          'file_validate_extensions' => ['xlsx'],
+        '#description' => $this->t('Upload a file (.xlsx only).'),
+        '#attributes' => [
+          'accept' => '.xlsx',
         ],
       ];
+
     }
 
     // if ($this->getElementType() == 'da') {
@@ -304,23 +304,62 @@ class AddMTForm extends FormBase {
     try {
       $useremail = \Drupal::currentUser()->getEmail();
 
-      $fileId = $form_state->getValue('mt_filename');
-      if (!empty($fileId) && isset($fileId[0])) {
-        $file_entity = \Drupal\file\Entity\File::load($fileId[0]);
-        if ($file_entity) {
-          $filename = $file_entity->getFilename();
-        } else {
-          \Drupal::messenger()->addError(t('File could not be loaded.'));
-          return;
-        }
-      } else {
+      // Validate that a file was uploaded
+      if (empty($_FILES['files']['name']['mt_filename'])) {
         \Drupal::messenger()->addError(t('Please upload a file.'));
         return;
       }
 
-      #\Drupal::logger('rep')->debug('File ID: <pre>@fileId</pre>', ['@fileId' => print_r($fileId, TRUE)]);
+      $file_info = $_FILES['files'];
+      $tmp_name = $file_info['tmp_name']['mt_filename'];
+      $original_name = $file_info['name']['mt_filename'];
 
+      // Determine destination directory
+      if ($this->getElementType() == 'kgr') {
+        $destination_dir = 'private://social/' . $this->getElementType();
+      } else {
+        $destination_dir = 'private://' . $this->getElementType();
+      }
 
+      // Ensure directory exists
+      $file_system = \Drupal::service('file_system');
+      if (!$file_system->prepareDirectory($destination_dir, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY)) {
+        \Drupal::messenger()->addError(t("Upload directory could not be prepared: " . $destination_dir));
+        return;
+      }
+
+      // Move uploaded file
+      $destination_real = $file_system->realpath($destination_dir) . '/' . basename($original_name);
+
+      if (!move_uploaded_file($tmp_name, $destination_real)) {
+        \Drupal::messenger()->addError(t("Failed to move uploaded file. Check permissions for @dir", ['@dir' => $destination_real]));
+        return;
+      }
+
+      // Confirm file actually exists at destination
+      if (!file_exists($destination_real)) {
+        \Drupal::messenger()->addError(t("File move failed — destination file does not exist: @path", ['@path' => $destination_real]));
+        return;
+      }
+
+      // If we reach here, upload succeeded
+      $filename = basename($original_name);
+
+      // Build the Drupal file URI (not the absolute path)
+      $drupal_uri = $destination_dir . '/' . $filename;
+
+      // Create a File entity for Drupal tracking
+      $file_entity = File::create([
+        'uri' => $drupal_uri,
+        'filename' => $filename,
+        'status' => FileInterface::STATUS_PERMANENT,
+        'uid' => \Drupal::currentUser()->id(),
+      ]);
+
+      $file_entity->save();
+      $file_id = $file_entity->id(); // This is your $fid
+
+      // Build URIs (same as before)
       $ddUri = NULL;
       if ($form_state->getValue('mt_dd') != NULL && $form_state->getValue('mt_dd') != '') {
         $ddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_dd'));
@@ -331,87 +370,77 @@ class AddMTForm extends FormBase {
         $sddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_sdd'));
       }
 
-      // DATAFILE JSON
+      // Build DATAFILE JSON
       $newDataFileUri = Utils::uriGen('datafile');
-      $datafileJSON = '{"uri":"'. $newDataFileUri .'",'.
-          '"typeUri":"'.HASCO::DATAFILE.'",'.
-          '"hascoTypeUri":"'.HASCO::DATAFILE.'",'.
-          '"label":"'.$form_state->getValue('mt_name').'",'.
-          '"filename":"'.$filename.'",'.
-          '"id":"'.$fileId[0].'",'.
-          '"fileStatus":"'.Constant::FILE_STATUS_UNPROCESSED.'",'.
-          '"hasSIRManagerEmail":"'.$useremail.'"}';
+      $datafileJSON = json_encode([
+        "uri" => $newDataFileUri,
+        "typeUri" => HASCO::DATAFILE,
+        "hascoTypeUri" => HASCO::DATAFILE,
+        "label" => $form_state->getValue('mt_name'),
+        "filename" => $filename,
+        "fileStatus" => Constant::FILE_STATUS_UNPROCESSED,
+        "hasSIRManagerEmail" => $useremail,
+        "id" => $file_id,
+      ]);
 
-      // MT JSON
-      $newMTUri = str_replace("DFL",Utils::elementPrefix($this->getElementType()),$newDataFileUri);
-      $mtJSON = '{"uri":"'. $newMTUri .'",'.
-          '"typeUri":"'.$this->getElementTypeUri().'",'.
-          '"hascoTypeUri":"'.$this->getElementTypeUri().'",';
-      if ($this->getElementType() == 'da') {
-        $mtJSON .= '"isMemberOfUri":"'.$this->getStudy()->uri.'",';
+      // Build MT JSON
+      $newMTUri = str_replace("DFL", Utils::elementPrefix($this->getElementType()), $newDataFileUri);
+      $mtData = [
+        "uri" => $newMTUri,
+        "typeUri" => $this->getElementTypeUri(),
+        "hascoTypeUri" => $this->getElementTypeUri(),
+        "label" => $form_state->getValue('mt_name'),
+        "hasDataFileUri" => $newDataFileUri,
+        "hasVersion" => $form_state->getValue('mt_version'),
+        "comment" => $form_state->getValue('mt_comment'),
+        "hasSIRManagerEmail" => $useremail,
+      ];
+
+      if ($this->getElementType() == 'da' && $this->getStudy()) {
+        $mtData["isMemberOfUri"] = $this->getStudy()->uri;
       }
-      if ($this->getElementType() == 'str') {
-        $mtJSON .= '"studyUri":"'.$this->getStudy()->uri.'",';
+
+      if ($this->getElementType() == 'str' && $this->getStudy()) {
+        $mtData["studyUri"] = $this->getStudy()->uri;
       }
+
       if ($ddUri != NULL) {
-        $mtJSON .= '"hasDDUri":"'.$ddUri.'",';
+        $mtData["hasDDUri"] = $ddUri;
       }
       if ($sddUri != NULL) {
-        $mtJSON .= '"hasSDDUri":"'.$sddUri.'",';
-      }
-      $mtJSON .= '"label":"'.$form_state->getValue('mt_name').'",'.
-          '"hasDataFileUri":"'.$newDataFileUri.'",'.
-          '"hasVersion":"'.$form_state->getValue('mt_version').'",'.
-          '"comment":"'.$form_state->getValue('mt_comment').'",'.
-          '"hasSIRManagerEmail":"'.$useremail.'"}';
-
-      // Check if a file was uploaded.
-      if ($file_entity) {
-        // Set the status to FILE_STATUS_PERMANENT.
-        $file_entity->set('status', FileInterface::STATUS_PERMANENT);
-        $file_entity->save();
-        #\Drupal::messenger()->addMessage(t('File uploaded successfully.'));
-
-        $api = \Drupal::service('rep.api_connector');
-
-        // ADD DATAFILE
-        $msg1 = $api->parseObjectResponse($api->datafileAdd($datafileJSON),'datafileAdd');
-
-        // ADD MT
-        $msg2 = $api->parseObjectResponse($api->elementAdd($this->getElementType(),$mtJSON),'elementAdd');
-
-        //dpm($datafileJSON);
-        //dpm($mtJSON);
-
-        if ($msg1 != NULL && $msg2 != NULL) {
-          \Drupal::messenger()->addMessage(t($this->getElementName() . " has been added successfully."));
-        } else {
-          $error = '';
-          if ($msg1 != NULL) {
-            $error .= $msg1;
-          }
-          if ($msg2 != NULL) {
-            $error .= $msg2;
-          }
-          \Drupal::messenger()->addError(t("Something went wrong while adding " . $this->getElementName() . ": " . $error));
-        }
-        self::backUrl();
-        return;
+        $mtData["hasSDDUri"] = $sddUri;
       }
 
-    } catch(\Exception $e) {
+      $mtJSON = json_encode($mtData);
+
+      // Send data to your API connector
+      $api = \Drupal::service('rep.api_connector');
+
+      $msg1 = $api->parseObjectResponse($api->datafileAdd($datafileJSON), 'datafileAdd');
+      $msg2 = $api->parseObjectResponse($api->elementAdd($this->getElementType(), $mtJSON), 'elementAdd');
+
+      if ($msg1 != NULL && $msg2 != NULL) {
+        \Drupal::messenger()->addMessage(t($this->getElementName() . " has been added successfully."));
+      } else {
+        $error = ($msg1 ?? '') . ' ' . ($msg2 ?? '');
+        \Drupal::messenger()->addError(t("Something went wrong while adding " . $this->getElementName() . ": " . $error));
+      }
+
+      self::backUrl();
+      return;
+
+    } catch (\Exception $e) {
       \Drupal::messenger()->addError(t("An error occurred while adding an ". $this->getElementName() . ": ".$e->getMessage()));
       self::backUrl();
       return;
     }
-
   }
 
   function backUrl() {
     $uid = \Drupal::currentUser()->id();
     if ($this->elementType != 'da')
       $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.add_mt');
-    else  
+    else
       $previousUrl = Utils::trackingGetPreviousUrl($uid, 'std.manage_study_elements');
 
     if ($previousUrl) {

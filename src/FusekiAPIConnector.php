@@ -12,7 +12,7 @@ use Exception;
 use Symfony\Component\HttpFoundation\Response;
 use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
+use Psr\Http\Message\ResponseInterface;
 
 class FusekiAPIConnector {
   private $client;
@@ -256,7 +256,6 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-
   public function getHascoType($uri) {
     $endpoint = "/hascoapi/api/hascotype/".rawurlencode($uri);
     $method = 'GET';
@@ -265,28 +264,35 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
-  public function listByKeywordAndLanguage($elementType, $keyword, $language, $pageSize, $offset) {
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  public function listByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/".
       rawurlencode($keyword)."/".
       rawurlencode($language)."/".
+      rawurlencode($type)."/".
+      rawurlencode($manageremail)."/".
+      rawurlencode($status)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+    // dpm($api_url.$endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
-  public function listSizeByKeywordAndLanguage($elementType, $keyword, $language) {
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  public function listSizeByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status) {
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/total/".
       rawurlencode($keyword)."/".
-      rawurlencode($language);
+      rawurlencode($language)."/".
+      rawurlencode($type)."/".
+      rawurlencode($manageremail)."/".
+      rawurlencode($status);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -317,7 +323,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
   public function listByManagerEmail($elementType, $manageremail, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -331,7 +337,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
   public function listByReviewStatus($elementType, $status, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -345,7 +351,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
   public function listSizeByManagerEmail($elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
       $elementType .
@@ -371,7 +377,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "detector", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
   public function listSizeByManagerEmailByStudy($studyuri, $elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
       $elementType .
@@ -782,6 +788,31 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // GET     /hascoapi/api/:elementtype/bysoc/:socuri/:pageSize/:offset                                  org.hascoapi.console.controllers.restapi.StudyObjectCollectionAPI.getElementsBySOC(socuri : String, elementtype: String, pageSize : Integer, offset : Integer)
+  public function listElementsBySOC($elementType, $socuri, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/bysoc/".
+      rawurlencode($socuri)."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+  // GET     /hascoapi/api/:elementtype/bysoc/total/:socuri                                              org.hascoapi.console.controllers.restapi.StudyObjectCollectionAPI.getTotalElementsBySOC(socuri : String, elementtype : String)
+  public function listSizeElementsBySOC($elementType, $socuri) {
+    $endpoint = "/hascoapi/api/".
+      $elementType .
+      "/bysoc/total/" .
+      rawurlencode($socuri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /******************************************************************************
    *
    *                             E L E M E N T S
@@ -970,24 +1001,24 @@ class FusekiAPIConnector {
     return $response;
   }
 
-  public function processInstrumentDel($processUri, $detectorUri) {
-    $endpoint = "/hascoapi/api/process/instrument/remove/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
+  public function processInstrumentDel($processUri, $componentUri) {
+    $endpoint = "/hascoapi/api/process/instrument/remove/".rawurlencode($processUri).'/'.rawurlencode($componentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function processDetectorAdd($processUri, $detectorUri) {
-    $endpoint = "/hascoapi/api/process/detector/add/".rawurlencode($processUri).'/'.rawurlencode($detectorUri);
+  public function processComponentAdd($processUri, $componentUri) {
+    $endpoint = "/hascoapi/api/process/component/add/".rawurlencode($processUri).'/'.rawurlencode($componentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function processDetectorDel($processUri, $instrumentUri) {
-    $endpoint = "/hascoapi/api/process/detector/remove/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
+  public function processComponentDel($processUri, $instrumentUri) {
+    $endpoint = "/hascoapi/api/process/component/remove/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1007,9 +1038,64 @@ class FusekiAPIConnector {
    *    TASKS
    */
 
-  // TODOPP
-  // End-Point da API para salvar os instrumentos nas tasks
+  public function taskSetRequiredInstruments(array $payload) {
+    $endpoint = "/hascoapi/api/task/instruments";
+    $method   = "POST";
+    $api_url = $this->getApiUrl();
 
+    if ($this->bearer === NULL) {
+        $this->bearer = "Bearer " . JWT::jwt();
+    }
+
+    $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
+
+    $data = [
+        'headers' => [
+            'Content-Type'  => 'application/json',
+            'Authorization' => $this->bearer,
+        ],
+        'body'    => $json,
+    ];
+
+    try {
+        // $ch = curl_init($url);
+        // curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        // curl_setopt($ch, CURLOPT_HTTPHEADER, array_map(
+        //     fn($k, $v) => "$k: $v",
+        //     array_keys($options['headers']),
+        //     $options['headers']
+        // ));
+        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        // curl_setopt($ch, CURLOPT_POSTFIELDS, $options['body']);
+
+        // $resp     = curl_exec($ch);
+        // $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        // $curlErr  = curl_error($ch);
+        // curl_close($ch);
+
+        // $decoded = json_decode($resp, true);
+
+        // return $decoded;
+        $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
+
+        return $response;
+    }
+    catch (\Exception $e) {
+        \Drupal::logger('rep')->error('Exception em taskSetRequiredInstruments(): @msg', [
+          '@msg' => $e->getMessage()
+        ]);
+        throw $e;
+    }
+  }
+
+  // POST /hascoapi/api/task/deletewithtasks/$taskUri<[^/]+> org.hascoapi.console.controllers.restapi.TaskAPI.deleteWithTasks(taskUri:String)
+  public function taskDeleteWithTasks($taskUri) {
+    $endpoint = "/hascoapi/api/task/deletewithtasks/".rawurlencode($taskUri);
+    $method = "POST";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
 
   /**
    *    PROJECTS
@@ -1067,8 +1153,8 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function containerslotAttach($actuatorUri,$containerslotUri) {
-    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($actuatorUri)."/".rawurlencode($containerslotUri);
+  public function containerslotAttach($componentUri,$containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($componentUri)."/".rawurlencode($containerslotUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1142,67 +1228,27 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   ACTUATORS
+   *   COMPONENTS
    */
 
-   public function actuatorAdd($actuatorJson) {
-    $endpoint = "/hascoapi/api/actuator/create/".rawurlencode($actuatorJson);
+  public function componentAdd($componentJson) {
+    $endpoint = "/hascoapi/api/component/create/".rawurlencode($componentJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function actuatorDel($actuatorUri) {
-    $endpoint = "/hascoapi/api/actuator/delete/".rawurlencode($actuatorUri);
+  public function componentDel($componentUri) {
+    $endpoint = "/hascoapi/api/component/delete/".rawurlencode($componentUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  /**
-   *   ACTUATOR STEMS
-   */
-
-   public function actuatorStemAdd($actuatorStemJson) {
-    $endpoint = "/hascoapi/api/actuatorstem/create/".rawurlencode($actuatorStemJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
-
-  public function actuatorStemDel($actuatorStemUri) {
-    $endpoint = "/hascoapi/api/actuatorstem/delete/".rawurlencode($actuatorStemUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
-
-  /**
-   *   DETECTORS
-   */
-
-  public function detectorAdd($detectorJson) {
-    $endpoint = "/hascoapi/api/detector/create/".rawurlencode($detectorJson);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
-
-  public function detectorDel($detectorUri) {
-    $endpoint = "/hascoapi/api/detector/delete/".rawurlencode($detectorUri);
-    $method = 'POST';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
-  }
-
-  public function detectorAttach($detectorUri,$containerslotUri) {
-    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($detectorUri)."/".rawurlencode($containerslotUri);
+  public function componentAttach($componentUri,$containerslotUri) {
+    $endpoint = "/hascoapi/api/slots/container/attach/".rawurlencode($componentUri)."/".rawurlencode($containerslotUri);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1210,19 +1256,19 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   DETECTOR STEMS
+   *   COMPONENT STEMS
    */
 
-   public function detectorStemAdd($detectorStemJson) {
-    $endpoint = "/hascoapi/api/detectorstem/create/".rawurlencode($detectorStemJson);
+   public function componentStemAdd($componentStemJson) {
+    $endpoint = "/hascoapi/api/componentstem/create/".rawurlencode($componentStemJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function detectorStemDel($detectorStemUri) {
-    $endpoint = "/hascoapi/api/detectorstem/delete/".rawurlencode($detectorStemUri);
+  public function componentStemDel($componentStemUri) {
+    $endpoint = "/hascoapi/api/componentstem/delete/".rawurlencode($componentStemUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1959,6 +2005,20 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function repoReloadSelectedNamespaceTriples(array $namespaces) {
+    $endpoint = '/hascoapi/api/repo/ont/reload';
+    $url      = $this->getApiUrl() . $endpoint;
+
+    $jsonBody = ['namespaceUris' => $namespaces];
+    $headers = $this->getHeader();
+    $options = [
+      'headers' => $headers,
+      'json'    => $jsonBody,
+    ];
+
+    return $this->perform_http_request('POST', $url, $options);
+  }
+
   public function repoDeleteSelectedNamespace($abbreviation) {
     $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($abbreviation);
     $method = "GET";
@@ -1977,6 +2037,15 @@ class FusekiAPIConnector {
 
   public function repoDeleteNamespaceTriples() {
     $endpoint = "/hascoapi/api/repo/ont/delete";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/repo/namespace/topclasses/:abbreviation org.hascoapi.console.controllers.restapi.RepoPage.getTopClasses(abbreviation : String)
+  public function repoTopClassNamespaces($abbreviation) {
+    $endpoint = "/hascoapi/api/repo/namespace/topclasses/".rawurlencode($abbreviation);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -2147,46 +2216,49 @@ class FusekiAPIConnector {
    *  If anything goes wrong, this method will return NULL and issue a Drupal error message fowrarding the message provided by
    *  the HASCO API.
    */
-  // public function parseObjectResponse($response, $methodCalled) {
-  //   if ($this->error != NULL) {
-  //     if ($this->error == 'CON') {
-  //       \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
-  //     } else {
-  //       \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
-  //     }
-  //     return NULL;
-  //   }
-  //   if ($response == NULL || $response == "") {
-  //       \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
-  //       return NULL;
-  //   }
+//   public function parseObjectResponse($response, $methodCalled) {
+//     if ($this->error != NULL) {
+//       if ($this->error == 'CON') {
+//         \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
+//       } else {
+//         \Drupal::messenger()->addError(t("API ERROR " . $this->error . ". Message: " . $this->error_message));
+//       }
+//       return NULL;
+//     }
+//     if ($response == NULL || $response == "") {
+//         \Drupal::messenger()->addError(t("API service has returned no response: called " . $methodCalled));
+//         return NULL;
+//     }
 
-  //   // Se já veio um array (já decodificado), devolve-o logo
-  //   if (is_array($response)) {
-  //     return $response;
-  //   }
+//     // Se já veio um array (já decodificado), devolve-o logo
+//     if (is_array($response)) {
+//       return $response;
+//     }
 
-  //   // Caso venha um Stream ou outro objecto com __toString(), força string
-  //   if (!is_string($response) && method_exists($response, '__toString')) {
-  //     $response = (string) $response;
-  //   }
+//     // 4) If it's a stream or other object with __toString(), cast to string.
+//     // if (!is_string($response) && method_exists($response, '__toString')) {
+//     //   $response = (string) $response;
+//     // }
+//     if (!is_string($response) && is_object($response) && method_exists($response, '__toString')) {
+//       $response = (string) $response;
+//     }
 
-  //   $obj = json_decode($response);
-  //   if ($obj == NULL) {
-  //     \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
-  //     return NULL;
-  //   }
-  //   if ($obj->isSuccessful) {
-  //     return $obj->body;
-  //   }
-  //   $message = $obj->body;
-  //   if ($message != NULL && is_string($message) &&
-  //       str_starts_with($message,"No") && str_ends_with($message,"has been found")) {
-  //     return array();
-  //   }
-  //   \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
-  //   return NULL;
-  // }
+//     $obj = json_decode($response);
+//     if ($obj == NULL) {
+//       \Drupal::messenger()->addError(t("API service has failed with following RAW message: [" . $response . "]"));
+//       return NULL;
+//     }
+//     if ($obj->isSuccessful) {
+//       return $obj->body;
+//     }
+//     $message = $obj->body;
+//     if ($message != NULL && is_string($message) &&
+//         str_starts_with($message,"No") && str_ends_with($message,"has been found")) {
+//       return array();
+//     }
+//     \Drupal::messenger()->addError(t("API service has failed with following message: " . $obj->body));
+//     return NULL;
+//   }
 
   public function parseObjectResponse($response, $methodCalled) {
     // 1) Any prior connection or HTTP error?
@@ -2217,7 +2289,7 @@ class FusekiAPIConnector {
     }
 
     // 4) If it's a stream or other object with __toString(), cast to string.
-    if (!is_string($response) && method_exists($response, '__toString')) {
+    if (!is_string($response) && is_object($response) && method_exists($response, '__toString')) {
       $response = (string) $response;
     }
 
@@ -2282,9 +2354,18 @@ class FusekiAPIConnector {
     return $totalValue;
   }
 
-  // Return List of Component elements from Instrument to Fill on Process
+  // Return List of Component elements from Instrument to Fill on Workflow
   public function componentListFromInstrument($instrumentUri) {
     $endpoint = "/hascoapi/api/instrument/components/".rawurlencode($instrumentUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // Return List of Component Containerslots to fill the Workflow Tasks
+  public function containersListFromInstrument($instrumentUri) {
+    $endpoint = "/hascoapi/api/instrument/containerslots/".rawurlencode($instrumentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -2622,5 +2703,63 @@ class FusekiAPIConnector {
       '@s' => $status ?? 'none',
     ]);
     return NULL;
+  }
+
+  // POST    /hascoapi/api/repo/namespace/app/          org.hascoapi.console.controllers.restapi.RepoPage.ingestAppOnt(request: play.mvc.Http.Request)
+  public function uploadOntology(): ?ResponseInterface {
+    $logger = \Drupal::logger('rep_upload');
+    $file_system = \Drupal::service('file_system');
+    $config = \Drupal::config('rep.settings');
+    $guesser = \Drupal::service('file.mime_type.guesser');
+
+    $ns = (string) $config->get('repository_namespace_prefix');
+    $private_uri = 'private://ont/' . $ns . '.ttl';
+    $path = $file_system->realpath($private_uri);
+
+    if ($path === FALSE || !file_exists($path)) {
+      $logger->error('Ontology file not found or realpath failed: {uri}', ['uri' => $private_uri]);
+      return null;
+    }
+
+    $file_content = @file_get_contents($path);
+    if ($file_content === FALSE) {
+      $logger->error('Unable to read file contents: {path}', ['path' => $path]);
+      return null;
+    }
+
+    $mime_type = $guesser->guessMimeType($path) ?: 'text/turtle; charset=UTF-8';
+    $url = rtrim($this->getApiUrl(), '/') . '/hascoapi/api/repo/namespace/app';
+
+    $authHeader = $this->bearer ?? '';
+    if ($authHeader !== '' && stripos($authHeader, 'Bearer ') !== 0) {
+      $authHeader = 'Bearer ' . $authHeader;
+    }
+
+    $client = new Client([
+      'timeout' => 20,
+      'connect_timeout' => 10,
+      'http_errors' => false, // keep 4xx/5xx as responses, not exceptions
+    ]);
+
+    try {
+      $response = $client->post($url, [
+        'headers' => [
+          'Content-Type'  => $mime_type,
+          'Content-Disposition' => 'attachment; filename="'.$ns . '.ttl"',
+          'Accept'        => 'application/json, text/plain;q=0.5, */*;q=0.1',
+          'Authorization' => $authHeader,
+        ],
+        'body' => $file_content,
+      ]);
+
+      return $response; // <-- devolve o ResponseInterface “cru”
+    } catch (RequestException $e) {
+      $logger->error('Upload exception: {msg}', ['msg' => $e->getMessage()]);
+      // If the server returned a response, you can still return it:
+      if ($e->hasResponse()) {
+        return $e->getResponse();
+      }
+      return null;
+    }
   }
 }

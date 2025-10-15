@@ -69,13 +69,13 @@ class StudyObject {
       $root_url = \Drupal::request()->getBaseUrl();
       $encodedUri = rawurlencode(rawurlencode($element->uri));
       $output[$element->uri] = [
-        'element_uri' => t('<a href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+        'element_uri' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
         'element_soc_name' => t($socLabel),
         'element_original_id' => t($originalId),
         'element_entity' => t($typeLabel),
-        'element_domain_scope' => t($domainScope),
-        'element_time_scope' => t($timeScope),
-        'element_space_scope' => t($spaceScope),
+        'element_domain_scope' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($domainScope).'">'.Utils::namespaceUri($domainScope).'</a>'),
+        'element_time_scope' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeScope).'">'.Utils::namespaceUri($timeScope).'</a>'),
+        'element_space_scope' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($spaceScope).'">'.Utils::namespaceUri($spaceScope).'</a>'),
       ];
     }
     return $output;

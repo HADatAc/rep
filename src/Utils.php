@@ -15,6 +15,7 @@ use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\Component\Render\Markup;
 use Drupal\Component\Utility\Html;
+use Drupal\rep\Vocabulary\OWL;
 
 class Utils {
 
@@ -71,20 +72,17 @@ class Utils {
       return NULL;
     }
     switch ($elementType) {
-      case "actuator":
-        $short = Constant::PREFIX_ACTUATOR;
-        break;
-      case "actuatorinstance":
-        $short = Constant::PREFIX_ACTUATOR_INSTANCE;
-        break;
-      case "actuatorstem":
-        $short = Constant::PREFIX_ACTUATOR_STEM;
-        break;
       case "annotation":
         $short = Constant::PREFIX_ANNOTATION;
         break;
       case "annotationstem":
         $short = Constant::PREFIX_ANNOTATION_STEM;
+        break;
+      case "component":
+        $short = Constant::PREFIX_COMPONENT;
+        break;
+      case "componentstem":
+        $short = Constant::PREFIX_COMPONENT_STEM;
         break;
       case "codebook":
         $short = Constant::PREFIX_CODEBOOK;
@@ -101,14 +99,14 @@ class Utils {
       case "deployment":
         $short = Constant::PREFIX_DEPLOYMENT;
         break;
-      case "detector":
-        $short = Constant::PREFIX_DETECTOR;
+      case "component":
+        $short = Constant::PREFIX_COMPONENT;
         break;
-      case "detectorinstance":
-        $short = Constant::PREFIX_DETECTOR_INSTANCE;
+      case "componentinstance":
+        $short = Constant::PREFIX_COMPONENT_INSTANCE;
         break;
-      case "detectorstem":
-        $short = Constant::PREFIX_DETECTOR_STEM;
+      case "componentstem":
+        $short = Constant::PREFIX_COMPONENT_STEM;
         break;
       case "dp2":
         $short = Constant::PREFIX_DP2;
@@ -398,6 +396,42 @@ class Utils {
     return $uri;
   }
 
+  public static function placeholderImage($url, $default_element = 'unknown', $divider = '#', ) {
+    if ($url === NULL) {
+      return NULL;
+    }
+
+    $pos = strrpos($url, $divider);
+    $placeholder = $pos === FALSE
+      ? ''
+      : strtolower(substr($url, $pos + strlen($divider)));
+
+    // FALLBACK TO DEFAULT ELEMENT IF NO PLACEHOLDER FOUND
+    $pos = strrpos($url, '#');
+    $placeholder = $pos === FALSE
+      ? ''
+      : strtolower(substr($url, $pos + strlen('#')));
+
+    $module_path = \Drupal::service('extension.list.module')->getPath('rep');
+
+    $fs_path = DRUPAL_ROOT . '/'
+            . $module_path
+            . '/images/placeholders/'
+            . $placeholder . '_placeholder.png';
+
+    if (!file_exists($fs_path)) {
+      $placeholder = $default_element;
+      $fs_path = DRUPAL_ROOT . '/'
+              . $module_path
+              . '/images/placeholders/'.$default_element.'_placeholder.png';
+    }
+
+    return base_path()
+        . $module_path
+        . '/images/placeholders/'
+        . $placeholder . '_placeholder.png';
+  }
+
   public static function repUriLink($uri) {
     $root_url = \Drupal::request()->getBaseUrl();
     $uriFinal = Utils::namespaceUri($uri);
@@ -413,11 +447,11 @@ class Utils {
   }
 
   public static function elementTypeModule($elementtype) {
-    $sir = ['instrument', 'containerslot', 'detectorstem', 'detector', 'actuatorstem', 'actuator', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'processstem', 'process'];
+    $sir = ['instrument', 'containerslot', 'componentstem', 'component', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'processstem', 'process'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];
-    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'detectorinstance', 'actuatorinstance', 'deployment'];
+    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'componentinstance', 'deployment'];
     $socialm = ['kgr','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
@@ -546,15 +580,39 @@ class Utils {
   public static function trimAutoCompleteString($content, $uri)
   {
     $maxLength = 127;
-    $uriLength = strlen($uri) + 4; // Inclui os colchetes e o espaço
+    $uriLength = strlen($uri) + 4;
     $availableLength = $maxLength - $uriLength;
     if (strlen($content) > $availableLength) {
-      $value = substr($content, 0, $availableLength - 4) . '... ['. $uri .']'; // Trunca e adiciona "..."
+      $value = substr($content, 0, $availableLength - 4) . '... ['. $uri .']';
     } else {
       $value = $content;
     }
 
     return $value;
+  }
+
+  public static function trimPreserveBracket(string $input, int $maxLength = 127): string
+  {
+      if (mb_strlen($input, 'UTF-8') <= $maxLength) {
+          return $input;
+      }
+
+      $bracketStart = mb_strpos($input, '[', 0, 'UTF-8');
+      if ($bracketStart === false) {
+          return mb_substr($input, 0, $maxLength, 'UTF-8');
+      }
+
+      $bracketPart = mb_substr($input, $bracketStart, null, 'UTF-8');
+      $bracketLen  = mb_strlen($bracketPart, 'UTF-8');
+
+      if ($bracketLen > $maxLength) {
+          return "";
+      }
+
+      $prefixMaxLen = $maxLength - $bracketLen;
+      $prefix = mb_substr($input, 0, min($bracketStart, $prefixMaxLen), 'UTF-8');
+
+      return $prefix . $bracketPart;
   }
 
   /**
@@ -707,151 +765,6 @@ class Utils {
     return $label; // Outputs: calf
   }
 
-
-  // /**
-  //  * RECURSIVE BUILD OF INSTRUMENTS CONTAINER ELEMENTS
-  //  */
-  // public static function buildSlotElements($containerUri, $api, $renderMode = 'table') {
-  //   // ------------------------------------------
-  //   // 1) Internal recursive function to build a "tree" data structure
-  //   //    from the slot elements, so we have a consistent representation
-  //   //    for both table and tree renderings.
-  //   // ------------------------------------------
-  //   $buildTree = function($uri, $api) use (&$buildTree) {
-  //     // Fetch slotElements for this container
-  //     $slotElements = $api->parseObjectResponse($api->slotElements($uri), 'slotElements');
-  //     if (empty($slotElements)) {
-  //       return [];
-  //     }
-
-  //     $tree = [];
-
-  //     foreach ($slotElements as $slotElement) {
-  //       // Prepare a basic structure for each slotElement
-  //       $item = [
-  //         'uri'      => $slotElement->uri ?? '',
-  //         'type'     => isset($slotElement->hascoTypeUri) ? Utils::namespaceUri($slotElement->hascoTypeUri) : '',
-  //         'label'    => $slotElement->label ?? '',
-  //         'priority' => $slotElement->hasPriority ?? '',
-  //         'element'  => '', // This will store any custom content/markup
-  //         'children' => [],
-  //       ];
-
-  //       // Example logic to fill 'element' or other data
-  //       if ($item['type'] === Utils::namespaceUri(VSTOI::CONTAINER_SLOT)) {
-  //         // Example: if it's a container slot (detector/actuator), do your custom logic
-  //         $item['element'] = 'ContainerSlot content here...';
-  //       }
-  //       elseif ($item['type'] === Utils::namespaceUri(VSTOI::SUBCONTAINER)) {
-  //         // If it's a subcontainer, call recursively
-  //         $item['element'] = 'Subcontainer: ' . ($slotElement->label ?? '[no label]');
-  //         if (!empty($item['uri'])) {
-  //           $item['children'] = $buildTree($item['uri'], $api);
-  //         }
-  //       }
-  //       else {
-  //         // Unknown or other type
-  //         $item['element'] = '(Unknown type)';
-  //       }
-
-  //       $tree[] = $item;
-  //     }
-
-  //     return $tree;
-  //   };
-
-  //   // ------------------------------------------
-  //   // 2) Internal function to render the tree data as a nested <ul>
-  //   // ------------------------------------------
-  //   $renderAsTree = function(array $tree) use (&$renderAsTree) {
-  //     if (empty($tree)) {
-  //       return '';
-  //     }
-
-  //     $html = '<ul>';
-  //     foreach ($tree as $item) {
-  //       // Build a display text, e.g. "[Type] Label (priority)"
-  //       $title = '[' . $item['type'] . '] ' . $item['label']
-  //              . ' (priority: ' . $item['priority'] . ')';
-
-  //       $html .= '<li>';
-  //       $html .= '<div>' . $title . '</div>';
-  //       $html .= '<div>' . $item['element'] . '</div>';
-
-  //       // If there are children, render them recursively
-  //       if (!empty($item['children'])) {
-  //         $html .= $renderAsTree($item['children']);
-  //       }
-
-  //       $html .= '</li>';
-  //     }
-  //     $html .= '</ul>';
-
-  //     return $html;
-  //   };
-
-  //   // ------------------------------------------
-  //   // 3) Internal function to render the tree data as nested tables
-  //   // ------------------------------------------
-  //   $renderAsTable = function(array $tree) use (&$renderAsTable) {
-  //     // Define the table header
-  //     $header = [
-  //       t('Type'),
-  //       t('Label'),
-  //       t('Priority'),
-  //       t('Element'),
-  //     ];
-
-  //     $rows = [];
-  //     foreach ($tree as $item) {
-  //       // Build a single row for this item
-  //       $rows[] = [
-  //         $item['type'],
-  //         $item['label'],
-  //         $item['priority'],
-  //         $item['element'],
-  //       ];
-
-  //       // If there are children, render them as a sub-table in a new row
-  //       if (!empty($item['children'])) {
-  //         $subTable = $renderAsTable($item['children']);
-  //         // Insert a row with a single cell containing the sub-table
-  //         $rows[] = [
-  //           [
-  //             'data' => $subTable,
-  //             'colspan' => 4, // spanning all columns
-  //           ],
-  //         ];
-  //       }
-  //     }
-
-  //     // Return the Drupal render array for the table
-  //     return [
-  //       '#type'   => 'table',
-  //       '#header' => $header,
-  //       '#rows'   => $rows,
-  //       '#empty'  => t('No response options found'),
-  //     ];
-  //   };
-
-  //   // ------------------------------------------
-  //   // 4) Build the tree data structure, then render based on $renderMode
-  //   // ------------------------------------------
-  //   $tree = $buildTree($containerUri, $api);
-
-  //   if ($renderMode === 'tree') {
-  //     // Wrap the HTML string in a markup render array
-  //     return [
-  //       '#type' => 'markup',
-  //       '#markup' => $renderAsTree($tree),
-  //     ];
-  //   }
-  //   else {
-  //     // Return a Drupal render array with nested tables
-  //     return $renderAsTable($tree);
-  //   }
-  // }
-
   /*****************************************************
    * Build and render slot elements in either a table
    * or a tree format, **recursively** starting from
@@ -861,7 +774,7 @@ class Utils {
     // ------------------------------------------
     // 1) Internal recursive function:
     //    Build a "tree" data structure by exploring
-    //    subcontainers, container slots, detectors, etc.
+    //    subcontainers, container slots, components, etc.
     // ------------------------------------------
     $buildTree = function($uri) use (&$buildTree, $api) {
 
@@ -896,7 +809,7 @@ class Utils {
         /****************************************************
          * Logic to determine if it's a subcontainer,
          * a container slot referencing another container,
-         * or a leaf (detector, actuator, etc.).
+         * or a leaf (component, etc.).
          ****************************************************/
         if ($typeUri === VSTOI::SUBCONTAINER) {
           // Mark as subcontainer
@@ -908,7 +821,7 @@ class Utils {
         }
         elseif ($typeUri === VSTOI::CONTAINER_SLOT) {
           // Possibly a container slot with a component
-          // (detector, actuator, or even another subcontainer)
+          // (component or even another subcontainer)
           $item['element'] = 'No element was added to slot.'; // Adjust as needed
 
           if (!empty($slotElement->hasComponent)) {
@@ -927,8 +840,8 @@ class Utils {
                 $item['element'] = 'ContainerSlot referencing a container: ' . ($componentObj->label ?? '[no label]');
                 $item['children'] = $buildTree($componentObj->uri);
               }
-              // If the component is a DETECTOR, ACTUATOR, or other "leaf" type
-              else if ($componentType === VSTOI::DETECTOR || $componentType === VSTOI::ACTUATOR) {
+              // If the component is a COMPONENT or other "leaf" type
+              else if ($componentType === VSTOI::COMPONENT) {
                 $type = self::namespaceUri($componentObj->hascoTypeUri);
                 if (isset($componentObj->uri)) {
                   // $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
@@ -948,8 +861,8 @@ class Utils {
                   $codebook = '<b>CB</b>: [EMPTY]';
                 }
                 $item['element'] = $componentUri . " " . $content . " " . $codebook;
-                // $item['element'] = 'Detector: ' . ($componentObj->label ?? '[no label]');
-                // No recursion, as a detector is typically a leaf
+                // $item['element'] = 'Component: ' . ($componentObj->label ?? '[no label]');
+                // No recursion, as a component is typically a leaf
               }
               else {
                 // Unknown or other type
@@ -1036,7 +949,7 @@ class Utils {
           */
         }
         else {
-          // Normal item (container slot, detector, etc.)
+          // Normal item (container slot, component, etc.)
           $rows[] = [
             $item['type'],
             $item['label'],
@@ -1320,7 +1233,7 @@ class Utils {
       return '';
     }
 
-    // Se o valor já for uma URL completa, retorna diretamente.
+    // If the value is already a full URL, return it directly.
     if (strpos($apiDocument, 'http') === 0) {
       return $apiDocument;
     }
@@ -1332,17 +1245,17 @@ class Utils {
       $file_content = $response->getContent();
       $original_content_type = $response->headers->get('Content-Type');
 
-      // Verifica a extensão do arquivo com base no nome.
+      // Check the file extension based on the name.
       $extension = strtolower(pathinfo($apiDocument, PATHINFO_EXTENSION));
 
       if ($extension === 'pdf') {
-        // Se for PDF, force o Content-Type para application/pdf.
+        // If it is a PDF, force the Content-Type to application/pdf.
         $content_type = 'application/pdf';
         $response->headers->set('Content-Type', $content_type);
         $response->headers->set('Content-Disposition', 'inline; filename="' . $apiDocument . '"');
       }
       else {
-        // Para outros tipos de arquivo, usa o Content-Type original.
+        // For other file types, use the original Content-Type.
         $content_type = $original_content_type;
       }
 
@@ -1354,4 +1267,150 @@ class Utils {
     }
   }
 
+  // 🔁 Builds nodes and edges from an array of data (converted visElement)
+  public static function buildGraphFromArray($data, $resolver = null) {
+  $nodes = [];
+  $edges = [];
+
+  $createNode = function ($id, $label, $typeUri = null) {
+    $label = self::sanitizeString($label); // ✅ sanitizes
+    $shape = 'box';
+    $color = ['background' => '#007bff', 'border' => '#0056b3'];
+    $font = ['color' => 'white'];
+
+    if ($typeUri === 'http://www.w3.org/2002/07/owl#Class') {
+      $shape = 'ellipse';
+      $color = ['background' => '#28a745', 'border' => '#1e7e34'];
+      $font = ['color' => 'black'];
+    }
+
+    return [
+      'id' => $id,
+      'label' => $label,
+      'shape' => $shape,
+      'color' => $color,
+      'font' => $font,
+    ];
+  };
+
+  $walkSequence = function ($item) use (&$walkSequence, &$nodes, &$edges, $createNode, $resolver) {
+    while ($item) {
+      $id = $item->uri ?? uniqid('node_');
+      $label = self::sanitizeString($item->label ?? 'Unnamed');
+      $typeUri = $item->typeUri ?? null;
+      $nodes[] = $createNode($id, $label, $typeUri);
+
+      if (isset($item->component)) {
+        $comp = $item->component;
+        $compId = $comp->uri ?? uniqid('comp_');
+        $nodes[] = $createNode($compId, self::sanitizeString($comp->label ?? 'Component'), $comp->typeUri ?? null);
+        $edges[] = ['from' => $id, 'to' => $compId, 'label' => 'hasComponent', 'arrows' => 'to'];
+      }
+
+      if (isset($item->componentStem)) {
+        $stem = $item->componentStem;
+        $stemId = $stem->uri ?? uniqid('stem_');
+        $nodes[] = $createNode($stemId, self::sanitizeString($stem->label ?? 'Stem'), $stem->typeUri ?? null);
+        $edges[] = ['from' => $item->component->uri ?? $id, 'to' => $stemId, 'label' => 'hasComponentStem', 'arrows' => 'to'];
+      }
+
+      if (isset($item->hasNext)) {
+        $next = is_object($item->hasNext) ? $item->hasNext : ($resolver ? call_user_func($resolver, $item->hasNext) : null);
+        if ($next && is_object($next)) {
+          $edges[] = ['from' => $id, 'to' => $next->uri ?? uniqid(), 'label' => 'hasNext', 'arrows' => 'to'];
+          $item = $next;
+        } else break;
+      } else break;
+    }
+  };
+
+  if (isset($data['hasFirst']) && is_object($data['hasFirst'])) {
+    $walkSequence($data['hasFirst']);
+  }
+
+  if (isset($data['typeURL']) && is_object($data['typeURL'])) {
+    $nodes[] = $createNode($data['typeURL']->uri ?? uniqid(), self::sanitizeString($data['typeURL']->label ?? 'Type'), $data['typeURL']->typeUri ?? null);
+  }
+
+  if (!empty($data['hascoTypeUri']) && is_string($data['hascoTypeUri'])) {
+    $hascoTypeUri = $data['hascoTypeUri'];
+    if (!isset($data['typeUri']) || $data['typeUri'] !== $hascoTypeUri) {
+      $label = preg_match('/#([^#\/]+)$/', $hascoTypeUri, $m) ? $m[1] : basename($hascoTypeUri);
+      $label = self::sanitizeString($label);
+      $nodes[] = $createNode($hascoTypeUri, $label);
+      $edges[] = [
+        'from' => $data['uri'] ?? 'root',
+        'to' => $hascoTypeUri,
+        'label' => 'hascoTypeUri',
+        'arrows' => 'to',
+      ];
+    }
+  }
+
+  return ['nodes' => $nodes, 'edges' => $edges];
 }
+
+// ✅ Removes @lang or @type from the end
+public static function sanitizeString($text) {
+  return preg_replace('/@.*$/', '', $text);
+}
+
+// ✅ Renders the graph canvas panel with all necessary data
+public static function buildGraphCanvas(array $baseNodes, array $extraNodes, array $extraEdges, array $baseEdges): array {
+  return [
+    'graph_canvas_block' => [
+      '#type' => 'inline_template',
+      '#template' => <<<'EOT'
+<div class="graph-canvas-block" style="margin: 20px auto; padding: 20px; max-width: 100%; border: 2px solid #ccc; border-radius: 12px; background: #fff;">
+  <h2 style="margin-bottom: 15px;">Graph Visualization</h2>
+  <div id="my-network" style="width: 100%; height: 700px; border: 2px solid #007bff; background: white; border-radius: 6px;"></div>
+</div>
+EOT,
+      '#context' => [
+        'nodes' => json_encode($baseNodes),
+        'edges' => json_encode($baseEdges),
+        'extraNodes' => json_encode($extraNodes),
+        'extraEdges' => json_encode($extraEdges),
+      ],
+      '#attached' => [
+        'library' => ['rep/vis_graph_panel'], // ✅ includes new JS library
+        'drupalSettings' => [
+          'graphData' => [
+            'nodes' => $baseNodes,
+            'edges' => $baseEdges,
+            'extraNodes' => $extraNodes,
+            'extraEdges' => $extraEdges,
+          ],
+        ],
+      ],
+      '#cache' => ['max-age' => 0], // ✅ disables caching
+    ],
+  ];
+}
+
+// 🧱 Basic creation of a node with visual formatting
+public static function buildNode($uri, $label, $typeUri = null, $shape = 'box', $size = 20) {
+  $label = self::sanitizeString($label); // ✅ sanitizes the label
+  $color = ['background' => '#007bff', 'border' => '#0056b3'];
+  $fontColor = 'white';
+
+  if ($typeUri === 'http://www.w3.org/2002/07/owl#Class') {
+    $color = ['background' => '#28a745', 'border' => '#1e7e34'];
+    $fontColor = 'black';
+  }
+
+  return [
+    'id' => $uri,
+    'label' => $label,
+    'shape' => $shape,
+    'color' => $color,
+    'font' => ['color' => $fontColor, 'size' => $size],
+    'typeUri' => $typeUri,
+  ];
+}
+
+}
+
+
+
+

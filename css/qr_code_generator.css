@@ -1,0 +1,7 @@
+#qr-output {
+  margin-top: 10px;
+  display:flex; justify-content:center; align-items:center;
+}
+#qr-output canvas {
+  border: 1px solid #ccc;
+}

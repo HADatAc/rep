@@ -61,7 +61,6 @@ class TreeController extends ControllerBase {
     return new JsonResponse(array_values($pool));
   }
 
-
   public function getNode(Request $request) {
     $api = \Drupal::service('rep.api_connector');
 
@@ -153,6 +152,43 @@ class TreeController extends ControllerBase {
     $mapping = $tables->getAllMappings();
 
     return new JsonResponse($mapping);
+  }
+
+  public function getTopClass(Request $request) {
+    $api     = \Drupal::service('rep.api_connector');
+    $nodeUri = $request->query->get('nodeUri');
+    $topNode = $api->parseObjectResponse($api->getUri($nodeUri), 'getUri');
+    // kint($topNode, 'Top Node');
+    // $abbrev = strstr($topNode->uriNamespace, ':', true);
+    $children = $api->parseObjectResponse($api->repoTopClassNamespaces($nodeUri), 'repoTopClassNamespaces');
+    if (!is_array($children)) {
+      $children = [];
+    }
+
+    $tables       = new Tables(\Drupal::database());
+    $all_mappings = $tables->getAllMappings();
+    $mapped_nodes = [];
+    if (isset($all_mappings[$nodeUri])) {
+      $mappedUri = $all_mappings[$nodeUri];
+      if ($obj = $api->parseObjectResponse($api->getUri($mappedUri), 'getUri')) {
+        $mapped_nodes[] = $obj;
+      }
+    }
+
+    $pool = [];
+    foreach (array_merge($children, $mapped_nodes) as $item) {
+      $pool[$item->uri] = $item;
+    }
+
+    foreach ($pool as $uri => $item) {
+      $item->isMapped = (isset($all_mappings[$nodeUri]) && $all_mappings[$nodeUri] === $uri);
+    }
+
+    $items = array_values($pool);
+    usort($items, function($a, $b) {
+      return strcasecmp($a->label, $b->label);
+    });
+    return new JsonResponse(array_values($pool));
   }
 
 }

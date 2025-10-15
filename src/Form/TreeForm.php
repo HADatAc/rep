@@ -90,8 +90,7 @@ class TreeForm extends FormBase {
     $validTypes = [
       'annotationstem' => ["Annotation Stem", EntryPoints::ANNOTATION_STEM],
       'attribute' => ["Attribute", EntryPoints::ATTRIBUTE],
-      'detectorstem' => ["Detector Stem", EntryPoints::DETECTOR_STEM],
-      'actuatorstem' => ["Actuator Stem", EntryPoints::ACTUATOR_STEM],
+      'componentstem' => ["Component Stem", EntryPoints::COMPONENT_STEM],
       'entity' => ["Entity", EntryPoints::ENTITY],
       'group' => ["Group", EntryPoints::GROUP],
       'instrument' => ["Instrument", EntryPoints::INSTRUMENT],
@@ -99,19 +98,15 @@ class TreeForm extends FormBase {
       'person' => ["Person", EntryPoints::PERSON],
       'place' => ["Place", EntryPoints::PLACE],
       'platform' => ["Platform", EntryPoints::PLATFORM],
-      'processstem' => ["Process Stem", EntryPoints::PROCESS_STEM],
+      'processstem' => ["Workflow Stem", EntryPoints::PROCESS_STEM],
       'questionnaire' => ["Questionnaire", EntryPoints::QUESTIONNAIRE],
       'responseoption' => ["Response Option", EntryPoints::RESPONSE_OPTION],
       'study' => ["Study", EntryPoints::STUDY],
       'task' => ["Task Type", EntryPoints::TASK],
       'tasktemporaldependency' => ["Task Temporal Dependency", EntryPoints::TASK_TEMPORAL_DEPENDENCY],
       'unit' => ["Unit", EntryPoints::UNIT],
-      'detectorattribute' => ["Detector Attribute", EntryPoints::DETECTOR_ATTRIBUTE],
-      'actuatorattribute' => ["Actuator Attribute", EntryPoints::ACTUATOR_ATTRIBUTE],
-      // 'platforminstance' => ["Platform Instance", EntryPoints::PLATFORM_INSTANCE],
-      // 'instrumentinstance' => ["Instrument Instance", EntryPoints::INSTRUMENT_INSTANCE],
-      // 'detectorinstance' => ["Detector Instance", EntryPoints::DETECTOR_INSTANCE],
-      // 'actuatorinstance' => ["Actuator Instance", EntryPoints::ACTUATOR_INSTANCE]
+      'componentattribute' => ["Component Attribute", EntryPoints::COMPONENT_ATTRIBUTE],
+      'component' => ["Component", EntryPoints::COMPONENT],
     ];
 
     $branches_param = [
@@ -128,32 +123,24 @@ class TreeForm extends FormBase {
         'uriNamespace' => EntryPoints::ATTRIBUTE
       ],
       [
-        'id' => 'actuatorstem',
-        'uri' => EntryPoints::ACTUATOR_STEM,
-        'label' => 'Actuator Stem',
-        'typeNamespace' => EntryPoints::ACTUATOR_STEM,
-        'uriNamespace' => EntryPoints::ACTUATOR_STEM
+        'id' => 'componentstem',
+        'uri' => EntryPoints::COMPONENT_STEM,
+        'label' => 'Component Stem',
+        'typeNamespace' => EntryPoints::COMPONENT_STEM,
+        'uriNamespace' => EntryPoints::COMPONENT_STEM
       ],
       [
-        'id' => 'actuatorattribute',
-        'uri' => EntryPoints::ACTUATOR_ATTRIBUTE,
-        'label' => 'Actuator Attribute',
-        'typeNamespace' => EntryPoints::ACTUATOR_ATTRIBUTE,
-        'uriNamespace' => EntryPoints::ACTUATOR_ATTRIBUTE
+        'id' => 'component',
+        'uri' => EntryPoints::COMPONENT,
+        'label' => 'Component',
+        'typeNamespace' => EntryPoints::COMPONENT,
+        'uriNamespace' => EntryPoints::COMPONENT
       ],
       [
-        'id' => 'detectorstem',
-        'uri' => EntryPoints::DETECTOR_STEM,
-        'label' => 'Detector Stem',
-        'typeNamespace' => EntryPoints::DETECTOR_STEM,
-        'uriNamespace' => EntryPoints::DETECTOR_STEM
-      ],
-      [
-        'id' => 'detectorattribute',
-        'uri' => EntryPoints::DETECTOR_ATTRIBUTE,
-        'label' => 'Detector Attribute',
-        'typeNamespace' => EntryPoints::DETECTOR_ATTRIBUTE,
-        'uriNamespace' => EntryPoints::DETECTOR_ATTRIBUTE
+        'id' => 'componentattribute',
+        'uri' => EntryPoints::COMPONENT_ATTRIBUTE,
+        'label' => 'Component Attribute',
+        'uriNamespace' => EntryPoints::COMPONENT_ATTRIBUTE
       ],
       [
         'id' => 'entity',
@@ -192,7 +179,7 @@ class TreeForm extends FormBase {
       [
         'id' => 'processstem',
         'uri' => EntryPoints::PROCESS_STEM,
-        'label' => 'Process Stem',
+        'label' => 'Workflow Stem',
         'uriNamespace' => EntryPoints::PROCESS_STEM
       ],
       [
@@ -311,7 +298,7 @@ class TreeForm extends FormBase {
 
     $tables = new Tables;
 
-    $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
+    $base_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'baseUrl' => $base_url,
       'username' => \Drupal::currentUser()->getAccountName(),
@@ -336,7 +323,7 @@ class TreeForm extends FormBase {
     {
       $form['title'] = [
           '#type' => 'markup',
-          '#markup' => '<h3 class="mt-4 mb-4">'.$elementName.' Graph Hierarchy</h3>',
+          '#markup' => '<h3 class="mb-4">Available <font style="color:DarkGreen;">'.$elementName.'</font> Graph Hierarchy</h3>',
       ];
     }
 

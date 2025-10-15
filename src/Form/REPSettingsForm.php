@@ -11,6 +11,7 @@
  use Drupal\Core\Form\FormStateInterface;
  use Drupal\Core\Url;
  use Drupal\rep\Constant;
+ use Drupal\Core\File\FileSystemInterface;
 
 
  class REPSettingsForm extends ConfigFormBase {
@@ -303,6 +304,63 @@
         $config->set("jwt_secret", $form_state->getValue('jwt_secret'));
         $config->save();
 
+        // --- Ensure private://ont directory and hasco.ttl exist --------------------
+
+        /** @var \Drupal\Core\File\FileSystemInterface $fs */
+        $fs = \Drupal::service('file_system');
+        $logger = \Drupal::logger('rep');
+        $messenger = \Drupal::messenger();
+
+        $dir_uri  = 'private://ont';
+        $file_uri = $dir_uri . '/'.$config->get('repository_namespace_prefix').'.ttl';
+
+        try {
+          // 1) Ensure the directory exists (create if missing).
+          //    prepareDirectory() will create the directory for stream wrappers.
+          $created = $fs->prepareDirectory($dir_uri, FileSystemInterface::CREATE_DIRECTORY);
+          if (!$created) {
+            // Directory may already exist; check realpath to confirm.
+            $dir_real = $fs->realpath($dir_uri);
+            if ($dir_real === FALSE || !is_dir($dir_real)) {
+              $logger->error('Could not create or access directory {dir}', ['dir' => $dir_uri]);
+              // Not fatal for the form, but we notify the user.
+              $messenger->addError($this->t('Could not create/access the directory %dir.', ['%dir' => $dir_uri]));
+            }
+          }
+
+          // 2) Try to enforce 0755 on the directory (no-op on Windows).
+          $dir_real = $fs->realpath($dir_uri);
+          if ($dir_real && is_dir($dir_real)) {
+            // On Windows this may have no effect; do not treat failure as fatal.
+            @chmod($dir_real, 0755);
+          }
+
+          // 3) Ensure the file exists; if missing, create an empty TTL file.
+          $file_real = $fs->realpath($file_uri);
+          if ($file_real === FALSE || !file_exists($file_real)) {
+            // saveData() creates a file for stream wrappers; write empty content.
+            $saved_uri = $fs->saveData('', $file_uri, FileSystemInterface::EXISTS_ERROR);
+            if ($saved_uri === FALSE) {
+              $logger->error('Failed to create file {file}', ['file' => $file_uri]);
+              $messenger->addError($this->t('Failed to create %file.', ['%file' => $file_uri]));
+            } else {
+              // Optional: set 0644 on the file (again, no-op on Windows).
+              $file_real = $fs->realpath($file_uri);
+              if ($file_real) {
+                @chmod($file_real, 0644);
+              }
+              $logger->notice('Created ontology file at {file}', ['file' => $file_uri]);
+              // You may show a gentle info message if you want:
+              // $messenger->addStatus($this->t('Created %file.', ['%file' => $file_uri]));
+            }
+          }
+        }
+        catch (\Throwable $e) {
+          // Catch-all to avoid breaking the submit flow.
+          $logger->error('Error ensuring private://ont and hasco.ttl: {msg}', ['msg' => $e->getMessage()]);
+          $messenger->addError($this->t('Error preparing ontology storage: %msg', ['%msg' => $e->getMessage()]));
+        }
+
         //site name
         $configdrupal = \Drupal::service('config.factory')->getEditable('system.site');
         $configdrupal->set('name', $form_state->getValue('site_name'));
@@ -414,7 +472,7 @@
                 'acc_repo_instance' => $repo_instance,
                 'acc_name' => $user->getDisplayName(),
                 'acc_email' => $user->getEmail(),
-                'acc_user_uri' => \Drupal::request()->getSchemeAndHttpHost() . '/user/' . $user->id(),
+                'acc_user_uri' => (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl() . '/user/' . $user->id(),
                 'acc_cellphone' => $user->hasField('field_cellphone') && !$user->get('field_cellphone')->isEmpty()
                     ? (int) $user->get('field_cellphone')->value
                     : null,
@@ -426,7 +484,7 @@
                 // Usuário já existe no sguser, verificar necessidade de atualização
                 $existing_user = $sguser_map[$user_key];
 
-                if ($existing_user['acc_name'] !== $user_data['acc_name'] || $existing_user['acc_email'] !== $user_data['acc_email'] || $existing_user['acc_cellphone'] !== $user_data['acc_cellphone']) {
+                if (trim((string) $existing_user['acc_name']) !== trim((string) $user_data['acc_name']) || trim((string) $existing_user['acc_email']) !== trim((string) $user_data['acc_email']) || (string) $existing_user['acc_cellphone'] !== (string) $user_data['acc_cellphone']) {
                     try {
                         $response = \Drupal::httpClient()->patch("{$sagres_base_url}/sguser/account/update", [
                             'json' => $user_data,
@@ -447,13 +505,12 @@
                     }
                 }
             } else {
-
                 try {
-                    \Drupal::httpClient()->post("{$sagres_base_url}/sguser/account/add", [
+                    $response = \Drupal::httpClient()->post("{$sagres_base_url}/sguser/account/add", [
                         'json' => $user_data,
                         'headers' => [
-                            'Content-Type' => 'application/json',
-                            'Authorization' => "Bearer {$sagres_token}"
+                          'Content-Type' => 'application/json',
+                          'Authorization' => "Bearer {$sagres_token}"
                         ],
                     ]);
 

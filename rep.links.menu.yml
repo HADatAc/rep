@@ -31,6 +31,16 @@ rep.uri_describe:
   requirements:
     _permission: 'access content'
 
+rep.icons_explanation:
+  title: 'Icons Explanation'
+  description: 'Explanation of Knowledge Graph icons'
+  route_name: rep.icons_explanation
+  parent: rep.kg
+  menu_name: main
+  weight: 110
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
 
 #
 # REPOSITORY
@@ -187,20 +197,20 @@ rep.social_status:
     _permission: 'access content'
     _role: 'authenticated'
 
-rep.socialm_manageConsumer:
-  title: Social KG Manage Consumer Organization
-  description: Social KG Manage Consumer Organization
-  route_name: socialm.select_consumer_element
-  route_parameters:
-    elementtype: 'consumer'
-    page: '1'
-    pagesize: '9'
-  parent: rep.socialkg
-  menu_name: main
-  weight: 25
-  requirements:
-    _permission: 'access content'
-    _role: 'authenticated'
+#rep.socialm_manageConsumer:
+ # title: Social KG Manage Consumer Organization
+  #description: Social KG Manage Consumer Organization
+  #route_name: socialm.select_consumer_element
+  #route_parameters:
+   # elementtype: 'consumer'
+    #page: '1'
+    #pagesize: '9'
+  #parent: rep.socialkg
+  #menu_name: main
+  #weight: 25
+  #requirements:
+   # _permission: 'access content'
+    #_role: 'authenticated'
 #
 # REVIEWER
 #
@@ -212,6 +222,17 @@ reviewer.top_level:
   menu_name: main
   weight: 100
   requirements:
+    _role: 'content_editor'
+
+reviewer.searchMT:
+  title: Search MT
+  description: ''
+  menu_name: main
+  route_name: rep.mt_list_element
+  parent: reviewer.top_level
+  weight: 10
+  requirements:
+    _permission: 'access content'
     _role: 'content_editor'
 
 reviewer.uploadingest_review:
@@ -247,16 +268,6 @@ rep.ontologies_root:
   requirements:
     _role: 'content_editor'
 
-# rep.add_ontologies:
-#   title: 'Add Ontology'
-#   description: ''
-#   route_name: rep.add_ontologies
-#   parent: rep.ontologies_root
-#   menu_name: main
-#   weight: 0
-#   requirements:
-#     _role: 'content_editor'
-
 rep.manage_ontologies:
   title: 'Manage Ontologies'
   description: ''
@@ -274,5 +285,28 @@ rep.map_entry_points:
   parent: rep.ontologies_root
   menu_name: main
   weight: 1
+  requirements:
+    _role: 'content_editor'
+
+rep.view_app_ontology:
+  title: 'View Application Ontologiy'
+  description: ''
+  route_name: rep.ont_view
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 2
+  options:
+    attributes:
+      target: '_blank'
+  # requirements:
+  #   _role: 'content_editor'
+
+rep.edit_app_ontology:
+  title: 'Edit Application Ontologiy'
+  description: ''
+  route_name: rep.ont_edit
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 3
   requirements:
     _role: 'content_editor'

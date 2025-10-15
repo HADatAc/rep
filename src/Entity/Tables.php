@@ -32,6 +32,19 @@ class Tables {
     return $results;
   }
 
+  public function getTopClasses() {
+    $APIservice = \Drupal::service('rep.api_connector');
+    $topClasses = $APIservice->parseObjectResponse($APIservice->repoTopClassNamespaces('https://hadatac.org/ont/hadatac#'), 'repoTopClassNamespaces');
+    if ($topClasses == NULL) {
+      return NULL;
+    }
+    $results = array();
+    foreach ($topClasses as $topClass) {
+      $results[$topClass->label] = $topClass->uri;
+    }
+    return $results;
+  }
+
   public function getLanguages() {
     $APIservice = \Drupal::service('rep.api_connector');
     $languages = $APIservice->parseObjectResponse($APIservice->languageList(), 'languageList');
