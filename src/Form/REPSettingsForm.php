@@ -484,7 +484,7 @@
                 // Usuário já existe no sguser, verificar necessidade de atualização
                 $existing_user = $sguser_map[$user_key];
 
-                if ($existing_user['acc_name'] !== $user_data['acc_name'] || $existing_user['acc_email'] !== $user_data['acc_email'] || $existing_user['acc_cellphone'] !== $user_data['acc_cellphone']) {
+                if (trim((string) $existing_user['acc_name']) !== trim((string) $user_data['acc_name']) || trim((string) $existing_user['acc_email']) !== trim((string) $user_data['acc_email']) || (string) $existing_user['acc_cellphone'] !== (string) $user_data['acc_cellphone']) {
                     try {
                         $response = \Drupal::httpClient()->patch("{$sagres_base_url}/sguser/account/update", [
                             'json' => $user_data,
@@ -505,13 +505,12 @@
                     }
                 }
             } else {
-
                 try {
-                    \Drupal::httpClient()->post("{$sagres_base_url}/sguser/account/add", [
+                    $response = \Drupal::httpClient()->post("{$sagres_base_url}/sguser/account/add", [
                         'json' => $user_data,
                         'headers' => [
-                            'Content-Type' => 'application/json',
-                            'Authorization' => "Bearer {$sagres_token}"
+                          'Content-Type' => 'application/json',
+                          'Authorization' => "Bearer {$sagres_token}"
                         ],
                     ]);
 
