@@ -1,237 +1,217 @@
 (function ($, Drupal, drupalSettings) {
   Drupal.behaviors.workflowCanvasInit = {
     attach: function (context) {
-      // ➜ Usa o MESMO ID definido no Form PHP
-      var el = context.querySelector('#workflow-canvas');
+      const el = context.querySelector('#workflow-canvas');
       if (!el || el.dataset.loaded === 'true') return;
       if (typeof vis === 'undefined') return;
       el.dataset.loaded = 'true';
 
-      // Dados base vindos do PHP
-      var base = (typeof drupalSettings !== 'undefined' && drupalSettings.workflowData)
-                 ? drupalSettings.workflowData
-                 : { nodes: [], edges: [] };
+      // ===== Dados base =====
+      const base = (drupalSettings && drupalSettings.workflowData) || { nodes: [], edges: [] };
+      const endpoint = drupalSettings?.rep?.workflowEndpoint || null;
 
-      // Endpoint (sem optional chaining)
-      var endpoint = null;
-      if (typeof drupalSettings !== 'undefined' &&
-          drupalSettings.rep &&
-          drupalSettings.rep.workflowEndpoint) {
-        endpoint = drupalSettings.rep.workflowEndpoint;
-      }
+      const nodes = new vis.DataSet((base.nodes || []).map(styleNode));
+      const edges = new vis.DataSet((base.edges || []).map(styleEdge));
 
-      // Conjuntos
-      var nodes = new vis.DataSet(((base.nodes || [])).map(styleNode));
-      var edges = new vis.DataSet(((base.edges || [])).map(styleEdge));
-
-      var options = {
+      // ===== Layout hierárquico =====
+      const options = {
+        layout: {
+          hierarchical: {
+            enabled: true,
+            direction: 'UD',
+            sortMethod: 'directed',
+            levelSeparation: 120,
+            nodeSpacing: 150,
+            treeSpacing: 200,
+            shakeTowards: 'roots'
+          }
+        },
+        physics: { enabled: false },
+        interaction: {
+          multiselect: true,
+          selectConnectedEdges: false,
+          hover: true,
+          zoomView: true,
+          dragView: true,
+          dragNodes: true
+        },
         nodes: { shape: 'box', font: { color: 'white' } },
-        edges: { arrows: 'to', smooth: { type: 'dynamic' } },
-        interaction: { multiselect: true, navigationButtons: false, keyboard: false },
-        physics: { stabilization: true }
+        edges: { smooth: false, color: { color: '#444' } },
+        manipulation: { enabled: false }
       };
 
-      // Cria o network
-      var network = new vis.Network(el, { nodes: nodes, edges: edges }, options);
+      const network = new vis.Network(el, { nodes, edges }, options);
 
-      // ===== Toolbar (agora FORA do canvas) =====
-      addToolbarOutside(el, nodes, edges, network, endpoint);
+      function applyHierarchical() {
+        network.setOptions({
+          layout: { hierarchical: {
+            enabled: true, direction: 'UD', sortMethod: 'directed',
+            levelSeparation: 120, nodeSpacing: 150, treeSpacing: 200
+          }},
+          physics: { enabled: false }
+        });
+        setTimeout(() => network.fit({ animation: true }), 0);
+      }
 
-      // ===== Duplo clique para renomear =====
-      network.on('doubleClick', function (params) {
-        if (params.nodes && params.nodes.length === 1) {
-          var id = params.nodes[0];
-          var n = nodes.get(id);
-          var label = prompt('Rename task:', (n && n.label) ? n.label : '');
-          if (label !== null) nodes.update({ id: id, label: label });
+      // ===== Toolbar =====
+      addToolbarOutside(el, nodes, edges, network, endpoint, applyHierarchical);
+
+      // ===== Duplo clique: rename node =====
+      network.on('doubleClick', (params) => {
+        if (params.nodes?.length === 1) {
+          const id = params.nodes[0];
+          const n = nodes.get(id);
+          const label = prompt('Rename task:', n?.label || '');
+          if (label !== null) nodes.update({ id, label });
         }
       });
 
-      // ===== Delete para apagar seleção =====
-      document.addEventListener('keydown', function (ev) {
+      // ===== Delete via teclado =====
+      document.addEventListener('keydown', (ev) => {
         if (ev.key === 'Delete' || ev.key === 'Backspace') {
-          var sel = network.getSelection();
-          var hasNodes = sel.nodes && sel.nodes.length;
-          var hasEdges = sel.edges && sel.edges.length;
-          if (hasNodes || hasEdges) {
-            if (confirm('Delete selected nodes/edges?')) {
-              if (hasEdges) edges.remove(sel.edges);
-              if (hasNodes) nodes.remove(sel.nodes);
-            }
+          const sel = network.getSelection();
+          if ((sel.nodes?.length || sel.edges?.length) && confirm('Delete selected nodes/edges?')) {
+            if (sel.edges?.length) edges.remove(sel.edges);
+            if (sel.nodes?.length) nodes.remove(sel.nodes);
+            applyHierarchical();
           }
         }
       });
 
-      // ===== Menu de contexto =====
-      network.on('oncontext', function (params) {
+      // ===== Editor de Arestas (corrigido) =====
+      let edgeEditorEl = null;
+      let activeEdgeId = null;
+
+      network.on('click', (params) => {
+        if (params.edges && params.edges.length === 1) openEdgeEditor(params.edges[0]);
+        else closeEdgeEditor();
+      });
+
+      network.on('selectEdge', (params) => {
+        if (params.edges && params.edges.length === 1) openEdgeEditor(params.edges[0]);
+      });
+
+      function openEdgeEditor(edgeId) {
+        closeEdgeEditor();
+        activeEdgeId = edgeId;
+        network.setSelection({ edges: [edgeId] });
+
+        const e = edges.get(edgeId);
+        if (!e) return;
+        const p1 = network.getPosition(e.from);
+        const p2 = network.getPosition(e.to);
+        const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        const dom = network.canvasToDOM(mid);
+        const rect = el.getBoundingClientRect();
+
+        edgeEditorEl = document.createElement('div');
+        edgeEditorEl.className = 'wf-edge-editor';
+        edgeEditorEl.style.cssText =
+          'position:absolute; z-index:1001; background:#fff; border:1px solid #ddd;' +
+          'box-shadow:0 2px 10px rgba(0,0,0,.12); border-radius:6px; padding:6px; display:flex; gap:6px;';
+
+        const buttons = [
+          mkMiniBtn('No label', () => updateEdgeLabel(edgeId, null)),
+          mkMiniBtn('>>', () => updateEdgeLabel(edgeId, '>>')),
+          mkMiniBtn('|||', () => updateEdgeLabel(edgeId, '|||')),
+          mkMiniBtn('[]', () => updateEdgeLabel(edgeId, '[]')),
+          mkMiniBtn('Swap', () => swapEnds(edgeId)),
+          mkMiniBtn('Rewire', () => {
+            network.setOptions({ manipulation: { enabled: true, editEdge: true } });
+            network.editEdgeMode();
+            closeEdgeEditor();
+            setTimeout(() => { network.disableEditMode(); applyHierarchical(); }, 2000);
+          }),
+          mkMiniBtn('Delete', () => { edges.remove(edgeId); closeEdgeEditor(); applyHierarchical(); })
+        ];
+        buttons.forEach(b => edgeEditorEl.appendChild(b));
+        document.body.appendChild(edgeEditorEl);
+        edgeEditorEl.style.left = (rect.left + dom.x + 8) + 'px';
+        edgeEditorEl.style.top  = (rect.top + dom.y + 8) + 'px';
+
+        document.removeEventListener('click', edgeCloser, true);
+        setTimeout(() => document.addEventListener('click', edgeCloser, true), 50);
+      }
+
+      function closeEdgeEditor() {
+        if (edgeEditorEl) { edgeEditorEl.remove(); edgeEditorEl = null; }
+        activeEdgeId = null;
+        // ⚠️ não limpa seleção — agora podes selecionar nós logo a seguir
+        document.removeEventListener('click', edgeCloser, true);
+      }
+
+      function edgeCloser(e) {
+        if (!edgeEditorEl) return;
+        if (!edgeEditorEl.contains(e.target)) closeEdgeEditor();
+      }
+
+      function updateEdgeLabel(edgeId, label) {
+        edges.update({ id: edgeId, label: (label ? label : '') });
+        closeEdgeEditor(); applyHierarchical();
+      }
+
+      function swapEnds(edgeId) {
+        const e = edges.get(edgeId);
+        if (!e) return;
+        edges.update({ id: edgeId, from: e.to, to: e.from });
+        closeEdgeEditor(); applyHierarchical();
+      }
+
+      // ===== Menu de contexto (nós) =====
+      network.on('oncontext', (params) => {
         params.event.preventDefault();
-        var nodeId = network.getNodeAt(params.pointer.DOM);
+        const nodeId = network.getNodeAt(params.pointer.DOM);
         if (!nodeId) return;
         showContextMenu(params.event, [
-          { text: 'Rename', action: function () {
-              var n = nodes.get(nodeId);
-              var label = prompt('Rename task:', (n && n.label) ? n.label : '');
-              if (label !== null) nodes.update({ id: nodeId, label: label });
+          { text: 'Rename', action: () => {
+              const n = nodes.get(nodeId);
+              const label = prompt('Rename task:', n?.label || '');
+              if (label !== null) nodes.update({ id: nodeId, label });
             }},
-          { text: 'Delete', action: function () { nodes.remove(nodeId); } }
+          { text: 'Delete', action: () => { nodes.remove(nodeId); applyHierarchical(); } }
         ]);
       });
 
-      function showContextMenu(domEvent, items) {
-        closeMenus();
-        var m = document.createElement('div');
+      function showContextMenu(ev, items) {
+        document.querySelectorAll('.wf-menu').forEach(e => e.remove());
+        const m = document.createElement('div');
         m.className = 'wf-menu';
-        m.style.cssText = 'position:absolute; z-index:1000; background:#fff; border:1px solid #ddd; box-shadow:0 2px 8px rgba(0,0,0,.08);';
-        items.forEach(function (it) {
-          var b = document.createElement('div');
+        m.style.cssText = 'position:absolute; z-index:1000; background:#fff; border:1px solid #ddd; box-shadow:0 2px 8px rgba(0,0,0,.08); border-radius:6px;';
+        items.forEach(it => {
+          const b = document.createElement('div');
           b.textContent = it.text;
-          b.style.cssText = 'padding:8px 12px; cursor:pointer;';
-          b.onmouseenter = function () { b.style.background = '#f5f5f5'; };
-          b.onmouseleave = function () { b.style.background = ''; };
-          b.onclick = function () { it.action(); closeMenus(); };
+          b.style.cssText = 'padding:8px 12px; cursor:pointer; border-bottom:1px solid #eee;';
+          b.onmouseenter = () => b.style.background = '#f5f5f5';
+          b.onmouseleave = () => b.style.background = '';
+          b.onclick = () => { it.action(); m.remove(); };
           m.appendChild(b);
         });
+        if (m.lastChild) m.lastChild.style.borderBottom = 'none';
         document.body.appendChild(m);
-        m.style.left = domEvent.clientX + 'px';
-        m.style.top  = domEvent.clientY + 'px';
-        setTimeout(function () { document.addEventListener('click', closeMenus, { once: true }); }, 0);
-
-        function closeMenus() {
-          var menus = document.querySelectorAll('.wf-menu');
-          for (var i = 0; i < menus.length; i++) menus[i].remove();
-        }
+        m.style.left = ev.clientX + 'px';
+        m.style.top = ev.clientY + 'px';
+        setTimeout(() => document.addEventListener('click', () => m.remove(), { once: true }), 0);
       }
 
+      // ===== Helpers =====
       function styleNode(n) {
-        var colors = {
-          'task':   { background: '#007bff', border: '#0056b3' },
-          'choice': { background: '#6f42c1', border: '#59359a' },
-          'and':    { background: '#28a745', border: '#1e7e34' }
+        const colors = {
+          task:   { background: '#007bff', border: '#0056b3' },
+          choice: { background: '#6f42c1', border: '#59359a' },
+          and:    { background: '#28a745', border: '#1e7e34' }
         };
-        var color = colors[n.type] || { background: '#6c757d', border: '#495057' };
-        return Object.assign({}, n, { shape: 'box', color: color, font: { color: 'white' } });
+        const color = colors[n.type] || { background: '#6c757d', border: '#495057' };
+        return { ...n, shape: 'box', color, font: { color: 'white' } };
       }
 
       function styleEdge(e) {
-        var base = { arrows: 'to' };
-        if (e.label === '>>')  return Object.assign({}, e, base, { dashes: false });
-        if (e.label === '|||') return Object.assign({}, e, base, { dashes: true });
-        if (e.label === '[]')  return Object.assign({}, e, base, { color: { color: '#6f42c1' } });
-        return Object.assign({}, e, base);
-      }
-
-      function addToolbarOutside(canvasEl, nodes, edges, network, endpoint) {
-        var bar = document.createElement('div');
-        bar.style.cssText = 'margin:0 0 8px 0; display:flex; gap:8px; flex-wrap:wrap;';
-
-        var addTaskBtn = mkBtn('Add Task', function () {
-          var id = 'T:' + Date.now();
-          nodes.add(styleNode({ id: id, label: 'New Task', type: 'task' }));
-        });
-
-        var linkSeqBtn = mkBtn('Link >>', function () { linkSelected('>>'); });
-        var linkParBtn = mkBtn('Link |||', function () { linkSelected('|||'); });
-        var linkAltBtn = mkBtn('Link []', function () { linkSelected('[]'); });
-
-        var fitBtn  = mkBtn('Fit',  function () { network.fit({ animation: true }); });
-        var zoomIn  = mkBtn('+',    function () { network.moveTo({ scale: network.getScale() * 1.2 }); });
-        var zoomOut = mkBtn('−',    function () { network.moveTo({ scale: network.getScale() / 1.2 }); });
-
-        var exportBtn = mkBtn('Export JSON', function () {
-          var payload = currentPayload();
-          var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-          var a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = 'workflow.json';
-          a.click();
-        });
-
-        var importInp = document.createElement('input');
-        importInp.type = 'file'; importInp.accept = 'application/json';
-        var importBtn = mkBtn('Import JSON', function () { importInp.click(); });
-        importInp.onchange = function (e) {
-          var file = (e.target && e.target.files) ? e.target.files[0] : null;
-          if (!file) return;
-          var reader = new FileReader();
-          reader.onload = function () {
-            try {
-              var payload = JSON.parse(reader.result);
-              replaceWithPayload(payload);
-            } catch (err) { alert('Invalid JSON'); }
-          };
-          reader.readAsText(file);
-        };
-
-        var saveBtn = mkBtn('Save (server)', function () {
-          if (!endpoint) { alert('No endpoint configured.'); return; }
-          fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(currentPayload())
-          })
-          .then(function (res) { return res.json(); })
-          .then(function (j) {
-            var msg = (j && j.meta && j.meta.message) ? j.meta.message : 'Saved.';
-            alert(msg);
-          })
-          .catch(function (e) { alert('Save failed. Check console.'); console.error(e); });
-        });
-
-        var loadBtn = mkBtn('Load (server)', function () {
-          if (!endpoint) { alert('No endpoint configured.'); return; }
-          fetch(endpoint)
-            .then(function (res) { return res.json(); })
-            .then(function (j) { replaceWithPayload(j); })
-            .catch(function (e) { alert('Load failed.'); console.error(e); });
-        });
-
-        function linkSelected(op) {
-          var sel = network.getSelectedNodes();
-          if (sel.length === 2) {
-            var e = { from: sel[0], to: sel[1], label: op };
-            edges.add(styleEdge(e));
-          } else {
-            alert('Seleciona exatamente 2 tarefas para ligar.');
-          }
-        }
-
-        function currentPayload() {
-          return {
-            nodes: nodes.get().map(function (t) { return { id: t.id, label: t.label, type: t.type }; }),
-            edges: edges.get().map(function (e) { return { from: e.from, to: e.to, label: e.label }; }),
-            meta: { ts: Date.now() }
-          };
-        }
-
-        function replaceWithPayload(payload) {
-          var ns = ((payload && payload.nodes) ? payload.nodes : []).map(styleNode);
-          var es = ((payload && payload.edges) ? payload.edges : []).map(styleEdge);
-          nodes.clear(); edges.clear();
-          nodes.add(ns); edges.add(es);
-          network.fit({ animation: true });
-        }
-
-        // 👉 coloca a toolbar ANTES do canvas
-        canvasEl.parentNode.insertBefore(bar, canvasEl);
-
-        // Botões
-        bar.appendChild(addTaskBtn);
-        bar.appendChild(linkSeqBtn);
-        bar.appendChild(linkParBtn);
-        bar.appendChild(linkAltBtn);
-        bar.appendChild(fitBtn);
-        bar.appendChild(zoomIn);
-        bar.appendChild(zoomOut);
-        bar.appendChild(exportBtn);
-        bar.appendChild(importBtn);
-        bar.appendChild(saveBtn);
-        bar.appendChild(loadBtn);
-        bar.appendChild(importInp);
-        importInp.style.display = 'none';
+        const out = { from: e.from, to: e.to, smooth: false, color: { color: '#444' } };
+        if (e.label) out.label = e.label;
+        return out;
       }
 
       function mkBtn(txt, onClick) {
-        var b = document.createElement('button');
+        const b = document.createElement('button');
         b.type = 'button';
         b.textContent = txt;
         b.className = 'btn btn-sm btn-primary';
@@ -240,7 +220,141 @@
         return b;
       }
 
-      // Estilo leve do canvas (fallback caso não uses CSS)
+      function mkMiniBtn(txt, onClick) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = txt;
+        b.style.cssText = 'padding:4px 8px; font-size:12px; border-radius:4px; border:1px solid #ccc; background:#f8f9fa; cursor:pointer;';
+        b.onmouseenter = () => b.style.background = '#eef2f6';
+        b.onmouseleave = () => b.style.background = '#f8f9fa';
+        b.onclick = onClick;
+        return b;
+      }
+
+      // ===== Toolbar externa =====
+      function addToolbarOutside(canvasEl, nodes, edges, network, endpoint, applyHierarchical) {
+        const bar = document.createElement('div');
+        bar.style.cssText = 'margin:0 0 8px 0; display:flex; gap:8px; flex-wrap:wrap;';
+
+        const addTaskBtn = mkBtn('Add Task', () => {
+          const id = 'T:' + Date.now();
+          nodes.add(styleNode({ id, label: 'New Task', type: 'task' }));
+          applyHierarchical();
+        });
+
+        const addSubBtn = mkBtn('Add Subtask', () => {
+          const sel = network.getSelectedNodes();
+          if (sel && sel.length === 1) {
+            createSubtask(sel[0]);
+          } else {
+            alert('Clique numa tarefa para ser o parent.');
+            const once = (params) => {
+              if (params.nodes && params.nodes.length === 1) createSubtask(params.nodes[0]);
+              network.off('click', once);
+            };
+            network.on('click', once);
+          }
+        });
+
+        function createSubtask(parentId) {
+          const id = 'T:' + Date.now();
+          const label = prompt('Subtask name:', 'New Task');
+          nodes.add(styleNode({ id, label: label || 'New Task', type: 'task' }));
+          edges.add(styleEdge({ from: parentId, to: id })); // sem label
+          applyHierarchical();
+        }
+
+        const parentChildBtn = mkBtn('Parent → Child', () => {
+          const sel = network.getSelectedNodes();
+          if (!sel || sel.length !== 2) return alert('Seleciona 2 tarefas: parent e child.');
+          edges.add(styleEdge({ from: sel[0], to: sel[1] }));
+          applyHierarchical();
+        });
+
+        const linkSeqBtn = mkBtn('Link >>', () => linkSelected('>>'));
+        const linkParBtn = mkBtn('Link |||', () => linkSelected('|||'));
+        const linkAltBtn = mkBtn('Link []', () => linkSelected('[]'));
+
+        const fitBtn = mkBtn('Fit', () => network.fit({ animation: true }));
+        const zoomIn = mkBtn('+', () => network.moveTo({ scale: network.getScale() * 1.2 }));
+        const zoomOut = mkBtn('−', () => network.moveTo({ scale: network.getScale() / 1.2 }));
+
+        const exportBtn = mkBtn('Export JSON', () => {
+          const blob = new Blob([JSON.stringify(currentPayload(), null, 2)], { type: 'application/json' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'workflow.json';
+          a.click();
+        });
+
+        const importInp = document.createElement('input');
+        importInp.type = 'file'; importInp.accept = 'application/json';
+        const importBtn = mkBtn('Import JSON', () => importInp.click());
+        importInp.onchange = (e) => {
+          const file = e.target.files?.[0]; if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const payload = JSON.parse(reader.result);
+              replaceWithPayload(payload);
+              applyHierarchical();
+            } catch { alert('Invalid JSON'); }
+          };
+          reader.readAsText(file);
+        };
+
+        const saveBtn = mkBtn('Save (server)', () => {
+          if (!endpoint) return alert('No endpoint configured.');
+          fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentPayload())
+          })
+            .then(r => r.json())
+            .then(j => alert(j?.meta?.message || 'Saved.'))
+            .catch(() => alert('Save failed.'));
+        });
+
+        const loadBtn = mkBtn('Load (server)', () => {
+          if (!endpoint) return alert('No endpoint configured.');
+          fetch(endpoint)
+            .then(r => r.json())
+            .then(j => { replaceWithPayload(j); applyHierarchical(); })
+            .catch(() => alert('Load failed.'));
+        });
+
+        function linkSelected(op) {
+          const sel = network.getSelectedNodes();
+          if (sel.length === 2) {
+            edges.add(styleEdge({ from: sel[0], to: sel[1], label: op }));
+            applyHierarchical();
+          } else alert('Seleciona exatamente 2 tarefas.');
+        }
+
+        function currentPayload() {
+          return {
+            nodes: nodes.get().map(t => ({ id: t.id, label: t.label, type: t.type })),
+            edges: edges.get().map(e => ({ from: e.from, to: e.to, ...(e.label ? { label: e.label } : {}) })),
+            meta: { ts: Date.now() }
+          };
+        }
+
+        function replaceWithPayload(payload) {
+          const ns = (payload.nodes || []).map(styleNode);
+          const es = (payload.edges || []).map(styleEdge);
+          nodes.clear(); edges.clear();
+          nodes.add(ns); edges.add(es);
+          network.fit({ animation: true });
+        }
+
+        canvasEl.parentNode.insertBefore(bar, canvasEl);
+        [addTaskBtn, addSubBtn, parentChildBtn, linkSeqBtn, linkParBtn, linkAltBtn,
+         fitBtn, zoomIn, zoomOut, exportBtn, importBtn, saveBtn, loadBtn, importInp]
+          .forEach(b => bar.appendChild(b));
+        importInp.style.display = 'none';
+      }
+
+      // ===== Estilo base do canvas =====
       if (!el.style.height) el.style.height = '700px';
       el.style.width = '100%';
       el.style.marginTop = '10px';

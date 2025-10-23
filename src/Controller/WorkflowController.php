@@ -64,8 +64,8 @@ class WorkflowController {
         ['id' => 'T:Browse', 'label' => 'Browse',    'type' => 'task'],
       ],
       'edges' => [
-        ['from' => 'T:Root',  'to' => 'T:Login',  'label' => '>>'],
-        ['from' => 'T:Login', 'to' => 'T:Browse', 'label' => '>>'],
+        ['from' => 'T:Root',  'to' => 'T:Login'],
+        ['from' => 'T:Login', 'to' => 'T:Browse'],
       ],
       'meta'  => ['status' => 'ok', 'source' => 'default'],
     ]);
