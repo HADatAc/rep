@@ -11,7 +11,9 @@
  * And:
  *   drupalSettings.rep.socObjectsEndpoint
  *   drupalSettings.rep.graphLimits = {
- *     maxMembersPerSOC, pageSize, maxLiveNodes, autoShowOnFetch
+ *     maxMembersPerSOC, pageSize, maxLiveNodes, autoShowOnFetch,
+ *     // NEW optional:
+ *     // labelDiscoveryLimit -> how many edges to fetch once to discover ALL labels for a node
  *   }
  *
  * This build ensures:
@@ -23,6 +25,8 @@
  * - "Make it base" promotes a node to be the **graph root** and performs a **real navigation**
  *   to that node’s page, but the graph is snapshotted in sessionStorage and restored on load
  *   so the visualization stays exactly as it was (no losses).
+ * - NEW: Ao clicar num nó, fazemos (uma única vez) uma chamada de "descoberta de labels"
+ *   para garantir que o menu mostra **todos** os rótulos possíveis, tal como no main node.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -43,6 +47,8 @@
       const PAGE_SIZE           = Number(limits.pageSize         || 5);
       const MAX_LIVE_NODES      = Number(limits.maxLiveNodes     || 600);
       const AUTO_SHOW_ON_FETCH  = Number(limits.autoShowOnFetch  || 0);
+      // NEW: limite para a chamada única de descoberta de labels (pode ajustar via drupalSettings)
+      const LABEL_DISCOVERY_LIMIT = Number((limits && limits.labelDiscoveryLimit) || 250);
 
       const eyeSVG = `<i class="fa fa-eye"></i>`;
       const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
@@ -112,6 +118,9 @@
       // Guards & paging state
       const openedNodes = {};
       const primedNodes = {};
+      // NEW: marca se já fizemos a descoberta de labels para um nó
+      const labelsPrimed = {};
+
       const pageState = Object.create(null);
 
       // ----- Layout helpers -----
@@ -384,7 +393,7 @@
         const normEdges = (data.edges || []).map(normalizeEdge);
 
         const accept = (e) => {
-          if (e.from !== nodeId) return false;
+          if (e.from !== expandCurie(nodeId)) return false; // FIX: comparar com IRI expandido
           if (label === 'contains') return isMemberLabel(e.label);
           if (label === 'hascoTypeUri') return e.label === 'hascoTypeUri';
           if (label === 'typeUri')     return e.label === 'typeUri';
@@ -409,15 +418,16 @@
 
       // ---------- Items for label (with fallback for hascoTypeUri) ----------
       function itemsForLabel(nodeId, label) {
+        const nid = expandCurie(nodeId); // FIX: sempre expandido
         const norms = extraEdges.map(normalizeEdge);
 
         if (label === 'contains') {
           return norms
-            .filter(e => e.from === nodeId && isMemberLabel(e.label))
+            .filter(e => e.from === nid && isMemberLabel(e.label))
             .map(e => ({ edge: { ...e, label: 'contains' }, id: edgeIdOf({ ...e, label: 'contains' }) }));
         }
 
-        const rel = norms.filter(e => e.from === nodeId);
+        const rel = norms.filter(e => e.from === nid);
         const map = buildLabelEdgesMap(rel);
         let list = (map.get(label) || []);
         if (label === 'hascoTypeUri' && list.length === 0) {
@@ -431,7 +441,9 @@
         const isType = (label === 'hascoTypeUri' || label === 'typeUri');
         if (!socEndpoint) return;
 
-        const paramsLabeled = { from: nodeId, limit: isType ? 6 : PAGE_SIZE, offset: state.fetched, debug: 1 };
+        const fromIdApi = expandCurie(nodeId); // FIX
+
+        const paramsLabeled = { from: fromIdApi, limit: isType ? 6 : PAGE_SIZE, offset: state.fetched, debug: 1 };
         if (label === 'contains') paramsLabeled.relation = 'contains';
         else paramsLabeled.label = label;
 
@@ -453,17 +465,17 @@
           .done(data => {
             const slim = slimPayloadForLabel(data, nodeId, label, isType ? 6 : PAGE_SIZE);
             const returned = slim.edges.length;
-            mergeGraphPayload(slim, nodeId);
+            mergeGraphPayload(slim, fromIdApi);
 
             if (isType) {
               finish(returned, false, slim.meta);
               if (returned === 0 && !state.triedGeneric) {
                 state.triedGeneric = true;
-                $.getJSON(socEndpoint, { from: nodeId, limit: 8, offset: 0, debug: 1 })
+                $.getJSON(socEndpoint, { from: fromIdApi, limit: 8, offset: 0, debug: 1 })
                   .done(data2 => {
                     const slim2 = slimPayloadForLabel(data2, nodeId, label, 8);
                     const ret2 = slim2.edges.length;
-                    mergeGraphPayload(slim2, nodeId);
+                    mergeGraphPayload(slim2, fromIdApi);
                     finish(ret2, false, slim2.meta);
                   })
                   .fail(() => finish(0, false));
@@ -478,11 +490,11 @@
           .fail(() => {
             if (isType && !state.triedGeneric) {
               state.triedGeneric = true;
-              $.getJSON(socEndpoint, { from: nodeId, limit: 8, offset: 0, debug: 1 })
+              $.getJSON(socEndpoint, { from: fromIdApi, limit: 8, offset: 0, debug: 1 })
                 .done(data2 => {
                   const slim2 = slimPayloadForLabel(data2, nodeId, label, 8);
                   const ret2 = slim2.edges.length;
-                  mergeGraphPayload(slim2, nodeId);
+                  mergeGraphPayload(slim2, fromIdApi);
                   finish(ret2, false, slim2.meta);
                 })
                 .fail(() => finish(0, false));
@@ -492,12 +504,31 @@
           });
       }
 
+      // ---------- NEW: descobre TODOS os labels de um nó (uma vez) ----------
+      function primeAllLabelsForNode(nodeId, done) {
+        if (!socEndpoint) { done && done(); return; }
+        if (labelsPrimed[nodeId] === true) { done && done(); return; }
+        if (labelsPrimed[nodeId] === 'loading') { done && done(); return; }
+
+        labelsPrimed[nodeId] = 'loading';
+        const fromIdApi = expandCurie(nodeId); // FIX
+
+        $.getJSON(socEndpoint, { from: fromIdApi, limit: LABEL_DISCOVERY_LIMIT, offset: 0, debug: 1 })
+          .done(data => {
+            // Apenas povoamos o cache; a renderização/paginação continua como antes
+            mergeGraphPayload(data, fromIdApi);
+            labelsPrimed[nodeId] = true;
+          })
+          .fail(() => { labelsPrimed[nodeId] = false; })
+          .always(() => { if (done) done(); });
+      }
+
       function openLabelSubmenu(opt, nodeId, label) {
         let submenu = opt.querySelector(".submenu");
         if (submenu) { submenu.remove(); return; }
         closeAllSubmenus();
 
-        const key = `${nodeId}:${label}`;
+        const key = `${expandCurie(nodeId)}:${label}`; // FIX: chave estável
         if (!pageState[key]) {
           const now = itemsForLabel(nodeId, label).length;
           pageState[key] = {
@@ -556,7 +587,7 @@
               : (child.id?.split('/').pop() || child.id || '(no label)');
             if (!child.label || !String(child.label).trim()) child.label = displayLabel;
 
-            const desiredEdge = { from: nodeId, to: child.id, label };
+            const desiredEdge = { from: expandCurie(nodeId), to: child.id, label }; // FIX
             const desiredEdgeId = edgeIdOf(desiredEdge);
             const edgeOn = !!edges.get(desiredEdgeId);
 
@@ -597,12 +628,12 @@
                 addEdgeVisible({ ...desiredEdge, id: desiredEdgeId });
 
                 const neighborIds = edges.get()
-                  .filter(ed => ed.from === nodeId)
+                  .filter(ed => ed.from === expandCurie(nodeId)) // FIX
                   .map(ed => ed.to)
                   .filter((v, i, arr) => arr.indexOf(v) === i);
                 if (neighborIds.length) {
                   freezeAllNodes(nodes);
-                  placeAround(network, nodeId, neighborIds, 140);
+                  placeAround(network, expandCurie(nodeId), neighborIds, 140);
                   network.redraw();
                   unfreezeNodes(nodes, neighborIds);
                 }
@@ -759,18 +790,26 @@
         closeAllSubmenus();
         if (params.nodes.length === 0) return;
 
-        const selectedNodeId = params.nodes[0];
+        const selectedNodeId = params.nodes[0]; // manter o id exatamente como está no DataSet
         const selectedNode   = nodes.get(selectedNodeId) || extraNodes.find(n => n.id === selectedNodeId);
         if (!selectedNode) return;
 
         seedTypeEdgesForNode(selectedNode);
 
-        // Prime fetch once per node
+        // Prime fetch once per node (pequeno)
         if (socEndpoint && !primedNodes[selectedNodeId]) {
           primedNodes[selectedNodeId] = true;
-          $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
-            .done(data => mergeGraphPayload(data, selectedNodeId))
+          $.getJSON(socEndpoint, { from: expandCurie(selectedNodeId), limit: PAGE_SIZE, offset: 0, debug: 1 }) // FIX
+            .done(data => mergeGraphPayload(data, expandCurie(selectedNodeId)))
             .always(() => { setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0); });
+          return;
+        }
+
+        // NEW: garantir que temos TODOS os labels antes de compor o menu
+        if (socEndpoint && labelsPrimed[selectedNodeId] !== true) {
+          primeAllLabelsForNode(selectedNodeId, () => {
+            setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
+          });
           return;
         }
 
@@ -789,17 +828,17 @@
         const kind = nodeKindByTypeUri(selectedNode?.typeUri);
 
         const hasContains =
-          extraEdges.map(normalizeEdge).some(e => e.from === selectedNodeId && isMemberLabel(e.label)) ||
-          extraEdges.map(normalizeEdge).some(e => e.to   === selectedNodeId && isReverseMemberLabel(e.label));
-        if (hasContains) synthesizeContainsFromReverse(selectedNodeId);
+          extraEdges.map(normalizeEdge).some(e => e.from === expandCurie(selectedNodeId) && isMemberLabel(e.label)) || // FIX
+          extraEdges.map(normalizeEdge).some(e => e.to   === expandCurie(selectedNodeId) && isReverseMemberLabel(e.label)); // FIX
+        if (hasContains) synthesizeContainsFromReverse(expandCurie(selectedNodeId)); // FIX
 
         // Lazy fetch SOC members
         if (socEndpoint && kind === 'soc' && !hasContains && !openedNodes[selectedNodeId]) {
           openedNodes[selectedNodeId] = true;
-          $.getJSON(socEndpoint, { from: selectedNodeId, relation: 'contains', limit: PAGE_SIZE, offset: 0, debug: 1 })
+          $.getJSON(socEndpoint, { from: expandCurie(selectedNodeId), relation: 'contains', limit: PAGE_SIZE, offset: 0, debug: 1 }) // FIX
             .done(data => {
               const slim = slimPayloadForLabel(data, selectedNodeId, 'contains', PAGE_SIZE);
-              mergeGraphPayload(slim, selectedNodeId);
+              mergeGraphPayload(slim, expandCurie(selectedNodeId));
               setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
             })
             .fail(() => { openedNodes[selectedNodeId] = false; });
@@ -808,7 +847,7 @@
 
         // Lazy fetch Study → SOCs
         const hasSOC = extraEdges.map(normalizeEdge).some(e =>
-          e.from === selectedNodeId &&
+          e.from === expandCurie(selectedNodeId) && // FIX
           (e.label === 'hasSampleCollection' ||
            e.label === 'hasSubjectCollection' ||
            e.label === 'hasSpaceCollection'   ||
@@ -817,17 +856,17 @@
         );
         if (socEndpoint && kind === 'study' && !hasSOC && !openedNodes[selectedNodeId]) {
           openedNodes[selectedNodeId] = true;
-          $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
+          $.getJSON(socEndpoint, { from: expandCurie(selectedNodeId), limit: PAGE_SIZE, offset: 0, debug: 1 }) // FIX
             .done(data => {
-              mergeGraphPayload(data, selectedNodeId);
+              mergeGraphPayload(data, expandCurie(selectedNodeId));
               setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
             })
             .fail(() => { openedNodes[selectedNodeId] = false; });
           return;
         }
 
-        // Build labels from cached edges
-        const relatedEdges = extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId);
+        // Build labels from cached edges (agora já temos todos por causa do primeAllLabelsForNode)
+        const relatedEdges = extraEdges.map(normalizeEdge).filter(e => e.from === expandCurie(selectedNodeId)); // FIX
         const labelEdgesMap = buildLabelEdgesMap(relatedEdges);
         let labels = Array.from(labelEdgesMap.keys()).filter(isDisplayableLabel);
 

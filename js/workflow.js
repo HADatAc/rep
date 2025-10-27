@@ -13,6 +13,20 @@
       const nodes = new vis.DataSet((base.nodes || []).map(styleNode));
       const edges = new vis.DataSet((base.edges || []).map(styleEdge));
 
+      // ===== Helpers CTT: parent/irmãs =====
+      function getParent(nodeId) {
+        // parent é a aresta sem label que entra no nó (decomposição)
+        const inDecomp = edges.get({
+          filter: e => e.to === nodeId && (!e.label || e.label === '')
+        });
+        return inDecomp.length ? inDecomp[0].from : null;
+      }
+      function areSiblings(a, b) {
+        if (!a || !b || a === b) return false;
+        const pa = getParent(a), pb = getParent(b);
+        return !!(pa && pb && pa === pb);
+      }
+
       // ===== Layout hierárquico =====
       const options = {
         layout: {
@@ -78,7 +92,7 @@
         }
       });
 
-      // ===== Editor de Arestas (corrigido) =====
+      // ===== Editor de Arestas (com regra CTT) =====
       let edgeEditorEl = null;
       let activeEdgeId = null;
 
@@ -86,7 +100,6 @@
         if (params.edges && params.edges.length === 1) openEdgeEditor(params.edges[0]);
         else closeEdgeEditor();
       });
-
       network.on('selectEdge', (params) => {
         if (params.edges && params.edges.length === 1) openEdgeEditor(params.edges[0]);
       });
@@ -98,11 +111,16 @@
 
         const e = edges.get(edgeId);
         if (!e) return;
+
+        // Ponto médio para posicionar
         const p1 = network.getPosition(e.from);
         const p2 = network.getPosition(e.to);
         const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
         const dom = network.canvasToDOM(mid);
         const rect = el.getBoundingClientRect();
+
+        // Só pode ter operador temporal se for entre irmãs
+        const canTemporal = areSiblings(e.from, e.to);
 
         edgeEditorEl = document.createElement('div');
         edgeEditorEl.className = 'wf-edge-editor';
@@ -110,24 +128,37 @@
           'position:absolute; z-index:1001; background:#fff; border:1px solid #ddd;' +
           'box-shadow:0 2px 10px rgba(0,0,0,.12); border-radius:6px; padding:6px; display:flex; gap:6px;';
 
-        const buttons = [
-          mkMiniBtn('No label', () => updateEdgeLabel(edgeId, null)),
-          mkMiniBtn('>>', () => updateEdgeLabel(edgeId, '>>')),
-          mkMiniBtn('|||', () => updateEdgeLabel(edgeId, '|||')),
-          mkMiniBtn('[]', () => updateEdgeLabel(edgeId, '[]')),
-          mkMiniBtn('Swap', () => swapEnds(edgeId)),
-          mkMiniBtn('Rewire', () => {
-            network.setOptions({ manipulation: { enabled: true, editEdge: true } });
-            network.editEdgeMode();
-            closeEdgeEditor();
-            setTimeout(() => { network.disableEditMode(); applyHierarchical(); }, 2000);
-          }),
-          mkMiniBtn('Delete', () => { edges.remove(edgeId); closeEdgeEditor(); applyHierarchical(); })
-        ];
-        buttons.forEach(b => edgeEditorEl.appendChild(b));
+        const noLbl = mkMiniBtn('No label', () => updateEdgeLabel(edgeId, null));
+
+        const b1 = mkMiniBtn('>>',  () => updateEdgeLabel(edgeId, '>>'));
+        const b2 = mkMiniBtn('|||', () => updateEdgeLabel(edgeId, '|||'));
+        const b3 = mkMiniBtn('[]',  () => updateEdgeLabel(edgeId, '[]'));
+        [b1, b2, b3].forEach(btn => {
+          if (!canTemporal) {
+            btn.disabled = true;
+            btn.title = 'Operadores temporais só entre sub-tasks do mesmo parent';
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+          }
+        });
+
+        const swap   = mkMiniBtn('Swap',   () => { swapEnds(edgeId); });
+        const rewire = mkMiniBtn('Rewire', () => {
+          network.setOptions({ manipulation: { enabled: true, editEdge: true } });
+          network.editEdgeMode();
+          closeEdgeEditor();
+          setTimeout(() => {
+            network.disableEditMode();
+            validateAllEdges(); // garante a regra após rewire
+            applyHierarchical();
+          }, 2000);
+        });
+        const del    = mkMiniBtn('Delete', () => { edges.remove(edgeId); closeEdgeEditor(); applyHierarchical(); });
+
+        [noLbl, b1, b2, b3, swap, rewire, del].forEach(b => edgeEditorEl.appendChild(b));
         document.body.appendChild(edgeEditorEl);
         edgeEditorEl.style.left = (rect.left + dom.x + 8) + 'px';
-        edgeEditorEl.style.top  = (rect.top + dom.y + 8) + 'px';
+        edgeEditorEl.style.top  = (rect.top  + dom.y + 8) + 'px';
 
         document.removeEventListener('click', edgeCloser, true);
         setTimeout(() => document.addEventListener('click', edgeCloser, true), 50);
@@ -136,16 +167,21 @@
       function closeEdgeEditor() {
         if (edgeEditorEl) { edgeEditorEl.remove(); edgeEditorEl = null; }
         activeEdgeId = null;
-        // ⚠️ não limpa seleção — agora podes selecionar nós logo a seguir
         document.removeEventListener('click', edgeCloser, true);
       }
-
       function edgeCloser(e) {
         if (!edgeEditorEl) return;
         if (!edgeEditorEl.contains(e.target)) closeEdgeEditor();
       }
 
+      // Aplica/retira label com validação CTT
       function updateEdgeLabel(edgeId, label) {
+        const e = edges.get(edgeId);
+        if (!e) return;
+        if (label && !areSiblings(e.from, e.to)) {
+          alert('Operadores temporais só entre sub-tasks do mesmo parent. Mantém-se sem label.');
+          label = '';
+        }
         edges.update({ id: edgeId, label: (label ? label : '') });
         closeEdgeEditor(); applyHierarchical();
       }
@@ -154,7 +190,17 @@
         const e = edges.get(edgeId);
         if (!e) return;
         edges.update({ id: edgeId, from: e.to, to: e.from });
+        validateAllEdges();
         closeEdgeEditor(); applyHierarchical();
+      }
+
+      // Remove labels inválidos (não-irmãs)
+      function validateAllEdges() {
+        edges.get().forEach(e => {
+          if (e.label && !areSiblings(e.from, e.to)) {
+            edges.update({ id: e.id, label: '' });
+          }
+        });
       }
 
       // ===== Menu de contexto (nós) =====
@@ -193,7 +239,7 @@
         setTimeout(() => document.addEventListener('click', () => m.remove(), { once: true }), 0);
       }
 
-      // ===== Helpers =====
+      // ===== Helpers visuais =====
       function styleNode(n) {
         const colors = {
           task:   { background: '#007bff', border: '#0056b3' },
@@ -203,13 +249,11 @@
         const color = colors[n.type] || { background: '#6c757d', border: '#495057' };
         return { ...n, shape: 'box', color, font: { color: 'white' } };
       }
-
       function styleEdge(e) {
         const out = { from: e.from, to: e.to, smooth: false, color: { color: '#444' } };
-        if (e.label) out.label = e.label;
+        if (e.label) out.label = e.label; // só quando existir
         return out;
       }
-
       function mkBtn(txt, onClick) {
         const b = document.createElement('button');
         b.type = 'button';
@@ -219,7 +263,6 @@
         b.onclick = onClick;
         return b;
       }
-
       function mkMiniBtn(txt, onClick) {
         const b = document.createElement('button');
         b.type = 'button';
@@ -260,14 +303,14 @@
           const id = 'T:' + Date.now();
           const label = prompt('Subtask name:', 'New Task');
           nodes.add(styleNode({ id, label: label || 'New Task', type: 'task' }));
-          edges.add(styleEdge({ from: parentId, to: id })); // sem label
+          edges.add(styleEdge({ from: parentId, to: id })); // decomposição: SEM label
           applyHierarchical();
         }
 
         const parentChildBtn = mkBtn('Parent → Child', () => {
           const sel = network.getSelectedNodes();
           if (!sel || sel.length !== 2) return alert('Seleciona 2 tarefas: parent e child.');
-          edges.add(styleEdge({ from: sel[0], to: sel[1] }));
+          edges.add(styleEdge({ from: sel[0], to: sel[1] })); // SEM label (decomposição)
           applyHierarchical();
         });
 
@@ -275,9 +318,9 @@
         const linkParBtn = mkBtn('Link |||', () => linkSelected('|||'));
         const linkAltBtn = mkBtn('Link []', () => linkSelected('[]'));
 
-        const fitBtn = mkBtn('Fit', () => network.fit({ animation: true }));
-        const zoomIn = mkBtn('+', () => network.moveTo({ scale: network.getScale() * 1.2 }));
-        const zoomOut = mkBtn('−', () => network.moveTo({ scale: network.getScale() / 1.2 }));
+        const fitBtn   = mkBtn('Fit', () => network.fit({ animation: true }));
+        const zoomIn   = mkBtn('+',   () => network.moveTo({ scale: network.getScale() * 1.2 }));
+        const zoomOut  = mkBtn('−',   () => network.moveTo({ scale: network.getScale() / 1.2 }));
 
         const exportBtn = mkBtn('Export JSON', () => {
           const blob = new Blob([JSON.stringify(currentPayload(), null, 2)], { type: 'application/json' });
@@ -297,6 +340,7 @@
             try {
               const payload = JSON.parse(reader.result);
               replaceWithPayload(payload);
+              validateAllEdges();
               applyHierarchical();
             } catch { alert('Invalid JSON'); }
           };
@@ -319,16 +363,18 @@
           if (!endpoint) return alert('No endpoint configured.');
           fetch(endpoint)
             .then(r => r.json())
-            .then(j => { replaceWithPayload(j); applyHierarchical(); })
+            .then(j => { replaceWithPayload(j); validateAllEdges(); applyHierarchical(); })
             .catch(() => alert('Load failed.'));
         });
 
+        // >>> Só cria operadores entre irmãs
         function linkSelected(op) {
           const sel = network.getSelectedNodes();
-          if (sel.length === 2) {
-            edges.add(styleEdge({ from: sel[0], to: sel[1], label: op }));
-            applyHierarchical();
-          } else alert('Seleciona exatamente 2 tarefas.');
+          if (sel.length !== 2) return alert('Seleciona exatamente 2 tarefas.');
+          const [a, b] = sel;
+          if (!areSiblings(a, b)) return alert('Operadores temporais só entre sub-tasks do mesmo parent.');
+          edges.add(styleEdge({ from: a, to: b, label: op }));
+          applyHierarchical();
         }
 
         function currentPayload() {
@@ -362,4 +408,40 @@
       el.style.border = '1px solid #ddd';
     }
   };
+
+  // ==== helpers comuns (fora do attach para manter o escopo limpo) ====
+  function styleNode(n) {
+    const colors = {
+      task:   { background: '#007bff', border: '#0056b3' },
+      choice: { background: '#6f42c1', border: '#59359a' },
+      and:    { background: '#28a745', border: '#1e7e34' }
+    };
+    const color = colors[n.type] || { background: '#6c757d', border: '#495057' };
+    return { ...n, shape: 'box', color, font: { color: 'white' } };
+  }
+  function styleEdge(e) {
+    const out = { from: e.from, to: e.to, smooth: false, color: { color: '#444' } };
+    if (e.label) out.label = e.label;
+    return out;
+  }
+  function mkBtn(txt, onClick) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = txt;
+    b.className = 'btn btn-sm btn-primary';
+    b.style.cssText = 'padding:4px 8px;';
+    b.onclick = onClick;
+    return b;
+  }
+  function mkMiniBtn(txt, onClick) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = txt;
+    b.style.cssText =
+      'padding:4px 8px; font-size:12px; border-radius:4px; border:1px solid #ccc; background:#f8f9fa; cursor:pointer;';
+    b.onmouseenter = () => b.style.background = '#eef2f6';
+    b.onmouseleave = () => b.style.background = '#f8f9fa';
+    b.onclick = onClick;
+    return b;
+  }
 })(jQuery, Drupal, drupalSettings);
