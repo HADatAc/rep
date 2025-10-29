@@ -151,26 +151,129 @@
             '#description' => 'This value is used to compose the URL of rep elements created within this repository',
         ];
 
-        $namespaceSourceMime = "";
-        if ($config->get("repository_namespace_source_mime")!= NULL) {
-            $namespaceSourceMime = $config->get("repository_namespace_source_mime");
-        }
-        $form['repository_namespace_source_mime'] = [
-            '#type' => 'textfield',
-            '#title' => 'Mime for Base Namespace',
-            '#required' => FALSE,
-            '#default_value' => $namespaceSourceMime,
+        // $namespaceSourceMime = "text/turtle";
+        // if ($config->get("repository_namespace_source_mime")!= NULL) {
+        //     $namespaceSourceMime = $config->get("repository_namespace_source_mime");
+        // }
+        // $form['repository_namespace_source_mime'] = [
+        //     '#type' => 'textfield',
+        //     '#title' => 'Mime for Base Namespace',
+        //     '#required' => FALSE,
+        //     '#default_value' => $namespaceSourceMime,
+        // ];
+
+        // // $namespaceSource = ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https://' : 'http://') . ((($a=$_SERVER['SERVER_ADDR']??'') && $a!=='::1' && $a!=='127.0.0.1' && strpos($a,':')===false) ? $a : (($b=@gethostbyname(@gethostname())) && $b!=='127.0.0.1' && $b!==@gethostname() ? $b : (function(){ $s=@socket_create(AF_INET,SOCK_DGRAM,SOL_UDP); if($s && @socket_connect($s,'8.8.8.8',53)){ @socket_getsockname($s,$n,$p); @socket_close($s); return $n; } return '127.0.0.1'; })())) . '/ont/';
+        // $namespaceSource = \Drupal::request()->getScheme().'://'.((($a=$_SERVER['SERVER_ADDR']??'') && $a!=='::1' && $a!=='127.0.0.1' && strpos($a,':')===false)?$a:(($b=@gethostbyname(@gethostname())) && $b!=='127.0.0.1' && $b!==@gethostname()?$b:(function(){ $s=@socket_create(AF_INET,SOCK_DGRAM,SOL_UDP); if($s && @socket_connect($s,'8.8.8.8',53)){ @socket_getsockname($s,$n,$p); @socket_close($s); return $n; } return '127.0.0.1';})())).((($p=\Drupal::request()->getPort()) && !in_array($p,[80,443]))?':'.$p:'').\Drupal::request()->getBasePath().'/ont/';
+        // if ($config->get("repository_namespace_source")!= NULL) {
+        //     $namespaceSource = $config->get("repository_namespace_source");
+        // }
+        // $form['repository_namespace_source'] = [
+        //     '#type' => 'textfield',
+        //     '#title' => 'Source for Base Namespace',
+        //     '#required' => FALSE,
+        //     '#default_value' => $namespaceSource,
+        // ];
+
+        // Read current checkbox state.
+        $local = $form_state->getValue('localAppOntology', $config->get('localAppOntology') ?? FALSE);
+
+        // Controller checkbox (keeps AJAX)
+        $form['localAppOntology'] = [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Use LocalAPP Ontology file?'),
+          '#default_value' => $local,
+          '#ajax' => [
+            'callback' => '::toggleLocalAppOntology',
+            'wrapper'  => 'repo-wrapper',
+            'progress' => ['type' => 'throbber'],
+          ],
         ];
 
-        $namespaceSource = "";
-        if ($config->get("repository_namespace_source")!= NULL) {
-            $namespaceSource = $config->get("repository_namespace_source");
+        // Wrapper updated by AJAX
+        $form['repo_wrapper'] = [
+          '#type' => 'container',
+          '#attributes' => ['id' => 'repo-wrapper'],
+        ];
+
+        // Config (settings) values – used when checkbox is OFF
+        $configMime   = $config->get('repository_namespace_source_mime') ?? '';
+        $configSource = $config->get('repository_namespace_source') ?? '';
+
+        // Local (auto) suggestions – used when checkbox is ON
+        $localMime    = $config->get('repository_namespace_source_mime') ?: 'text/turtle';
+        $localSource  = \Drupal::request()->getScheme().'://'
+          .((($a=$_SERVER['SERVER_ADDR']??'') && $a!=='::1' && $a!=='127.0.0.1' && strpos($a,':')===false)?$a:
+            (($b=@gethostbyname(@gethostname())) && $b!=='127.0.0.1' && $b!==@gethostname()?$b:(function(){
+              $s=@socket_create(AF_INET,SOCK_DGRAM,SOL_UDP);
+              if($s && @socket_connect($s,'8.8.8.8',53)){ @socket_getsockname($s,$n,$p); @socket_close($s); return $n; }
+              return '127.0.0.1';
+            })()))
+          .((($p=\Drupal::request()->getPort()) && !in_array($p,[80,443]))?':'.$p:'')
+          .\Drupal::request()->getBasePath().'/ont/';
+
+        // Values stored in settings (non-local baseline)
+        $configMime   = (string) ($config->get('repository_namespace_source_mime') ?? '');
+        $configSource = (string) ($config->get('repository_namespace_source') ?? '');
+
+        // Current checkbox state (already computed)
+        $local = $form_state->getValue('localAppOntology', (bool) $config->get('localAppOntology'));
+
+        // Read current inputs
+        $inputMime   = $form_state->getValue('repository_namespace_source_mime');
+        $inputSource = $form_state->getValue('repository_namespace_source');
+
+        // Detect if the checkbox triggered this rebuild
+        $trigger = $form_state->getTriggeringElement();
+        $checkboxToggled = $trigger && (($trigger['#name'] ?? '') === 'localAppOntology');
+
+        if ($checkboxToggled) {
+          // Get raw userInput so the next render uses our changes
+          $raw = $form_state->getUserInput() ?: [];
+
+          if ($local) {
+            // Turned ON → prefill with local suggestions when empty
+            if ($inputMime === NULL || $inputMime === '') {
+              $form_state->setValue('repository_namespace_source_mime', $localMime);
+              $raw['repository_namespace_source_mime'] = $localMime;
+            }
+            if ($inputSource === NULL || $inputSource === '') {
+              $form_state->setValue('repository_namespace_source', $localSource);
+              $raw['repository_namespace_source'] = $localSource;
+            }
+          } else {
+            // Turned OFF → if fields still equal local suggestions, clear them
+            if ((string) $inputMime === (string) $localMime) {
+              $form_state->setValue('repository_namespace_source_mime', '');
+              $raw['repository_namespace_source_mime'] = '';
+            }
+            if ((string) $inputSource === (string) $localSource) {
+              $form_state->setValue('repository_namespace_source', '');
+              $raw['repository_namespace_source'] = '';
+            }
+          }
+
+          // Write back so #default_value is ignored in favor of what we set here
+          $form_state->setUserInput($raw);
+
+          // Re-read after mutation
+          $inputMime   = $form_state->getValue('repository_namespace_source_mime');
+          $inputSource = $form_state->getValue('repository_namespace_source');
         }
-        $form['repository_namespace_source'] = [
-            '#type' => 'textfield',
-            '#title' => 'Source for Base Namespace',
-            '#required' => FALSE,
-            '#default_value' => $namespaceSource,
+
+        // Render editable fields (never disabled)
+        $form['repo_wrapper']['repository_namespace_source_mime'] = [
+          '#type' => 'textfield',
+          '#title' => $this->t('MIME for Base Namespace'),
+          '#required' => FALSE,
+          // If still NULL (first paint without interaction), pick config when OFF, local when ON
+          '#default_value' => $inputMime ?? ($local ? $localMime : $configMime),
+        ];
+
+        $form['repo_wrapper']['repository_namespace_source'] = [
+          '#type' => 'textfield',
+          '#title' => $this->t('Source for Base Namespace'),
+          '#required' => FALSE,
+          '#default_value' => $inputSource ?? ($local ? $localSource : $configSource),
         ];
 
         $description = "";
@@ -285,7 +388,10 @@
             return;
         }
 
-          $config = $this->config(static::CONFIGNAME);
+        $config = $this->config(static::CONFIGNAME);
+
+        // Persist "localAppOntology" and its dependent fields coherently.
+        $config->set('localAppOntology', (bool) $form_state->getValue('localAppOntology'));
 
         //save confs
         $config->set("rep_home", $form_state->getValue('rep_home'));
@@ -296,8 +402,8 @@
         $config->set("repository_domain_url", trim($form_state->getValue('repository_domain_url')));
         $config->set("repository_namespace_prefix", trim($form_state->getValue('repository_namespace_prefix')));
         $config->set("repository_namespace_url", trim($form_state->getValue('repository_namespace_url')));
-        $config->set("repository_namespace_source_mime", trim($form_state->getValue('repository_namespace_source_mime')));
-        $config->set("repository_namespace_source", trim($form_state->getValue('repository_namespace_source')));
+        $config->set('repository_namespace_source_mime', trim((string) $form_state->getValue('repository_namespace_source_mime')));
+        $config->set('repository_namespace_source', trim((string) $form_state->getValue('repository_namespace_source')));
         $config->set("repository_description", trim($form_state->getValue('repository_description')));
         $config->set("sagres_base_url", $form_state->getValue('sagres_base_url'));
         $config->set("api_url", $form_state->getValue('api_url'));
@@ -528,4 +634,12 @@
 
         \Drupal::messenger()->addMessage("Sincronização concluída: $users_created utilizadores criados, $users_updated atualizados.");
     }
+
+    public function toggleLocalAppOntology(array &$form, FormStateInterface $form_state) {
+      // Force a rebuild so #default_value / user input injection takes effect.
+      $form_state->setRebuild(TRUE);
+      return $form['repo_wrapper'];
+    }
+
+
 }

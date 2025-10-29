@@ -1,16 +1,18 @@
 <?php
-// modules/custom/REP/src/Form/OntEditForm.php
-namespace Drupal\REP\Form;
+
+namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\Core\File\FileSystemInterface;
+use Drupal\rep\Utils;
 
 /**
- * Provides a form to edit RDF files in the private ont/ directory.
+ * Form to edit the Application Ontology RDF (TTL) file under private://ont.
  */
 class OntEditForm extends FormBase {
+
   /**
    * {@inheritdoc}
    */
@@ -19,68 +21,98 @@ class OntEditForm extends FormBase {
   }
 
   /**
-   * Builds the RDF editor form.
+   * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
+    $config  = $this->config('rep.settings');
+    $enabled = (bool) $config->get('localAppOntology');
 
-    $filename = \Drupal::config('rep.settings')->get('repository_namespace_prefix').'.ttl';
+    /**
+     * GUARD CLAUSE:
+     * If the feature is disabled in settings, show a red alert and STOP here.
+     * No editor, no assets, nothing else is rendered.
+     */
+    if (!$enabled) {
+      // Also push a system message (will appear via status_messages).
+      $this->messenger()->addError($this->t('Local APP Ontology editing is disabled in settings. Please enable it to access the editor.'));
+      $baseUrl = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
 
+      return [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['messages', 'messages--error']],
+        'msg' => [
+          '#markup' => $this->t('<p>&nbsp;</p><h4> <i class="fa-solid fa-circle-info"></i> INFO:</h4><h5><br />Local APP Ontology editing is disabled in settings.</h5><br />Please enable it in \'<a href="'.$baseUrl.'/admin/config/rep">Repository > Configurations</a>\' to access the editor.'),
+        ],
+      ];
+    }
+
+    // ------- From here down we render the editor (only when enabled). -------
+
+    $filename = (string) $config->get('repository_namespace_prefix') . '.ttl';
+
+    // Attach your editor libraries.
     $form['#attached']['library'][] = 'rep/rdf_graph_editor';
     $form['#attached']['library'][] = 'rep/ont_editor_states';
 
+    // Pass endpoints to JS.
     $form['#attached']['drupalSettings']['repRdfEditor'] = [
       'filename' => $filename,
       'getUrl'   => Url::fromRoute('rep.api.get', ['filename' => $filename])->toString(),
       'saveUrl'  => Url::fromRoute('rep.api.save', ['filename' => $filename])->toString(),
     ];
 
-    $file_path = 'private://ont/' . $filename;
-    $realpath = \Drupal::service('file_system')->realpath($file_path);
+    // Load file contents.
+    $file_uri = 'private://ont/' . $filename;
+    $realpath = \Drupal::service('file_system')->realpath($file_uri);
 
-    if (!file_exists($realpath)) {
+    if ($realpath === FALSE || !file_exists($realpath)) {
+      $this->messenger()->addError($this->t('Ontology file not found: @file', ['@file' => $filename]));
       return [
-        '#markup' => $this->t('File not found: @file', ['@file' => $filename]),
+        '#type' => 'container',
+        '#attributes' => ['class' => ['messages', 'messages--error']],
+        'msg' => [
+          '#markup' => $this->t('Ontology file not found: @file', ['@file' => $filename]),
+        ],
       ];
     }
 
-    $content = file_get_contents($realpath);
+    $content = (string) file_get_contents($realpath);
 
     $form['filename'] = [
       '#type' => 'hidden',
       '#value' => $filename,
     ];
 
-    // Hidden flag para estados do formulário (0 = limpo, 1 = alterado)
+    // 0 = clean; 1 = dirty (your JS toggles this).
     $form['is_dirty'] = [
       '#type' => 'hidden',
       '#value' => '0',
     ];
 
-    $form['injest_button'] = [
+    // Top-right actions.
+    $form['actions_top'] = [
       '#type' => 'container',
-      '#attributes' => [
-        'class' => ['d-flex', 'justify-content-end', 'mb-3'],
-      ],
+      '#attributes' => ['class' => ['d-flex', 'justify-content-end', 'mb-3']],
     ];
 
-    $form['injest_button']['view_application_ontology'] = [
+    $form['actions_top']['view_application_ontology'] = [
       '#type' => 'link',
       '#title' => $this->t('View Application Ontology'),
       '#url' => Url::fromRoute('rep.ont_view'),
       '#attributes' => [
-        'class' => ['btn', 'button', 'button--primary', 'view-button', 'text-align-center', 'mx-2'],
-        'target' => '_new',
+        'class' => ['btn', 'button', 'button--primary', 'mx-2'],
+        'target' => '_blank',
         'rel' => 'noopener noreferrer',
       ],
     ];
 
-    $form['injest_button']['injest_application_ontology'] = [
+    $form['actions_top']['ingest_application_ontology'] = [
       '#type' => 'link',
-      '#title' => $this->t('Injest Application Ontology'),
+      '#title' => $this->t('Ingest Application Ontology'),
       '#url' => Url::fromRoute('rep.ont_injest'),
       '#attributes' => [
-        'id' => 'rep-ont-ingest', // <-- ID para o JS
-        'class' => ['btn', 'button', 'button--warning', 'ingest_mt-button', 'text-align-center'],
+        'id' => 'rep-ont-ingest',
+        'class' => ['btn', 'button', 'button--warning'],
       ],
     ];
 
@@ -101,11 +133,11 @@ class OntEditForm extends FormBase {
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Save Application ontology File'),
+      '#value' => $this->t('Save Application Ontology File'),
       '#button_type' => 'primary',
       '#attributes' => [
-        'id' => 'rep-ont-save',      // <-- ID para o JS
-        'class' => ['mb-5', 'save-button'],
+        'id' => 'rep-ont-save',
+        'class' => ['mb-5'],
       ],
       '#states' => [
         'disabled' => [
@@ -119,19 +151,15 @@ class OntEditForm extends FormBase {
 
   /**
    * {@inheritdoc}
-   * Only checks presence of version IRI, skips full RDF parsing to preserve file format.
+   * Lightweight validation: require an owl:versionIRI.
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    // Look for a line like:
-    //   owl:versionIRI   hadatac:1 ;
-    $data = $form_state->getValue('rdf_editor_textarea');
-    $versionPattern = '/owl:versionIRI\s+hadatac:(\d+(?:\.\d+)?)\s*;/';
-
-    if (!preg_match($versionPattern, $data)) {
-      // Prevent submission if no valid version IRI is found.
+    $data = (string) $form_state->getValue('rdf_editor_textarea');
+    $pattern = '/owl:versionIRI\s+hadatac:(\d+(?:\.\d+)?)\s*;/';
+    if (!preg_match($pattern, $data)) {
       $form_state->setErrorByName(
         'rdf_editor_textarea',
-        $this->t('Version IRI pattern not found. Please include a line like “owl:versionIRI   hadatac:1 ;”.')
+        $this->t('Version IRI not found. Please include a line like: owl:versionIRI   hadatac:1 ;')
       );
     }
   }
@@ -140,65 +168,34 @@ class OntEditForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // Retrieve filename and textarea contents.
-    $filename = $form_state->getValue('filename');
-    $originalData = $form_state->getValue('rdf_editor_textarea');
-    $fileSystem = \Drupal::service('file_system');
+    $filename     = (string) $form_state->getValue('filename');
+    $originalData = (string) $form_state->getValue('rdf_editor_textarea');
+    $fs = \Drupal::service('file_system');
 
-    // 1) Find the current version number (e.g. "1" or "2.3").
-    $versionPattern = '/owl:versionIRI\s+hadatac:(\d+(?:\.\d+)?)\s*;/';
-    if (!preg_match($versionPattern, $originalData, $matches)) {
-      $this->messenger()->addError($this->t('Version IRI pattern not found; no changes were made.'));
-      $form_state->setRedirectUrl(Url::fromRoute('rep.ont_edit', ['filename' => $filename]));
+    $pattern = '/owl:versionIRI\s+hadatac:(\d+(?:\.\d+)?)\s*;/';
+    if (!preg_match($pattern, $originalData, $m)) {
+      $this->messenger()->addError($this->t('Version IRI not found; no changes were saved.'));
       return;
     }
-    $currentVersion = $matches[1];
-    // Increment the integer part; adjust logic if you need different versioning.
-    $newVersion = intval($currentVersion) + 1;
+    $cur = $m[1];
+    $next = (string) (intval($cur) + 1);
 
-    // 2) Replace the version IRI line.
-    $updatedData = preg_replace(
-      $versionPattern,
-      'owl:versionIRI   hadatac:' . $newVersion . ' ;',
-      $originalData,
-      1
-    );
-
-    // 3) Replace the rdfs:label line to match the new version.
+    $updated = preg_replace($pattern, 'owl:versionIRI   hadatac:' . $next . ' ;', $originalData, 1);
     $labelPattern = '/rdfs:label\s+"HADATAC Ontology v\d+"\s*;/';
-    $updatedData = preg_replace(
-      $labelPattern,
-      'rdfs:label       "HADATAC Ontology v' . $newVersion . '" ;',
-      $updatedData,
-      1
-    );
+    $updated = preg_replace($labelPattern, 'rdfs:label       "HADATAC Ontology v' . $next . '" ;', $updated, 1);
 
-    // 4) Prepare directories for archiving.
-    $dirCurrent = 'private://ont/' . $currentVersion;
-    $dirNew     = 'private://ont/' . $newVersion;
-    $fileSystem->prepareDirectory($dirCurrent, FileSystemInterface::CREATE_DIRECTORY);
-    $fileSystem->prepareDirectory($dirNew, FileSystemInterface::CREATE_DIRECTORY);
+    $dirOld = 'private://ont/' . $cur;
+    $dirNew = 'private://ont/' . $next;
+    $fs->prepareDirectory($dirOld, FileSystemInterface::CREATE_DIRECTORY);
+    $fs->prepareDirectory($dirNew, FileSystemInterface::CREATE_DIRECTORY);
 
-    $origDir  = $fileSystem->realpath($dirCurrent);
-    $newDir   = $fileSystem->realpath($dirNew);
-    $baseFile = $fileSystem->realpath('private://ont/' . $filename);
+    file_put_contents($fs->realpath($dirOld) . '/' . $filename, $originalData);
+    file_put_contents($fs->realpath($dirNew) . '/' . $filename, $updated);
+    file_put_contents($fs->realpath('private://ont/' . $filename), $updated);
 
-    // 5) Archive the original file under its version directory.
-    file_put_contents($origDir . '/' . $filename, $originalData);
-
-    // 6) Save the updated ontology into the new version folder and overwrite the base file.
-    file_put_contents($newDir . '/' . $filename, $updatedData);
-    file_put_contents($baseFile, $updatedData);
-
-    // 7) Notify the user of success.
-    $this->messenger()->addStatus(
-      $this->t(
-        'Ontology archived under version @old and updated to version @new.',
-        ['@old' => $currentVersion, '@new' => $newVersion]
-      )
-    );
-
-    // Redirect back to the edit form for this file.
-    $form_state->setRedirectUrl(Url::fromRoute('rep.ont_edit', ['filename' => $filename]));
+    $this->messenger()->addStatus($this->t(
+      'Ontology archived under version @old and updated to version @new.',
+      ['@old' => $cur, '@new' => $next]
+    ));
   }
 }
