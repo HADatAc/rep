@@ -49,8 +49,10 @@ class MapEntryPointsForm extends FormBase {
     }
 
     // Root URI for the LEFT tree, coming from settings.
-    $root_from_settings = (string) \Drupal::config('rep.settings')->get('repository_namespace_url');
-    $root_label         = (string) \Drupal::config('rep.settings')->get('repository_namespace_prefix') ?: $root_from_settings;
+    // $root_from_settings = (string) \Drupal::config('rep.settings')->get('repository_namespace_url');
+    // $root_label         = (string) \Drupal::config('rep.settings')->get('repository_namespace_prefix') ?: $root_from_settings;
+    $root_from_settings = (string) 'http://hadatac.org/ont/hasco/EntryPoint';
+    $root_label         = (string) 'HASCO';
     if ($root_label === '') {
       $root_label = $this->t('Root');
     }
@@ -183,7 +185,11 @@ class MapEntryPointsForm extends FormBase {
       return;
     }
 
-    $tables->saveMapping($entry_point_uri, $selected_node_uri);
+    // $tables->saveMapping($entry_point_uri, $selected_node_uri);
+    $new_map_entry = $selected_node_uri.
+	                        'a refs:Class;
+	                         refs:subClassOf '.$entry_point_uri;
+
 
     $this->messenger()->addStatus($this->t(
       'Saved @node under @ep.',
