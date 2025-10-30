@@ -77,15 +77,6 @@
             ],
         ];
 
-        $form['project_submit'] = [
-            '#type' => 'submit',
-            '#value' => $this->t('Associated Project'),
-            '#name' => 'project',
-            '#attributes' => [
-              'class' => ['btn', 'btn-primary', 'bookmark-button'],
-            ],
-        ];
-
         $form['rep_home'] = [
             '#type' => 'checkbox',
             '#title' => 'Do you want rep to be the home (first page) of the Drupal?',
