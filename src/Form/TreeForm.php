@@ -264,7 +264,7 @@ class TreeForm extends FormBase {
       $branches_param = [
         [
           'id' => 'instrument',
-          'uri' => VSTOI::INSTRUMENT,
+          'uri' =>EntryPoints::EP_INSTRUMENT,
           'label' => 'Instruments',
           'uriNamespace' => Utils::namespaceUri(EntryPoints::EP_INSTRUMENT),
         ],
