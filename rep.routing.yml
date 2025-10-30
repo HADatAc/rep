@@ -293,6 +293,17 @@ rep.admin_preferred_names_custom:
     _admin_route: TRUE
     no_cache: 'TRUE'
 
+rep.admin_associated_project_custom:
+  path: 'admin/config/rep/project'
+  defaults:
+    _form: '\Drupal\rep\Form\REPProjectInfoForm'
+    _title: 'Semantic Repository Project Info Management'
+  requirements:
+    _permission: 'administer site Project Info configuration'
+  options:
+    _admin_route: TRUE
+    no_cache: 'TRUE'
+
 rep.repo_info:
   path: 'rep/repo/info'
   defaults:
