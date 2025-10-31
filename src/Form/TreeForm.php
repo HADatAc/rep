@@ -58,6 +58,12 @@ class TreeForm extends FormBase {
 
     $show_label = $form_state->getValue('show_label') ?? 'label';
 
+    $silent = filter_var($silent, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    if ($silent === null && is_string($silent)) {
+      $silent = strtolower($silent) === 'false' ? false : true;
+    }
+    $prefix = filter_var($prefix, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
+
     // basic validation of parameters
     if (empty($mode) || empty($elementtype)) {
       \Drupal::messenger()->addError($this->t('Invalid parameters provided.'));
@@ -83,6 +89,8 @@ class TreeForm extends FormBase {
       \Drupal::messenger()->addError(t("An element type is required to inspect a concept hierarchy."));
       return [];
     }
+
+    // dpm($elementtype, 'Debug $elementtype received');
 
     //$this->setElementType($elementtype);
 
@@ -145,7 +153,8 @@ class TreeForm extends FormBase {
       [
         'id' => 'entity',
         'uri' => EntryPoints::EP_ENTITY,
-        'label' => 'Entity'
+        'label' => 'Entity',
+        'uriNamespace' => Utils::namespaceUri(EntryPoints::EP_ENTITY),
       ],
       [
         'id' => 'group',
@@ -191,7 +200,7 @@ class TreeForm extends FormBase {
       [
         'id' => 'responseoption',
         'uri' => EntryPoints::EP_RESPONSE_OPTION,
-        'label' => 'Response Option',~
+        'label' => 'Response Option',
         'uriNamespace' => EntryPoints::EP_RESPONSE_OPTION,
       ],
       [
@@ -473,7 +482,8 @@ class TreeForm extends FormBase {
       $auto_close = ($caller !== 'add_task_form');
 
       // dpm($silent, 'Debug $silent'); // Check if silent mode is set
-      if ($silent === "false") {
+      // Mostra o botão quando NÃO está em modo silencioso
+      if ($silent === false) {
         $form['select_node'] = [
           '#type'     => 'inline_template',
           '#template' => '

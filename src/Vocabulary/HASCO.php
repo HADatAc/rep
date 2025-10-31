@@ -67,7 +67,7 @@ use PHPUnit\Event\Application\Started;
     const PUBLIC                        = HASCO::HASCO . "Public";
     const PRIVATE                       = HASCO::HASCO . "Private";
 
-    /* 
+    /*
      *  ENTRY POINTS
      */
 
@@ -77,7 +77,7 @@ use PHPUnit\Event\Application\Started;
     const COMPONENT_STEM_ENTRY_POINT            = HASCO::HASCO . "ComponentStemEntryPoint";
     const COMPONENT_ENTRY_POINT                 = HASCO::HASCO . "ComponentEntryPoint";
     const COMPONENT_ATTRIBUTE_ENTRY_POINT       = HASCO::HASCO . "ComponentAttributeEntryPoint";
-    const ENTITY_ENTRY_POINT                    = HASCO::HASCO . "EntrityEntryPoint";
+    const ENTITY_ENTRY_POINT                    = HASCO::HASCO . "EntityEntryPoint";
     const GROUP_ENTRY_POINT                     = HASCO::HASCO . "GroupEntryPoint";
     const INSTRUMENT_ENTRY_POINT                = HASCO::HASCO . "InstrumentEntryPoint";
     const ORGANIZATION_ENTRY_POINT              = HASCO::HASCO . "OrganizationEntryPoint";
