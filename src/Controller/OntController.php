@@ -16,7 +16,7 @@ class OntController extends ControllerBase {
 
   public function view() {
     // Define the filename to be served.
-    $filename = \Drupal::config('rep.settings')->get('repository_namespace_prefix').'.ttl';
+    $filename = 'hasco.ttl';
 
     $uri = 'private://ont/' . $filename;
 
@@ -44,7 +44,7 @@ class OntController extends ControllerBase {
   public function modify() {
 
     // Define the filename to be served.
-    $filename = \Drupal::config('rep.settings')->get('repository_namespace_prefix').'.ttl';
+    $filename = 'hasco.ttl';
 
     // Resolve private URI to real path.
     $uri = 'private://ont/' . $filename;
@@ -160,8 +160,8 @@ class OntController extends ControllerBase {
     $ttl = preg_replace($pattern, "$prefix$new$suffix", $ttl, 1);
 
     // Update rdfs:label
-    $labelPattern = '/(rdfs:label\s+")HASCO Ontology v[0-9]+\.[0-9]+("\s*;)/';
-    $ttl = preg_replace($labelPattern, "\$1HASCO Ontology v$new\$2", $ttl, 1);
+    // $labelPattern = '/(rdfs:label\s+")HASCO APP Ontology v[0-9]+\.[0-9]+("\s*;)/';
+    // $ttl = preg_replace($labelPattern, "\$1HASCO APP Ontology v$new\$2", $ttl, 1);
 
     // Save
     $uri = 'private://ont/' . $filename;
@@ -177,7 +177,8 @@ class OntController extends ControllerBase {
     $messenger = \Drupal::messenger();
     /** @var \Drupal\rep\ApiConnector $api */
     $api = \Drupal::service('rep.api_connector');
-    $rep_ns = \Drupal::config('rep.settings')->get('repository_namespace_prefix');
+    // $rep_ns = \Drupal::config('rep.settings')->get('repository_namespace_prefix');
+    $rep_ns = 'hasco';
     $res = $api->uploadOntology();
 
     if (!$res || $res->getStatusCode() >= 400) {

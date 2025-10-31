@@ -48,7 +48,8 @@ class OntEditForm extends FormBase {
 
     // ------- From here down we render the editor (only when enabled). -------
 
-    $filename = (string) $config->get('repository_namespace_prefix') . '.ttl';
+    // $filename = (string) $config->get('repository_namespace_prefix') . '.ttl';
+    $filename = (string) 'hasco.ttl';
 
     // Attach your editor libraries.
     $form['#attached']['library'][] = 'rep/rdf_graph_editor';
@@ -155,11 +156,11 @@ class OntEditForm extends FormBase {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     $data = (string) $form_state->getValue('rdf_editor_textarea');
-    $pattern = '/owl:versionIRI\s+hadatac:(\d+(?:\.\d+)?)\s*;/';
+    $pattern = '/owl:versionIRI\s+hasco:(\d+(?:\.\d+)?)\s*;/';
     if (!preg_match($pattern, $data)) {
       $form_state->setErrorByName(
         'rdf_editor_textarea',
-        $this->t('Version IRI not found. Please include a line like: owl:versionIRI   hadatac:1 ;')
+        $this->t('Version IRI not found. Please include a line like: owl:versionIRI   hasco:1 ;')
       );
     }
   }
@@ -172,7 +173,7 @@ class OntEditForm extends FormBase {
     $originalData = (string) $form_state->getValue('rdf_editor_textarea');
     $fs = \Drupal::service('file_system');
 
-    $pattern = '/owl:versionIRI\s+hadatac:(\d+(?:\.\d+)?)\s*;/';
+    $pattern = '/owl:versionIRI\s+hasco:(\d+(?:\.\d+)?)\s*;/';
     if (!preg_match($pattern, $originalData, $m)) {
       $this->messenger()->addError($this->t('Version IRI not found; no changes were saved.'));
       return;
@@ -180,9 +181,9 @@ class OntEditForm extends FormBase {
     $cur = $m[1];
     $next = (string) (intval($cur) + 1);
 
-    $updated = preg_replace($pattern, 'owl:versionIRI   hadatac:' . $next . ' ;', $originalData, 1);
-    $labelPattern = '/rdfs:label\s+"HADATAC Ontology v\d+"\s*;/';
-    $updated = preg_replace($labelPattern, 'rdfs:label       "HADATAC Ontology v' . $next . '" ;', $updated, 1);
+    $updated = preg_replace($pattern, 'owl:versionIRI   hasco:' . $next . ' ;', $originalData, 1);
+    $labelPattern = '/rdfs:label\s+"Hasco APP Ontology v\d+"\s*;/';
+    $updated = preg_replace($labelPattern, 'rdfs:label       "HASCO Ontology v' . $next . '" ;', $updated, 1);
 
     $dirOld = 'private://ont/' . $cur;
     $dirNew = 'private://ont/' . $next;

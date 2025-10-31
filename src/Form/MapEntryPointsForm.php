@@ -6,6 +6,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\Html;
 use Drupal\rep\Entity\Tables;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\SettingsCommand;
@@ -29,6 +30,15 @@ use Drupal\Core\Url;
 class MapEntryPointsForm extends FormBase {
 
   /**
+   * Paths and filenames used for ontology storage and versioning.
+   * Adjust if your OntEditForm uses different conventions.
+   */
+  private const ONT_ROOT_DIR       = 'private://ont';
+  private const ONT_TTL_FILENAME   = 'hasco.ttl';     // root TTL file
+  private const VERSIONS_SUBDIR    = 'versions';          // incremental versions
+  private const VERSION_PREFIX     = 'v';                 // e.g., v0001, v0002, ...
+
+  /**
    * {@inheritdoc}
    */
   public function getFormId() {
@@ -48,9 +58,7 @@ class MapEntryPointsForm extends FormBase {
       return [];
     }
 
-    // Root URI for the LEFT tree, coming from settings.
-    // $root_from_settings = (string) \Drupal::config('rep.settings')->get('repository_namespace_url');
-    // $root_label         = (string) \Drupal::config('rep.settings')->get('repository_namespace_prefix') ?: $root_from_settings;
+    // Root URI for the LEFT tree, coming from settings (example fallback here).
     $root_from_settings = (string) 'http://hadatac.org/ont/hasco/EntryPoint';
     $root_label         = (string) 'HASCO';
     if ($root_label === '') {
@@ -140,7 +148,7 @@ class MapEntryPointsForm extends FormBase {
       'apiEndpoint'         => $base . '/rep/getchildren?_format=json',
       'childParam'          => 'nodeUri',
       'currentRootUri'      => $root_from_settings,
-      'currentRootLabel'    => $root_label, // <— pass label to JS
+      'currentRootLabel'    => $root_label,
     ];
 
     // Hidden fields used on submit.
@@ -175,25 +183,158 @@ class MapEntryPointsForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $tables = new Tables(\Drupal::database());
-
-    $entry_point_uri  = (string) $form_state->getValue('selected_entry_point'); // from LEFT tree
-    $selected_node_uri = (string) $form_state->getValue('selected_node');       // from RIGHT tree
+    $entry_point_uri   = (string) $form_state->getValue('selected_entry_point');
+    $selected_node_uri = (string) $form_state->getValue('selected_node');
 
     if ($selected_node_uri === '') {
       $this->messenger()->addWarning($this->t('No node selected on the right tree.'));
       return;
     }
 
-    // $tables->saveMapping($entry_point_uri, $selected_node_uri);
-    $new_map_entry = $selected_node_uri.
-	                        'a refs:Class;
-	                         refs:subClassOf '.$entry_point_uri;
+    $fs = \Drupal::service('file_system');
 
+    // Ensure ontology root directory exists (argument MUST be passed by reference).
+    $ontRootDir = self::ONT_ROOT_DIR; // <-- use a variable, not a constant directly
+    $fs->prepareDirectory($ontRootDir, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
 
-    $this->messenger()->addStatus($this->t(
-      'Saved @node under @ep.',
-      ['@node' => $selected_node_uri, '@ep' => $entry_point_uri]
-    ));
+    // Resolve TTL file URI and path.
+    $ttl_uri  = self::ONT_ROOT_DIR . '/' . self::ONT_TTL_FILENAME;
+    $ttl_path = $fs->realpath($ttl_uri);
+
+    // If TTL does not exist, create an empty file with a header marker.
+    if (!file_exists($ttl_path)) {
+      $header = "# Ontology file created by MapEntryPointsForm\n";
+      file_put_contents($ttl_path, $header);
+    }
+
+    // Read current TTL content (used for @prefix check and version backup).
+    $ttl_content_before = file_get_contents($ttl_path);
+
+    // Create an incremental version folder and copy the current TTL there.
+    try {
+      $version_dir_uri = $this->createIncrementalVersionDirectory(self::ONT_ROOT_DIR, self::VERSIONS_SUBDIR);
+      $fs->copy($ttl_uri, $version_dir_uri . '/' . self::ONT_TTL_FILENAME, FileSystemInterface::EXISTS_REPLACE);
+    } catch (\Throwable $e) {
+      $this->messenger()->addWarning($this->t('Versioning failed. Proceeding to write the mapping. Error: @e', ['@e' => $e->getMessage()]));
+    }
+
+    // Build Turtle entry.
+    $subject = $this->formatTurtleTerm($selected_node_uri);
+    $object  = $this->formatTurtleTerm($entry_point_uri);
+
+    $new_map_entry  = "\n# --- Mapping appended by MapEntryPointsForm ---\n";
+    $new_map_entry .= $subject . "\n\ta rdfs:Class;";
+    $new_map_entry .= "\n\trdfs:subClassOf " . $object . " .\n";
+
+    // Prefix check for selected_node_uri.
+    $missing_prefix_warning = '';
+    $maybe_prefix = $this->extractCompactPrefix($selected_node_uri);
+    if ($maybe_prefix !== null && !$this->ttlHasPrefix($ttl_content_before, $maybe_prefix)) {
+      $missing_prefix_warning = $this->t('Heads up: prefix "@p:" was NOT found in the @prefix header. The mapping was saved, but you must add that @prefix to the TTL file manually.', ['@p' => $maybe_prefix]);
+    }
+
+    // Append mapping.
+    $ok = (bool) file_put_contents($ttl_path, $new_map_entry, FILE_APPEND | LOCK_EX);
+
+    if ($ok) {
+      $this->messenger()->addStatus($this->t(
+        'Mapping saved: @node -> @ep (appended at the end of @file).',
+        ['@node' => $selected_node_uri, '@ep' => $entry_point_uri, '@file' => self::ONT_TTL_FILENAME]
+      ));
+      if ($missing_prefix_warning) {
+        $this->messenger()->addWarning($missing_prefix_warning);
+      }
+    } else {
+      $this->messenger()->addError($this->t('Failed to append the mapping to the TTL file.'));
+    }
   }
+
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Format a Turtle term:
+   * - If it looks like a full URI (http(s):// or urn:), wrap with <...>
+   * - Otherwise, return as-is (assumed CURIE or QName with a known prefix).
+   */
+  private function formatTurtleTerm(string $term): string {
+    $t = trim($term);
+    if (preg_match('#^(https?://|urn:)#i', $t)) {
+      // Avoid double-wrapping if user already provided <...>
+      if ($t[0] !== '<') {
+        return '<' . $t . '>';
+      }
+      return $t;
+    }
+    // Likely a prefixed name like envo:Class
+    return $t;
+  }
+
+  /**
+   * If the term is a compact prefixed name (e.g., envo:Something) and NOT a
+   * full URI, returns the prefix (e.g., "envo"). Otherwise returns null.
+   */
+  private function extractCompactPrefix(string $term): ?string {
+    $t = trim($term);
+    // Ignore full URIs
+    if (stripos($t, '://') !== false) {
+      return null;
+    }
+    // Match prefix:suffix (where prefix starts with a letter or underscore)
+    if (preg_match('/^([A-Za-z_][A-Za-z0-9_\-]*)\:/', $t, $m)) {
+      return $m[1];
+    }
+    return null;
+  }
+
+  /**
+   * Searches the TTL content for an @prefix declaration of the given prefix.
+   * Loose match: "@prefix <prefix>:" at the beginning of a line (ignoring spaces).
+   */
+  private function ttlHasPrefix(string $ttlContent, string $prefix): bool {
+    $pattern = '/^\s*@prefix\s+' . preg_quote($prefix, '/') . '\s*\:/mi';
+    return (bool) preg_match($pattern, $ttlContent);
+  }
+
+  /**
+   * Create the next incremental version directory under the ontology root.
+   * Example structure:
+   *   private://ont/versions/v0001/
+   *   private://ont/versions/v0002/
+   *
+   * Returns the created directory URI (e.g., "private://ont/versions/v0003").
+   */
+  private function createIncrementalVersionDirectory(string $ontRootUri, string $versionsSubdir): string {
+    $fs = \Drupal::service('file_system');
+
+    // Ensure versions base directory exists: private://ont/versions
+    $versions_base = rtrim($ontRootUri, '/') . '/' . trim($versionsSubdir, '/');
+    $versionsBaseRef = $versions_base; // pass-by-ref requirement
+    $fs->prepareDirectory($versionsBaseRef, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+
+    $real_versions_base = $fs->realpath($versions_base);
+    $entries = @scandir($real_versions_base) ?: [];
+    $max = 0;
+    foreach ($entries as $entry) {
+      if (preg_match('/^' . preg_quote(self::VERSION_PREFIX, '/') . '(\d{4})$/', $entry, $m)) {
+        $n = (int) $m[1];
+        if ($n > $max) {
+          $max = $n;
+        }
+      }
+    }
+    $next = $max + 1;
+    $version_dir_name = self::VERSION_PREFIX . str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+    $version_dir_uri  = $versions_base . '/' . $version_dir_name;
+
+    // Create that specific version directory (again, pass a variable by ref).
+    $versionDirRef = $version_dir_uri;
+    $fs->prepareDirectory($versionDirRef, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+
+    return $version_dir_uri;
+  }
+
+
 }

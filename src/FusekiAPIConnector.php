@@ -2712,7 +2712,7 @@ class FusekiAPIConnector {
     $config = \Drupal::config('rep.settings');
     $guesser = \Drupal::service('file.mime_type.guesser');
 
-    $ns = (string) $config->get('repository_namespace_prefix');
+    $ns = (string) 'hasco';
     $private_uri = 'private://ont/' . $ns . '.ttl';
     $path = $file_system->realpath($private_uri);
 
