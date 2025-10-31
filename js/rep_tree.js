@@ -769,6 +769,78 @@
           });
         }
 
+        // Build a jsTree node object from a backend item, preserving your status/label rules.
+        function buildChildNode(item, parentNode, hideDraft, hideDeprecated) {
+          var prefixed = namespacePrefixUri(item.uri);
+          var parentIdSafe = sanitizeForId(parentNode.id);
+          var childIdSafe  = sanitizeForId(item.uri);
+
+          var nodeObj = {
+            id: 'node_' + parentIdSafe + '_' + childIdSafe,
+            text: setNodeText(item),
+            label: item.label,
+            uri: item.uri,
+            typeNamespace: item.typeNamespace || '',
+            comment: item.comment || '',
+            data: {
+              originalLabel: item.label + setTitleSuffix(item),
+              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSuffix(item),
+              originalUri: item.uri + setTitleSuffix(item),
+              originalPrefixUri: namespaceUri(item.uri) + setTitleSuffix(item),
+              prefix: prefixed,
+              comment: item.comment || '',
+              typeNamespace: item.typeNamespace || '',
+              hasWebDocument: item.hasWebDocument,
+              hasImageUri: item.hasImageUri,
+              realUri: item.uri
+            },
+            icon: 'fas fa-file-alt',
+            hasStatus: item.hasStatus,
+            hasSIRManagerEmail: item.hasSIRManagerEmail,
+            hasWebDocument: item.hasWebDocument,
+            hasImageUri: item.hasImageUri,
+            children: true,
+            skip: false
+          };
+
+          // --- status decoration (unchanged from your code) ---
+          var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
+          var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
+          var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
+
+          if (item.hasStatus === DEPRECATED_URI) {
+            if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+              nodeObj.skip = true;
+            } else {
+              nodeObj.text += ' (Deprecated)';
+              nodeObj.a_attr = (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail)
+                ? { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' }
+                : { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
+            }
+          } else if (item.hasStatus === DRAFT_URI) {
+            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+              nodeObj.skip = true;
+            } else {
+              nodeObj.text += ' (Draft)';
+              nodeObj.a_attr = (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail)
+                ? { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' }
+                : { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
+            }
+          } else if (item.hasStatus === UNDERREVIEW_URI) {
+            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
+              nodeObj.skip = true;
+            } else {
+              nodeObj.text += ' (Under Review)';
+              nodeObj.a_attr = (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail)
+                ? { style: 'font-style: italic; color:rgb(172, 164, 164);' }
+                : { style: 'font-style: italic; color:rgba(206, 103, 19, 0.77);' };
+            }
+          }
+
+          return nodeObj;
+        }
+
+
         // --------------------------------------------------------------
         // resetTree()
         //    - Destroys/recreates jsTree in “top-level only” state.
@@ -825,107 +897,75 @@
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-                      // console.log("[tree] resetTree AJAX success for children of", node.original.uri, "→ items.length =", data.length);
-                      var temp = [];
-                      var seen = new Set();
-                      data.forEach(function (item) {
-                        var normalizedUri = item.uri.trim().toLowerCase();
-                        if (!seen.has(normalizedUri)) {
-                          seen.add(normalizedUri);
+  // NOTE: if the expanded node is a top-level branch (node.parent === '#')
+  // we may "promote" one level to skip the duplicated child.
+  var isTopLevelBranch = (node.parent === '#');
+  var shouldPromote = false;
+  var promotionTargetUri = null;
 
-                          var prefixed = namespacePrefixUri(item.uri);
-                          var nodeObj = {
-                            id: 'node_' + sanitizeForId(item.uri),
-                            text: setNodeText(item),
-                            label: item.label,
-                            uri: item.uri,
-                            typeNamespace: item.typeNamespace || '',
-                            comment: item.comment || '',
-                            data: {
-                              originalLabel: item.label + setTitleSuffix(item),
-                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSuffix(item),
-                              originalUri: item.uri + setTitleSuffix(item),
-                              originalPrefixUri: namespaceUri(item.uri) + setTitleSuffix(item),
-                              prefix: prefixed,
-                              comment: item.comment || '',
-                              typeNamespace: item.typeNamespace || '',
-                              hasWebDocument: item.hasWebDocument,
-                              hasImageUri: item.hasImageUri
-                            },
-                            icon: 'fas fa-file-alt',
-                            hasStatus: item.hasStatus,
-                            hasSIRManagerEmail: item.hasSIRManagerEmail,
-                            hasWebDocument: item.hasWebDocument,
-                            hasImageUri: item.hasImageUri,
-                            children: true,
-                            skip: false
-                          };
+  if (isTopLevelBranch && Array.isArray(data) && data.length > 0) {
+    var first = data[0];
 
-                          // monta um ID único combinando pai + filho
-                          var parentIdSafe = sanitizeForId(node.id);
-                          var childIdSafe  = sanitizeForId(item.uri);
-                          nodeObj.id = 'node_' + parentIdSafe + '_' + childIdSafe;
+    // --- NEW: safe helpers for comparison ---
+    var rootUri   = (node.original && node.original.uri)   ? node.original.uri   : null;
+    var rootLabel = (node.original && node.original.label) ? node.original.label : (node.text || '');
+    var childSup  = (first && first.superUri) ? first.superUri : null;
+    var childLbl  = (first && first.label)    ? first.label    : '';
 
-                          // preserve a URI real em data
-                          nodeObj.data = nodeObj.data || {};
-                          nodeObj.data.realUri = item.uri;
+    // --- PROMOTION RULE ---
+    // Promote if:
+    //  (A) child's superUri equals root uri
+    //   OR
+    //  (B) child's label equals root label (case/space trimmed)
+    if (
+      (childSup && rootUri && childSup === rootUri) ||
+      (String(childLbl).trim() !== '' &&
+       String(rootLabel).trim() !== '' &&
+       String(childLbl).trim() === String(rootLabel).trim())
+    ) {
+      shouldPromote = true;
+      promotionTargetUri = first.uri; // we will fetch grandchildren of this child
+    }
+  }
 
-                          var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
-                          var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
-                          var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
+  // Helper to convert items to jsTree nodes and return them.
+  function processAndReturn(list) {
+    var temp = [];
+    var seen = new Set();
+    (list || []).forEach(function (item) {
+      var key = (item.uri || '').trim().toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
 
-                          // Apply hideDeprecated/hideDraft to each child node
-                          if (item.hasStatus === DEPRECATED_URI) {
-                            if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
-                            } else {
-                              nodeObj.text += ' (Deprecated)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
-                              }
-                            }
-                          } else if (item.hasStatus === DRAFT_URI) {
-                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
-                            } else {
-                              nodeObj.text += ' (Draft)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
-                              }
-                            }
-                          } else if (item.hasStatus === UNDERREVIEW_URI) {
-                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
-                            } else {
-                              nodeObj.text += ' (Under Review)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgb(172, 164, 164);' };
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(206, 103, 19, 0.77);' };
-                              }
-                            }
-                          }
+      var nodeObj = buildChildNode(item, node, hideDraft, hideDeprecated);
+      if (!nodeObj.skip) temp.push(nodeObj);
+    });
+    cb(temp);
+  }
 
-                          if (!nodeObj.skip) {
-                            temp.push(nodeObj);
-                          }
-                        }
-                      });
-                      // console.log("[tree] resetTree → children data length =", temp.length);
-                      cb(temp);
-                    },
+  if (shouldPromote && promotionTargetUri) {
+    // Second hop: fetch grandchildren from promoted child.
+    $.ajax({
+      url: drupalSettings.rep_tree.apiEndpoint,
+      type: 'GET',
+      data: { nodeUri: promotionTargetUri },
+      dataType: 'json',
+      success: function (grandchildren) {
+        processAndReturn(grandchildren);
+      },
+      error: function () {
+        console.warn('[tree] promotion hop failed for', promotionTargetUri, '→ falling back to original children.');
+        processAndReturn(data);
+      }
+    });
+  } else {
+    // Normal path.
+    processAndReturn(data);
+  }
+},
+
                     error: function () {
-                      console.error("[tree] resetTree: error fetching children for", node.original.uri);
+                      console.error("[tree] jsTree error fetching children for", node.original.uri);
                       cb([]);
                     }
                   });
@@ -1123,99 +1163,72 @@
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-                      // console.log("[tree] jsTree AJAX success for children of", node.original.uri, ": items.length =", data.length);
-                      var temp = [];
-                      var seen = new Set();
-                      data.forEach(function (item) {
-                        var normalizedUri = item.uri.trim().toLowerCase();
-                        if (!seen.has(normalizedUri)) {
-                          seen.add(normalizedUri);
-                          var prefixed = namespacePrefixUri(item.uri);
-                          var parentIdSafe = sanitizeForId(node.id);
-                          var childIdSafe  = sanitizeForId(item.uri);
-                          var nodeObj = {
-                            id: 'node_' + parentIdSafe + '_' + childIdSafe,
-                            text: setNodeText(item),
-                            label: item.label,
-                            uri: item.uri,
-                            typeNamespace: item.typeNamespace || '',
-                            comment: item.comment || '',
-                            data: {
-                              originalLabel: item.label + setTitleSuffix(item),
-                              originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSuffix(item),
-                              originalUri: item.uri + setTitleSuffix(item),
-                              originalPrefixUri: namespaceUri(item.uri) + setTitleSuffix(item),
-                              prefix: prefixed,
-                              comment: item.comment || '',
-                              typeNamespace: item.typeNamespace || '',
-                              hasWebDocument: item.hasWebDocument,
-                              hasImageUri: item.hasImageUri
-                            },
-                            icon: 'fas fa-file-alt',
-                            hasStatus: item.hasStatus,
-                            hasSIRManagerEmail: item.hasSIRManagerEmail,
-                            hasWebDocument: item.hasWebDocument,
-                            hasImageUri: item.hasImageUri,
-                            children: true,
-                            skip: false
-                          };
+  // NOTE: if the expanded node is a top-level branch (node.parent === '#')
+  // we may "promote" one level to skip the duplicated child.
+  var isTopLevelBranch = (node.parent === '#');
+  var shouldPromote = false;
+  var promotionTargetUri = null;
 
-                          var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
-                          var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
-                          var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
+  if (isTopLevelBranch && Array.isArray(data) && data.length > 0) {
+    var first = data[0];
 
-                          if (item.hasStatus === DEPRECATED_URI) {
-                            if (hideDeprecated && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
-                            } else {
-                              nodeObj.text += ' (Deprecated)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(141, 141, 141, 0.77);' };
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
-                              }
-                            }
-                          } else if (item.hasStatus === DRAFT_URI) {
-                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
-                            } else {
-                              nodeObj.text += ' (Draft)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(153, 0, 0, 0.77);' };
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(109, 18, 112, 0.77);' };
-                              }
-                            }
-                          } else if (item.hasStatus === UNDERREVIEW_URI) {
-                            if (hideDraft && drupalSettings.rep_tree.managerEmail !== item.hasSIRManagerEmail) {
-                              nodeObj.skip = true;
-                            } else {
-                              nodeObj.text += ' (Under Review)';
-                              if (drupalSettings.rep_tree.managerEmail === item.hasSIRManagerEmail) {
-                                nodeObj.text += ' (' + drupalSettings.rep_tree.username + ')';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgb(172, 164, 164);' };
-                              } else {
-                                nodeObj.text += ' (Another Person)';
-                                nodeObj.a_attr = { style: 'font-style: italic; color:rgba(206, 103, 19, 0.77);' };
-                              }
-                            }
-                          }
+    // --- NEW: safe helpers for comparison ---
+    var rootUri   = (node.original && node.original.uri)   ? node.original.uri   : null;
+    var rootLabel = (node.original && node.original.label) ? node.original.label : (node.text || '');
+    var childSup  = (first && first.superUri) ? first.superUri : null;
+    var childLbl  = (first && first.label)    ? first.label    : '';
 
-                          nodeObj.data = nodeObj.data || {};
-                          nodeObj.data.realUri = item.uri;
+    // --- PROMOTION RULE ---
+    // Promote if:
+    //  (A) child's superUri equals root uri
+    //   OR
+    //  (B) child's label equals root label (case/space trimmed)
+    if (
+      (childSup && rootUri && childSup === rootUri) ||
+      (String(childLbl).trim() !== '' &&
+       String(rootLabel).trim() !== '' &&
+       String(childLbl).trim() === String(rootLabel).trim())
+    ) {
+      shouldPromote = true;
+      promotionTargetUri = first.uri; // we will fetch grandchildren of this child
+    }
+  }
 
-                          if (!nodeObj.skip) {
-                            temp.push(nodeObj);
-                          }
-                        }
-                      });
-                      // console.log("[tree] jsTree children data length =", temp.length);
-                      cb(temp);
-                    },
+  // Helper to convert items to jsTree nodes and return them.
+  function processAndReturn(list) {
+    var temp = [];
+    var seen = new Set();
+    (list || []).forEach(function (item) {
+      var key = (item.uri || '').trim().toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      var nodeObj = buildChildNode(item, node, hideDraft, hideDeprecated);
+      if (!nodeObj.skip) temp.push(nodeObj);
+    });
+    cb(temp);
+  }
+
+  if (shouldPromote && promotionTargetUri) {
+    // Second hop: fetch grandchildren from promoted child.
+    $.ajax({
+      url: drupalSettings.rep_tree.apiEndpoint,
+      type: 'GET',
+      data: { nodeUri: promotionTargetUri },
+      dataType: 'json',
+      success: function (grandchildren) {
+        processAndReturn(grandchildren);
+      },
+      error: function () {
+        console.warn('[tree] promotion hop failed for', promotionTargetUri, '→ falling back to original children.');
+        processAndReturn(data);
+      }
+    });
+  } else {
+    // Normal path.
+    processAndReturn(data);
+  }
+},
                     error: function () {
                       console.error("[tree] jsTree error fetching children for", node.original.uri);
                       cb([]);
