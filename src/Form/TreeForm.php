@@ -115,6 +115,10 @@ class TreeForm extends FormBase {
       'unit' => ["Unit", EntryPoints::EP_UNIT],
       'componentattribute' => ["Component Attribute", EntryPoints::EP_COMPONENT_ATTRIBUTE],
       'component' => ["Component", EntryPoints::EP_COMPONENT],
+
+      'person' => ["Person", EntryPoints::EP_PERSON],
+      'place' => ["Place", EntryPoints::EP_PLACE],
+      'organization' => ["Organization", EntryPoints::EP_ORGANIZATION],
     ];
 
     $branches_param = [
