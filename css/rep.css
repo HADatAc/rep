@@ -849,6 +849,21 @@ div.toast {
 }
 
 /* TREE */
+.treeMO {
+  max-height:425px!important;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 0!important;
+}
+
+.treeMOL {
+  min-height:505px;
+  max-height:505px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 0!important;
+}
+
 #block-hasco-barrio-content form.tree-form{
   padding-left:5px;
   max-width: 1360px !important;

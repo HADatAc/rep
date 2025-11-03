@@ -11,6 +11,9 @@ use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\SettingsCommand;
 use Drupal\Core\Url;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Drupal\rep\Controller\OntController;
 
 /**
  * Form to browse an ontology and save a mapping.
@@ -96,7 +99,7 @@ class MapEntryPointsForm extends FormBase {
       '#markup' => '<div id="current-tree"'
         . ' data-root-uri="' . Html::escape($root_from_settings) . '"'
         . ' data-root-label="' . Html::escape($root_label) . '"'
-        . ' class="border border-1 p-2" style="min-height:300px"></div>',
+        . ' class="border border-1 p-2 treeMOL"></div>',
     ];
 
     // RIGHT column: namespace selector + load button + tree.
@@ -111,13 +114,13 @@ class MapEntryPointsForm extends FormBase {
 
     $form['row']['right_col']['namespace'] = [
       '#type'          => 'select',
-      '#title'         => $this->t('Ontology Namespace'),
+      // '#title'         => $this->t('Ontology Namespace'),
       '#description'   => $this->t('Select the base namespace to explore on the right.'),
       '#empty_option'  => $this->t('Select…'),
       '#options'       => $ns_options,
       '#default_value' => $selected_ns,
       '#attributes'    => ['class' => ['map-ontology-select']],
-      '#prefix'        => '<div class="col-md-5">',
+      '#prefix'        => '<div class="col-md-8">',
       '#suffix'        => '</div>',
     ];
 
@@ -125,19 +128,21 @@ class MapEntryPointsForm extends FormBase {
       '#type'       => 'button',
       '#value'      => $this->t('Load Ontology Tree'),
       '#attributes' => [
-        'style' => 'margin-bottom:20px;',
+        'style' => 'margin-bottom:35px',
         'class' => ['btn'],
         'id'    => 'edit-load-tree',
       ],
-      '#prefix'     => '<div class="col-md-3 align-self-center">',
+      '#prefix'     => '<div class="col-md-4 align-self-center">',
       '#suffix'     => '</div>',
     ];
 
     $form['row']['right_col']['ontology_tree'] = [
       '#type'   => 'markup',
-      '#markup' => '<div id="ontology-tree" class="border p-2" style="min-height:300px"></div>',
+      '#markup' => '<div id="ontology-tree" class="border pt-2 ps-2 pe-2 pb-0 treeMO"></div>',
       '#prefix' => '<div class="col-md-12">',
       '#suffix' => '</div>',
+      '#wrapper_attributes' => ['style' => "min-height:300px; max-height:500px;"],
+      '#attributes' => ['style' => 'min-height:300px; max-height:500px'],
     ];
 
     $tables = new Tables;
@@ -240,13 +245,24 @@ class MapEntryPointsForm extends FormBase {
     $ok = (bool) file_put_contents($ttl_path, $new_map_entry, FILE_APPEND | LOCK_EX);
 
     if ($ok) {
-      $this->messenger()->addStatus($this->t(
-        'Mapping saved: @node -> @ep (appended at the end of @file).',
-        ['@node' => $selected_node_uri, '@ep' => $entry_point_uri, '@file' => self::ONT_TTL_FILENAME]
-      ));
+
+      // --- Dispara a ingestão via sub-request à route rep.ont_injest ---
+      try {
+        $ontController = new OntController();
+        $ontController->injest();
+      }
+      catch (\Throwable $e) {
+        $this->messenger()->addWarning($this->t('Error failed Auto Ingestion: @msg', ['@msg' => $e->getMessage()]));
+      }
+
+      // $this->messenger()->addStatus($this->t(
+      //   'Mapping saved: @node -> @ep (appended at the end of @file).',
+      //   ['@node' => $selected_node_uri, '@ep' => $entry_point_uri, '@file' => self::ONT_TTL_FILENAME]
+      // ));
       if ($missing_prefix_warning) {
         $this->messenger()->addWarning($missing_prefix_warning);
       }
+
     } else {
       $this->messenger()->addError($this->t('Failed to append the mapping to the TTL file.'));
     }
