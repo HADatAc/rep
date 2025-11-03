@@ -783,7 +783,7 @@
             typeNamespace: item.typeNamespace || '',
             comment: item.comment || '',
             data: {
-              originalLabel: item.label + setTitleSuffix(item),
+              originalLabel: "xxxx" + item.label + setTitleSuffix(item),
               originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSuffix(item),
               originalUri: item.uri + setTitleSuffix(item),
               originalPrefixUri: namespaceUri(item.uri) + setTitleSuffix(item),
@@ -802,6 +802,8 @@
             children: true,
             skip: false
           };
+
+          nodeObj.text += " [" + namespaceUri(item.uri) + "]"
 
           // --- status decoration (unchanged from your code) ---
           var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
@@ -1163,72 +1165,72 @@
                     data: { nodeUri: node.original.uri },
                     dataType: 'json',
                     success: function (data) {
-  // NOTE: if the expanded node is a top-level branch (node.parent === '#')
-  // we may "promote" one level to skip the duplicated child.
-  var isTopLevelBranch = (node.parent === '#');
-  var shouldPromote = false;
-  var promotionTargetUri = null;
+                      // NOTE: if the expanded node is a top-level branch (node.parent === '#')
+                      // we may "promote" one level to skip the duplicated child.
+                      var isTopLevelBranch = (node.parent === '#');
+                      var shouldPromote = false;
+                      var promotionTargetUri = null;
 
-  if (isTopLevelBranch && Array.isArray(data) && data.length > 0) {
-    var first = data[0];
+                      if (isTopLevelBranch && Array.isArray(data) && data.length > 0) {
+                        var first = data[0];
 
-    // --- NEW: safe helpers for comparison ---
-    var rootUri   = (node.original && node.original.uri)   ? node.original.uri   : null;
-    var rootLabel = (node.original && node.original.label) ? node.original.label : (node.text || '');
-    var childSup  = (first && first.superUri) ? first.superUri : null;
-    var childLbl  = (first && first.label)    ? first.label    : '';
+                        // --- NEW: safe helpers for comparison ---
+                        var rootUri   = (node.original && node.original.uri)   ? node.original.uri   : null;
+                        var rootLabel = (node.original && node.original.label) ? node.original.label : (node.text || '');
+                        var childSup  = (first && first.superUri) ? first.superUri : null;
+                        var childLbl  = (first && first.label)    ? first.label    : '';
 
-    // --- PROMOTION RULE ---
-    // Promote if:
-    //  (A) child's superUri equals root uri
-    //   OR
-    //  (B) child's label equals root label (case/space trimmed)
-    if (
-      (childSup && rootUri && childSup === rootUri) ||
-      (String(childLbl).trim() !== '' &&
-       String(rootLabel).trim() !== '' &&
-       String(childLbl).trim() === String(rootLabel).trim())
-    ) {
-      shouldPromote = true;
-      promotionTargetUri = first.uri; // we will fetch grandchildren of this child
-    }
-  }
+                        // --- PROMOTION RULE ---
+                        // Promote if:
+                        //  (A) child's superUri equals root uri
+                        //   OR
+                        //  (B) child's label equals root label (case/space trimmed)
+                        if (
+                          (childSup && rootUri && childSup === rootUri) ||
+                          (String(childLbl).trim() !== '' &&
+                          String(rootLabel).trim() !== '' &&
+                          String(childLbl).trim() === String(rootLabel).trim())
+                        ) {
+                          shouldPromote = true;
+                          promotionTargetUri = first.uri; // we will fetch grandchildren of this child
+                        }
+                      }
 
-  // Helper to convert items to jsTree nodes and return them.
-  function processAndReturn(list) {
-    var temp = [];
-    var seen = new Set();
-    (list || []).forEach(function (item) {
-      var key = (item.uri || '').trim().toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
+                      // Helper to convert items to jsTree nodes and return them.
+                      function processAndReturn(list) {
+                        var temp = [];
+                        var seen = new Set();
+                        (list || []).forEach(function (item) {
+                          var key = (item.uri || '').trim().toLowerCase();
+                          if (seen.has(key)) return;
+                          seen.add(key);
 
-      var nodeObj = buildChildNode(item, node, hideDraft, hideDeprecated);
-      if (!nodeObj.skip) temp.push(nodeObj);
-    });
-    cb(temp);
-  }
+                          var nodeObj = buildChildNode(item, node, hideDraft, hideDeprecated);
+                          if (!nodeObj.skip) temp.push(nodeObj);
+                        });
+                        cb(temp);
+                      }
 
-  if (shouldPromote && promotionTargetUri) {
-    // Second hop: fetch grandchildren from promoted child.
-    $.ajax({
-      url: drupalSettings.rep_tree.apiEndpoint,
-      type: 'GET',
-      data: { nodeUri: promotionTargetUri },
-      dataType: 'json',
-      success: function (grandchildren) {
-        processAndReturn(grandchildren);
-      },
-      error: function () {
-        console.warn('[tree] promotion hop failed for', promotionTargetUri, '→ falling back to original children.');
-        processAndReturn(data);
-      }
-    });
-  } else {
-    // Normal path.
-    processAndReturn(data);
-  }
-},
+                      if (shouldPromote && promotionTargetUri) {
+                        // Second hop: fetch grandchildren from promoted child.
+                        $.ajax({
+                          url: drupalSettings.rep_tree.apiEndpoint,
+                          type: 'GET',
+                          data: { nodeUri: promotionTargetUri },
+                          dataType: 'json',
+                          success: function (grandchildren) {
+                            processAndReturn(grandchildren);
+                          },
+                          error: function () {
+                            console.warn('[tree] promotion hop failed for', promotionTargetUri, '→ falling back to original children.');
+                            processAndReturn(data);
+                          }
+                        });
+                      } else {
+                        // Normal path.
+                        processAndReturn(data);
+                      }
+                    },
                     error: function () {
                       console.error("[tree] jsTree error fetching children for", node.original.uri);
                       cb([]);

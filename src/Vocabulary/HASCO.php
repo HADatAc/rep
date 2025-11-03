@@ -85,7 +85,7 @@ use PHPUnit\Event\Application\Started;
     const PLACE_ENTRY_POINT                     = HASCO::HASCO . "PlaceEntryPoint";
     const PLATFORM_ENTRY_POINT                  = HASCO::HASCO . "PlatformEntryPoint";
     const WORKFLOW_STEM_ENTRY_POINT             = HASCO::HASCO . "WorkflowEntryPoint";
-    const QUESTIONNAIRE_ENTRY_POINT             = HASCO::HASCO . "QuestionnaireEntryPoint";
+    // const QUESTIONNAIRE_ENTRY_POINT             = HASCO::HASCO . "QuestionnaireEntryPoint";
     const RESPONSE_OPTION_ENTRY_POINT           = HASCO::HASCO . "ResponseOptionEntryPoint";
     const STUDY_ENTRY_POINT                     = HASCO::HASCO . "StudyEntryPoint";
     const TASK_ENTRY_POINT                      = HASCO::HASCO . "TaskEntryPoint";

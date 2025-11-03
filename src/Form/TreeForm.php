@@ -107,7 +107,7 @@ class TreeForm extends FormBase {
       'place' => ["Place", EntryPoints::EP_PLACE],
       'platform' => ["Platform", EntryPoints::EP_PLATFORM],
       'workflowstem' => ["Workflow Stem", EntryPoints::EP_WORKFLOW_STEM],
-      'questionnaire' => ["Questionnaire", EntryPoints::EP_QUESTIONNAIRE],
+      // 'questionnaire' => ["Questionnaire", EntryPoints::EP_QUESTIONNAIRE],
       'responseoption' => ["Response Option", EntryPoints::EP_RESPONSE_OPTION],
       'study' => ["Study", EntryPoints::EP_STUDY],
       'task' => ["Task Type", EntryPoints::EP_TASK],
@@ -195,12 +195,12 @@ class TreeForm extends FormBase {
         'label' => 'Workflow Stem',
         'uriNamespace' => EntryPoints::EP_WORKFLOW_STEM
       ],
-      [
-        'id' => 'questionnaire',
-        'uri' => EntryPoints::EP_QUESTIONNAIRE,
-        'label' => 'Questionnaire',
-        'uriNamespace' => EntryPoints::EP_QUESTIONNAIRE,
-      ],
+      // [
+      //   'id' => 'questionnaire',
+      //   'uri' => EntryPoints::EP_QUESTIONNAIRE,
+      //   'label' => 'Questionnaire',
+      //   'uriNamespace' => EntryPoints::EP_QUESTIONNAIRE,
+      // ],
       [
         'id' => 'responseoption',
         'uri' => EntryPoints::EP_RESPONSE_OPTION,
