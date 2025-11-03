@@ -58,7 +58,7 @@
                 const items = (data || []).map(item => {
                   const real  = item.uri;
                   const id    = 'node_' + sanitizeForId(rootUri) + '_' + sanitizeForId(real);
-                  const label = item.label || extractLabel(real);
+                  const label = item.label +" ["+namespaceUri(item.uri) +"]" || extractLabel(real);
                   return { id, text: label, children: true, data: { realUri: real } };
                 });
                 cb(items);
@@ -73,7 +73,7 @@
               const children = (data || []).map(item => {
                 const real  = item.uri;
                 const id    = 'node_' + sanitizeForId(parentReal) + '_' + sanitizeForId(real);
-                const label = item.label || extractLabel(real);
+                const label = item.label + " ["+namespaceUri(item.uri) +"]" || extractLabel(real);
                 return { id, text: label, children: true, data: { realUri: real } };
               });
               cb(children);
@@ -172,5 +172,18 @@
         });
     }
   };
+
+  function namespaceUri(uri) {
+    // Given a full URI, return a prefixed form if it matches a known namespace
+    var namespaces = (drupalSettings.repMap && drupalSettings.repMap.nameSpacesList) || {};
+    for (var abbrev in namespaces) {
+      if (!namespaces.hasOwnProperty(abbrev)) continue;
+      var ns = namespaces[abbrev];
+      if (abbrev && ns && uri.startsWith(ns)) {
+        return abbrev + ":" + uri.slice(ns.length);
+      }
+    }
+    return uri;
+  }
 
 })(jQuery, Drupal, drupalSettings);

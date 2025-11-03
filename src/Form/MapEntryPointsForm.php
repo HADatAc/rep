@@ -140,6 +140,8 @@ class MapEntryPointsForm extends FormBase {
       '#suffix' => '</div>',
     ];
 
+    $tables = new Tables;
+
     // Attach JS library and pass endpoints/settings to JS.
     $base = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
     $form['#attached']['library'][] = 'rep/map_entry_points';
@@ -149,6 +151,7 @@ class MapEntryPointsForm extends FormBase {
       'childParam'          => 'nodeUri',
       'currentRootUri'      => $root_from_settings,
       'currentRootLabel'    => $root_label,
+      'nameSpacesList' => $tables->getNamespaces(),
     ];
 
     // Hidden fields used on submit.
