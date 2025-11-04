@@ -125,11 +125,11 @@ class MapEntryPointsForm extends FormBase {
     ];
 
     $form['row']['right_col']['load_tree'] = [
-      '#type'       => 'button',
+      '#type'       => 'submit',
       '#value'      => $this->t('Load Ontology Tree'),
       '#attributes' => [
         'style' => 'margin-bottom:35px',
-        'class' => ['btn'],
+        'class' => ['btn', 'load-more-button'],
         'id'    => 'edit-load-tree',
       ],
       '#prefix'     => '<div class="col-md-4 align-self-center">',
@@ -182,23 +182,27 @@ class MapEntryPointsForm extends FormBase {
       '#type'        => 'submit',
       '#value'       => $this->t('Save Mappings'),
       '#button_type' => 'primary',
+      '#attributes'  => [
+        'id'    => 'rep-map-entry-points-submit',
+        'class' => ['save-button'],
+      ],
     ];
 
     $form['row']['actions']['ingest_application_ontology'] = [
       '#type' => 'link',
-      '#title' => $this->t('Ingest Application Ontology'),
+      '#title' => $this->t('Ingest App Ontology'),
       '#url' => Url::fromRoute('rep.ont_injest',
         ['returnPathway' => 'rep.map_entry_points']
       ),
       '#attributes' => [
         'id' => 'rep-ont-ingest',
-        'class' => ['btn', 'button', 'button--warning'],
+        'class' => ['btn', 'button', 'button--warning', 'ingest_mt-button'],
       ],
     ];
 
     $form['row']['notes'] = [
       '#type' => 'markup',
-      '#markup' => '<div class="mt-1"><em>' . $this->t('<strong>Information</strong>: The "Saving Mappings" button will automatically ingest the App Ontology, but the "Ingest Application Ontology" button won\'t save the mappings.') . '</em></div>',
+      '#markup' => '<div class="mt-1 mb-5"><em>' . $this->t('<strong>Information</strong>: The "Saving Mappings" button will automatically ingest the App Ontology, but the "Ingest Application Ontology" button won\'t save the mappings.') . '</em></div>',
     ];
 
     return $form;

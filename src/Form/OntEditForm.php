@@ -98,10 +98,10 @@ class OntEditForm extends FormBase {
 
     $form['actions_top']['view_application_ontology'] = [
       '#type' => 'link',
-      '#title' => $this->t('View Application Ontology'),
+      '#title' => $this->t('View App Ontology'),
       '#url' => Url::fromRoute('rep.ont_view'),
       '#attributes' => [
-        'class' => ['btn', 'button', 'button--primary', 'mx-2'],
+        'class' => ['btn', 'button', 'button--primary', 'mx-2', 'view-button'],
         'target' => '_blank',
         'rel' => 'noopener noreferrer',
       ],
@@ -109,11 +109,11 @@ class OntEditForm extends FormBase {
 
     $form['actions_top']['ingest_application_ontology'] = [
       '#type' => 'link',
-      '#title' => $this->t('Ingest Application Ontology'),
+      '#title' => $this->t('Ingest App Ontology'),
       '#url' => Url::fromRoute('rep.ont_injest'),
       '#attributes' => [
         'id' => 'rep-ont-ingest',
-        'class' => ['btn', 'button', 'button--warning'],
+        'class' => ['btn', 'button', 'button--warning', 'ingest_mt-button'],
       ],
     ];
 
@@ -134,11 +134,11 @@ class OntEditForm extends FormBase {
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Save Application Ontology File'),
+      '#value' => $this->t('Save App Ontology File'),
       '#button_type' => 'primary',
       '#attributes' => [
         'id' => 'rep-ont-save',
-        'class' => ['mb-5'],
+        'class' => ['mb-5', 'save-button'],
       ],
       '#states' => [
         'disabled' => [
