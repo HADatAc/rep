@@ -470,10 +470,11 @@ rep.ont_edit:
     no_cache: TRUE
 
 rep.ont_injest:
-  path: '/ont/injest'
+  path: '/ont/injest/{returnPathway}'
   defaults:
     _controller: '\Drupal\rep\Controller\OntController::injest'
     _title: 'Injest Application Ontology File'
+    returnPathway: 'rep.ont_edit'
   requirements:
     _permission: 'access content'
   options:

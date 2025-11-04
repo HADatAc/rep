@@ -173,7 +173,7 @@ class OntController extends ControllerBase {
     return new Response('success', 200);
   }
 
-  public function injest() {
+  public function injest($returnPathway = 'rep.ont_edit') {
     $messenger = \Drupal::messenger();
     /** @var \Drupal\rep\ApiConnector $api */
     $api = \Drupal::service('rep.api_connector');
@@ -189,7 +189,10 @@ class OntController extends ControllerBase {
       $messenger->addStatus($this->t('Application Ontology Successfully Submitted'));
     }
 
-    // Redirecta para onde fizer sentido:
-    return $this->redirect('rep.ont_edit', ['filename' => $rep_ns.'.ttl']);
+    if ($returnPathway == 'rep.ont_edit') {
+      return $this->redirect($returnPathway, ['filename' => $rep_ns.'.ttl']);
+    } elseif ($returnPathway == 'rep.map_entry_points') {
+      return $this->redirect($returnPathway);
+    }
   }
 }

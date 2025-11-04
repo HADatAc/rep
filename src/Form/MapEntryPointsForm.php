@@ -184,6 +184,23 @@ class MapEntryPointsForm extends FormBase {
       '#button_type' => 'primary',
     ];
 
+    $form['row']['actions']['ingest_application_ontology'] = [
+      '#type' => 'link',
+      '#title' => $this->t('Ingest Application Ontology'),
+      '#url' => Url::fromRoute('rep.ont_injest',
+        ['returnPathway' => 'rep.map_entry_points']
+      ),
+      '#attributes' => [
+        'id' => 'rep-ont-ingest',
+        'class' => ['btn', 'button', 'button--warning'],
+      ],
+    ];
+
+    $form['row']['notes'] = [
+      '#type' => 'markup',
+      '#markup' => '<div class="mt-1"><em>' . $this->t('<strong>Information</strong>: The "Saving Mappings" button will automatically ingest the App Ontology, but the "Ingest Application Ontology" button won\'t save the mappings.') . '</em></div>',
+    ];
+
     return $form;
   }
 
