@@ -803,7 +803,7 @@
             skip: false
           };
 
-          nodeObj.text += " [" + namespaceUri(item.uri) + "]"
+          nodeObj.text += " (" + namespaceUri(item.uri) + ")"
 
           // --- status decoration (unchanged from your code) ---
           var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
