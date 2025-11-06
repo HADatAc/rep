@@ -537,3 +537,13 @@ rep.icons_explanation:
     _title: 'Icons Explanation'
   requirements:
     _permission: 'access content'
+
+rep.file_download:
+  path: '/rep/file/{fid}/download'
+  defaults:
+    _controller: '\Drupal\rep\Controller\FileDownloadController::download'
+    _title: 'Download file'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: TRUE
