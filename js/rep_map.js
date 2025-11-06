@@ -58,7 +58,7 @@
                 const items = (data || []).map(item => {
                   const real  = item.uri;
                   const id    = 'node_' + sanitizeForId(rootUri) + '_' + sanitizeForId(real);
-                  const label = item.label +" ("+namespaceUri(item.uri) +")" || extractLabel(real);
+                  const label = item.label +" ["+namespaceUri(item.uri) +"]" || extractLabel(real);
                   return { id, text: label, children: true, data: { realUri: real } };
                 });
                 cb(items);
@@ -73,7 +73,7 @@
               const children = (data || []).map(item => {
                 const real  = item.uri;
                 const id    = 'node_' + sanitizeForId(parentReal) + '_' + sanitizeForId(real);
-                const label = item.label + " ("+namespaceUri(item.uri) +")" || extractLabel(real);
+                const label = item.label + " ["+namespaceUri(item.uri) +"]" || extractLabel(real);
                 return { id, text: label, children: true, data: { realUri: real } };
               });
               cb(children);
