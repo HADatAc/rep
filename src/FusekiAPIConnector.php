@@ -2383,8 +2383,8 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
   // Per status
-  public function generateMTPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri) {
-    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+  public function generateMTPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri, $datafileUri) {
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri)."/".rawurlencode($datafileUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -2393,8 +2393,8 @@ class FusekiAPIConnector {
 
   // GET     /hascoapi/api/mt/gen/perinstrument/:elementtype/:instrumenturi/:filename
   // Per Instrument
-  public function generateMTPerInstrument($elementtype, $instrumentUri, $filename, $mediafolder, $verifyuri) {
-    $endpoint = "/hascoapi/api/mt/gen/perinstrument/".rawurlencode($elementtype)."/".rawurlencode($instrumentUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+  public function generateMTPerInstrument($elementtype, $instrumentUri, $filename, $mediafolder, $verifyuri, $datafileUri) {
+    $endpoint = "/hascoapi/api/mt/gen/perinstrument/".rawurlencode($elementtype)."/".rawurlencode($instrumentUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri)."/".rawurlencode($datafileUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -2434,8 +2434,8 @@ class FusekiAPIConnector {
 
   // GET     /hascoapi/api/mt/gen/peruser/:elementtype/:useremail/:status/:filename
   // Per User and Status
-  public function generateMTPerUserStatus($elementtype,$userEmail, $status, $filename, $mediafolder, $verifyuri) {
-    $endpoint = "/hascoapi/api/mt/gen/peruser/".rawurlencode($elementtype)."/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+  public function generateMTPerUserStatus($elementtype,$userEmail, $status, $filename, $mediafolder, $verifyuri, $datafileUri) {
+    $endpoint = "/hascoapi/api/mt/gen/peruser/".rawurlencode($elementtype)."/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri)."/".rawurlencode($datafileUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
