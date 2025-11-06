@@ -2383,8 +2383,8 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
   // Per status
-  public function generateMTPerStatus($elementtype, $status, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/_/false";
+  public function generateMTPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
