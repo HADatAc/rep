@@ -435,6 +435,14 @@ rep.map_entry_points:
   requirements:
     _role: 'content_editor'
 
+rep.map_instance_entry_points:
+  path: '/rep/manage/map-instance-entry-points'
+  defaults:
+    _form: '\Drupal\rep\Form\MapInstanceEntryPointsForm'
+    _title: 'Manage Instance Entry Points'
+  requirements:
+    _role: 'content_editor'
+
 rep.map_delete:
   path: '/rep/map/delete/{entryPoint}/{mappedUri}'
   defaults:

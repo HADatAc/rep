@@ -288,13 +288,23 @@ rep.map_entry_points:
   requirements:
     _role: 'content_editor'
 
+rep.map_instance_entry_points:
+  title: 'Manage Instance Entry Points'
+  description: 'Map instances to one or more ontologies.'
+  route_name: rep.map_instance_entry_points
+  parent: rep.ontologies_root
+  menu_name: main
+  weight: 2
+  requirements:
+    _role: 'content_editor'
+
 rep.view_app_ontology:
   title: 'View Application Ontologiy'
   description: ''
   route_name: rep.ont_view
   parent: rep.ontologies_root
   menu_name: main
-  weight: 2
+  weight: 3
   options:
     attributes:
       target: '_blank'
@@ -307,6 +317,6 @@ rep.edit_app_ontology:
   route_name: rep.ont_edit
   parent: rep.ontologies_root
   menu_name: main
-  weight: 3
+  weight: 4
   requirements:
     _role: 'content_editor'
