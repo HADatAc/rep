@@ -2373,18 +2373,18 @@ class FusekiAPIConnector {
   }
 
   // GENERATE MT METHODS
-  // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:status/:filename
+  // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:datafileuri/:status/:filename/:mediafolder/:verifyuri                   org.hascoapi.console.controllers.restapi.IngestionAPI.mtGenByStatus(elementtype : String, datafileuri : String, status: String, filename: String, mediafolder : String, verifyuri : String)
   // Per status (KGR)
-  public function generateMTKGRPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri) {
-    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+  public function generateMTKGRPerStatus($elementtype, $datafileuri, $status, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
   // Per status
-  public function generateMTPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri, $datafileUri) {
-    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri)."/".rawurlencode($datafileUri);
+  public function generateMTPerStatus($elementtype, $datafileuri, $status, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -2440,6 +2440,38 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // POST     /hascoapi/api/mt/get/generated/:filename
+  public function downloadGeneratedFile($filename) {
+    $endpoint = "/hascoapi/api/mt/get/generated/" . rawurlencode($filename);
+    $api_url = $this->getApiUrl();
+    $client = new Client();
+
+    try {
+      $res = $client->post($api_url . $endpoint, [
+        'headers' => [
+          'Authorization' => $this->bearer,
+        ],
+        'http_errors' => false, // don't throw on 404/204
+      ]);
+
+      $status = $res->getStatusCode();
+      if ($status !== 200) {
+        // Not ready yet or not found.
+        return NULL;
+      }
+
+      $file_content = $res->getBody()->getContents();
+      $content_type = $res->getHeaderLine('Content-Type') ?: 'application/octet-stream';
+    }
+    catch (\Exception $e) {
+      return NULL;
+    }
+
+    $response = new Response($file_content);
+    $response->headers->set('Content-Type', $content_type);
+    return $response;
   }
 
   // POST    /hascoapi/api/uploadFile/:elementuri  org.hascoapi.console.controllers.restapi.DataFileAPI.uploadFile(elementuri: String, request: play.mvc.Http.Request)

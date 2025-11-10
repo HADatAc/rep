@@ -966,7 +966,7 @@ div.toast {
   max-width: 1000px;
 }
 
-body.path-rep div.ui-dialog-titlebar {display:none!important;}
+/* body.path-rep div.ui-dialog-titlebar {display:none!important;} */
 
 #node-comment-display {
   background-color: #e6e6e6;
