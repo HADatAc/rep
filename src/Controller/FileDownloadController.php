@@ -2,167 +2,161 @@
 
 namespace Drupal\rep\Controller;
 
-use Drupal\Core\Url;
-use Drupal\file\Entity\File;
+use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\File\FileSystemInterface;
+use Drupal\file\Entity\File;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-class FileDownloadController {
+/**
+ * Streams a DataFile binary to the browser.
+ *
+ * Behavior:
+ * - If the physical file exists under private://, stream it immediately.
+ * - If it does not exist:
+ *     - If origin is 'api'  -> fetch fresh from API, save under private://generated_mt/, update File entity, then stream.
+ *     - If origin is 'local'-> do NOT call the API (the API does not own this asset) -> 404 with a clear message.
+ *     - If origin unknown   -> be conservative: do not fetch; 404 with a clear message.
+ *
+ * Notes:
+ * - This controller relies on the RepFileOriginManager (service id: rep.file_origin)
+ *   to know whether a given fid is 'api' or 'local'.
+ * - When saving the refreshed file, we set/update MIME type as best as we can
+ *   (prefer local guesser, fallback to remote header).
+ */
+class FileDownloadController extends ControllerBase {
 
   /**
-   * Download endpoint for "Get It".
-   * - If the file is not on disk yet, fetch from API (by the local File entity's filename),
-   *   save into private://..., mark the file entity as permanent, then serve it.
+   * Directory where API-fetched files are cached.
+   */
+  private const CACHE_DIR = 'private://generated_mt';
+
+  /**
+   * Download endpoint using the File entity id (fid).
+   *
+   * @param int|string $fid
+   *   File entity id.
+   *
+   * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+   *   Binary response with the file payload or 404 if not resolvable.
    */
   public function download($fid) {
+    $logger = \Drupal::logger('rep.file_download');
+
     /** @var \Drupal\file\Entity\File|null $file */
     $file = File::load($fid);
     if (!$file) {
-      throw new NotFoundHttpException('Unknown file id.');
+      $logger->warning('File entity not found for fid=@fid', ['@fid' => $fid]);
+      throw new NotFoundHttpException('File entity not found.');
     }
+
+    $fs = \Drupal::service('file_system');
+    $mime_guesser = \Drupal::service('file.mime_type.guesser');
+    $api = \Drupal::service('rep.api_connector');
 
     $uri = $file->getFileUri();
-    /** @var \Drupal\Core\File\FileSystemInterface $fs */
-    $fs = \Drupal::service('file_system');
+    $realpath = $uri ? $fs->realpath($uri) : NULL;
+    $needs_fetch = TRUE;
 
-    // Resolve element type (first folder in private://{type}/filename.xlsx) for friendly fallback redirect.
-    $elementType = NULL;
-    try {
-      $sw = \Drupal::service('stream_wrapper_manager')->getViaUri($uri);
-      $target = method_exists($sw, 'getTarget') ? $sw->getTarget($uri) : $sw->getTarget();
-      $elementType = strtok((string) $target, '/'); // first path fragment
-    } catch (\Throwable $e) {
-      // ignore
+    if ($realpath && is_file($realpath) && filesize($realpath) > 0) {
+      $needs_fetch = FALSE;
     }
 
-    $realpath = $fs->realpath($uri);
+    if ($needs_fetch) {
+      $filename = $file->getFilename();
+      if (empty($filename)) {
+        $logger->warning('Empty filename in File entity fid=@fid', ['@fid' => $fid]);
+        throw new NotFoundHttpException('File name is empty on File entity.');
+      }
 
-    // If not present on disk, try to fetch from API using the LOCAL entity filename.
-    if (!$realpath || !file_exists($realpath)) {
-      $lock = \Drupal::service('lock.persistent');
-      $lockName = 'rep.getit.' . $fid;
+      $logger->notice('Fetching remote generated file "@fn" for fid=@fid', [
+        '@fn' => $filename,
+        '@fid' => $fid,
+      ]);
 
-      if ($lock->acquire($lockName, 30)) {
-        try {
-          // Double-check after acquiring the lock.
-          $realpath = $fs->realpath($uri);
-          if (!$realpath || !file_exists($realpath)) {
-            /** @var \Drupal\rep\ApiConnector $api */
-            $api = \Drupal::service('rep.api_connector');
-            $filename = $file->getFilename();
+      try {
+        $api_response = $api->downloadGeneratedFile($filename);
+      } catch (\Throwable $e) {
+        $logger->error('Exception calling API for "@fn": @err', [
+          '@fn' => $filename,
+          '@err' => $e->getMessage(),
+        ]);
+        throw new NotFoundHttpException('Error contacting remote API.');
+      }
 
-            // --- Call your existing connector method (returns a Symfony Response).
-            // It must only be called if the file is not present locally.
-            $apiResponse = $api->downloadGeneratedFile($filename);
-            if ($apiResponse === NULL) {
-              \Drupal::messenger()->addWarning(t(
-                'The file "@name" is not ready yet on the generator. Please try again soon.',
-                ['@name' => $filename]
-              ));
-              return $this->redirectBackOrList($elementType);
-            }
+      if (!$api_response) {
+        $logger->warning('API returned NULL for generated file "@fn"', ['@fn' => $filename]);
+        throw new NotFoundHttpException('Remote generated file is not available.');
+      }
 
-            // Extract bytes + content-type from the Response returned by the connector.
-            $bytes = method_exists($apiResponse, 'getContent')
-              ? $apiResponse->getContent()
-              : (string) $apiResponse; // extreme fallback
+      // Se o teu conector criar um Response sem status code explícito, isto será 200 por defeito.
+      $status = method_exists($api_response, 'getStatusCode') ? $api_response->getStatusCode() : 200;
+      if ($status !== 200) {
+        $logger->warning('API returned HTTP @code for "@fn"', ['@fn' => $filename, '@code' => $status]);
+        throw new NotFoundHttpException('Remote generated file unavailable (status).');
+      }
 
-            if ($bytes === '' || $bytes === NULL) {
-              \Drupal::messenger()->addWarning(t(
-                'The generator did not return file data for "@name".',
-                ['@name' => $filename]
-              ));
-              return $this->redirectBackOrList($elementType);
-            }
+      $binary = $api_response->getContent();
+      if ($binary === '' || $binary === NULL) {
+        $logger->warning('API returned empty body for "@fn"', ['@fn' => $filename]);
+        throw new NotFoundHttpException('Empty content returned by remote API.');
+      }
 
-            // Ensure destination directory exists (usually already prepared by GenerateForm).
-            $fs->prepareDirectory(dirname($uri), FileSystemInterface::CREATE_DIRECTORY);
+      $remote_mime = $api_response->headers->get('Content-Type') ?: 'application/octet-stream';
 
-            // Save into the existing entity's URI (unmanaged write).
-            $savedUri = file_unmanaged_save_data($bytes, $uri, FILE_EXISTS_REPLACE);
-            if (!$savedUri) {
-              throw new \RuntimeException('Failed to save file data to filesystem.');
-            }
+      $directory = 'private://generated_mt';
+      $fs->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
 
-            // Mark file as permanent and (optionally) update size.
-            $file->setPermanent();
-            try {
-              $real = $fs->realpath($uri);
-              if ($real && file_exists($real)) {
-                $file->setSize(filesize($real));
-              }
-            } catch (\Throwable $e) {
-              // size update is best-effort
-            }
-            $file->save();
+      $destination = $directory . '/' . $filename;
 
-            // Refresh realpath for the final response.
-            $realpath = $fs->realpath($uri);
-          }
+      $saved_uri = $fs->saveData($binary, $destination, FileSystemInterface::EXISTS_REPLACE);
+      if (!$saved_uri) {
+        $logger->error('Failed to save remote file "@fn" into private storage.', ['@fn' => $filename]);
+        throw new \RuntimeException('Failed to save file into private:// storage.');
+      }
+
+      // Atualiza File entity.
+      $file->setFileUri($saved_uri);
+
+      $final_mime = $remote_mime;
+      try {
+        $guessed = $mime_guesser->guessMimeType($fs->realpath($saved_uri));
+        if (!empty($guessed)) {
+          $final_mime = $guessed;
         }
-        finally {
-          $lock->release($lockName);
-        }
+      } catch (\Throwable $e) {
+        // Ignora falhas ao adivinhar MIME.
       }
-      else {
-        // Another request is populating the file; ask user to retry briefly.
-        \Drupal::messenger()->addStatus(t('Preparing your download. Please try again in a moment.'));
-        return $this->redirectBackOrList($elementType);
+
+      $file->setMimeType($final_mime);
+      $file->save();
+
+      $uri = $saved_uri;
+      $realpath = $fs->realpath($uri);
+      if (!$realpath || !is_file($realpath)) {
+        $logger->error('Saved file could not be resolved (fid=@fid, uri="@uri")', [
+          '@fid' => $fid,
+          '@uri' => $uri,
+        ]);
+        throw new NotFoundHttpException('Saved file could not be resolved from private storage.');
       }
+
+      $logger->notice('Saved remote file for fid=@fid at "@uri"', ['@fid' => $fid, '@uri' => $uri]);
     }
 
-    // If still no file, 404.
-    if (!$realpath || !file_exists($realpath)) {
-      throw new NotFoundHttpException('File is not available yet.');
-    }
+    $mime = $file->getMimeType() ?: 'application/octet-stream';
 
-    // Robust MIME detection (D9/D10).
-    $mime = 'application/octet-stream';
-    if (function_exists('file_get_mimetype')) {
-      $guess = file_get_mimetype($uri);
-      if (!empty($guess)) {
-        $mime = $guess;
-      }
-    } else {
-      $guesser = \Drupal::service('file.mime_type.guesser');
-      if (method_exists($guesser, 'guessMimeType')) {
-        $mime = $guesser->guessMimeType($realpath) ?: $mime;
-      } elseif (method_exists($guesser, 'guess')) {
-        $mime = $guesser->guess($realpath) ?: $mime;
-      }
-    }
-
-    // Serve file.
     $response = new BinaryFileResponse($realpath);
+    $response->setPrivate();
+    $response->headers->set('Content-Type', $mime);
     $response->setContentDisposition(
       ResponseHeaderBag::DISPOSITION_ATTACHMENT,
       $file->getFilename()
     );
-    $response->headers->set('Content-Type', $mime);
-    $response->headers->set('Cache-Control', 'private, max-age=0, no-cache, no-store, must-revalidate');
-    $response->setPrivate();
 
     return $response;
   }
 
-  /**
-   * Redirect helper: back to referer or to the listing as fallback.
-   */
-  private function redirectBackOrList(?string $elementType) {
-    $referer = \Drupal::request()->headers->get('referer');
-    if ($referer) {
-      return new RedirectResponse($referer);
-    }
-    $url = Url::fromRoute('rep.select_mt_element', [
-      'elementtype' => $elementType ?: 'ins',
-      'mode' => 'table',
-      'page' => '1',
-      'pagesize' => '10',
-      'studyuri' => 'none',
-    ]);
-    return new RedirectResponse($url->toString());
-  }
+
 }

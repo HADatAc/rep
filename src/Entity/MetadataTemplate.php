@@ -196,7 +196,7 @@ class MetadataTemplate
         $download = ' ';
         if (!empty($element->hasDataFile->id)) {
           $download_url = Url::fromRoute('rep.file_download', ['fid' => $element->hasDataFile->id])->toString();
-          $download = '<a href="' . $download_url . '" class="btn btn-primary btn-sm" role="button">Get It</a>';
+          $download = '<a href="' . $download_url . '" class="btn btn-primary btn-sm download-button" role="button">Get It</a>';
         }
       }
 
