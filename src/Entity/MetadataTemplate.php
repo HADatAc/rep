@@ -12,7 +12,6 @@ use Drupal\rep\Utils;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Link;
 
-
 class MetadataTemplate
 {
 
@@ -194,13 +193,10 @@ class MetadataTemplate
 
           //$log = '<a href="'.$link.'" class="btn btn-primary btn-sm" role="button">Read</a>';
         }
-        $downloadLink = '';
-        if ($element->hasDataFile->id != NULL && $element->hasDataFile->id != '') {
-          $file_entity = \Drupal\file\Entity\File::load($element->hasDataFile->id);
-          if ($file_entity != NULL) {
-            $downloadLink = base64_encode($element->hasDataFile->uri);
-            $download = '<a href="#" data-view-url="' . $downloadLink . '" class="btn btn-primary btn-sm download-button" role="button" disabled>Get It</a>';
-          }
+        $download = ' ';
+        if (!empty($element->hasDataFile->id)) {
+          $download_url = Url::fromRoute('rep.file_download', ['fid' => $element->hasDataFile->id])->toString();
+          $download = '<a href="' . $download_url . '" class="btn btn-primary btn-sm download-button" role="button">Get It</a>';
         }
       }
 
@@ -222,12 +218,12 @@ class MetadataTemplate
 
       if ($mode == 'normal') {
         $output[$element->uri] = [
-          'element_uri' => t('<a href="' . $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($uri) . '">' . $uri . '</a>'),
-          'element_name' => t($label),
+          'element_uri'      => Markup::create('<a href="' . $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($uri) . '">' . $uri . '</a>'),
+          'element_name'     => $label,
           'element_filename' => $filename,
-          'element_status' => t($filestatus),
-          'element_log' => t($log),
-          'element_download' => t($download),
+          'element_status'   => Markup::create($filestatus),
+          'element_log'      => Markup::create($log),
+          'element_download' => Markup::create($download),
         ];
       } else {
 
@@ -337,14 +333,13 @@ class MetadataTemplate
           ];
         }
 
-        $download_bto = [
-          '#type' => 'link',
-          '#title' => Markup::create('<i class="fa-solid fa-download"></i>'),
-          '#url' => Url::fromUserInput("#", ['attributes' => ['data-download-url' => $download_da]]),
-          '#attributes' => [
-            'title' => t('Download file'),
-            'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-unassociated-url'],
-          ],
+        $download_bto = Link::fromTextAndUrl(
+          Markup::create('<i class="fa-solid fa-download"></i>'),
+          Url::fromRoute('rep.file_download', ['fid' => $element->hasDataFile->id])
+        )->toRenderable();
+        $download_bto['#attributes'] = [
+          'title' => t('Download file'),
+          'class' => ['btn', 'btn-sm', 'btn-secondary'],
         ];
 
         $links = [
@@ -580,19 +575,13 @@ class MetadataTemplate
         '),
       ];
 
-      $download_bto = [
-        '#type' => 'link',
-        '#title' => Markup::create('<i class="fa-solid fa-download"></i>'),
-        '#url' => Url::fromUserInput('#', [
-          'attributes' => [
-            'class' => [(!$bto_active ? 'disabled' : '')],
-            'title' => t('Download file'),
-            'data-download-url' => $download_da,
-          ],
-        ]),
-        '#attributes' => [
-          'class' => ['btn', 'btn-sm', 'btn-secondary', 'download-associated-url'],
-        ],
+      $download_bto = Link::fromTextAndUrl(
+        Markup::create('<i class="fa-solid fa-download"></i>'),
+        Url::fromRoute('rep.file_download', ['fid' => $element->hasDataFile->id])
+      )->toRenderable();
+      $download_bto['#attributes'] = [
+        'class' => ['btn', 'btn-sm', 'btn-secondary'],
+        'title' => t('Download file'),
       ];
 
       $links = [
@@ -799,9 +788,9 @@ class MetadataTemplate
       // }
 
       // Link for Download.
-      $download_da = Url::fromRoute('rep.datafile_download', [
-        'datafileuri' => isset($element->hasDataFile) ? base64_encode($element->hasDataFile->uri) : '',
-      ]);
+      $download_da = !empty($element->hasDataFile->id)
+        ? Url::fromRoute('rep.file_download', ['fid' => $element->hasDataFile->id])
+        : Url::fromRoute('<nolink>');
 
       // Create the card outer container.
       $card = [

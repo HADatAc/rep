@@ -2373,28 +2373,36 @@ class FusekiAPIConnector {
   }
 
   // GENERATE MT METHODS
-  // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:status/:filename
+  // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:datafileuri/:status/:filename/:mediafolder/:verifyuri                   org.hascoapi.console.controllers.restapi.IngestionAPI.mtGenByStatus(elementtype : String, datafileuri : String, status: String, filename: String, mediafolder : String, verifyuri : String)
   // Per status (KGR)
-  public function generateMTKGRPerStatus($elementtype, $status, $filename, $mediafolder, $verifyuri) {
-    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+  public function generateMTKGRPerStatus($elementtype, $datafileuri, $status, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
   // Per status
-  public function generateMTPerStatus($elementtype, $status, $filename) {
-    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($status)."/".rawurlencode($filename)."/_/false";
+  public function generateMTPerStatus($elementtype, $datafileuri, $status, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // GET     /hascoapi/api/mt/gen/perinstrument/:elementtype/:instrumenturi/:filename
-  // Per Instrument
-  public function generateMTPerInstrument($elementtype, $instrumentUri, $filename, $mediafolder, $verifyuri) {
-    $endpoint = "/hascoapi/api/mt/gen/perinstrument/".rawurlencode($elementtype)."/".rawurlencode($instrumentUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+  // GET     /hascoapi/api/mt/gen/perelement/:elementtype/:datafileuri/:elementuri/:filename/:mediafolder/:verifyuri              org.hascoapi.console.controllers.restapi.IngestionAPI.mtGenByElement(elementtype : String, datafileuri : String, elementuri: String, filename: String, mediafolder : String, verifyuri : String)
+  public function generateMTPerElement($elementtype, $datafileuri, $elementUri, $filename, $mediafolder, $verifyuri) {
+    $endpoint = "/hascoapi/api/mt/gen/perinstrument/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($elementUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri)."/".rawurlencode($datafileUri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // GET     /hascoapi/api/mt/gen/peruser/:elementtype/:datafileuri/:useremail/:status/:filename/:mediafolder/:verifyuri          org.hascoapi.console.controllers.restapi.IngestionAPI.mtGenByManager(elementtype : String, datafileuri : String, useremail: String, status: String, filename: String, mediafolder : String, verifyuri : String)
+  public function generateMTPerUserStatus($elementtype,$datafileuri, $userEmail, $status, $filename, $mediafolder, $verifyuri, $datafileUri) {
+    $endpoint = "/hascoapi/api/mt/gen/peruser/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri)."/".rawurlencode($datafileUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -2432,14 +2440,36 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // GET     /hascoapi/api/mt/gen/peruser/:elementtype/:useremail/:status/:filename
-  // Per User and Status
-  public function generateMTPerUserStatus($elementtype,$userEmail, $status, $filename, $mediafolder, $verifyuri) {
-    $endpoint = "/hascoapi/api/mt/gen/peruser/".rawurlencode($elementtype)."/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
-    $method = "GET";
+  // POST     /hascoapi/api/mt/get/generated/:filename
+  public function downloadGeneratedFile($filename) {
+    $endpoint = "/hascoapi/api/mt/get/generated/" . rawurlencode($filename);
     $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+    $client = new Client();
+
+    try {
+      $res = $client->post($api_url . $endpoint, [
+        'headers' => [
+          'Authorization' => $this->bearer,
+        ],
+        'http_errors' => false, // don't throw on 404/204
+      ]);
+
+      $status = $res->getStatusCode();
+      if ($status !== 200) {
+        // Not ready yet or not found.
+        return NULL;
+      }
+
+      $file_content = $res->getBody()->getContents();
+      $content_type = $res->getHeaderLine('Content-Type') ?: 'application/octet-stream';
+    }
+    catch (\Exception $e) {
+      return NULL;
+    }
+
+    $response = new Response($file_content);
+    $response->headers->set('Content-Type', $content_type);
+    return $response;
   }
 
   // POST    /hascoapi/api/uploadFile/:elementuri  org.hascoapi.console.controllers.restapi.DataFileAPI.uploadFile(elementuri: String, request: play.mvc.Http.Request)
@@ -2712,7 +2742,7 @@ class FusekiAPIConnector {
     $config = \Drupal::config('rep.settings');
     $guesser = \Drupal::service('file.mime_type.guesser');
 
-    $ns = (string) $config->get('repository_namespace_prefix');
+    $ns = (string) 'hasco';
     $private_uri = 'private://ont/' . $ns . '.ttl';
     $path = $file_system->realpath($private_uri);
 
@@ -2762,4 +2792,21 @@ class FusekiAPIConnector {
       return null;
     }
   }
+
+
+  /* INSTANCES  */
+  /* Units, etc */
+
+  // GET /hascoapi/api/instances/keyword/:classuri/:keyword
+  public function listInstancesByKeyword($keyword) {
+    $endpoint = "/hascoapi/api/instances/keyword/http%3A%2F%2Fqudt.org%2Fschema%2Fqudt%2FUnit/".
+      rawurlencode($keyword);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+
+
 }

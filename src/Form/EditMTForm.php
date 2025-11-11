@@ -224,6 +224,7 @@ class EditMTForm extends FormBase {
       '#type' => 'textfield',
       '#title' => $this->t('Version'),
       '#default_value' => $this->getMT()->hasVersion,
+      '#disabled' => true
     ];
     $form['mt_comment'] = [
       '#type' => 'textfield',

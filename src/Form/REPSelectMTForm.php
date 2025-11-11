@@ -876,32 +876,107 @@ class REPSelectMTForm extends FormBase {
 
   /**
    * UNINGEST FUNCTION
+   *
+   * Behavior:
+   *  1) Fetch current MT + DF from the API and preserve them locally (in-memory).
+   *  2) Call API to UNINGEST the MT.
+   *  3) Recreate/persist the preserved MT/DF locally (status UNPROCESSED).
+   *  4) If the DF has a Drupal File entity and its origin is 'api', purge ONLY the
+   *     physical binary from private:// (keep the File entity). This forces a
+   *     fresh download from the API on the next "Get It".
+   *     - If origin is 'local', do NOT purge (API does not own that asset).
    */
   protected function performUningest(array $uris, FormStateInterface $form_state) {
-    $api = \Drupal::service('rep.api_connector');
+    $api        = \Drupal::service('rep.api_connector');
+    $originMgr  = \Drupal::service('rep.file_origin_manager'); // RepFileOriginManager (as discussed)
+    $fs         = \Drupal::service('file_system');
+
+    // Expecting a single URI in $uris.
     $uri = reset($uris);
+
+    // 1) Retrieve and preserve current MT.
     $newMT = new MetadataTemplate();
     $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
     if ($mt == NULL) {
-      \Drupal::messenger()->addError(t("Failed to recover " . $this->single_class_name . " for uningestion."));
+      \Drupal::messenger()->addError(t('Failed to recover @type for uningestion.', ['@type' => $this->single_class_name]));
       return;
     }
     $newMT->setPreservedMT($mt);
+
+    // 2) Retrieve and preserve DF.
     $df = $api->parseObjectResponse($api->getUri($mt->hasDataFileUri), 'getUri');
     if ($df == NULL) {
-      \Drupal::messenger()->addError(t("Fail to recover datafile of" . $this->single_class_name . " from being unigested."));
+      \Drupal::messenger()->addError(t('Failed to recover DataFile of @type before uningestion.', ['@type' => $this->single_class_name]));
       return;
     }
     $newMT->setPreservedDF($df);
+
+    // 3) Call API to UNINGEST.
     $msg = $api->parseObjectResponse($api->uningestMT($mt->uri), 'uningestMT');
     if ($msg == NULL) {
-      \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to uningested."));
+      \Drupal::messenger()->addError(t('The selected @type failed to be uningested.', ['@type' => $this->single_class_name]));
       return;
     }
-    $newMT->savePreservedMT($this->element_type);
-    \Drupal::messenger()->addMessage(t("The " . $this->single_class_name . " seleted was uningested."));
+
+    // 4) Recreate/persist preserved MT + DF locally (DataFile UNPROCESSED, etc.).
+    $savedOk = $newMT->savePreservedMT($this->element_type);
+    if (!$savedOk) {
+      \Drupal::messenger()->addWarning(t('Uningest succeeded, but local preservation of @type could not be saved.', ['@type' => $this->single_class_name]));
+    }
+
+    // 5) Conditional purge of the local binary to enforce freshness on next download.
+    //    We only purge if:
+    //      - The DataFile has a Drupal File entity (fid).
+    //      - The file origin is 'api' (remote owns the asset).
+    //    We KEEP the File entity (do NOT delete from DB); we only delete the physical file
+    //    so the download controller will re-fetch from the API on next "Get It".
+    try {
+      if (!empty($df->id)) {
+        /** @var \Drupal\file\Entity\File|null $file */
+        $file = \Drupal\file\Entity\File::load($df->id);
+        if ($file) {
+          $origin = $originMgr->getOrigin((int) $file->id());
+
+          if ($origin === 'api') {
+            // Purge only the physical binary; keep the File entity record.
+            $file_uri  = $file->getFileUri();
+            $real_path = $file_uri ? $fs->realpath($file_uri) : NULL;
+
+            if ($real_path && is_file($real_path)) {
+              // Delete the physical file from private:// storage.
+              $fs->delete($file_uri);
+              // Do NOT delete file_managed row; keeping fid allows the controller
+              // to trigger a cache-miss and re-download from the API on demand.
+              \Drupal::messenger()->addStatus(t('Local binary was purged (API origin). Next "Get It" will fetch a fresh copy from the API.'));
+            }
+            else {
+              // Nothing to purge physically.
+              \Drupal::messenger()->addStatus(t('No local binary found to purge (API origin).'));
+            }
+          }
+          elseif ($origin === 'local') {
+            // Keep local files created via "Add New" (API does not have the asset).
+            \Drupal::messenger()->addWarning(t('Binary was NOT purged because its origin is local. The API does not own this asset.'));
+          }
+          else {
+            // Unknown origin -> conservative: do nothing.
+            \Drupal::messenger()->addWarning(t('Binary was NOT purged due to unknown origin. No action taken.'));
+          }
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      // Non-fatal: uningest already succeeded; just warn about purge failure.
+      \Drupal::messenger()->addWarning(t('Uningested, but failed to purge local binary: @msg', ['@msg' => $e->getMessage()]));
+    }
+
+    \Drupal::messenger()->addStatus(t('The selected @type was successfully uningested.', ['@type' => $this->single_class_name]));
+
+    // Optional: redirect back to the selector to refresh the list.
+    $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
     return;
   }
+
 
   /**
    * {@inheritdoc}

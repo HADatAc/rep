@@ -30,7 +30,7 @@ use Drupal\rep\Controller\OntController;
  * where entry point defaults to the left-tree root (settings value) or
  * any node the user selects on the left tree.
  */
-class MapEntryPointsForm extends FormBase {
+class MapInstanceEntryPointsForm extends FormBase {
 
   /**
    * Paths and filenames used for ontology storage and versioning.
@@ -45,7 +45,7 @@ class MapEntryPointsForm extends FormBase {
    * {@inheritdoc}
    */
   public function getFormId() {
-    return 'rep_map_entry_points_form';
+    return 'rep_map_instance_entry_points_form';
   }
 
   /**
@@ -232,7 +232,7 @@ class MapEntryPointsForm extends FormBase {
 
     // If TTL does not exist, create an empty file with a header marker.
     if (!file_exists($ttl_path)) {
-      $header = "# Ontology file created by MapEntryPointsForm\n";
+      $header = "# Ontology file created by MapInstanceEntryPointsForm\n";
       file_put_contents($ttl_path, $header);
     }
 
@@ -251,7 +251,7 @@ class MapEntryPointsForm extends FormBase {
     $subject = $this->formatTurtleTerm($selected_node_uri);
     $object  = $this->formatTurtleTerm($entry_point_uri);
 
-    $new_map_entry  = "\n# --- Mapping appended by MapEntryPointsForm ---\n";
+    $new_map_entry  = "\n# --- Mapping appended by MapInstanceEntryPointsForm ---\n";
     $new_map_entry .= $subject . "\n\ta rdfs:Class;";
     $new_map_entry .= "\n\trdfs:subClassOf " . $object . " .\n";
 

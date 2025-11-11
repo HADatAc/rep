@@ -25,3 +25,9 @@ services:
     class: Drupal\rep\EventSubscriber\BlockConfigUpdateSubscriber
     tags:
       - { name: event_subscriber }
+
+  rep.file_origin_manager:
+    class: 'Drupal\rep\Service\RepFileOriginManager'
+    arguments: ['@keyvalue']
+    public: true
+

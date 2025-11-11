@@ -50,7 +50,7 @@ class DataFile {
         if ($file_entity != NULL) {
           $id .= " (available)";
           $downloadLink = $root_url.REPGUI::DATAFILE_DOWNLOAD.base64_encode($element->uri);
-          $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm download-button" role="button" disabled>Get It</a>';
+          $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm download-button download-button" role="button" disabled>Get It</a>';
           //dpm($file_entity);
         } else {
           $id .= " (unavailable)";
@@ -79,7 +79,7 @@ class DataFile {
         $showLogLink = $root_url.REPGUI::DATAFILE_LOG.base64_encode($element->uri);
         $log = '<a href="' . $showLogLink . '" class="use-ajax btn btn-primary btn-sm search-button" '.
                'data-dialog-type="modal" '.
-               'data-dialog-options=\'{"width": 700}\' role="button">Read</a>';
+               'data-dialog-options=\'{"width": 700, "min-height": 400}\' role="button">Read</a>';
       } else {
         $log = ' ';
       }

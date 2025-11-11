@@ -8,29 +8,29 @@
   use Drupal\rep\Vocabulary\SCHEMA;
   use Drupal\rep\Vocabulary\SIO;
   use Drupal\rep\Vocabulary\VSTOI;
-use Drupal\sir\Entity\Task;
+  use Drupal\sir\Entity\Task;
 
   class EntryPoints {
 
-    const ANNOTATION_STEM           = VSTOI::ANNOTATION_STEM;
-    const ATTRIBUTE                 = SIO::ATTRIBUTE;
-    const CODEBOOK                  = VSTOI::CODEBOOK;
-    const COMPONENT_STEM            = VSTOI::COMPONENT_STEM;
-    const COMPONENT                 = VSTOI::COMPONENT;
-    const COMPONENT_ATTRIBUTE       = VSTOI::COMPONENT_ATTRIBUTE;
-    const ENTITY                    = SIO::ENTITY;
-    const GROUP                     = FOAF::GROUP;
-    const INSTRUMENT                = VSTOI::INSTRUMENT;
-    const ORGANIZATION              = SCHEMA::ORGANIZATION;
-    const PERSON                    = SCHEMA::PERSON;
-    const PLACE                     = SCHEMA::PLACE;
-    const PLATFORM                  = VSTOI::PLATFORM;
-    const PROCESS_STEM              = VSTOI::PROCESS_STEM;
-    const QUESTIONNAIRE             = VSTOI::QUESTIONNAIRE;
-    const RESPONSE_OPTION           = VSTOI::RESPONSE_OPTION;
-    const STUDY                     = HASCO::STUDY;
-    const TASK                      = VSTOI::TASK;
-    const TASK_TEMPORAL_DEPENDENCY  = VSTOI::TASK_TEMPORAL_DEPENDENCY;
-    const UNIT                      = SIO::UNIT;
+    const EP_ANNOTATION_STEM           = HASCO::ANNOTATION_STEM_ENTRY_POINT;
+    const EP_ATTRIBUTE                 = HASCO::ATTRIBUTE_ENTRY_POINT;
+    const EP_CODEBOOK                  = HASCO::CODEBOOK_ENTRY_POINT;
+    const EP_COMPONENT_STEM            = HASCO::COMPONENT_STEM_ENTRY_POINT;
+    const EP_COMPONENT                 = HASCO::COMPONENT_ENTRY_POINT;
+    const EP_COMPONENT_ATTRIBUTE       = HASCO::COMPONENT_ATTRIBUTE_ENTRY_POINT;
+    const EP_ENTITY                    = HASCO::ENTITY_ENTRY_POINT;
+    const EP_GROUP                     = HASCO::GROUP_ENTRY_POINT;
+    const EP_INSTRUMENT                = HASCO::INSTRUMENT_ENTRY_POINT;
+    const EP_ORGANIZATION              = HASCO::ORGANIZATION_ENTRY_POINT;
+    const EP_PERSON                    = HASCO::PERSON_ENTRY_POINT;
+    const EP_PLACE                     = HASCO::PLACE_ENTRY_POINT;
+    const EP_PLATFORM                  = HASCO::PLATFORM_ENTRY_POINT;
+    const EP_WORKFLOW_STEM             = HASCO::WORKFLOW_STEM_ENTRY_POINT;
+    // const EP_QUESTIONNAIRE             = HASCO::QUESTIONNAIRE_ENTRY_POINT;
+    const EP_RESPONSE_OPTION           = HASCO::RESPONSE_OPTION_ENTRY_POINT;
+    const EP_STUDY                     = HASCO::STUDY_ENTRY_POINT;
+    const EP_TASK                      = HASCO::TASK_ENTRY_POINT;
+    const EP_TASK_TEMPORAL_DEPENDENCY  = HASCO::TASK_TEMPORAL_DEPENDENCY_ENTRY_POINT;
+    const EP_UNIT                      = HASCO::UNIT_ENTRY_POINT;
 
   }
