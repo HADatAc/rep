@@ -2792,4 +2792,21 @@ class FusekiAPIConnector {
       return null;
     }
   }
+
+
+  /* INSTANCES  */
+  /* Units, etc */
+
+  // GET /hascoapi/api/instances/keyword/:classuri/:keyword
+  public function listInstancesByKeyword($keyword) {
+    $endpoint = "/hascoapi/api/instances/keyword/http%3A%2F%2Fqudt.org%2Fschema%2Fqudt%2FUnit/".
+      rawurlencode($keyword);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+
+
 }
