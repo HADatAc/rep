@@ -151,7 +151,7 @@ final class IconsExplanationForm extends FormBase {
       ['name' => 'Annotations', 'desc' => 'NOT FOUND'],
       ['name' => 'Platform', 'desc' => 'A surface onto which '.$preferred_instrument.'s are deployed to collect data.'],
       ['name' => ucfirst($preferred_instrument), 'desc' => 'A device or mechanism that is used to achire attribute values of entities of interest. An '.$preferred_instrument.' does not necessarily require a way to store its measured quantity (e.g, a hard disk).'],
-      ['name' => ucfirst($preferred_component), 'desc' => 'A physical part of an '.$preferred_instrument.'. A component can be a sensor, a circuit board, a housing, etc. A component can also be a collection of other components.'],
+      ['name' => ucfirst($preferred_component), 'desc' => 'A physical part of an '.$preferred_instrument.'. A '.lcfirst($preferred_component).' can be a sensor, a circuit board, a housing, etc. A '.lcfirst($preferred_component).' can also be a collection of other components.'],
       ['name' => ucfirst($preferred_component).' Stem', 'desc' => 'NOT FOUND'],
       ['name' => 'Deployments', 'desc' => 'A platform is deployed during a certain duration of time and over a certain spacial domain. The platform has '.$preferred_instrument.'s on it within the scope of this deployment. For example, a boat will carry certain '.$preferred_instrument.'s during a deployment, and those '.$preferred_instrument.'s will be removed once the deployment is completed. A stationary deployment can last a much longer time, even decades, with the same '.$preferred_instrument.'.'],
       ['name' => 'Message Streams', 'desc' => 'NOT FOUND'],
