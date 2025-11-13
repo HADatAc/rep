@@ -17,6 +17,8 @@ class AssocStudyObjectCollection {
     $api = \Drupal::service('rep.api_connector');
     $t = \Drupal::service('string_translation');
 
+    $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
+
     /*
     *    SOC's STUDY OBJECTS
     */
@@ -27,7 +29,7 @@ class AssocStudyObjectCollection {
         $totalobjs = $api->parseTotalResponse($api->sizeStudyObjectsBySOC($element->uri),'sizeStudyObjectsBySOC');
         $form['objs']['begin_objects'] = [
           '#type' => 'markup',
-          '#markup' => $t->translate("<b>Contains Study Objects (total of " . $totalobjs . "):</b><ul>"),
+          '#markup' => $t->translate("<b>Contains ".ucfirst($preferred_study)." Objects (total of " . $totalobjs . "):</b><ul>"),
         ];
         $header = StudyObject::generateHeader();
         $output = StudyObject::generateOutput($objs);
