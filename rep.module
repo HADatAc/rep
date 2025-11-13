@@ -471,72 +471,90 @@ function rep_page_attachments(array &$attachments) {
  * Implements hook_block_view_alter().
  *
  * Dynamically adjusts block titles/labels according to the preferred names
- * stored in rep.settings (currently: only the Instrument label is used).
+ * stored in rep.settings (instrument, component, process, study).
  *
- * This allows blocks like "Search Instrument Criteria" to automatically
- * update when the administrator changes the preferred term for "Instrument"
- * in the REP Preferred Names form.
+ * It looks at the current block label and replaces occurrences of:
+ *   - Study / Studies
+ *   - Instrument / Instruments
+ *   - Component / Components
+ *   - Process / Processes / Workflow / Workflows
+ * with the administrator-defined preferred terms.
+ *
+ * Example:
+ *   "Search Studies Criteria"  ->  "Search RGPD Criteria"
+ *   "Search Instrument Criteria" -> "Search Tool Criteria"
  */
 function rep_block_view_alter(array &$build, BlockPluginInterface $block) {
   // Read preferred names from REP configuration.
   $config = \Drupal::config('rep.settings');
+
   $preferred_instrument = $config->get('preferred_instrument') ?: 'Instrument';
+  $preferred_component  = $config->get('preferred_component') ?: 'Component';
+  $preferred_process    = $config->get('preferred_process') ?: 'Workflow';
+  $preferred_study      = $config->get('preferred_study') ?: 'Study';
 
-  // Normalized label to use in the UI (first letter uppercase).
+  // Normalized labels for UI (first letter uppercase).
   $label_instrument = ucfirst($preferred_instrument);
+  $label_component  = ucfirst($preferred_component);
+  $label_process    = ucfirst($preferred_process);
+  $label_study      = ucfirst($preferred_study);
 
-  // Block configuration (for config blocks, this includes the "id" defined
-  // in block.block.<id>.yml).
-  $configuration = $block->getConfiguration();
-  $block_id = $configuration['id'] ?? NULL;
-
-  if (!$block_id) {
-    // If we cannot determine the block ID, do nothing.
+  // Get current label from the build array.
+  if (!isset($build['#configuration']['label'])) {
+    // Some blocks might not have a label; nothing to change.
     return;
   }
 
-  // Map of block IDs to the type of preferred label and the pattern to use.
-  // At the moment we only need to handle the "Search Instrument Criteria" block.
-  $block_map = [
-    // custom/sir/config/install/block.block.searchcriteria.yml
-    //   id: searchcriteria
-    //   settings:
-    //     label: 'Search Instrument Criteria'
-    'searchcriteria' => [
-      'type' => 'instrument',
-      'pattern' => 'Search @label Criteria',
-    ],
+  $current_label = $build['#configuration']['label'];
+
+  // Convert TranslatableMarkup or other objects to plain string.
+  if ($current_label instanceof TranslatableMarkup) {
+    $label_text = $current_label->render();
+  }
+  else {
+    $label_text = (string) $current_label;
+  }
+
+  if ($label_text === '') {
+    return;
+  }
+
+  // Replacement map: any occurrence of these words will be replaced
+  // by the corresponding preferred label (singular form).
+  // Note: we deliberately map plural forms (Studies/Instruments/etc.)
+  // to the same preferred label string. This can produce:
+  //   "Search RGPD Criteria" (from "Search Studies Criteria"),
+  // which is acceptable for this use case.
+  $replacements = [
+    'Study'      => $label_study,
+    'Studies'    => $label_study,
+    'Instrument' => $label_instrument,
+    'Instruments'=> $label_instrument,
+    'Component'  => $label_component,
+    'Components' => $label_component,
+    'Process'    => $label_process,
+    'Processes'  => $label_process,
+    'Workflow'   => $label_process,
+    'Workflows'  => $label_process,
   ];
 
-  // If this block is not in our map, we do nothing.
-  if (!isset($block_map[$block_id])) {
+  $new_text = strtr($label_text, $replacements);
+
+  // If nothing changed, we can return early.
+  if ($new_text === $label_text) {
     return;
   }
 
-  $info = $block_map[$block_id];
-  $type = $info['type'];
-  $pattern = $info['pattern'];
+  // Wrap the new label as a TranslatableMarkup so it can still be translated.
+  $new_label = new TranslatableMarkup($new_text);
 
-  // Choose which preferred label to apply, based on the mapped type.
-  switch ($type) {
-    case 'instrument':
-      $replacement = $label_instrument;
-      break;
-
-    default:
-      // Unknown type → no change.
-      return;
-  }
-
-  // Build the new label as a translatable string.
-  $new_label = new TranslatableMarkup($pattern, ['@label' => $replacement]);
-
-  // Update the label in the rendered build array:
-  // - #configuration['label'] is used by the block system.
-  // - #title is used by many themes / preprocess functions.
+  // Update the block configuration label for rendering.
   $build['#configuration']['label'] = $new_label;
+
+  // Also set #title explicitly, to cover themes that read from here.
   $build['#title'] = $new_label;
 }
+
 
 // /**
 //  * Helper para executar chamadas autenticadas ao Sagres com renovação automática do token.
