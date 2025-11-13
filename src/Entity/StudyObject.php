@@ -86,6 +86,9 @@ class StudyObject {
     // Get the root URL.
     $root_url = \Drupal::request()->getBaseUrl();
 
+    // Study Prefered name
+    $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
+
     if (empty($list)) {
       return $output;
     }
@@ -156,7 +159,7 @@ class StudyObject {
               . '<strong>Domain:</strong> ' . $domainScope . '<br>'
               . '<strong>Time:</strong> ' . $timeScope . '<br>'
               . '<strong>Space:</strong> ' . $spaceScope . '<br>'
-              . '<strong>Study:</strong> ' . $socLabel
+              . '<strong>'.$preferred_study.':</strong> ' . $socLabel
               . '</p>',
           ],
           // Add a "View" button that links to the study object description.

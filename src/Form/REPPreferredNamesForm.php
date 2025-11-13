@@ -74,6 +74,16 @@
             '#default_value' => $proccess,
         ];
 
+        $study = "";
+        if ($config->get("preferred_study")!= NULL) {
+            $study = $config->get("preferred_study");
+        }
+        $form['preferred_study'] = [
+            '#type' => 'textfield',
+            '#title' => $this->t("Study's preferred name"),
+            '#default_value' => $study,
+        ];
+
         $form['filler'] = [
             '#type' => 'item',
             '#title' => $this->t('<br>'),
@@ -101,6 +111,9 @@
         if(strlen($form_state->getValue('preferred_process')) < 1) {
             $form_state->setErrorByName('preferred_process', $this->t("Please inform a preferred name for processes."));
         }
+        if(strlen($form_state->getValue('preferred_study')) < 1) {
+            $form_state->setErrorByName('preferred_study', $this->t("Please inform a preferred name for study."));
+        }
     }
 
     /**
@@ -121,10 +134,13 @@
             $form_state->getValue('preferred_component') != null &&
             $form_state->getValue('preferred_component') != "" &&
             $form_state->getValue('preferred_process') != null &&
-            $form_state->getValue('preferred_process') != "") {
+            $form_state->getValue('preferred_process') != "" &&
+            $form_state->getValue('preferred_study') != null &&
+            $form_state->getValue('preferred_study') != "") {
           $config->set("preferred_instrument", $form_state->getValue('preferred_instrument'));
           $config->set("preferred_component", $form_state->getValue('preferred_component'));
           $config->set("preferred_process", $form_state->getValue('preferred_process'));
+          $config->set("preferred_study", $form_state->getValue('preferred_study'));
           $config->save();
         }
 
