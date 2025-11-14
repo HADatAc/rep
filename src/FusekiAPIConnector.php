@@ -2397,7 +2397,6 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    dpm($endpoint);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
