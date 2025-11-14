@@ -8,37 +8,41 @@ use Drupal\rep\Vocabulary\REPGUI;
 class Deployment {
 
   public static function generateHeader() {
+    $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'instrument';
+
     return $header = [
       'element_uri' => t('URI'),
       'element_designedAt' => t('Design Time'),
       'element_startedAt' => t('Execution Time'),
       'element_platform_instance' => t('Platform Instance'),
-      'element_instrument_instance' => t('Instrument Instance'),
+      'element_instrument_instance' => t(ucfirst($preferred_instrument).' Instance'),
     ];
   }
 
   public static function generateHeaderState($state) {
+
+    $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'instrument';
 
     if ($state == 'design') {
       return $header = [
         'element_uri' => t('URI'),
         'element_datetime' => t('Design Time'),
         'element_platform_instance' => t('Platform Instance'),
-        'element_instrument_instance' => t('Instrument Instance'),
+        'element_instrument_instance' => t(ucfirst($preferred_instrument).' Instance'),
       ];
     } else if ($state == 'all') {
       return $header = [
         'element_uri' => t('URI'),
         'element_datetime' => t('Design / Execution Time'),
         'element_platform_instance' => t('Platform Instance'),
-        'element_instrument_instance' => t('Instrument Instance'),
+        'element_instrument_instance' => t(ucfirst($preferred_instrument).' Instance'),
       ];
     } else {
       return $header = [
         'element_uri' => t('URI'),
         'element_datetime' => t('Execution Time'),
         'element_platform_instance' => t('Platform Instance'),
-        'element_instrument_instance' => t('Instrument Instance'),
+        'element_instrument_instance' => t(ucfirst($preferred_instrument).' Instance'),
       ];
     }
 

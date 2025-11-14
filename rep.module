@@ -6,112 +6,130 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use GuzzleHttp\Exception\RequestException;
+use Drupal\Core\Block\BlockPluginInterface;
 
 /**
  * Implements hook_install().
+ *
+ * Creates the user_tracking table used to store basic navigation history.
  */
 function rep_install() {
-  // Define the schema for user_tracking table.
+  // Define the schema for the user_tracking table.
   $schema['user_tracking'] = [
-    'description' => 'Stores user session history',
+    'description' => 'Stores user session history.',
     'fields' => [
       'uid' => [
         'type' => 'int',
         'not null' => TRUE,
-        'description' => 'User ID',
+        'description' => 'User ID.',
       ],
       'previous_url' => [
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
-        'description' => 'Previous URL',
+        'description' => 'Previous URL.',
       ],
       'current_url' => [
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
-        'description' => 'Current URL',
+        'description' => 'Current URL.',
       ],
       'created' => [
         'type' => 'int',
         'not null' => TRUE,
-        'description' => 'Timestamp when the entry was created',
+        'description' => 'Timestamp when the entry was created.',
       ],
     ],
     'primary key' => ['uid', 'current_url'],
   ];
 
-  // Create the table.
+  // Create the table in the active connection.
   Database::getConnection()->schema()->createTable('user_tracking', $schema['user_tracking']);
 }
 
 /**
  * Implements hook_form_alter().
+ *
+ * Used here to remove the default submit button from specific REP forms,
+ * because those forms use custom action buttons / redirects.
  */
 function rep_form_alter(&$form, &$form_state, $form_id) {
-  // Check if the form ID matches your configuration form.
+  // Check if the form ID matches one of the REP configuration forms.
   if ($form_id == 'rep_form_namespace' ||
       $form_id == 'rep_form_preferred_names' ||
       $form_id == 'rep_form_update_namespace') {
-      // Remove the default "Save configuration" button.
+    // Remove the default "Save configuration" button.
     unset($form['actions']['submit']);
   }
 }
 
 /**
- * Implements hook_theme
+ * Implements hook_theme().
+ *
+ * Registers custom theme hooks for REP.
  */
-function rep_theme($existing, $type, $theme, $path)
-{
-    return [
-        'list-page' => [
-            'variables' => array(
-                'items' => array(
-                    'offset' => '',
-                    'first' => '',
-                    'last' => '',
-                    'previous' => '',
-                    'next' => '',
-                    'links' => array(),
-                    'title' => ''
-                )
-            )
+function rep_theme($existing, $type, $theme, $path) {
+  return [
+    'list-page' => [
+      'variables' => [
+        'items' => [
+          'offset' => '',
+          'first' => '',
+          'last' => '',
+          'previous' => '',
+          'next' => '',
+          'links' => [],
+          'title' => '',
         ],
-    ];
+      ],
+    ],
+  ];
 }
 
 /**
  * Implements hook_preprocess_HOOK() for block templates.
+ *
+ * Attaches required libraries to all blocks rendered by Drupal.
  */
 function rep_preprocess_block(&$variables) {
-  // Add the core/drupal.dialog.ajax library.
+  // Attach the core AJAX dialog library to all blocks.
   $variables['#attached']['library'][] = 'core/drupal.dialog.ajax';
-  $attachments['#attached']['library'][] = 'rep/rep_js_css';
+
+  // Attach the custom REP JS/CSS library to all blocks as well.
+  // (This assumes that 'rep/rep_js_css' is defined in rep.libraries.yml.)
+  $variables['#attached']['library'][] = 'rep/rep_js_css';
 }
 
 /**
  * Implements hook_help().
+ *
+ * Provides simple help text for the REP module.
  */
 function rep_help($route_name, \Drupal\Core\Routing\RouteMatchInterface $route_match) {
-    switch ($route_name) {
-      case 'rep.help':
-        return '<h2>This is the help content for the HAScO Semantics Package.</h2>';
-    }
+  switch ($route_name) {
+    case 'rep.help':
+      return '<h2>This is the help content for the HAScO Semantics Package.</h2>';
   }
-
-/**
- * Implements hook_update_N().
- */
-function rep_update_8001() {
-
-  \Drupal::configFactory()->getEditable('system.site')->set('page.front', '/rep/list/instrument/_/_/1/12')->save();
-
 }
 
 /**
- * Ensure the sidebar first width setting is set to 3 cols.
+ * Implements hook_update_N().
+ *
+ * Update 8001: Set the front page to a REP listing route.
+ */
+function rep_update_8001() {
+  \Drupal::configFactory()
+    ->getEditable('system.site')
+    ->set('page.front', '/rep/list/instrument/_/_/1/12')
+    ->save();
+}
+
+/**
+ * Update 8002: Ensure the sidebar first width setting is set to 3 columns.
  */
 function rep_update_8002() {
   // Retrieve the editable configuration for the Bootstrap Barrio theme.
@@ -132,8 +150,15 @@ function rep_update_8002() {
 
 /**
  * Implements hook_menu_links_discovered_alter().
+ *
+ * This hook allows REP to:
+ * - Register custom access checks for some reviewer menu entries.
+ * - Hide Sagres / Social integration menus when disabled in REP config.
+ * - Dynamically rename menu titles/descriptions based on the preferred
+ *   names configured in rep.settings (instrument, component, process, study).
  */
 function rep_menu_links_discovered_alter(&$links) {
+  // 1) Add custom access callback for some reviewer links.
   $target_links = [
     'reviewer.top_level',
     'reviewer.response_options',
@@ -141,14 +166,14 @@ function rep_menu_links_discovered_alter(&$links) {
 
   foreach ($target_links as $link_key) {
     if (isset($links[$link_key])) {
-      // Define o requisito de acesso personalizado.
+      // Register the custom access requirement.
       $links[$link_key]['requirements']['_custom_access_check'] = 'TRUE';
     }
   }
 
+  // 2) Hide Sagres / Social integration menus if disabled in REP config.
   $config = \Drupal::config('rep.settings');
   $sagres_enabled = $config->get('sagres_conf');
-  // \Drupal::logger('rep')->notice('sagres_conf: ' . $sagres_enabled);
   $social_enabled = $config->get('social_conf');
 
   if ($sagres_enabled == 0) {
@@ -159,11 +184,14 @@ function rep_menu_links_discovered_alter(&$links) {
     ];
 
     foreach ($links as $key => $link) {
-      if ((isset($link['route_name']) && in_array($link['route_name'], [
-              'rep.sagres.status_form',
-              'rep.sagres.config_form'
-          ])) || in_array($key, $to_hide)) {
-          unset($links[$key]);
+      if (
+        (isset($link['route_name']) && in_array($link['route_name'], [
+          'rep.sagres.status_form',
+          'rep.sagres.config_form',
+        ]))
+        || in_array($key, $to_hide, TRUE)
+      ) {
+        unset($links[$key]);
       }
     }
   }
@@ -176,28 +204,206 @@ function rep_menu_links_discovered_alter(&$links) {
     ];
 
     foreach ($links as $key => $link) {
-      if ((isset($link['route_name']) && in_array($link['route_name'], [
-              'social.config_form',
-              'social.status_form'
-          ])) || in_array($key, $to_hide_social)) {
-          unset($links[$key]);
+      if (
+        (isset($link['route_name']) && in_array($link['route_name'], [
+          'social.config_form',
+          'social.status_form',
+        ]))
+        || in_array($key, $to_hide_social, TRUE)
+      ) {
+        unset($links[$key]);
       }
+    }
+  }
+
+  // 3) Dynamic menu labels based on preferred names.
+  //    This affects menus defined in SIR, STD, DPL that use
+  //    Instrument / Component / Process / Study terminology.
+  $preferred_instrument = $config->get('preferred_instrument') ?: 'Instrument';
+  $preferred_component  = $config->get('preferred_component') ?: 'Component';
+  $preferred_process    = $config->get('preferred_process') ?: 'Workflow';
+  $preferred_study      = $config->get('preferred_study') ?: 'Study';
+
+  // Normalized labels for UI (first letter uppercase).
+  $label_instrument = ucfirst($preferred_instrument);
+  $label_component  = ucfirst($preferred_component);
+  $label_process    = ucfirst($preferred_process);
+  $label_study      = ucfirst($preferred_study);
+
+  // ------------------------------------------------------------
+  // STD: Study-related menus.
+  // ------------------------------------------------------------
+  $study_map = [
+    // std.links.menu.yml
+    'std.top_level' => [
+      'title' => '@label Elements',
+      'description' => 'Manage @label elements',
+    ],
+    'std.search_option' => [
+      'title' => 'Search @label elements',
+      'description' => 'Search @label elements',
+    ],
+    'std.manage_studies' => [
+      'title' => 'Manage @label',
+      'description' => 'Manage @label items',
+    ],
+  ];
+
+  // STD: Process / Workflow menus.
+  $process_map = [
+    // std.manage_processstems / std.manage_process in std.links.menu.yml
+    'std.manage_processstems' => [
+      'title' => 'Manage @label stems',
+      'description' => 'Manage @label stems',
+    ],
+    'std.manage_process' => [
+      'title' => 'Manage @label',
+      'description' => 'Manage @label',
+    ],
+  ];
+
+  // SIR + DPL: Instrument-related menus.
+  $instrument_map = [
+    // sir.links.menu.yml
+    'sir.top_level' => [
+      'title' => '@label Elements',
+      'description' => 'Manage @label elements',
+    ],
+    'sir.search' => [
+      'title' => 'Search @label elements',
+      'description' => 'Search @label elements',
+    ],
+    'sir.manage_instruments' => [
+      'title' => 'Manage @label',
+      'description' => 'Manage @label',
+    ],
+    // dpl.links.menu.yml
+    'dpl.manage_instrument_instances' => [
+      'title' => 'Manage @label instances',
+      'description' => 'Manage @label instances',
+    ],
+  ];
+
+  // SIR + DPL: Component-related menus.
+  $component_map = [
+    // sir.manage_componentstems / sir.manage_components in sir.links.menu.yml
+    'sir.manage_componentstems' => [
+      'title' => 'Manage @label stems',
+      'description' => 'Manage @label stems',
+    ],
+    'sir.manage_components' => [
+      'title' => 'Manage @label',
+      'description' => 'Manage @label',
+    ],
+    // dpl.manage_component_instances in dpl.links.menu.yml
+    'dpl.manage_component_instances' => [
+      'title' => 'Manage @label instances',
+      'description' => 'Manage @label instances',
+    ],
+  ];
+
+  // ------------------------------------------------------------
+  // Apply the maps safely: only touch links that actually exist.
+  // This is important because SIR / STD / DPL modules may or may
+  // not be enabled on a given repository instance.
+  // ------------------------------------------------------------
+
+  // Study.
+  foreach ($study_map as $plugin_id => $texts) {
+    if (!isset($links[$plugin_id])) {
+      continue;
+    }
+    if (!empty($texts['title'])) {
+      $links[$plugin_id]['title'] = new TranslatableMarkup(
+        $texts['title'],
+        ['@label' => $label_study]
+      );
+    }
+    if (!empty($texts['description'])) {
+      $links[$plugin_id]['description'] = new TranslatableMarkup(
+        $texts['description'],
+        ['@label' => $label_study]
+      );
+    }
+  }
+
+  // Process / Workflow.
+  foreach ($process_map as $plugin_id => $texts) {
+    if (!isset($links[$plugin_id])) {
+      continue;
+    }
+    if (!empty($texts['title'])) {
+      $links[$plugin_id]['title'] = new TranslatableMarkup(
+        $texts['title'],
+        ['@label' => $label_process]
+      );
+    }
+    if (!empty($texts['description'])) {
+      $links[$plugin_id]['description'] = new TranslatableMarkup(
+        $texts['description'],
+        ['@label' => $label_process]
+      );
+    }
+  }
+
+  // Instrument.
+  foreach ($instrument_map as $plugin_id => $texts) {
+    if (!isset($links[$plugin_id])) {
+      continue;
+    }
+    if (!empty($texts['title'])) {
+      $links[$plugin_id]['title'] = new TranslatableMarkup(
+        $texts['title'],
+        ['@label' => $label_instrument]
+      );
+    }
+    if (!empty($texts['description'])) {
+      $links[$plugin_id]['description'] = new TranslatableMarkup(
+        $texts['description'],
+        ['@label' => $label_instrument]
+      );
+    }
+  }
+
+  // Component.
+  foreach ($component_map as $plugin_id => $texts) {
+    if (!isset($links[$plugin_id])) {
+      continue;
+    }
+    if (!empty($texts['title'])) {
+      $links[$plugin_id]['title'] = new TranslatableMarkup(
+        $texts['title'],
+        ['@label' => $label_component]
+      );
+    }
+    if (!empty($texts['description'])) {
+      $links[$plugin_id]['description'] = new TranslatableMarkup(
+        $texts['description'],
+        ['@label' => $label_component]
+      );
     }
   }
 }
 
 /**
- * Função de callback de acesso personalizada.
+ * Custom access callback function.
+ *
+ * This can be used whenever you want to restrict a menu link (or route)
+ * to users that:
+ *   - Have the "content_editor" role, and
+ *   - Do NOT have the "administrator" role.
  *
  * @param \Drupal\Core\Session\AccountInterface $account
+ *   The current user account.
  *
  * @return \Drupal\Core\Access\AccessResultInterface
+ *   Allowed if the user matches the criteria, forbidden otherwise.
  */
 function rep_custom_access_callback(AccountInterface $account) {
-  // Verifica se o utilizador possui o papel 'content_editor'.
+  // Check if the user has the 'content_editor' role.
   $has_content_editor = $account->hasRole('content_editor');
 
-  // Verifica se o utilizador NÃO possui o papel 'administrator'.
+  // Check if the user does NOT have the 'administrator' role.
   $is_not_administrator = !$account->hasRole('administrator');
 
   if ($has_content_editor && $is_not_administrator) {
@@ -207,19 +413,23 @@ function rep_custom_access_callback(AccountInterface $account) {
   return AccessResult::forbidden()->cachePerUser();
 }
 
-
-/* Implements hook_file_download().
+/**
+ * Implements hook_file_download().
  *
- * Allow authenticated users to download images from private://resources/.
+ * Allows authenticated users to download files from private://resources/.
+ * - If the file extension is ".pdf" a PDF content type is sent.
+ * - Otherwise the file is treated as a JPEG image.
  *
  * @param string $uri
  *   The file URI being requested.
  *
  * @return array|int
- *   An empty array to allow access or -1 to deny.
+ *   An array of HTTP headers to allow access, or -1 to deny access.
  */
 function rep_file_download($uri) {
+  // Allow access only to files under private://resources/.
   if (strpos($uri, 'private://resources/') === 0) {
+    // Only authenticated users can download these resources.
     if (\Drupal::currentUser()->isAuthenticated()) {
       $extension = pathinfo($uri, PATHINFO_EXTENSION);
 
@@ -229,21 +439,122 @@ function rep_file_download($uri) {
         ];
       }
       else {
+        // Default to JPEG for non-PDF image files.
         return [
           'Content-Type' => 'image/jpeg',
         ];
       }
     }
     else {
+      // Anonymous users are not allowed to download from this directory.
       return -1;
     }
   }
+
+  // For any other path, deny by default.
   return -1;
 }
 
+/**
+ * Implements hook_page_attachments().
+ *
+ * Globally attaches the rep_js_css library to every page.
+ *
+ * @param array $attachments
+ *   Page attachments array (libraries, CSS, JS, etc.).
+ */
 function rep_page_attachments(array &$attachments) {
   $attachments['#attached']['library'][] = 'rep/rep_js_css';
 }
+
+/**
+ * Implements hook_block_view_alter().
+ *
+ * Dynamically adjusts block titles/labels according to the preferred names
+ * stored in rep.settings (instrument, component, process, study).
+ *
+ * It looks at the current block label and replaces occurrences of:
+ *   - Study / Studies
+ *   - Instrument / Instruments
+ *   - Component / Components
+ *   - Process / Processes / Workflow / Workflows
+ * with the administrator-defined preferred terms.
+ *
+ * Example:
+ *   "Search Studies Criteria"  ->  "Search RGPD Criteria"
+ *   "Search Instrument Criteria" -> "Search Tool Criteria"
+ */
+function rep_block_view_alter(array &$build, BlockPluginInterface $block) {
+  // Read preferred names from REP configuration.
+  $config = \Drupal::config('rep.settings');
+
+  $preferred_instrument = $config->get('preferred_instrument') ?: 'Instrument';
+  $preferred_component  = $config->get('preferred_component') ?: 'Component';
+  $preferred_process    = $config->get('preferred_process') ?: 'Workflow';
+  $preferred_study      = $config->get('preferred_study') ?: 'Study';
+
+  // Normalized labels for UI (first letter uppercase).
+  $label_instrument = ucfirst($preferred_instrument);
+  $label_component  = ucfirst($preferred_component);
+  $label_process    = ucfirst($preferred_process);
+  $label_study      = ucfirst($preferred_study);
+
+  // Get current label from the build array.
+  if (!isset($build['#configuration']['label'])) {
+    // Some blocks might not have a label; nothing to change.
+    return;
+  }
+
+  $current_label = $build['#configuration']['label'];
+
+  // Convert TranslatableMarkup or other objects to plain string.
+  if ($current_label instanceof TranslatableMarkup) {
+    $label_text = $current_label->render();
+  }
+  else {
+    $label_text = (string) $current_label;
+  }
+
+  if ($label_text === '') {
+    return;
+  }
+
+  // Replacement map: any occurrence of these words will be replaced
+  // by the corresponding preferred label (singular form).
+  // Note: we deliberately map plural forms (Studies/Instruments/etc.)
+  // to the same preferred label string. This can produce:
+  //   "Search RGPD Criteria" (from "Search Studies Criteria"),
+  // which is acceptable for this use case.
+  $replacements = [
+    'Study'      => $label_study,
+    'Studies'    => $label_study,
+    'Instrument' => $label_instrument,
+    'Instruments'=> $label_instrument,
+    'Component'  => $label_component,
+    'Components' => $label_component,
+    'Process'    => $label_process,
+    'Processes'  => $label_process,
+    'Workflow'   => $label_process,
+    'Workflows'  => $label_process,
+  ];
+
+  $new_text = strtr($label_text, $replacements);
+
+  // If nothing changed, we can return early.
+  if ($new_text === $label_text) {
+    return;
+  }
+
+  // Wrap the new label as a TranslatableMarkup so it can still be translated.
+  $new_label = new TranslatableMarkup($new_text);
+
+  // Update the block configuration label for rendering.
+  $build['#configuration']['label'] = $new_label;
+
+  // Also set #title explicitly, to cover themes that read from here.
+  $build['#title'] = $new_label;
+}
+
 
 // /**
 //  * Helper para executar chamadas autenticadas ao Sagres com renovação automática do token.

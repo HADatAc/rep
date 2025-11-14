@@ -50,6 +50,12 @@ class TreeForm extends FormBase {
 
     $form['#cache']['max-age'] = 0;
 
+    // Prefered name
+    $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'instrument';
+    $preferred_component = \Drupal::config('rep.settings')->get('preferred_component') ?? 'component';
+    $preferred_process = \Drupal::config('rep.settings')->get('preferred_process') ?? 'workflow';
+    $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
+
     // Toggles
     $hide_draft = $form_state->getValue('hide_draft') ?? true;
     $hide_deprecated = $form_state->getValue('hide_deprecated') ?? true;
@@ -98,23 +104,23 @@ class TreeForm extends FormBase {
     $validTypes = [
       'annotationstem' => ["Annotation Stem", EntryPoints::EP_ANNOTATION_STEM],
       'attribute' => ["Attribute", EntryPoints::EP_ATTRIBUTE],
-      'componentstem' => ["Component Stem", EntryPoints::EP_COMPONENT_STEM],
+      'componentstem' => [ucfirst($preferred_component)." Stem", EntryPoints::EP_COMPONENT_STEM],
       'entity' => ["Entity", EntryPoints::EP_ENTITY],
       'group' => ["Group", EntryPoints::EP_GROUP],
-      'instrument' => ["Instrument", EntryPoints::EP_INSTRUMENT],
+      'instrument' => [ucfirst($preferred_instrument), EntryPoints::EP_INSTRUMENT],
       'organization' => ["Organization", EntryPoints::EP_ORGANIZATION],
       'person' => ["Person", EntryPoints::EP_PERSON],
       'place' => ["Place", EntryPoints::EP_PLACE],
       'platform' => ["Platform", EntryPoints::EP_PLATFORM],
-      'workflowstem' => ["Workflow Stem", EntryPoints::EP_WORKFLOW_STEM],
+      'workflowstem' => [ucfirst($preferred_process)." Stem", EntryPoints::EP_WORKFLOW_STEM],
       // 'questionnaire' => ["Questionnaire", EntryPoints::EP_QUESTIONNAIRE],
       'responseoption' => ["Response Option", EntryPoints::EP_RESPONSE_OPTION],
-      'study' => ["Study", EntryPoints::EP_STUDY],
+      'study' => [ucfirst($preferred_study), EntryPoints::EP_STUDY],
       'task' => ["Task Type", EntryPoints::EP_TASK],
       'tasktemporaldependency' => ["Task Temporal Dependency", EntryPoints::EP_TASK_TEMPORAL_DEPENDENCY],
       'unit' => ["Unit", EntryPoints::EP_UNIT],
-      'componentattribute' => ["Component Attribute", EntryPoints::EP_COMPONENT_ATTRIBUTE],
-      'component' => ["Component", EntryPoints::EP_COMPONENT],
+      'componentattribute' => [ucfirst($preferred_component)." Attribute", EntryPoints::EP_COMPONENT_ATTRIBUTE],
+      'component' => [ucfirst($preferred_component), EntryPoints::EP_COMPONENT],
 
       'person' => ["Person", EntryPoints::EP_PERSON],
       'place' => ["Place", EntryPoints::EP_PLACE],
@@ -137,21 +143,21 @@ class TreeForm extends FormBase {
       [
         'id' => 'componentstem',
         'uri' => EntryPoints::EP_COMPONENT_STEM,
-        'label' => 'Component Stem',
+        'label' => ucfirst($preferred_component).' Stem',
         'typeNamespace' => EntryPoints::EP_COMPONENT_STEM,
         'uriNamespace' => EntryPoints::EP_COMPONENT_STEM
       ],
       [
         'id' => 'component',
         'uri' => EntryPoints::EP_COMPONENT,
-        'label' => 'Component',
+        'label' => ucfirst($preferred_component),
         'typeNamespace' => EntryPoints::EP_COMPONENT,
         'uriNamespace' => EntryPoints::EP_COMPONENT
       ],
       [
         'id' => 'componentattribute',
         'uri' => EntryPoints::EP_COMPONENT_ATTRIBUTE,
-        'label' => 'Component Attribute',
+        'label' => ucfirst($preferred_component).' Attribute',
         'uriNamespace' => EntryPoints::EP_COMPONENT_ATTRIBUTE
       ],
       [
@@ -168,7 +174,7 @@ class TreeForm extends FormBase {
       [
         'id' => 'instrument',
         'uri' => EntryPoints::EP_INSTRUMENT,
-        'label' => 'Instrument',
+        'label' => ucfirst($preferred_instrument),
         'uriNamespace' => Utils::namespaceUri(EntryPoints::EP_INSTRUMENT),
       ],
       [
@@ -192,7 +198,7 @@ class TreeForm extends FormBase {
       [
         'id' => 'processstem',
         'uri' => EntryPoints::EP_WORKFLOW_STEM,
-        'label' => 'Workflow Stem',
+        'label' => ucfirst($preferred_process).' Stem',
         'uriNamespace' => EntryPoints::EP_WORKFLOW_STEM
       ],
       // [
@@ -210,7 +216,7 @@ class TreeForm extends FormBase {
       [
         'id' => 'study',
         'uri' => EntryPoints::EP_STUDY,
-        'label' => 'Study',
+        'label' => ucfirst($preferred_study),
         'uriNamespace' => EntryPoints::EP_STUDY,
       ],
       [
@@ -278,7 +284,7 @@ class TreeForm extends FormBase {
         [
           'id' => 'instrument',
           'uri' =>EntryPoints::EP_INSTRUMENT,
-          'label' => 'Instruments',
+          'label' => ucfirst($preferred_instrument),
           'uriNamespace' => Utils::namespaceUri(EntryPoints::EP_INSTRUMENT),
         ],
       ];

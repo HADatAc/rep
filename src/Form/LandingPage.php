@@ -32,167 +32,154 @@ class LandingPage extends FormBase {
 
      public function buildForm(array $form, FormStateInterface $form_state){
 
-        $form['rep_home'] = [
-            '#type' => 'item',
-            '#title' => '<br>This is a <a href="http://hadatac.org/software/hascorepo/">HAScO/Repo</a> instance ' .
-                'developed by <a href="http://hadatac.org/">HADatAc.org</a> community.<br>',
+      // Prefered name
+      $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'instrument';
+      $preferred_component = \Drupal::config('rep.settings')->get('preferred_component') ?? 'component';
+      $preferred_process = \Drupal::config('rep.settings')->get('preferred_process') ?? 'workflow';
+      $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
+
+      $form['rep_home'] = [
+          '#type' => 'item',
+          '#title' => '<br>This is a <a href="http://hadatac.org/software/hascorepo/">HAScO/Repo</a> instance ' .
+              'developed by <a href="http://hadatac.org/">HADatAc.org</a> community.<br>',
+      ];
+
+      $form['rep_content1'] = [
+          '#type' => 'item',
+          '#title' => 'This repository currently hosts a knowledge graph containing the following kinds of <b>core elements</b>:<br>',
+      ];
+
+      $form['row1'] = array(
+          '#type' => 'container',
+          '#attributes' => array('class' => array('row')),
+      );
+
+      $form['totals_wrapper'] = [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['card']],
+          'body' => [
+            '#type' => 'container',
+            '#attributes' => ['class' => ['card-body']],
+          ],
         ];
 
-        $form['rep_content1'] = [
-            '#type' => 'item',
-            '#title' => 'This repository currently hosts a knowledge graph containing the following kinds of <b>core elements</b>:<br>',
+        // Title row
+        $form['totals_wrapper']['body']['titles'] = [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['row', 'text-center']],
         ];
 
-        $form['row1'] = array(
-            '#type' => 'container',
-            '#attributes' => array('class' => array('row')),
-        );
+        $dimensions = [
+          'Social<br>Dimension',
+          'Sensing/Acting<br>Dimension',
+          'Infrastructure<br>Dimension',
+          'Science<br>Dimension',
+          'Semantic<br>Dimension',
+          'Data<br>Dimension',
+        ];
 
-        $form['totals_wrapper'] = [
-            '#type' => 'container',
-            '#attributes' => ['class' => ['card']],
-            'body' => [
-              '#type' => 'container',
-              '#attributes' => ['class' => ['card-body']],
-            ],
+        foreach ($dimensions as $i => $label) {
+          $form['totals_wrapper']['body']['titles']["col_$i"] = [
+            '#type' => 'markup',
+            '#markup' => "<div class='col-md-2'><h4>$label</h4></div>",
           ];
+        }
 
-          // Title row
-          $form['totals_wrapper']['body']['titles'] = [
+        // Data rows
+        $rows = [
+          // Row 1
+          [
+            ['project', 'Project(s)', null, 'fa-list-check', 'icon'],
+            ['instrument', ucfirst($preferred_instrument).'(s)', null, 'instrument', 'image'],
+            ['instrumentinstance', ucfirst($preferred_instrument).' instance(s)', null, 'instrument_instance', 'image'],
+            ['study', ucfirst($preferred_study).'(ies)', null, 'fa-graduation-cap', 'icon'],
+            ['entity', 'Entity Type(s)', null, 'entity', 'images'],
+            ['stream', 'Datafile Stream(s)', null, 'datafile_stream', 'images'],
+          ],
+          // Row 2
+          [
+            ['organization', 'Organization(s)', null, 'fa-building', 'icon'],
+            ['component', ucfirst($preferred_component).'(s)', null, 'fa-puzzle-piece', 'icon'],
+            ['componentinstance', ucfirst($preferred_component).' Instance(s)', null, 'component_instance', 'image'],
+            ['objectcollection', 'object Collection(s)', null, 'studyobjectcollection', 'images'],
+            ['variable', 'Variable(s)', null, 'variable', 'images'],
+            ['stream', 'Message Stream(s)', null, 'message_stream', 'images'],
+          ],
+          // Row 3
+          [
+            ['person', 'Person(s)', null, 'fa-user', 'icon'],
+            ['codebook', 'Codebook(s)', null, 'fa-book', 'icon'],
+            ['deployment', 'Deployment(s)', null, 'deployment', 'images'],
+            ['object', 'Object(s)', 'studyobject', 'studyobject', 'images'],
+            ['semanticvariable', 'Semantic Variable(s)', null, 'semanticvariable', 'images'],
+            ['value', 'Value(s)', null, 'value', 'images'],
+          ],
+        ];
+
+        // Icon styling
+        $iconStyle = 'padding:30px; width:80px; height:80px; display:inline-flex; align-items:center; justify-content:center;';
+
+        foreach ($rows as $row_index => $row) {
+          $form['totals_wrapper']['body']["row_$row_index"] = [
             '#type' => 'container',
             '#attributes' => ['class' => ['row', 'text-center']],
           ];
 
-          $dimensions = [
-            'Social<br>Dimension',
-            'Sensing/Acting<br>Dimension',
-            'Infrastructure<br>Dimension',
-            'Science<br>Dimension',
-            'Semantic<br>Dimension',
-            'Data<br>Dimension',
-          ];
+          foreach ($row as $col_index => $item) {
+            $key = $item[0];
+            $label = $item[1];
+            $total_key = $item[2] ?? $key;
+            $icon_class = $item[3] ?? 'fa-database'; // Default icon if not specified
+            $iconType = $item[4] ?? 'icon';
 
-          foreach ($dimensions as $i => $label) {
-            $form['totals_wrapper']['body']['titles']["col_$i"] = [
-              '#type' => 'markup',
-              '#markup' => "<div class='col-md-2'><h4>$label</h4></div>",
-            ];
-          }
+            $url = Utils::selectBackUrl($key)->toString();
+            $count = About::total($total_key);
 
-          // Data rows
-          $rows = [
-            // Row 1
-            [
-              ['project', 'Project(s)', null, 'fa-list-check', 'icon'],
-              ['instrument', 'Instrument(s)', null, 'instrument', 'image'],
-              ['instrumentinstance', 'Instrument instance(s)', null, 'instrument_instance', 'image'],
-              ['study', 'Study(ies)', null, 'fa-graduation-cap', 'icon'],
-              ['entity', 'Entity Type(s)', null, 'entity', 'images'],
-              ['stream', 'Datafile Stream(s)', null, 'datafile_stream', 'images'],
-            ],
-            // Row 2
-            [
-              ['organization', 'Organization(s)', null, 'fa-building', 'icon'],
-              ['component', 'Component(s)', null, 'fa-puzzle-piece', 'icon'],
-              ['componentinstance', 'Component Instance(s)', null, 'component_instance', 'image'],
-              ['objectcollection', 'object Collection(s)', null, 'studyobjectcollection', 'images'],
-              ['variable', 'Variable(s)', null, 'variable', 'images'],
-              ['stream', 'Message Stream(s)', null, 'message_stream', 'images'],
-            ],
-            // Row 3
-            [
-              ['person', 'Person(s)', null, 'fa-user', 'icon'],
-              ['codebook', 'Codebook(s)', null, 'fa-book', 'icon'],
-              ['deployment', 'Deployment(s)', null, 'deployment', 'images'],
-              ['object', 'Object(s)', 'studyobject', 'studyobject', 'images'],
-              ['semanticvariable', 'Semantic Variable(s)', null, 'semanticvariable', 'images'],
-              ['value', 'Value(s)', null, 'value', 'images'],
-            ],
-          ];
-
-          // Icon styling
-          $iconStyle = 'padding:30px; width:80px; height:80px; display:inline-flex; align-items:center; justify-content:center;';
-
-          foreach ($rows as $row_index => $row) {
-            $form['totals_wrapper']['body']["row_$row_index"] = [
+            $element = [
               '#type' => 'container',
-              '#attributes' => ['class' => ['row', 'text-center']],
+              '#attributes' => ['class' => ['col-md-2', 'text-center']],
             ];
 
-            foreach ($row as $col_index => $item) {
-              $key = $item[0];
-              $label = $item[1];
-              $total_key = $item[2] ?? $key;
-              $icon_class = $item[3] ?? 'fa-database'; // Default icon if not specified
-              $iconType = $item[4] ?? 'icon';
-
-              $url = Utils::selectBackUrl($key)->toString();
-              $count = About::total($total_key);
-
-              // $form['totals_wrapper']['body']["row_$row_index"]["col_{$col_index}"] = [
-              //   '#type' => 'container',
-              //   '#attributes' => ['class' => ['col-md-2', 'text-center']],
-              //   'icon' => [
-              //     '#type' => 'html_tag',
-              //     '#tag' => 'i',
-              //     '#attributes' => [
-              //       'class' => [
-              //         'fa-button', 'fa-3x', 'fa-solid', $icon_class, 'view-active',
-              //       ],
-              //       'style' => $iconStyle,
-              //     ],
-              //   ],
-              //   'label' => [
-              //     '#type' => 'markup',
-              //     '#markup' => "<div><a href=\"$url\">$label</a><br><h3>$count</h3></div>",
-              //   ],
-              // ];
-              // monta o container básico
-              $element = [
-                '#type' => 'container',
-                '#attributes' => ['class' => ['col-md-2', 'text-center']],
-              ];
-
-              if ($iconType === 'icon') {
-                $element['icon'] = [
-                  '#type' => 'html_tag',
-                  '#tag' => 'i',
-                  '#attributes' => [
-                    'class' => [
-                      'fa-button',
-                      'fa-3x',
-                      'fa-solid',
-                      $icon_class,
-                      'view-active',
-                    ],
-                    'style' => $iconStyle,
+            if ($iconType === 'icon') {
+              $element['icon'] = [
+                '#type' => 'html_tag',
+                '#tag' => 'i',
+                '#attributes' => [
+                  'class' => [
+                    'fa-button',
+                    'fa-3x',
+                    'fa-solid',
+                    $icon_class,
+                    'view-active',
                   ],
-                ];
-              }
-              if ($iconType !== 'icon') {
-                $module_path = \Drupal::service('extension.list.module')->getPath('rep');
-                $image_uri   = $module_path . '/images/placeholders/' . $icon_class . '_placeholder.png';
-
-                $element['image'] = [
-                  '#type' => 'html_tag',
-                  '#tag' => 'img',
-                  '#attributes' => [
-                    'src'   => $image_uri,
-                    'alt'   => $label,
-                    'class' => ['img-responsive'],
-                    'style' => 'width: 80px; height: 80px; display: inline-flex; align-items: center; justify-content: center;',
-                  ],
-                ];
-              }
-
-              $element['label'] = [
-                '#type' => 'markup',
-                '#markup' => "<div><a href=\"$url\">$label</a><br><h3>$count</h3></div>",
+                  'style' => $iconStyle,
+                ],
               ];
-
-              $form['totals_wrapper']['body']["row_$row_index"]["col_{$col_index}"] = $element;
             }
+            if ($iconType !== 'icon') {
+              $module_path = \Drupal::service('extension.list.module')->getPath('rep');
+              $image_uri   = $module_path . '/images/placeholders/' . $icon_class . '_placeholder.png';
+
+              $element['image'] = [
+                '#type' => 'html_tag',
+                '#tag' => 'img',
+                '#attributes' => [
+                  'src'   => $image_uri,
+                  'alt'   => $label,
+                  'class' => ['img-responsive'],
+                  'style' => 'width: 80px; height: 80px; display: inline-flex; align-items: center; justify-content: center;',
+                ],
+              ];
+            }
+
+            $element['label'] = [
+              '#type' => 'markup',
+              '#markup' => "<div><a href=\"$url\">$label</a><br><h3>$count</h3></div>",
+            ];
+
+            $form['totals_wrapper']['body']["row_$row_index"]["col_{$col_index}"] = $element;
           }
+        }
 
         $form['rep_full_list'] = [
             '#type' => 'item',

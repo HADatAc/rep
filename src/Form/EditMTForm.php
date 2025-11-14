@@ -86,6 +86,9 @@ class EditMTForm extends FormBase {
 
     $api = \Drupal::service('rep.api_connector');
 
+    // Study Prefered name
+    $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
+
     // HANDLE STUDYURI AND STUDY, IF ANY
     if ($studyuri != NULL) {
       if ($studyuri == 'none') {
@@ -95,7 +98,7 @@ class EditMTForm extends FormBase {
         $this->setStudyUri($studyuri_decoded);
         $study = $api->parseObjectResponse($api->getUri($this->getStudyUri()),'getUri');
         if ($study == NULL) {
-          \Drupal::messenger()->addMessage(t("Failed to retrieve Study."));
+          \Drupal::messenger()->addMessage(t("Failed to retrieve ".$preferred_study."."));
           self::backUrl();
           return;
         } else {
@@ -185,14 +188,14 @@ class EditMTForm extends FormBase {
       if ($fixstd == 'T') {
         $form['mt_study'] = [
           '#type' => 'textfield',
-          '#title' => $this->t('Study'),
+          '#title' => $this->t($preferred_study),
           '#default_value' => $study,
           '#disabled' => TRUE,
         ];
       } else {
         $form['mt_study'] = [
           '#type' => 'textfield',
-          '#title' => $this->t('Study'),
+          '#title' => $this->t($preferred_study),
           '#default_value' => $study,
           '#autocomplete_route_name' => 'std.study_autocomplete',
         ];

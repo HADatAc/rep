@@ -22,12 +22,15 @@ class Stream {
   }
 
   public static function generateHeaderState($state) {
+    // Study Prefered name
+    $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
+
     if ($state == 'design') {
       return $header = [
         'element_uri' => t('URI'),
         'element_datetime' => t('Design Time'),
         'element_deployment' => t('Deployment'),
-        'element_study' => t('Study'),
+        'element_study' => t($preferred_study),
         'element_sdd' => t('SDD'),
         'element_source' => t('Source'),
       ];
@@ -36,7 +39,7 @@ class Stream {
         'element_uri' => t('URI'),
         'element_datetime' => t('Execution Time'),
         'element_deployment' => t('Deployment'),
-        'element_study' => t('Study'),
+        'element_study' => t($preferred_study),
         'element_sdd' => t('SDD'),
         'element_source' => t('Source'),
       ];
