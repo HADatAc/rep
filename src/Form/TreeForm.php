@@ -102,140 +102,140 @@ class TreeForm extends FormBase {
 
     // Valid types
     $validTypes = [
-      'annotationstem' => ["Annotation Stem", EntryPoints::EP_ANNOTATION_STEM],
-      'attribute' => ["Attribute", EntryPoints::EP_ATTRIBUTE],
-      'componentstem' => [ucfirst($preferred_component)." Stem", EntryPoints::EP_COMPONENT_STEM],
-      'entity' => ["Entity", EntryPoints::EP_ENTITY],
-      'group' => ["Group", EntryPoints::EP_GROUP],
-      'instrument' => [ucfirst($preferred_instrument), EntryPoints::EP_INSTRUMENT],
-      'organization' => ["Organization", EntryPoints::EP_ORGANIZATION],
-      'person' => ["Person", EntryPoints::EP_PERSON],
-      'place' => ["Place", EntryPoints::EP_PLACE],
-      'platform' => ["Platform", EntryPoints::EP_PLATFORM],
-      'workflowstem' => [ucfirst($preferred_process)." Stem", EntryPoints::EP_WORKFLOW_STEM],
+      'annotationstem' => ["Annotation Stem", EntryPoints::CLASS_EP_ANNOTATION_STEM],
+      'attribute' => ["Attribute", EntryPoints::CLASS_EP_ATTRIBUTE],
+      'componentstem' => [ucfirst($preferred_component)." Stem", EntryPoints::CLASS_EP_COMPONENT_STEM],
+      'entity' => ["Entity", EntryPoints::CLASS_EP_ENTITY],
+      'group' => ["Group", EntryPoints::CLASS_EP_GROUP],
+      'instrument' => [ucfirst($preferred_instrument), EntryPoints::CLASS_EP_INSTRUMENT],
+      'organization' => ["Organization", EntryPoints::CLASS_EP_ORGANIZATION],
+      'person' => ["Person", EntryPoints::CLASS_EP_PERSON],
+      'place' => ["Place", EntryPoints::CLASS_EP_PLACE],
+      'platform' => ["Platform", EntryPoints::INSTANCE_EP_PLATFORM],
+      'workflowstem' => [ucfirst($preferred_process)." Stem", EntryPoints::CLASS_EP_WORKFLOW_STEM],
       // 'questionnaire' => ["Questionnaire", EntryPoints::EP_QUESTIONNAIRE],
-      'responseoption' => ["Response Option", EntryPoints::EP_RESPONSE_OPTION],
-      'study' => [ucfirst($preferred_study), EntryPoints::EP_STUDY],
-      'task' => ["Task Type", EntryPoints::EP_TASK],
-      'tasktemporaldependency' => ["Task Temporal Dependency", EntryPoints::EP_TASK_TEMPORAL_DEPENDENCY],
-      'unit' => ["Unit", EntryPoints::EP_UNIT],
-      'componentattribute' => [ucfirst($preferred_component)." Attribute", EntryPoints::EP_COMPONENT_ATTRIBUTE],
-      'component' => [ucfirst($preferred_component), EntryPoints::EP_COMPONENT],
+      'responseoption' => ["Response Option", EntryPoints::CLASS_EP_RESPONSE_OPTION],
+      'study' => [ucfirst($preferred_study), EntryPoints::CLASS_EP_STUDY],
+      'task' => ["Task Type", EntryPoints::CLASS_EP_TASK],
+      'tasktemporaldependency' => ["Task Temporal Dependency", EntryPoints::CLASS_EP_TASK_TEMPORAL_DEPENDENCY],
+      'unit' => ["Unit", EntryPoints::INSTANCE_EP_UNIT],
+      'componentattribute' => [ucfirst($preferred_component)." Attribute", EntryPoints::CLASS_EP_COMPONENT_ATTRIBUTE],
+      'component' => [ucfirst($preferred_component), EntryPoints::CLASS_EP_COMPONENT],
 
-      'person' => ["Person", EntryPoints::EP_PERSON],
-      'place' => ["Place", EntryPoints::EP_PLACE],
-      'organization' => ["Organization", EntryPoints::EP_ORGANIZATION],
+      'person' => ["Person", EntryPoints::CLASS_EP_PERSON],
+      'place' => ["Place", EntryPoints::CLASS_EP_PLACE],
+      'organization' => ["Organization", EntryPoints::CLASS_EP_ORGANIZATION],
     ];
 
     $branches_param = [
       [
         'id' => 'annotationstem',
-        'uri' => EntryPoints::EP_ANNOTATION_STEM,
+        'uri' => EntryPoints::CLASS_EP_ANNOTATION_STEM,
         'label' => 'Annotation Stem',
-        'uriNamespace' => EntryPoints::EP_ANNOTATION_STEM
+        'uriNamespace' => EntryPoints::CLASS_EP_ANNOTATION_STEM
       ],
       [
         'id' => 'attribute',
-        'uri' => EntryPoints::EP_ATTRIBUTE,
+        'uri' => EntryPoints::CLASS_EP_ATTRIBUTE,
         'label' => 'Attribute',
-        'uriNamespace' => EntryPoints::EP_ATTRIBUTE
+        'uriNamespace' => EntryPoints::CLASS_EP_ATTRIBUTE
       ],
       [
         'id' => 'componentstem',
-        'uri' => EntryPoints::EP_COMPONENT_STEM,
+        'uri' => EntryPoints::CLASS_EP_COMPONENT_STEM,
         'label' => ucfirst($preferred_component).' Stem',
-        'typeNamespace' => EntryPoints::EP_COMPONENT_STEM,
-        'uriNamespace' => EntryPoints::EP_COMPONENT_STEM
+        'typeNamespace' => EntryPoints::CLASS_EP_COMPONENT_STEM,
+        'uriNamespace' => EntryPoints::CLASS_EP_COMPONENT_STEM
       ],
       [
         'id' => 'component',
-        'uri' => EntryPoints::EP_COMPONENT,
+        'uri' => EntryPoints::CLASS_EP_COMPONENT,
         'label' => ucfirst($preferred_component),
-        'typeNamespace' => EntryPoints::EP_COMPONENT,
-        'uriNamespace' => EntryPoints::EP_COMPONENT
+        'typeNamespace' => EntryPoints::CLASS_EP_COMPONENT,
+        'uriNamespace' => EntryPoints::CLASS_EP_COMPONENT
       ],
       [
         'id' => 'componentattribute',
-        'uri' => EntryPoints::EP_COMPONENT_ATTRIBUTE,
+        'uri' => EntryPoints::CLASS_EP_COMPONENT_ATTRIBUTE,
         'label' => ucfirst($preferred_component).' Attribute',
-        'uriNamespace' => EntryPoints::EP_COMPONENT_ATTRIBUTE
+        'uriNamespace' => EntryPoints::CLASS_EP_COMPONENT_ATTRIBUTE
       ],
       [
         'id' => 'entity',
-        'uri' => EntryPoints::EP_ENTITY,
+        'uri' => EntryPoints::CLASS_EP_ENTITY,
         'label' => 'Entity',
-        'uriNamespace' => Utils::namespaceUri(EntryPoints::EP_ENTITY),
+        'uriNamespace' => Utils::namespaceUri(EntryPoints::CLASS_EP_ENTITY),
       ],
       [
         'id' => 'group',
-        'uri' => EntryPoints::EP_GROUP,
+        'uri' => EntryPoints::CLASS_EP_GROUP,
         'label' => 'Group'
       ],
       [
         'id' => 'instrument',
-        'uri' => EntryPoints::EP_INSTRUMENT,
+        'uri' => EntryPoints::CLASS_EP_INSTRUMENT,
         'label' => ucfirst($preferred_instrument),
-        'uriNamespace' => Utils::namespaceUri(EntryPoints::EP_INSTRUMENT),
+        'uriNamespace' => Utils::namespaceUri(EntryPoints::CLASS_EP_INSTRUMENT),
       ],
       [
         'id' => 'organization',
-        'uri' => EntryPoints::EP_ORGANIZATION,
+        'uri' => EntryPoints::CLASS_EP_ORGANIZATION,
         'label' => 'Organization',
-        'uriNamespace' => EntryPoints::EP_ORGANIZATION,
+        'uriNamespace' => EntryPoints::CLASS_EP_ORGANIZATION,
       ],
       [
         'id' => 'place',
-        'uri' => EntryPoints::EP_PLACE,
+        'uri' => EntryPoints::CLASS_EP_PLACE,
         'label' => 'Place',
-        'uriNamespace' => EntryPoints::EP_PLACE,
+        'uriNamespace' => EntryPoints::CLASS_EP_PLACE,
       ],
       [
         'id' => 'platform',
-        'uri' => EntryPoints::EP_PLATFORM,
+        'uri' => EntryPoints::CLASS_EP_PLATFORM,
         'label' => 'Platform',
-        'uriNamespace' => EntryPoints::EP_PLATFORM
+        'uriNamespace' => EntryPoints::CLASS_EP_PLATFORM
       ],
       [
         'id' => 'processstem',
-        'uri' => EntryPoints::EP_WORKFLOW_STEM,
+        'uri' => EntryPoints::CLASS_EP_WORKFLOW_STEM,
         'label' => ucfirst($preferred_process).' Stem',
-        'uriNamespace' => EntryPoints::EP_WORKFLOW_STEM
+        'uriNamespace' => EntryPoints::CLASS_EP_WORKFLOW_STEM
       ],
       // [
       //   'id' => 'questionnaire',
-      //   'uri' => EntryPoints::EP_QUESTIONNAIRE,
+      //   'uri' => EntryPoints::CLASS_EP_QUESTIONNAIRE,
       //   'label' => 'Questionnaire',
-      //   'uriNamespace' => EntryPoints::EP_QUESTIONNAIRE,
+      //   'uriNamespace' => EntryPoints::CLASS_EP_QUESTIONNAIRE,
       // ],
       [
         'id' => 'responseoption',
-        'uri' => EntryPoints::EP_RESPONSE_OPTION,
+        'uri' => EntryPoints::CLASS_EP_RESPONSE_OPTION,
         'label' => 'Response Option',
-        'uriNamespace' => EntryPoints::EP_RESPONSE_OPTION,
+        'uriNamespace' => EntryPoints::CLASS_EP_RESPONSE_OPTION,
       ],
       [
         'id' => 'study',
-        'uri' => EntryPoints::EP_STUDY,
+        'uri' => EntryPoints::CLASS_EP_STUDY,
         'label' => ucfirst($preferred_study),
-        'uriNamespace' => EntryPoints::EP_STUDY,
+        'uriNamespace' => EntryPoints::CLASS_EP_STUDY,
       ],
       [
         'id' => 'task',
-        'uri' => EntryPoints::EP_TASK,
+        'uri' => EntryPoints::CLASS_EP_TASK,
         'label' => 'Task Type',
-        'uriNamespace' => EntryPoints::EP_TASK,
+        'uriNamespace' => EntryPoints::CLASS_EP_TASK,
       ],
       [
         'id' => 'tasktemporaldependency',
-        'uri' => EntryPoints::EP_TASK_TEMPORAL_DEPENDENCY,
+        'uri' => EntryPoints::CLASS_EP_TASK_TEMPORAL_DEPENDENCY,
         'label' => 'Task Temporal Dependency',
-        'uriNamespace' => EntryPoints::EP_TASK_TEMPORAL_DEPENDENCY,
+        'uriNamespace' => EntryPoints::CLASS_EP_TASK_TEMPORAL_DEPENDENCY,
       ],
       [
         'id' => 'unit',
-        'uri' => EntryPoints::EP_UNIT,
+        'uri' => EntryPoints::INSTANCE_EP_UNIT,
         'label' => 'Unit',
-        'uriNamespace' => EntryPoints::EP_UNIT,
+        'uriNamespace' => EntryPoints::INSTANCE_EP_UNIT,
       ],
     ];
 
@@ -283,9 +283,9 @@ class TreeForm extends FormBase {
       $branches_param = [
         [
           'id' => 'instrument',
-          'uri' =>EntryPoints::EP_INSTRUMENT,
+          'uri' =>EntryPoints::CLASS_EP_INSTRUMENT,
           'label' => ucfirst($preferred_instrument),
-          'uriNamespace' => Utils::namespaceUri(EntryPoints::EP_INSTRUMENT),
+          'uriNamespace' => Utils::namespaceUri(EntryPoints::CLASS_EP_INSTRUMENT),
         ],
       ];
     }

@@ -71,25 +71,30 @@ use PHPUnit\Event\Application\Started;
      *  ENTRY POINTS
      */
 
-    const ANNOTATION_STEM_ENTRY_POINT           = HASCO::HASCO . "AnnotationStemEntryPoint";
-    const ATTRIBUTE_ENTRY_POINT                 = HASCO::HASCO . "AttributeEntryPoint";
-    const CODEBOOK_ENTRY_POINT                  = HASCO::HASCO . "CodebookEntryPoint";
-    const COMPONENT_STEM_ENTRY_POINT            = HASCO::HASCO . "ComponentStemEntryPoint";
-    const COMPONENT_ENTRY_POINT                 = HASCO::HASCO . "ComponentEntryPoint";
-    const COMPONENT_ATTRIBUTE_ENTRY_POINT       = HASCO::HASCO . "ComponentAttributeEntryPoint";
-    const ENTITY_ENTRY_POINT                    = HASCO::HASCO . "EntityEntryPoint";
-    const GROUP_ENTRY_POINT                     = HASCO::HASCO . "GroupEntryPoint";
-    const INSTRUMENT_ENTRY_POINT                = HASCO::HASCO . "InstrumentEntryPoint";
-    const ORGANIZATION_ENTRY_POINT              = HASCO::HASCO . "OrganizationEntryPoint";
-    const PERSON_ENTRY_POINT                    = HASCO::HASCO . "PersonEntryPoint";
-    const PLACE_ENTRY_POINT                     = HASCO::HASCO . "PlaceEntryPoint";
-    const PLATFORM_ENTRY_POINT                  = HASCO::HASCO . "PlatformEntryPoint";
-    const WORKFLOW_STEM_ENTRY_POINT             = HASCO::HASCO . "WorkflowEntryPoint";
+    // CLASS
+    const ANNOTATION_STEM_CLASS_ENTRY_POINT           = HASCO::HASCO . "AnnotationStemEntryPoint";
+    const ATTRIBUTE_CLASS_ENTRY_POINT                 = HASCO::HASCO . "AttributeEntryPoint";
+    const CODEBOOK_CLASS_ENTRY_POINT                  = HASCO::HASCO . "CodebookEntryPoint";
+    const COMPONENT_STEM_CLASS_ENTRY_POINT            = HASCO::HASCO . "ComponentStemEntryPoint";
+    const COMPONENT_CLASS_ENTRY_POINT                 = HASCO::HASCO . "ComponentEntryPoint";
+    const COMPONENT_ATTRIBUTE_CLASS_ENTRY_POINT       = HASCO::HASCO . "ComponentAttributeEntryPoint";
+    const ENTITY_CLASS_ENTRY_POINT                    = HASCO::HASCO . "EntityEntryPoint";
+    const GROUP_CLASS_ENTRY_POINT                     = HASCO::HASCO . "GroupEntryPoint";
+    const INSTRUMENT_CLASS_ENTRY_POINT                = HASCO::HASCO . "InstrumentEntryPoint";
+    const ORGANIZATION_CLASS_ENTRY_POINT              = HASCO::HASCO . "OrganizationEntryPoint";
+    const PERSON_CLASS_ENTRY_POINT                    = HASCO::HASCO . "PersonEntryPoint";
+    const PLACE_CLASS_ENTRY_POINT                     = HASCO::HASCO . "PlaceEntryPoint";
+    const WORKFLOW_STEM_CLASS_ENTRY_POINT             = HASCO::HASCO . "WorkflowEntryPoint";
     // const QUESTIONNAIRE_ENTRY_POINT             = HASCO::HASCO . "QuestionnaireEntryPoint";
-    const RESPONSE_OPTION_ENTRY_POINT           = HASCO::HASCO . "ResponseOptionEntryPoint";
-    const STUDY_ENTRY_POINT                     = HASCO::HASCO . "StudyEntryPoint";
-    const TASK_ENTRY_POINT                      = HASCO::HASCO . "TaskEntryPoint";
-    const TASK_TEMPORAL_DEPENDENCY_ENTRY_POINT  = HASCO::HASCO . "TaskTemporalDependencyEntryPoint";
-    const UNIT_ENTRY_POINT                      = HASCO::HASCO . "UnitEntryPoint";
+    const RESPONSE_OPTION_CLASS_ENTRY_POINT           = HASCO::HASCO . "ResponseOptionEntryPoint";
+    const STUDY_CLASS_ENTRY_POINT                     = HASCO::HASCO . "StudyEntryPoint";
+    const TASK_CLASS_ENTRY_POINT                      = HASCO::HASCO . "TaskEntryPoint";
+    const TASK_TEMPORAL_DEPENDENCY_CLASS_ENTRY_POINT  = HASCO::HASCO . "TaskTemporalDependencyEntryPoint";
+
+    // INSTANCES
+    const INSTRUMENT_INSTANCE_ENTRY_POINT         = HASCO::HASCO . "InstrumentInstanceEntryPoint";
+    const COMPONENT_INSTANCE_ENTRY_POINT         = HASCO::HASCO . "ComponentInstanceEntryPoint";
+    const PLATFORM_INSTANCE_ENTRY_POINT         = HASCO::HASCO . "PlatformInstanceEntryPoint";
+    const UNIT_INSTANCE_ENTRY_POINT             = HASCO::HASCO . "UnitInstanceEntryPoint";
 
    }
