@@ -555,3 +555,21 @@ rep.file_download:
     _permission: 'access content'
   options:
     no_cache: TRUE
+
+# Faceted Value Search
+rep.faceted_results:
+  path: '/rep/valuesearch/faceted/{page}/{pagesize}'
+  defaults:
+    _form: '\Drupal\rep\Form\ValueSearch\FacetedForm'
+    _title: 'Faceted Value Search Results'
+    page: 1
+    pagesize: 20
+  requirements:
+    _permission: 'access content'
+  options:
+    parameters:
+      page:
+        type: 'integer'
+      pagesize:
+        type: 'integer'
+
