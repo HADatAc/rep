@@ -121,7 +121,6 @@ class TreeForm extends FormBase {
       'unit' => ["Unit", EntryPoints::INSTANCE_EP_UNIT],
       'componentattribute' => [ucfirst($preferred_component)." Attribute", EntryPoints::CLASS_EP_COMPONENT_ATTRIBUTE],
       'component' => [ucfirst($preferred_component), EntryPoints::CLASS_EP_COMPONENT],
-
       'person' => ["Person", EntryPoints::CLASS_EP_PERSON],
       'place' => ["Place", EntryPoints::CLASS_EP_PLACE],
       'organization' => ["Organization", EntryPoints::CLASS_EP_ORGANIZATION],
@@ -191,9 +190,9 @@ class TreeForm extends FormBase {
       ],
       [
         'id' => 'platform',
-        'uri' => EntryPoints::CLASS_EP_PLATFORM,
+        'uri' => EntryPoints::INSTANCE_EP_PLATFORM,
         'label' => 'Platform',
-        'uriNamespace' => EntryPoints::CLASS_EP_PLATFORM
+        'uriNamespace' => EntryPoints::INSTANCE_EP_PLATFORM
       ],
       [
         'id' => 'processstem',

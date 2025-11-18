@@ -431,7 +431,7 @@ rep.map_entry_points:
   path: '/rep/manage/map-entry-points'
   defaults:
     _form: '\Drupal\rep\Form\MapEntryPointsForm'
-    _title: 'Manage Concept Entry Points'
+    _title: 'Manage Class Entry Points'
   requirements:
     _role: 'content_editor'
 
