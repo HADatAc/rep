@@ -1269,3 +1269,114 @@ form.rep-form-namespace legend {
   cursor: default;
   font-weight: 600; /* or any style you prefer */
 }
+
+
+/* FACETED VALUE SEARCH */
+/* Wrapper to mimic an accordion look */
+.rep-facet-accordion {
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  padding: 0;
+}
+
+/* Each group */
+.rep-facet-accordion-item {
+  margin-bottom: 2px;
+}
+
+/* Style the <summary> of each <details> as a blue header bar */
+.rep-facet-accordion-item > summary {
+  background: #1e73be;           /* blue */
+  color: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  border-radius: 5px;
+  margin-bottom: 2px;
+}
+
+/* Remove default disclosure triangle */
+.rep-facet-accordion-item > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Add your own +/- indicators using ::before */
+.rep-facet-accordion-item > summary::before {
+  content: "+ ";
+  margin-right: 4px;
+}
+
+.rep-facet-accordion-item[open] > summary::before {
+  content: "- ";
+}
+
+/* Body area (checkboxes) */
+.rep-facet-accordion-item .rep-filter-checkboxes {
+  padding: 8px 8px 8px;
+  background: #ffffff;
+  border-top: 1px solid #ddd;
+}
+
+.rep-facet-accordion-item .rep-filter-checkboxes label {
+  padding-top: 3px;
+};
+
+.rep-bar-chart--horizontal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.rep-bar-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+}
+
+.rep-bar-label {
+  font-weight: 600;
+}
+
+.rep-bar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+  height: 18px;
+  overflow: hidden;
+}
+
+.rep-bar-fill {
+  background: #1e73be;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.rep-bar-value {
+  text-align: right;
+  font-weight: 600;
+}
+
+.rep-faceted-legend-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.rep-legend-group-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.rep-legend-color-box {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-right: 6px;
+  border: 1px solid rgba(0,0,0,0.15);
+}

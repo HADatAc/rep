@@ -185,3 +185,13 @@ terms_modal:
     - core/jquery
     - core/drupal
     - core/drupal.dialog
+
+faceted_bar_chart:
+  version: 1.x
+  js:
+    https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js: { type: external, minified: true }
+    js/faceted_chart.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings

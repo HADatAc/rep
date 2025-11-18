@@ -1,0 +1,23 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - rep
+    - system
+  theme:
+    - hasco_barrio
+id: facetedvaluesearchform
+theme: hasco_barrio
+region: sidebar_first
+weight: 0
+plugin: rep_faceted_value_search_block
+settings:
+  id: rep_faceted_value_search_block
+  label: 'Faceted Value Search Form'
+  label_display: visible
+  provider: rep
+visibility:
+  request_path:
+    id: request_path
+    negate: false
+    pages: "/rep/valuesearch/faceted/*\r\n/rep/valuesearch/faceted"
