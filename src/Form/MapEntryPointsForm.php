@@ -62,8 +62,8 @@ class MapEntryPointsForm extends FormBase {
     }
 
     // Root URI for the LEFT tree, coming from settings (example fallback here).
-    $root_from_settings = (string) 'http://hadatac.org/ont/hasco/EntryPoint';
-    $root_label         = (string) 'HASCO';
+    $root_from_settings = (string) 'http://hadatac.org/ont/hasco/ClassEntryPoint';
+    $root_label         = (string) 'HASCO CLASSES';
     if ($root_label === '') {
       $root_label = $this->t('Root');
     }
