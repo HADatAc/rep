@@ -7,39 +7,39 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\Html;
 use Drupal\rep\Entity\Tables;
 use Drupal\Core\File\FileSystemInterface;
-use Drupal\Core\Ajax\AjaxResponse;
-use Drupal\Core\Ajax\HtmlCommand;
-use Drupal\Core\Ajax\SettingsCommand;
 use Drupal\Core\Url;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Drupal\rep\Controller\OntController;
 
 /**
  * Form to browse an ontology and save a mapping.
  *
- * Left column:
- *   - Loads the current ontology tree from the module settings root.
+ * LEFT column:
+ *   - Loads the current ontology tree from a known root (from settings or
+ *     hard-coded as HASCO ClassEntryPoint).
  *
- * Right column:
+ * RIGHT column:
  *   - Choose an ontology namespace and load/browse its tree.
  *   - Select a node to be saved as the mapping target.
  *
  * On submit, we save a single mapping:
  *   [entry point URI] -> [selected node URI]
- * where entry point defaults to the left-tree root (settings value) or
- * any node the user selects on the left tree.
+ * and append it to the local ontology TTL file.
+ *
+ * IMPORTANT:
+ *   This form ALWAYS works on a local ontology file under private://ont:
+ *      private://ont/hasco.ttl
+ *   There is no "remote vs local" toggle anymore.
  */
 class MapEntryPointsForm extends FormBase {
 
   /**
    * Paths and filenames used for ontology storage and versioning.
-   * Adjust if your OntEditForm uses different conventions.
+   * These are local-only and aligned with the current ontology setup.
    */
-  private const ONT_ROOT_DIR       = 'private://ont';
-  private const ONT_TTL_FILENAME   = 'hasco.ttl';     // root TTL file
-  private const VERSIONS_SUBDIR    = 'versions';          // incremental versions
-  private const VERSION_PREFIX     = 'v';                 // e.g., v0001, v0002, ...
+  private const ONT_ROOT_DIR     = 'private://ont';
+  private const ONT_TTL_FILENAME = 'hasco.ttl';  // main local TTL file
+  private const VERSIONS_SUBDIR  = 'versions';   // incremental versions subdir
+  private const VERSION_PREFIX   = 'v';          // e.g., v0001, v0002, ...
 
   /**
    * {@inheritdoc}
@@ -61,7 +61,8 @@ class MapEntryPointsForm extends FormBase {
       return [];
     }
 
-    // Root URI for the LEFT tree, coming from settings (example fallback here).
+    // Root URI for the LEFT tree.
+    // In a more advanced setup, this could come from configuration.
     $root_from_settings = (string) 'http://hadatac.org/ont/hasco/ClassEntryPoint';
     $root_label         = (string) 'HASCO CLASSES';
     if ($root_label === '') {
@@ -86,7 +87,7 @@ class MapEntryPointsForm extends FormBase {
       ],
     ];
 
-    // LEFT column: current tree, always starts from settings root.
+    // LEFT column: current tree, always from the fixed HASCO entry point.
     $form['row']['left_col'] = [
       '#type' => 'container',
       '#attributes' => [
@@ -102,7 +103,7 @@ class MapEntryPointsForm extends FormBase {
         . ' class="border border-1 p-2 treeMOL"></div>',
     ];
 
-    // RIGHT column: namespace selector + load button + tree.
+    // RIGHT column: namespace selector + load button + ontology tree.
     $form['row']['right_col'] = [
       '#type' => 'container',
       '#attributes' => [
@@ -114,7 +115,6 @@ class MapEntryPointsForm extends FormBase {
 
     $form['row']['right_col']['namespace'] = [
       '#type'          => 'select',
-      // '#title'         => $this->t('Ontology Namespace'),
       '#description'   => $this->t('Select the base namespace to explore on the right.'),
       '#empty_option'  => $this->t('Select…'),
       '#options'       => $ns_options,
@@ -145,10 +145,14 @@ class MapEntryPointsForm extends FormBase {
       '#attributes' => ['style' => 'min-height:300px; max-height:500px'],
     ];
 
-    $tables = new Tables;
+    // Reuse Tables instance for JS settings.
+    $tables = new Tables(\Drupal::database());
 
     // Attach JS library and pass endpoints/settings to JS.
-    $base = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
+    $base = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://' : 'http://')
+      . \Drupal::request()->getHost()
+      . \Drupal::request()->getBaseUrl();
+
     $form['#attached']['library'][] = 'rep/map_entry_points';
     $form['#attached']['drupalSettings']['repMap'] = [
       'apiTopClassEndpoint' => $base . '/rep/gettopclass?_format=json',
@@ -156,7 +160,7 @@ class MapEntryPointsForm extends FormBase {
       'childParam'          => 'nodeUri',
       'currentRootUri'      => $root_from_settings,
       'currentRootLabel'    => $root_label,
-      'nameSpacesList' => $tables->getNamespaces(),
+      'nameSpacesList'      => $tables->getNamespaces(),
     ];
 
     // Hidden fields used on submit.
@@ -167,17 +171,19 @@ class MapEntryPointsForm extends FormBase {
     ];
 
     // Entry point to save under: defaults to the LEFT root,
-    // but can be updated by clicking a node on the LEFT tree.
+    // but JS may update it when the user clicks a node on the LEFT tree.
     $form['selected_entry_point'] = [
       '#type' => 'hidden',
       '#default_value' => $root_from_settings,
       '#attributes' => ['id' => 'edit-selected-entry-point'],
     ];
 
+    // Actions row (bottom).
     $form['row']['actions'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['col-12', 'mt-3', 'pb-5']],
     ];
+
     $form['row']['actions']['submit'] = [
       '#type'        => 'submit',
       '#value'       => $this->t('Save Mappings'),
@@ -191,7 +197,8 @@ class MapEntryPointsForm extends FormBase {
     $form['row']['actions']['ingest_application_ontology'] = [
       '#type' => 'link',
       '#title' => $this->t('Ingest App Ontology'),
-      '#url' => Url::fromRoute('rep.ont_injest',
+      '#url' => Url::fromRoute(
+        'rep.ont_injest',
         ['returnPathway' => 'rep.map_entry_points']
       ),
       '#attributes' => [
@@ -202,7 +209,7 @@ class MapEntryPointsForm extends FormBase {
 
     $form['row']['notes'] = [
       '#type' => 'markup',
-      '#markup' => '<div class="mt-1 mb-5"><em>' . $this->t('<strong>Information</strong>: The "Saving Mappings" button will automatically ingest the App Ontology, but the "Ingest Application Ontology" button won\'t save the mappings.') . '</em></div>',
+      '#markup' => '<div class="mt-1 mb-5"><em>' . $this->t('<strong>Information</strong>: The "Save Mappings" button will automatically ingest the App Ontology, but the "Ingest App Ontology" button will not save the mappings.') . '</em></div>',
     ];
 
     return $form;
@@ -222,32 +229,45 @@ class MapEntryPointsForm extends FormBase {
 
     $fs = \Drupal::service('file_system');
 
-    // Ensure ontology root directory exists (argument MUST be passed by reference).
-    $ontRootDir = self::ONT_ROOT_DIR; // <-- use a variable, not a constant directly
-    $fs->prepareDirectory($ontRootDir, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+    // Ensure ontology root directory exists (argument must be passed by reference).
+    $ontRootDir = self::ONT_ROOT_DIR;
+    $fs->prepareDirectory(
+      $ontRootDir,
+      FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS
+    );
 
-    // Resolve TTL file URI and path.
+    // TTL file URI and path.
     $ttl_uri  = self::ONT_ROOT_DIR . '/' . self::ONT_TTL_FILENAME;
     $ttl_path = $fs->realpath($ttl_uri);
 
-    // If TTL does not exist, create an empty file with a header marker.
-    if (!file_exists($ttl_path)) {
+    // If TTL does not exist, create it with a simple header.
+    if ($ttl_path === FALSE || !file_exists($ttl_path)) {
       $header = "# Ontology file created by MapEntryPointsForm\n";
-      file_put_contents($ttl_path, $header);
+      $saved_uri = $fs->saveData($header, $ttl_uri, FileSystemInterface::EXISTS_REPLACE);
+      if ($saved_uri === FALSE) {
+        $this->messenger()->addError($this->t('Failed to create ontology TTL file at @uri.', ['@uri' => $ttl_uri]));
+        return;
+      }
+      $ttl_path = $fs->realpath($ttl_uri);
+      if ($ttl_path === FALSE) {
+        $this->messenger()->addError($this->t('Could not resolve real path for ontology TTL file at @uri.', ['@uri' => $ttl_uri]));
+        return;
+      }
     }
 
     // Read current TTL content (used for @prefix check and version backup).
-    $ttl_content_before = file_get_contents($ttl_path);
+    $ttl_content_before = (string) file_get_contents($ttl_path);
 
     // Create an incremental version folder and copy the current TTL there.
     try {
       $version_dir_uri = $this->createIncrementalVersionDirectory(self::ONT_ROOT_DIR, self::VERSIONS_SUBDIR);
       $fs->copy($ttl_uri, $version_dir_uri . '/' . self::ONT_TTL_FILENAME, FileSystemInterface::EXISTS_REPLACE);
-    } catch (\Throwable $e) {
+    }
+    catch (\Throwable $e) {
       $this->messenger()->addWarning($this->t('Versioning failed. Proceeding to write the mapping. Error: @e', ['@e' => $e->getMessage()]));
     }
 
-    // Build Turtle entry.
+    // Build Turtle entry: selected_node_uri becomes a subclass of entry_point_uri.
     $subject = $this->formatTurtleTerm($selected_node_uri);
     $object  = $this->formatTurtleTerm($entry_point_uri);
 
@@ -255,40 +275,38 @@ class MapEntryPointsForm extends FormBase {
     $new_map_entry .= $subject . "\n\ta rdfs:Class;";
     $new_map_entry .= "\n\trdfs:subClassOf " . $object . " .\n";
 
-    // Prefix check for selected_node_uri.
+    // Check for missing prefix in the TTL header (best-effort warning).
     $missing_prefix_warning = '';
     $maybe_prefix = $this->extractCompactPrefix($selected_node_uri);
     if ($maybe_prefix !== null && !$this->ttlHasPrefix($ttl_content_before, $maybe_prefix)) {
-      $missing_prefix_warning = $this->t('Heads up: prefix "@p:" was NOT found in the @prefix header. The mapping was saved, but you must add that @prefix to the TTL file manually.', ['@p' => $maybe_prefix]);
+      $missing_prefix_warning = $this->t(
+        'Heads up: prefix "@p:" was NOT found in the @prefix header. The mapping was saved, but you must add that @prefix to the TTL file manually.',
+        ['@p' => $maybe_prefix]
+      );
     }
 
-    // Append mapping.
+    // Append mapping to the TTL file.
     $ok = (bool) file_put_contents($ttl_path, $new_map_entry, FILE_APPEND | LOCK_EX);
 
     if ($ok) {
-
-      // --- Dispara a ingestão via sub-request à route rep.ont_injest ---
+      // Trigger ontology ingestion (same behavior as clicking "Ingest App Ontology").
       try {
         $ontController = new OntController();
         $ontController->injest();
       }
       catch (\Throwable $e) {
-        $this->messenger()->addWarning($this->t('Error failed Auto Ingestion: @msg', ['@msg' => $e->getMessage()]));
+        $this->messenger()->addWarning($this->t('Error during automatic ingestion: @msg', ['@msg' => $e->getMessage()]));
       }
 
-      // $this->messenger()->addStatus($this->t(
-      //   'Mapping saved: @node -> @ep (appended at the end of @file).',
-      //   ['@node' => $selected_node_uri, '@ep' => $entry_point_uri, '@file' => self::ONT_TTL_FILENAME]
-      // ));
+      // Optional status message about the mapping could be added here.
       if ($missing_prefix_warning) {
         $this->messenger()->addWarning($missing_prefix_warning);
       }
-
-    } else {
+    }
+    else {
       $this->messenger()->addError($this->t('Failed to append the mapping to the TTL file.'));
     }
   }
-
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -296,19 +314,19 @@ class MapEntryPointsForm extends FormBase {
 
   /**
    * Format a Turtle term:
-   * - If it looks like a full URI (http(s):// or urn:), wrap with <...>
+   * - If it looks like a full URI (http(s):// or urn:), wrap with <...>.
    * - Otherwise, return as-is (assumed CURIE or QName with a known prefix).
    */
   private function formatTurtleTerm(string $term): string {
     $t = trim($term);
     if (preg_match('#^(https?://|urn:)#i', $t)) {
-      // Avoid double-wrapping if user already provided <...>
+      // Avoid double-wrapping if user already provided <...>.
       if ($t[0] !== '<') {
         return '<' . $t . '>';
       }
       return $t;
     }
-    // Likely a prefixed name like envo:Class
+    // Likely a prefixed name like prefix:ClassName.
     return $t;
   }
 
@@ -318,11 +336,11 @@ class MapEntryPointsForm extends FormBase {
    */
   private function extractCompactPrefix(string $term): ?string {
     $t = trim($term);
-    // Ignore full URIs
+    // Ignore full URIs.
     if (stripos($t, '://') !== false) {
       return null;
     }
-    // Match prefix:suffix (where prefix starts with a letter or underscore)
+    // Match prefix:suffix (where prefix starts with a letter or underscore).
     if (preg_match('/^([A-Za-z_][A-Za-z0-9_\-]*)\:/', $t, $m)) {
       return $m[1];
     }
@@ -340,6 +358,7 @@ class MapEntryPointsForm extends FormBase {
 
   /**
    * Create the next incremental version directory under the ontology root.
+   *
    * Example structure:
    *   private://ont/versions/v0001/
    *   private://ont/versions/v0002/
@@ -349,14 +368,18 @@ class MapEntryPointsForm extends FormBase {
   private function createIncrementalVersionDirectory(string $ontRootUri, string $versionsSubdir): string {
     $fs = \Drupal::service('file_system');
 
-    // Ensure versions base directory exists: private://ont/versions
+    // Ensure versions base directory exists: private://ont/versions.
     $versions_base = rtrim($ontRootUri, '/') . '/' . trim($versionsSubdir, '/');
-    $versionsBaseRef = $versions_base; // pass-by-ref requirement
-    $fs->prepareDirectory($versionsBaseRef, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+    $versionsBaseRef = $versions_base;
+    $fs->prepareDirectory(
+      $versionsBaseRef,
+      FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS
+    );
 
     $real_versions_base = $fs->realpath($versions_base);
-    $entries = @scandir($real_versions_base) ?: [];
+    $entries = $real_versions_base ? (@scandir($real_versions_base) ?: []) : [];
     $max = 0;
+
     foreach ($entries as $entry) {
       if (preg_match('/^' . preg_quote(self::VERSION_PREFIX, '/') . '(\d{4})$/', $entry, $m)) {
         $n = (int) $m[1];
@@ -365,16 +388,19 @@ class MapEntryPointsForm extends FormBase {
         }
       }
     }
+
     $next = $max + 1;
     $version_dir_name = self::VERSION_PREFIX . str_pad((string) $next, 4, '0', STR_PAD_LEFT);
     $version_dir_uri  = $versions_base . '/' . $version_dir_name;
 
-    // Create that specific version directory (again, pass a variable by ref).
+    // Create that specific version directory.
     $versionDirRef = $version_dir_uri;
-    $fs->prepareDirectory($versionDirRef, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+    $fs->prepareDirectory(
+      $versionDirRef,
+      FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS
+    );
 
     return $version_dir_uri;
   }
-
 
 }

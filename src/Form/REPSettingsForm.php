@@ -10,7 +10,6 @@ namespace Drupal\rep\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
-use Drupal\rep\Constant;
 use Drupal\Core\File\FileSystemInterface;
 
 /**
@@ -164,113 +163,6 @@ class REPSettingsForm extends ConfigFormBase {
       '#description' => $this->t('This value is used to compose the URL of REP elements created within this repository.'),
     ];
 
-    // Determine current checkbox state for localAppOntology.
-    $local = $form_state->getValue('localAppOntology', $config->get('localAppOntology') ?? FALSE);
-
-    // Controller checkbox (keeps AJAX behaviour).
-    $form['localAppOntology'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Use LocalAPP Ontology file?'),
-      '#default_value' => $local,
-      '#ajax' => [
-        'callback' => '::toggleLocalAppOntology',
-        'wrapper' => 'repo-wrapper',
-        'progress' => ['type' => 'throbber'],
-      ],
-    ];
-
-    // Wrapper updated by AJAX when localAppOntology changes.
-    $form['repo_wrapper'] = [
-      '#type' => 'container',
-      '#attributes' => ['id' => 'repo-wrapper'],
-    ];
-
-    // Config (settings) values – used when checkbox is OFF.
-    $configMime = $config->get('repository_namespace_source_mime') ?? '';
-    $configSource = $config->get('repository_namespace_source') ?? '';
-
-    // Local (auto) suggestions – used when checkbox is ON.
-    $localMime = $config->get('repository_namespace_source_mime') ?: 'text/turtle';
-    $localSource = \Drupal::request()->getScheme() . '://'
-      . ((($a = $_SERVER['SERVER_ADDR'] ?? '') && $a !== '::1' && $a !== '127.0.0.1' && strpos($a, ':') === FALSE) ? $a :
-        (($b = @gethostbyname(@gethostname())) && $b !== '127.0.0.1' && $b !== @gethostname() ? $b : (function () {
-          $s = @socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
-          if ($s && @socket_connect($s, '8.8.8.8', 53)) {
-            @socket_getsockname($s, $n, $p);
-            @socket_close($s);
-            return $n;
-          }
-          return '127.0.0.1';
-        })()))
-      . ((($p = \Drupal::request()->getPort()) && !in_array($p, [80, 443])) ? ':' . $p : '')
-      . \Drupal::request()->getBasePath() . '/ont/';
-
-    // Re-read values from config to keep a clean baseline.
-    $configMime = (string) ($config->get('repository_namespace_source_mime') ?? '');
-    $configSource = (string) ($config->get('repository_namespace_source') ?? '');
-
-    // Current checkbox state (already computed).
-    $local = $form_state->getValue('localAppOntology', (bool) $config->get('localAppOntology'));
-
-    // Read current inputs (if any).
-    $inputMime = $form_state->getValue('repository_namespace_source_mime');
-    $inputSource = $form_state->getValue('repository_namespace_source');
-
-    // Detect if the checkbox triggered this rebuild.
-    $trigger = $form_state->getTriggeringElement();
-    $checkboxToggled = $trigger && (($trigger['#name'] ?? '') === 'localAppOntology');
-
-    if ($checkboxToggled) {
-      // Get raw userInput so the next render uses our changes.
-      $raw = $form_state->getUserInput() ?: [];
-
-      if ($local) {
-        // Checkbox turned ON → prefill with local suggestions when empty.
-        if ($inputMime === NULL || $inputMime === '') {
-          $form_state->setValue('repository_namespace_source_mime', $localMime);
-          $raw['repository_namespace_source_mime'] = $localMime;
-        }
-        if ($inputSource === NULL || $inputSource === '') {
-          $form_state->setValue('repository_namespace_source', $localSource);
-          $raw['repository_namespace_source'] = $localSource;
-        }
-      }
-      else {
-        // Checkbox turned OFF → if fields still equal local suggestions, clear them.
-        if ((string) $inputMime === (string) $localMime) {
-          $form_state->setValue('repository_namespace_source_mime', '');
-          $raw['repository_namespace_source_mime'] = '';
-        }
-        if ((string) $inputSource === (string) $localSource) {
-          $form_state->setValue('repository_namespace_source', '');
-          $raw['repository_namespace_source'] = '';
-        }
-      }
-
-      // Write back so #default_value is ignored in favor of what we set here.
-      $form_state->setUserInput($raw);
-
-      // Re-read after mutation.
-      $inputMime = $form_state->getValue('repository_namespace_source_mime');
-      $inputSource = $form_state->getValue('repository_namespace_source');
-    }
-
-    // Render editable fields (never disabled).
-    $form['repo_wrapper']['repository_namespace_source_mime'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('MIME for Base Namespace'),
-      '#required' => FALSE,
-      // If still NULL (first render without interaction), pick config when OFF, local when ON.
-      '#default_value' => $inputMime ?? ($local ? $localMime : $configMime),
-    ];
-
-    $form['repo_wrapper']['repository_namespace_source'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Source for Base Namespace'),
-      '#required' => FALSE,
-      '#default_value' => $inputSource ?? ($local ? $localSource : $configSource),
-    ];
-
     // Human-readable description of the repository (used in APIs / GUI).
     $description = '';
     if ($config->get('repository_description') != NULL) {
@@ -393,9 +285,6 @@ class REPSettingsForm extends ConfigFormBase {
     // From here on we are actually saving configuration.
     $config = $this->config(static::CONFIGNAME);
 
-    // Persist "localAppOntology" and its dependent fields coherently.
-    $config->set('localAppOntology', (bool) $form_state->getValue('localAppOntology'));
-
     // Save configuration values.
     $config->set('rep_home', $form_state->getValue('rep_home'));
     $config->set('sagres_conf', $form_state->getValue('sagres_conf'));
@@ -405,8 +294,6 @@ class REPSettingsForm extends ConfigFormBase {
     $config->set('repository_domain_url', trim($form_state->getValue('repository_domain_url')));
     $config->set('repository_namespace_prefix', trim($form_state->getValue('repository_namespace_prefix')));
     $config->set('repository_namespace_url', trim($form_state->getValue('repository_namespace_url')));
-    $config->set('repository_namespace_source_mime', trim((string) $form_state->getValue('repository_namespace_source_mime')));
-    $config->set('repository_namespace_source', trim((string) $form_state->getValue('repository_namespace_source')));
     $config->set('repository_description', trim($form_state->getValue('repository_description')));
     $config->set('sagres_base_url', $form_state->getValue('sagres_base_url'));
     $config->set('api_url', $form_state->getValue('api_url'));
@@ -420,7 +307,8 @@ class REPSettingsForm extends ConfigFormBase {
     \Drupal::service('plugin.manager.menu.link')->rebuild();
 
     // ------------------------------------------------------------------
-    // Ensure private://ont directory and the ontology TTL file exist.
+    // Ensure private://ont directory exists and that hasco.ttl is present.
+    // If hasco.ttl does not exist, create it with default content.
     // ------------------------------------------------------------------
     /** @var \Drupal\Core\File\FileSystemInterface $fs */
     $fs = \Drupal::service('file_system');
@@ -428,7 +316,7 @@ class REPSettingsForm extends ConfigFormBase {
     $messenger = \Drupal::messenger();
 
     $dir_uri = 'private://ont';
-    $file_uri = $dir_uri . '/' . $config->get('repository_namespace_prefix') . '.ttl';
+    $file_uri = $dir_uri . '/hasco.ttl';
 
     try {
       // 1) Ensure the directory exists (create if missing).
@@ -443,34 +331,48 @@ class REPSettingsForm extends ConfigFormBase {
         }
       }
 
-      // 2) Try to enforce 0755 on the directory (no-op on Windows).
+      // 2) Try to enforce 0755 on the directory (no-op on some systems).
       $dir_real = $fs->realpath($dir_uri);
       if ($dir_real && is_dir($dir_real)) {
         @chmod($dir_real, 0755);
       }
 
-      // 3) Ensure the file exists; if missing, create an empty TTL file.
+      // 3) Ensure the hasco.ttl file exists; if missing, create it with defaults.
       $file_real = $fs->realpath($file_uri);
       if ($file_real === FALSE || !file_exists($file_real)) {
-        // saveData() creates a file for stream wrappers; write empty content.
-        $saved_uri = $fs->saveData('', $file_uri, FileSystemInterface::EXISTS_ERROR);
+        // Load default HASCO ontology content from a file inside the module.
+        // Adjust this path if you place the TXT file in a different folder.
+        $module_path = \Drupal::service('extension.list.module')->getPath('rep');
+        $default_real_path = DRUPAL_ROOT . '/' . $module_path . '/resources/hasco_default.ttl';
+        $default_content = '';
+
+        if (file_exists($default_real_path) && is_readable($default_real_path)) {
+          $default_content = file_get_contents($default_real_path) ?: '';
+        }
+        else {
+          // Fallback: create an empty file and warn the administrator.
+          $logger->warning('Default HASCO ontology file not found at @path. Creating an empty hasco.ttl file.', ['@path' => $default_real_path]);
+        }
+
+        // saveData() creates the file via the stream wrapper.
+        $saved_uri = $fs->saveData($default_content, $file_uri, FileSystemInterface::EXISTS_ERROR);
         if ($saved_uri === FALSE) {
-          $logger->error('Failed to create file {file}', ['file' => $file_uri]);
+          $logger->error('Failed to create HASCO ontology file at {file}', ['file' => $file_uri]);
           $messenger->addError($this->t('Failed to create %file.', ['%file' => $file_uri]));
         }
         else {
-          // Optional: set 0644 on the file (again, no-op on Windows).
+          // Optional: set 0644 on the file.
           $file_real = $fs->realpath($file_uri);
           if ($file_real) {
             @chmod($file_real, 0644);
           }
-          $logger->notice('Created ontology file at {file}', ['file' => $file_uri]);
+          $logger->notice('Created HASCO ontology file at {file}', ['file' => $file_uri]);
         }
       }
     }
     catch (\Throwable $e) {
       // Catch-all to avoid breaking the submit flow.
-      $logger->error('Error ensuring private://ont and TTL file: {msg}', ['msg' => $e->getMessage()]);
+      $logger->error('Error ensuring private://ont and hasco.ttl file: {msg}', ['msg' => $e->getMessage()]);
       $messenger->addError($this->t('Error preparing ontology storage: %msg', ['%msg' => $e->getMessage()]));
     }
 
@@ -511,13 +413,14 @@ class REPSettingsForm extends ConfigFormBase {
       $form_state->getValue('repository_description')
     );
 
-    // Namespace.
+    // Namespace. The MIME/source arguments are now deprecated in the form,
+    // so we send empty strings (API may handle sensible defaults).
     $resp .= $api->repoUpdateNamespace(
       $form_state->getValue('api_url'),
       $form_state->getValue('repository_namespace_prefix'),
       $form_state->getValue('repository_namespace_url'),
-      $form_state->getValue('repository_namespace_source_mime'),
-      $form_state->getValue('repository_namespace_source')
+      '',
+      ''
     );
 
     $messenger = \Drupal::service('messenger');
@@ -666,17 +569,4 @@ class REPSettingsForm extends ConfigFormBase {
     \Drupal::messenger()->addMessage("Synchronization finished: {$users_created} users created, {$users_updated} updated.");
   }
 
-  /**
-   * AJAX callback for the localAppOntology checkbox.
-   *
-   * Forces a form rebuild so that the computed values for namespace source
-   * fields take effect immediately when toggling this option.
-   */
-  public function toggleLocalAppOntology(array &$form, FormStateInterface $form_state) {
-    // Force a rebuild so #default_value / user input injection takes effect.
-    $form_state->setRebuild(TRUE);
-    return $form['repo_wrapper'];
-  }
-
 }
-
