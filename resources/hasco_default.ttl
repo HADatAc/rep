@@ -1,0 +1,100 @@
+@prefix hadatac: <http://hadatac.org/ont/hadatac/> .
+@prefix hasco: <http://hadatac.org/ont/hasco/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vstoi: <http://hadatac.org/ont/vstoi#> .
+@prefix sio: <http://semanticscience.org/resource/> .
+@prefix schema: <https://schema.org/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+hasco:  owl:imports      <http://hadatac.org/ont/vstoi> ;
+        owl:imports      <http://www.w3.org/TR/prov-o/> ;
+        owl:imports      <http://www.w3.org/2004/02/skos/core> ;
+        owl:imports      <http://purl.obolibrary.org/obo/uo.owl> ;
+        owl:imports      <http://semanticscience.org/ontology/sio.owl> ;
+        owl:versionIRI   hasco:1 ;
+        rdfs:label       "HASCO APP Ontology" ;
+        rdf:type         owl:Ontology .
+
+vstoi:AnnotationStem
+	a rdfs:Class;
+	rdfs:subClassOf hasco:AnnotationStemEntryPoint.
+
+sio:Attribute
+	a rdfs:Class;
+	rdfs:subclassOf hasco:AttributeEntryPoint.
+
+vstoi:CodeBook
+	a rdfs:Class;
+	rdfs:subclassOf hasco:CodeBookEntryPoint.
+
+vstoi:ComponentStem
+	a rdfs:Class;
+	rdfs:subClassOf hasco:ComponentStemEntryPoint.
+
+vstoi:Component
+	a rdfs:Class;
+	rdfs:subClassOf hasco:ComponentEntryPoint.
+
+vstoi:ComponentAttribute
+	a rdfs:Class;
+	rdfs:subClassOf hasco:ComponentAttributeEntryPoint.
+
+sio:Entity
+	a rdfs:Class;
+	rdfs:subClassOf hasco:EntityEntryPoint.
+
+foaf:Group
+	a rdfs:Class;
+	rdfs:subClassOf hasco:GroupEntryPoint.
+
+vstoi:Instrument
+	a rdfs:Class;
+	rdfs:subClassOf hasco:InstrumentEntryPoint.
+
+schema:Organization
+	a rdfs:Class;
+	rdfs:subClassOf hasco:OrganizationEntryPoint.
+
+schema:Person
+	a rdfs:Class;
+	rdfs:subClassOf hasco:PersonEntryPoint.
+
+schema:Place
+	a rdfs:Class;
+	rdfs:subClassOf hasco:PlaceEntryPoint.
+
+vstoi:Platform
+	a rdfs:Class;
+	rdfs:subClassOf hasco:PlatformEntryPoint.
+
+vstoi:Workflow
+	a rdfs:Class;
+	rdfs:subClassOf hasco:WorkflowEntryPoint.
+
+vstoi:Questionnaire
+	a rdfs:Class;
+	rdfs:subClassOf hasco:QuestionnaireEntryPoint.
+
+vstoi:ResponseOption
+	a rdfs:Class;
+	rdfs:subClassOf hasco:ResponseOptionEntryPoint.
+
+hasco:Study
+	a rdfs:Class;
+	rdfs:subClassOf hasco:StudyEntryPoint.
+
+vstoi:Task
+	a rdfs:Class;
+	rdfs:subClassOf hasco:TaskEntryPoint.
+
+vstoi:TaskTemporalDependency
+	a rdfs:Class;
+	rdfs:subClassOf hasco:TaskTemporalDependencyEntryPoint.
+
+sio:Unit
+	a rdfs:Class;
+	rdfs:subClassOf hasco:UnitEntryPoint.

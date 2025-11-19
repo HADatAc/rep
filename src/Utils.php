@@ -845,7 +845,7 @@ class Utils {
                 $type = self::namespaceUri($componentObj->hascoTypeUri);
                 if (isset($componentObj->uri)) {
                   // $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
-                  $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a> ('.Utils::plainStatus($componentObj->hasStatus).')]');
+                  $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->label . '</a> ('.Utils::plainStatus($componentObj->hasStatus).')]');
                 }
                 if (isset($componentObj->isAttributeOf)) {
                   // $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(self::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. self::namespaceUri($componentObj->isAttributeOf) . "</a>]";
