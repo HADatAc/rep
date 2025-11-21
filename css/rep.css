@@ -1380,3 +1380,52 @@ form.rep-form-namespace legend {
   margin-right: 6px;
   border: 1px solid rgba(0,0,0,0.15);
 }
+
+/* Whole block (title + tabela interna) do sub-container */
+/* table.instrument-slots-table tr.subcontainer-block td {
+  background-color: #dbdeff;
+} */
+
+/* Tabela interna dos slots do sub-container – tirar o cinzento do theme se quiseres */
+/* table.instrument-slots-table tr.subcontainer-children-row table {
+  background-color: transparent;
+  border: none;
+} */
+
+/* 1) Não pintes o bloco todo */
+/* table.instrument-slots-table tr.subcontainer-block td {
+  background-color: transparent;
+} */
+
+/* 2) Só o título do sub-container ganha cor */
+/* table.instrument-slots-table tr.subcontainer-title-row td {
+  font-weight: bold;
+  background-color: #bac1ff;
+} */
+
+/* 3) O row que contém a table-responsive fica apenas com borda/padding */
+/* table.instrument-slots-table tr.subcontainer-children-row td {
+  padding: 8px;
+  border: 1px solid #e2e7ff;
+  background-color: transparent;
+} */
+
+/* Célula do subcontainer: sem cor própria */
+.subcontainer-block.subcontainer-children-row > td {
+  background-color: transparent;
+  padding: 0;
+  border: none;
+}
+
+/* “Cartão” por trás da tabela interna do sub-container */
+.subcontainer-block.subcontainer-children-row > td > .table-responsive {
+  background-color: #d8e1fd;   /* cor de destaque do bloco */
+  padding: 8px;
+  border-radius: 4px;
+  border: 2px solid #d0d4f0;
+}
+
+/* Tabela interna: deixa o tema controlar as linhas (odd/even) */
+.subcontainer-block.subcontainer-children-row > td > .table-responsive table.instrument-slots-table {
+  background-color: transparent;   /* não mexer nas linhas */
+}
