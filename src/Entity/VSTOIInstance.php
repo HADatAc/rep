@@ -13,7 +13,7 @@ class VSTOIInstance {
       'element_uri' => t('URI'),
       'element_label' => t('Label'),
       'element_type' => t('Type'),
-      'element_serial' => t('ID Number'),
+      'element_serial' => t('Serial Number'),
     ];
 
   }
