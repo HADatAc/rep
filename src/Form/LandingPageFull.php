@@ -35,7 +35,7 @@ class LandingPageFull extends FormBase {
       // Prefered name
       $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'instrument';
       $preferred_component = \Drupal::config('rep.settings')->get('preferred_component') ?? 'component';
-      $preferred_process = \Drupal::config('rep.settings')->get('preferred_process') ?? 'workflow';
+      $preferred_workflow = \Drupal::config('rep.settings')->get('preferred_workflow') ?? 'workflow';
       $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
 
       $form['rep_home'] = [
@@ -115,11 +115,11 @@ class LandingPageFull extends FormBase {
       $totalsInst .= '<ul>';
       $totalsInst .=  '<li> ' . About::total('ins') . ' <a href="'.Utils::selectBackUrl('ins')->toString().'">INS(s)</a> (MT)</li>';
       $totalsInst .=  '<li> ' . About::total('instrument') . ' <a href="'.Utils::selectBackUrl('instrument')->toString().'">'.ucfirst($preferred_instrument).'(s)</a></li>';
-      $totalsInst .=  '<li> ' . About::total('processstem') . ' <a href="'.Utils::selectBackUrl('processstem')->toString().'">'.$preferred_process.' stem(s)</a></li>';
+      $totalsInst .=  '<li> ' . About::total('workflowstem') . ' <a href="'.Utils::selectBackUrl('workflowstem')->toString().'">'.$preferred_workflow.' stem(s)</a></li>';
       $totalsInst .=  '<li> ' . About::total('componentstem') . ' <a href="'.Utils::selectBackUrl('componentstem')->toString().'">'.$preferred_component.' stem(s)</a></li>';
       $totalsInst .=  '<li> ' . About::total('component') . ' <a href="'.Utils::selectBackUrl('component')->toString().'">'.$preferred_component.'(s)</a></li>';
       $totalsInst .=  '<li> ' . About::total('codebook') . ' <a href="'.Utils::selectBackUrl('codebook')->toString().'">Codebook(s)</a></li>';
-      $totalsInst .=  '<li> ' . About::total('process') . ' <a href="'.Utils::selectBackUrl('process')->toString().'">'.$preferred_process.'(es)</a></li>';
+      $totalsInst .=  '<li> ' . About::total('workflow') . ' <a href="'.Utils::selectBackUrl('workflow')->toString().'">'.$preferred_workflow.'(es)</a></li>';
       $totalsInst .=  '<li> ' . About::total('responseoption') . ' <a href="'.Utils::selectBackUrl('responseoption')->toString().'">Response option(s)</a></li>';
       $totalsInst .=  '<li> ' . About::total('annotationstem') . ' <a href="'.Utils::selectBackUrl('annotationstem')->toString().'">Annotation stem(s)</a></li>';
       $totalsInst .=  '<li> ' . About::total('annotation') . ' <a href="'.Utils::selectBackUrl('annotation')->toString().'">Annotation(s)</a></li>';

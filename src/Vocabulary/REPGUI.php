@@ -42,8 +42,8 @@
     const EDIT_SEMANTIC_DATA_DICTIONARY  = "/sem/manage/editsemanticdatadictionary/";
     const VIEW_SEMANTIC_DATA_DICTIONARY  = "/sem/manage/viewsemanticdatadictionary/";
 
-    const ADD_PROCESS          = "/sir/manage/addprocess/";
-    const EDIT_PROCESS         = "/sir/manage/editprocess/";
+    const ADD_WORKFLOW          = "/sir/manage/addworkflow/";
+    const EDIT_WORKFLOW         = "/sir/manage/editworkflow/";
 
     const VIEW_STUDY_OBJECTS   = "/std/view/studyobjects/";
     const MANAGE_STUDY_OBJECTS = "/std/manage/studyobjects/";

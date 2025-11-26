@@ -53,7 +53,7 @@ class TreeForm extends FormBase {
     // Prefered name
     $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'instrument';
     $preferred_component = \Drupal::config('rep.settings')->get('preferred_component') ?? 'component';
-    $preferred_process = \Drupal::config('rep.settings')->get('preferred_process') ?? 'workflow';
+    $preferred_workflow = \Drupal::config('rep.settings')->get('preferred_workflow') ?? 'workflow';
     $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
 
     // Toggles
@@ -112,7 +112,7 @@ class TreeForm extends FormBase {
       'person' => ["Person", EntryPoints::CLASS_EP_PERSON],
       'place' => ["Place", EntryPoints::CLASS_EP_PLACE],
       'platform' => ["Platform", EntryPoints::INSTANCE_EP_PLATFORM],
-      'workflowstem' => [ucfirst($preferred_process)." Stem", EntryPoints::CLASS_EP_WORKFLOW_STEM],
+      'workflowstem' => [ucfirst($preferred_workflow)." Stem", EntryPoints::CLASS_EP_WORKFLOW_STEM],
       // 'questionnaire' => ["Questionnaire", EntryPoints::EP_QUESTIONNAIRE],
       'responseoption' => ["Response Option", EntryPoints::CLASS_EP_RESPONSE_OPTION],
       'study' => [ucfirst($preferred_study), EntryPoints::CLASS_EP_STUDY],
@@ -195,9 +195,9 @@ class TreeForm extends FormBase {
         'uriNamespace' => EntryPoints::INSTANCE_EP_PLATFORM
       ],
       [
-        'id' => 'processstem',
+        'id' => 'workflowstem',
         'uri' => EntryPoints::CLASS_EP_WORKFLOW_STEM,
-        'label' => ucfirst($preferred_process).' Stem',
+        'label' => ucfirst($preferred_workflow).' Stem',
         'uriNamespace' => EntryPoints::CLASS_EP_WORKFLOW_STEM
       ],
       // [

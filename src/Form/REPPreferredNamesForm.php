@@ -15,7 +15,7 @@ use Drupal\Core\Url;
  * Class REPPreferredNamesForm.
  *
  * Provides a configuration form to set preferred names (Instrument, Component,
- * Process, Study) used across the repository and related modules.
+ * Workflow, Study) used across the repository and related modules.
  */
 class REPPreferredNamesForm extends ConfigFormBase {
 
@@ -71,15 +71,15 @@ class REPPreferredNamesForm extends ConfigFormBase {
       '#default_value' => $component,
     ];
 
-    // Preferred name for "Process" / "Workflow".
-    $process = '';
-    if ($config->get('preferred_process') != NULL) {
-      $process = $config->get('preferred_process');
+    // Preferred name for "Workflow".
+    $workflow = '';
+    if ($config->get('preferred_workflow') != NULL) {
+      $workflow = $config->get('preferred_workflow');
     }
-    $form['preferred_process'] = [
+    $form['preferred_workflow'] = [
       '#type' => 'textfield',
       '#title' => $this->t("Workflow's preferred name"),
-      '#default_value' => $process,
+      '#default_value' => $workflow,
     ];
 
     // Preferred name for "Study".
@@ -130,8 +130,8 @@ class REPPreferredNamesForm extends ConfigFormBase {
     if (strlen($form_state->getValue('preferred_component')) < 1) {
       $form_state->setErrorByName('preferred_component', $this->t("Please inform a preferred name for components."));
     }
-    if (strlen($form_state->getValue('preferred_process')) < 1) {
-      $form_state->setErrorByName('preferred_process', $this->t("Please inform a preferred name for processes."));
+    if (strlen($form_state->getValue('preferred_workflow')) < 1) {
+      $form_state->setErrorByName('preferred_workflow', $this->t("Please inform a preferred name for workflows."));
     }
     if (strlen($form_state->getValue('preferred_study')) < 1) {
       $form_state->setErrorByName('preferred_study', $this->t("Please inform a preferred name for study."));
@@ -159,14 +159,14 @@ class REPPreferredNamesForm extends ConfigFormBase {
         $form_state->getValue('preferred_instrument') !== '' &&
         $form_state->getValue('preferred_component') !== NULL &&
         $form_state->getValue('preferred_component') !== '' &&
-        $form_state->getValue('preferred_process') !== NULL &&
-        $form_state->getValue('preferred_process') !== '' &&
+        $form_state->getValue('preferred_workflow') !== NULL &&
+        $form_state->getValue('preferred_workflow') !== '' &&
         $form_state->getValue('preferred_study') !== NULL &&
         $form_state->getValue('preferred_study') !== '') {
 
       $config->set('preferred_instrument', $form_state->getValue('preferred_instrument'));
       $config->set('preferred_component', $form_state->getValue('preferred_component'));
-      $config->set('preferred_process', $form_state->getValue('preferred_process'));
+      $config->set('preferred_workflow', $form_state->getValue('preferred_workflow'));
       $config->set('preferred_study', $form_state->getValue('preferred_study'));
       $config->save();
 

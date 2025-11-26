@@ -147,11 +147,11 @@ class Utils {
       case "postaladdress":
         $short = Constant::PREFIX_POSTAL_ADDRESS;
         break;
-      case "process":
-        $short = Constant::PREFIX_PROCESS;
+      case "workflow":
+        $short = Constant::PREFIX_WORKFLOW;
         break;
-      case "processstem":
-        $short = Constant::PREFIX_PROCESS_STEM;
+      case "workflowstem":
+        $short = Constant::PREFIX_WORKFLOW_STEM;
         break;
       case "project":
         $short = Constant::PREFIX_PROJECT;
@@ -447,7 +447,7 @@ class Utils {
   }
 
   public static function elementTypeModule($elementtype) {
-    $sir = ['instrument', 'containerslot', 'componentstem', 'component', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'processstem', 'process'];
+    $sir = ['instrument', 'containerslot', 'componentstem', 'component', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'workflowstem', 'workflow'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];

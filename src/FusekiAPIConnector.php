@@ -264,7 +264,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -283,7 +283,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listSizeByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -323,7 +323,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listByManagerEmail($elementType, $manageremail, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -337,7 +337,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listByReviewStatus($elementType, $status, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
       $elementType.
@@ -351,7 +351,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listSizeByManagerEmail($elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
       $elementType .
@@ -377,7 +377,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // valid values for elementType: "instrument", "component", "codebook", "process", "responseoption"
+  // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listSizeByManagerEmailByStudy($studyuri, $elementType, $manageremail, ) {
     $endpoint = "/hascoapi/api/".
       $elementType .
@@ -924,27 +924,27 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   PROCESS
+   *   WORKFLOW
    */
 
-  public function processAdd($processJson) {
-    $endpoint = "/hascoapi/api/process/create/".rawurlencode($processJson);
+  public function workflowAdd($workflowJson) {
+    $endpoint = "/hascoapi/api/workflow/create/".rawurlencode($workflowJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function processDel($processUri) {
-    $endpoint = "/hascoapi/api/process/delete/".rawurlencode($processUri);
+  public function workflowDel($workflowUri) {
+    $endpoint = "/hascoapi/api/workflow/delete/".rawurlencode($workflowUri);
     $method = "POST";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function processInstrumentAdd($processUri, array $instrumentUris) {
-    $endpoint = "/hascoapi/api/process/instruments";
+  public function workflowInstrumentAdd($workflowUri, array $instrumentUris) {
+    $endpoint = "/hascoapi/api/workflow/instruments";
     $method = "POST";
     $api_url = $this->getApiUrl();
 
@@ -954,7 +954,7 @@ class FusekiAPIConnector {
 
     // Estrutura o payload JSON no formato esperado pela API
     $payload = json_encode([
-        'processuri' => $processUri,
+        'workflowuri' => $workflowUri,
         'instrumenturis' => $instrumentUris
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);  // Facilita a leitura no log
 
@@ -977,14 +977,14 @@ class FusekiAPIConnector {
     return $response;
   }
 
-  public function processInstrumentUpdate(array $processData) {
-    $endpoint = "/hascoapi/api/process/instrument";
+  public function workflowInstrumentUpdate(array $workflowData) {
+    $endpoint = "/hascoapi/api/workflow/instrument";
     $method = "POST";
     $api_url = $this->getApiUrl();
 
-    $payload = json_encode($processData);
+    $payload = json_encode($workflowData);
 
-    \Drupal::logger('rep')->notice('Enviando instrumentos para o processo: @payload', [
+    \Drupal::logger('rep')->notice('Enviando instrumentos para o workflowo: @payload', [
         '@payload' => $payload,
     ]);
 
@@ -993,7 +993,7 @@ class FusekiAPIConnector {
           'Content-Type' => 'application/json',
           'Authorization' => $this->bearer
       ],
-      'body' => json_encode($processData)
+      'body' => json_encode($workflowData)
     ];
 
     $response = $this->perform_http_request($method, $api_url . $endpoint, $data);
@@ -1001,33 +1001,33 @@ class FusekiAPIConnector {
     return $response;
   }
 
-  public function processInstrumentDel($processUri, $componentUri) {
-    $endpoint = "/hascoapi/api/process/instrument/remove/".rawurlencode($processUri).'/'.rawurlencode($componentUri);
+  public function workflowInstrumentDel($workflowUri, $componentUri) {
+    $endpoint = "/hascoapi/api/workflow/instrument/remove/".rawurlencode($workflowUri).'/'.rawurlencode($componentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function processComponentAdd($processUri, $componentUri) {
-    $endpoint = "/hascoapi/api/process/component/add/".rawurlencode($processUri).'/'.rawurlencode($componentUri);
+  public function workflowComponentAdd($workflowUri, $componentUri) {
+    $endpoint = "/hascoapi/api/workflow/component/add/".rawurlencode($workflowUri).'/'.rawurlencode($componentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function processComponentDel($processUri, $instrumentUri) {
-    $endpoint = "/hascoapi/api/process/component/remove/".rawurlencode($processUri).'/'.rawurlencode($instrumentUri);
+  public function workflowComponentDel($workflowUri, $instrumentUri) {
+    $endpoint = "/hascoapi/api/workflow/component/remove/".rawurlencode($workflowUri).'/'.rawurlencode($instrumentUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  // GET /hascoapi/api/process/deletewithtasks/:processUri org.hascoapi.console.controllers.restapi.ProcessAPI.deleteWithTasks(processUri: String)
-  public function processDeleteWithTasks($processUri) {
-    $endpoint = "/hascoapi/api/process/deletewithtasks/".rawurlencode($processUri);
+  // GET /hascoapi/api/workflow/deletewithtasks/:workflowUri
+  public function workflowDeleteWithTasks($workflowUri) {
+    $endpoint = "/hascoapi/api/workflow/deletewithtasks/".rawurlencode($workflowUri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -1276,19 +1276,19 @@ class FusekiAPIConnector {
   }
 
   /**
-   *   PROCESS STEMS
+   *   WORKFLOW STEMS
    */
 
-   public function processStemAdd($processStemJson) {
-    $endpoint = "/hascoapi/api/processstem/create/".rawurlencode($processStemJson);
+   public function workflowStemAdd($workflowStemJson) {
+    $endpoint = "/hascoapi/api/workflowstem/create/".rawurlencode($workflowStemJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function processStemDel($processStemUri) {
-    $endpoint = "/hascoapi/api/processstem/delete/".rawurlencode($processStemUri);
+  public function workflowStemDel($workflowStemUri) {
+    $endpoint = "/hascoapi/api/workflowstem/delete/".rawurlencode($workflowStemUri);
     $method = 'POST';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

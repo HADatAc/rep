@@ -35,7 +35,7 @@ class LandingPage extends FormBase {
       // Prefered name
       $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'instrument';
       $preferred_component = \Drupal::config('rep.settings')->get('preferred_component') ?? 'component';
-      $preferred_process = \Drupal::config('rep.settings')->get('preferred_process') ?? 'workflow';
+      $preferred_workflow = \Drupal::config('rep.settings')->get('preferred_workflow') ?? 'workflow';
       $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
 
       $form['rep_home'] = [

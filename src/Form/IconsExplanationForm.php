@@ -23,7 +23,7 @@ final class IconsExplanationForm extends FormBase {
     // Prefered name
     $preferred_instrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'instrument';
     $preferred_component = \Drupal::config('rep.settings')->get('preferred_component') ?? 'component';
-    $preferred_process = \Drupal::config('rep.settings')->get('preferred_process') ?? 'workflow';
+    $preferred_workflow = \Drupal::config('rep.settings')->get('preferred_workflow') ?? 'workflow';
     $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
 
     $concept_header = [
@@ -54,8 +54,8 @@ final class IconsExplanationForm extends FormBase {
       'Virtual Columns' => 'virtualcolumn_placeholder.png',
       'Object Collections' => 'studyobjectcollection_placeholder.png',
       ucfirst($preferred_study).' Objects' => 'studyobject_placeholder.png',
-      ucfirst($preferred_process).' Stems' => 'processstem_placeholder.png',
-      ucfirst($preferred_process) => 'process_placeholder.png',
+      ucfirst($preferred_workflow).' Stems' => 'workflowstem_placeholder.png',
+      ucfirst($preferred_workflow) => 'workflow_placeholder.png',
       'Data Dictionary' => 'datadictionary_placeholder.png',
       'Semantic Data Dictionary' => 'semanticdatadictionary_placeholder.png',
       'Semantic Variable' => 'semanticvariable_placeholder.png',
@@ -102,8 +102,8 @@ final class IconsExplanationForm extends FormBase {
       'Virtual Columns' => 'http://hadatac.org/ont/hasco/VirtualColumn',
       'Object Collections' => 'http://hadatac.org/ont/hasco/ObjectCollection',
       ucfirst($preferred_study).' Objects' => 'http://hadatac.org/ont/hasco/StudyObject',
-      ucfirst($preferred_process).' Stems' => '',
-      ucfirst($preferred_process) => '',
+      ucfirst($preferred_workflow).' Stems' => '',
+      ucfirst($preferred_workflow) => '',
       'Data Dictionary' => '',
       'Semantic Data Dictionary' => '',
       'Semantic Variable' => '',
@@ -137,8 +137,8 @@ final class IconsExplanationForm extends FormBase {
       ['name' => 'Virtual Columns', 'desc' => 'NOT FOUND'],
       ['name' => 'Object Collections', 'desc' => 'NOT FOUND'],
       ['name' => ucfirst($preferred_study).' Objects', 'desc' => 'NOT FOUND'],
-      ['name' => ucfirst($preferred_process).' Stems', 'desc' => 'NOT FOUND'],
-      ['name' => ucfirst($preferred_process), 'desc' => 'NOT FOUND'],
+      ['name' => ucfirst($preferred_workflow).' Stems', 'desc' => 'NOT FOUND'],
+      ['name' => ucfirst($preferred_workflow), 'desc' => 'NOT FOUND'],
       ['name' => 'Data Dictionary', 'desc' => 'NOT FOUND'],
       ['name' => 'Semantic Data Dictionary', 'desc' => 'NOT FOUND'],
       ['name' => 'Semantic Variable', 'desc' => 'NOT FOUND'],
