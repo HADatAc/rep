@@ -155,7 +155,7 @@ function rep_update_8002() {
  * - Register custom access checks for some reviewer menu entries.
  * - Hide Sagres / Social integration menus when disabled in REP config.
  * - Dynamically rename menu titles/descriptions based on the preferred
- *   names configured in rep.settings (instrument, component, process, study).
+ *   names configured in rep.settings (instrument, component, workflow, study).
  */
 function rep_menu_links_discovered_alter(&$links) {
   // 1) Add custom access callback for some reviewer links.
@@ -218,16 +218,16 @@ function rep_menu_links_discovered_alter(&$links) {
 
   // 3) Dynamic menu labels based on preferred names.
   //    This affects menus defined in SIR, STD, DPL that use
-  //    Instrument / Component / Process / Study terminology.
+  //    Instrument / Component / Workflow / Study terminology.
   $preferred_instrument = $config->get('preferred_instrument') ?: 'Instrument';
   $preferred_component  = $config->get('preferred_component') ?: 'Component';
-  $preferred_process    = $config->get('preferred_process') ?: 'Workflow';
+  $preferred_workflow    = $config->get('preferred_workflow') ?: 'Workflow';
   $preferred_study      = $config->get('preferred_study') ?: 'Study';
 
   // Normalized labels for UI (first letter uppercase).
   $label_instrument = ucfirst($preferred_instrument);
   $label_component  = ucfirst($preferred_component);
-  $label_process    = ucfirst($preferred_process);
+  $label_workflow    = ucfirst($preferred_workflow);
   $label_study      = ucfirst($preferred_study);
 
   // ------------------------------------------------------------
@@ -249,14 +249,14 @@ function rep_menu_links_discovered_alter(&$links) {
     ],
   ];
 
-  // STD: Process / Workflow menus.
-  $process_map = [
-    // std.manage_processstems / std.manage_process in std.links.menu.yml
-    'std.manage_processstems' => [
+  // STD: Workflow menus.
+  $workflow_map = [
+    // std.manage_workflowstems / std.manage_workflow in std.links.menu.yml
+    'std.manage_workflowstems' => [
       'title' => 'Manage @label stems',
       'description' => 'Manage @label stems',
     ],
-    'std.manage_process' => [
+    'std.manage_workflow' => [
       'title' => 'Manage @label',
       'description' => 'Manage @label',
     ],
@@ -327,21 +327,21 @@ function rep_menu_links_discovered_alter(&$links) {
     }
   }
 
-  // Process / Workflow.
-  foreach ($process_map as $plugin_id => $texts) {
+  // Workflow.
+  foreach ($workflow_map as $plugin_id => $texts) {
     if (!isset($links[$plugin_id])) {
       continue;
     }
     if (!empty($texts['title'])) {
       $links[$plugin_id]['title'] = new TranslatableMarkup(
         $texts['title'],
-        ['@label' => $label_process]
+        ['@label' => $label_workflow]
       );
     }
     if (!empty($texts['description'])) {
       $links[$plugin_id]['description'] = new TranslatableMarkup(
         $texts['description'],
-        ['@label' => $label_process]
+        ['@label' => $label_workflow]
       );
     }
   }
@@ -471,13 +471,13 @@ function rep_page_attachments(array &$attachments) {
  * Implements hook_block_view_alter().
  *
  * Dynamically adjusts block titles/labels according to the preferred names
- * stored in rep.settings (instrument, component, process, study).
+ * stored in rep.settings (instrument, component, workflow, study).
  *
  * It looks at the current block label and replaces occurrences of:
  *   - Study / Studies
  *   - Instrument / Instruments
  *   - Component / Components
- *   - Process / Processes / Workflow / Workflows
+ *   - Workflow / Workflows
  * with the administrator-defined preferred terms.
  *
  * Example:
@@ -490,13 +490,13 @@ function rep_block_view_alter(array &$build, BlockPluginInterface $block) {
 
   $preferred_instrument = $config->get('preferred_instrument') ?: 'Instrument';
   $preferred_component  = $config->get('preferred_component') ?: 'Component';
-  $preferred_process    = $config->get('preferred_process') ?: 'Workflow';
+  $preferred_workflow    = $config->get('preferred_workflow') ?: 'Workflow';
   $preferred_study      = $config->get('preferred_study') ?: 'Study';
 
   // Normalized labels for UI (first letter uppercase).
   $label_instrument = ucfirst($preferred_instrument);
   $label_component  = ucfirst($preferred_component);
-  $label_process    = ucfirst($preferred_process);
+  $label_workflow    = ucfirst($preferred_workflow);
   $label_study      = ucfirst($preferred_study);
 
   // Get current label from the build array.
@@ -532,10 +532,8 @@ function rep_block_view_alter(array &$build, BlockPluginInterface $block) {
     'Instruments'=> $label_instrument,
     'Component'  => $label_component,
     'Components' => $label_component,
-    'Process'    => $label_process,
-    'Processes'  => $label_process,
-    'Workflow'   => $label_process,
-    'Workflows'  => $label_process,
+    'Workflow'    => $label_workflow,
+    'Workflows'  => $label_workflow,
   ];
 
   $new_text = strtr($label_text, $replacements);

@@ -111,7 +111,7 @@ class DescribeAssociatesForm extends FormBase {
       }
     }
 
-    // ✅ Process associations by object type
+    // ✅  associations by object type
     $typeUri = $element->hascoTypeUri ?? $element->typeUri ?? '';
 
     switch ($typeUri) {
