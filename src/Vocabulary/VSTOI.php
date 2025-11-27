@@ -31,8 +31,8 @@ use Drupal\sir\Entity\Instrument;
     const QUESTIONNAIRE                   = VSTOI::VSTOI . "Questionnaire";
     const RESPONSE_OPTION                 = VSTOI::VSTOI . "ResponseOption";
     const SUBCONTAINER                    = VSTOI::VSTOI . "Subcontainer";
-    const PROCESS_STEM                    = VSTOI::VSTOI . "ProcessStem";
-    const PROCESS                         = VSTOI::VSTOI . "Process";
+    const WORKFLOW_STEM                   = VSTOI::VSTOI . "WorkflowStem";
+    const WORKFLOW                        = VSTOI::VSTOI . "Workflow";
     const TASK                            = VSTOI::VSTOI . "Task";
     const TASK_TEMPORAL_DEPENDENCY        = VSTOI::VSTOI . "TemporalDependency";
 
@@ -60,8 +60,8 @@ use Drupal\sir\Entity\Instrument;
     const HAS_SIR_MANAGER_EMAIL           = VSTOI::VSTOI . "hasSIRManagerEmail";
     const HAS_VERSION                     = VSTOI::VSTOI . "hasVersion";
     const OF_CODEBOOK                     = VSTOI::VSTOI . "ofCodebook";
-    const HAS_PROCESS                     = VSTOI::VSTOI . "hasProcess";
-    const OF_PROCESS                      = VSTOI::VSTOI . "ofProcess";
+    const HAS_WORKFLOW                    = VSTOI::VSTOI . "hasWorkflow";
+    const OF_WORKFLOW                     = VSTOI::VSTOI . "ofWorkflow";
 
     /*
      * SIR/DPL STATUS
