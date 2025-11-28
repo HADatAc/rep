@@ -585,7 +585,7 @@ class Utils {
     if (strlen($content) > $availableLength) {
       $value = substr($content, 0, $availableLength - 4) . '... ['. $uri .']';
     } else {
-      $value = $content;
+      $value = $content . ' ['. $uri .']';
     }
 
     return $value;
