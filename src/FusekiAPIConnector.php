@@ -2140,21 +2140,38 @@ class FusekiAPIConnector {
 
   public function uploadTemplate($concept,$template,$status) {
 
-    // RETRIEVE FILE CONTENT FROM FID
-    $file_entity = \Drupal\file\Entity\File::load($template->hasDataFile->id);
-    if ($file_entity == NULL) {
-      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $template->hasDataFile->id . ']'));
-      return FALSE;
-    }
-    $file_uri = $file_entity->getFileUri();
-    $file_content = file_get_contents($file_uri);
-    if ($file_content == NULL) {
-      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $template->hasDataFile->id . ']'));
-      return FALSE;
-    }
+    // VALIDATE STATUS
     if ($status != "_" && $status != VSTOI::DRAFT && $status != VSTOI::CURRENT) {
       \Drupal::messenger()->addError(t('UploadTemplate: Invalid value for status: [' . $status . ']'));
       return FALSE;
+    }
+
+    // CHECK IF FILE ID EXISTS TO DETERMINE WHICH APPROACH TO USE
+    $file_content = NULL;
+    $content_type = 'application/json';
+    
+    if (isset($template->hasDataFile->id) && $template->hasDataFile->id != NULL) {
+      // TRADITIONAL APPROACH: RETRIEVE FILE CONTENT FROM FID
+      $file_entity = \Drupal\file\Entity\File::load($template->hasDataFile->id);
+      if ($file_entity == NULL) {
+        \Drupal::messenger()->addError(t('Could not retrieve file with following FID: [' . $template->hasDataFile->id . ']'));
+        return FALSE;
+      }
+      $file_uri = $file_entity->getFileUri();
+      $file_content = file_get_contents($file_uri);
+      if ($file_content == NULL) {
+        \Drupal::messenger()->addError(t('Could not retrieve file content from file with following FID: [' . $template->hasDataFile->id . ']'));
+        return FALSE;
+      }
+      $content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      \Drupal::logger('rep')->notice('UploadTemplate: Using traditional approach with file content for template: @uri', [
+        '@uri' => $template->uri,
+      ]);
+    } else {
+      // SIMPLIFIED APPROACH: NO FILE CONTENT UPLOAD
+      \Drupal::logger('rep')->notice('UploadTemplate: Using simplified approach without file content for template: @uri', [
+        '@uri' => $template->uri,
+      ]);
     }
 
     // APPEND DATAFILE URI AND STATUS TO ENDPOINT'S URL
@@ -2164,24 +2181,68 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $client = new Client();
     try {
-      $res = $client->post($api_url.$endpoint, [
+      $request_options = [
         'headers' => [
-          'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Type' => $content_type,
           // 'Authorization' => $this->bearer
         ],
-        'body' => $file_content,
-      ]);
+      ];
+      
+      // Only add body if we have file content
+      if ($file_content !== NULL) {
+        $request_options['body'] = $file_content;
+      }
+      
+      $res = $client->post($api_url.$endpoint, $request_options);
     } catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
-      \Drupal::messenger()->addError(t('UploadTemplate: Invalid value for status: [' . $this->error_message . ']'));
+      \Drupal::messenger()->addError(t('UploadTemplate: Connection error: [' . $this->error_message . ']'));
       return(NULL);
     } catch(ClientException $e){
       $res = $e->getResponse();
       if($res->getStatusCode() != '200') {
         $this->error=$res->getStatusCode();
         $this->error_message = "API request returned the following status code: " . $res->getStatusCode();
-        \Drupal::messenger()->addError(t('UploadTemplate: Invalid value for status: [' . $this->error_message . ']'));
+        \Drupal::messenger()->addError(t('UploadTemplate: API error: [' . $this->error_message . ']'));
+        return(NULL);
+      }
+    }
+    return($res->getBody());
+  }
+
+  public function simplifiedUpload($concept,$template,$status) {
+
+    // VALIDATE STATUS
+    if ($status != "_" && $status != VSTOI::DRAFT && $status != VSTOI::CURRENT) {
+      \Drupal::messenger()->addError(t('SimplifiedUpload: Invalid value for status: [' . $status . ']'));
+      return FALSE;
+    }
+
+    // APPEND DATAFILE URI AND STATUS TO ENDPOINT'S URL
+    $endpoint = "/hascoapi/api/ingest/".rawurlencode($status)."/".$concept."/".rawurlencode($template->uri);
+
+    // MAKE CALL TO API ENDPOINT WITHOUT FILE CONTENT
+    $api_url = $this->getApiUrl();
+    $client = new Client();
+    try {
+      $res = $client->post($api_url.$endpoint, [
+        'headers' => [
+          'Content-Type' => 'application/json',
+          // 'Authorization' => $this->bearer
+        ],
+      ]);
+    } catch(ConnectException $e){
+      $this->error="CON";
+      $this->error_message = "Connection error the following message: " . $e->getMessage();
+      \Drupal::messenger()->addError(t('SimplifiedUpload: Connection error: [' . $this->error_message . ']'));
+      return(NULL);
+    } catch(ClientException $e){
+      $res = $e->getResponse();
+      if($res->getStatusCode() != '200') {
+        $this->error=$res->getStatusCode();
+        $this->error_message = "API request returned the following status code: " . $res->getStatusCode();
+        \Drupal::messenger()->addError(t('SimplifiedUpload: API error: [' . $this->error_message . ']'));
         return(NULL);
       }
     }
