@@ -11,24 +11,24 @@ rep.kg:
   requirements:
     _permission: 'access content'
 
-rep.valsearch:
-  title: Value Search
-  description: Value Search
-  route_name: rep.home
-  menu_name: main
-  weight: 11
-  requirements:
-    _permission: 'access content'
+# rep.valsearch:
+#   title: Value Search
+#   description: Value Search
+#   route_name: rep.home
+#   menu_name: main
+#   weight: 11
+#   requirements:
+#     _permission: 'access content'
 
-rep.faceted_search:
-  title: Faceted Value Search
-  description: Faceted Value Search
-  route_name: rep.faceted_results
-  parent: rep.valsearch
-  menu_name: main
-  weight: 11
-  requirements:
-    _permission: 'access content'
+# rep.faceted_search:
+#   title: Faceted Value Search
+#   description: Faceted Value Search
+#   route_name: rep.faceted_results
+#   parent: rep.valsearch
+#   menu_name: main
+#   weight: 11
+#   requirements:
+#     _permission: 'access content'
 
 rep.service_search:
   title: Service Search

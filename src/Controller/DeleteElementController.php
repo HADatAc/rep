@@ -98,12 +98,12 @@ class DeleteElementController extends ControllerBase {
       }
     } elseif ($elementtype === 'study') {
         $elementname = 'study';
-    } elseif ($elementtype === 'process') {
-        $elementname = 'process';
+    } elseif ($elementtype === 'workflow') {
+        $elementname = 'workflow';
 
         //  We must delete all associated task also
         try {
-          $api->processDeleteWithTasks($uri);
+          $api->workflowDeleteWithTasks($uri);
         }
         catch (\Exception $e) {
           return new \Symfony\Component\HttpFoundation\JsonResponse([
