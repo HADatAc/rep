@@ -1295,6 +1295,15 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // Workflow methods (aliases for process methods)
+  public function workflowstemAdd($workflowstemJson) {
+    return $this->processStemAdd($workflowstemJson);
+  }
+
+  public function workflowstemDel($workflowstemUri) {
+    return $this->processStemDel($workflowstemUri);
+  }
+
   /**
    *   INSTRUMENTS
    */
@@ -2149,7 +2158,7 @@ class FusekiAPIConnector {
     // CHECK IF FILE ID EXISTS TO DETERMINE WHICH APPROACH TO USE
     $file_content = NULL;
     $content_type = 'application/json';
-    
+
     if (isset($template->hasDataFile->id) && $template->hasDataFile->id != NULL) {
       // TRADITIONAL APPROACH: RETRIEVE FILE CONTENT FROM FID
       $file_entity = \Drupal\file\Entity\File::load($template->hasDataFile->id);
@@ -2187,12 +2196,12 @@ class FusekiAPIConnector {
           // 'Authorization' => $this->bearer
         ],
       ];
-      
+
       // Only add body if we have file content
       if ($file_content !== NULL) {
         $request_options['body'] = $file_content;
       }
-      
+
       $res = $client->post($api_url.$endpoint, $request_options);
     } catch(ConnectException $e){
       $this->error="CON";

@@ -37,8 +37,8 @@ class Constant {
   const PREFIX_POSSIBLE_VALUE             = "PSV";
   const PREFIX_POSTAL_ADDRESS             = "PAD";
   const PREFIX_PROCESS                    = "PC0";
-  const PREFIX_PROCESS_STEM               = "PST";
-  const PREFIX_PROJECT                    = "PJT";
+  const PREFIX_PROCESS_STEM               = "PST";    const PREFIX_WORKFLOW                   = "PC0"; // Alias for PREFIX_PROCESS
+    const PREFIX_WORKFLOWSTEM               = "PST"; // Alias for PREFIX_PROCESS_STEM  const PREFIX_PROJECT                    = "PJT";
   const PREFIX_REQUIRED_INSTRUMENTATION   = "RIN";
   const PREFIX_RESPONSE_OPTION            = "ROP";
   const PREFIX_SDD                        = "SDD";

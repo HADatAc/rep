@@ -33,6 +33,8 @@ use Drupal\sir\Entity\Instrument;
     const SUBCONTAINER                    = VSTOI::VSTOI . "Subcontainer";
     const PROCESS_STEM                    = VSTOI::VSTOI . "ProcessStem";
     const PROCESS                         = VSTOI::VSTOI . "Process";
+    const WORKFLOWSTEM                    = VSTOI::VSTOI . "ProcessStem"; // Alias for PROCESS_STEM
+    const WORKFLOW                        = VSTOI::VSTOI . "Process";     // Alias for PROCESS
     const TASK                            = VSTOI::VSTOI . "Task";
     const TASK_TEMPORAL_DEPENDENCY        = VSTOI::VSTOI . "TemporalDependency";
 
