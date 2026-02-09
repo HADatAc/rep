@@ -177,6 +177,9 @@ class Utils {
       case "str":
         $short = Constant::PREFIX_STR;
         break;
+      case "wkf":
+        $short = Constant::PREFIX_WKF;
+        break;
       case "stream":
         $short = Constant::PREFIX_STREAM;
         break;

@@ -132,6 +132,7 @@ class MTSearchForm extends FormBase {
       'sdd' => ['label' => 'SDD', 'image' => 'white/sdd_placeholder.png'],
       'dp2' => ['label' => 'DP2', 'image' => 'white/dp2_placeholder.png'],
       'str' => ['label' => 'STR', 'image' => 'white/str_placeholder.png'],
+      'wkf' => ['label' => 'WKF', 'image' => 'white/ins_placeholder.png'],
     ];
 
     foreach ($element_types as $type => $info) {

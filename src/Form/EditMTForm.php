@@ -130,6 +130,8 @@ class EditMTForm extends FormBase {
       $this->setElementName('SDD');
     } else if ($this->getElementType() == 'str') {
       $this->setElementName('STR');
+    } else if ($this->getElementType() == 'wkf') {
+      $this->setElementName('WKF');
     } else {
       \Drupal::messenger()->addError(t("<b>".$this->getElementType() . "</b> is not a valid Metadata Template type."));
       self::backUrl();

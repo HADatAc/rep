@@ -39,6 +39,7 @@ use PHPUnit\Event\Application\Started;
     const TIME_COLLECTION               = HASCO::HASCO . "TimeCollection";
     const VALUE                         = HASCO::HASCO . "Value";
     const VIRTUAL_COLUMN                = HASCO::HASCO . "VirtualColumn";
+    const WKF                           = HASCO::HASCO . "WKF";
 
     // PROPERTIES
 

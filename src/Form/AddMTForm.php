@@ -134,6 +134,9 @@ class AddMTForm extends FormBase {
     } else if ($elementtype == 'str') {
       $this->setElementName('STR');
       $this->setElementTypeUri(HASCO::STR);
+    } else if ($elementtype == 'wkf') {
+      $this->setElementName('WKF');
+      $this->setElementTypeUri(HASCO::WKF);
     } else {
       \Drupal::messenger()->addError(t("<b>".$elementtype . "</b> is not a valid Metadata Template type."));
       self::backUrl();

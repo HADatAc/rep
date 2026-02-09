@@ -188,6 +188,12 @@ class REPSelectMTForm extends FormBase {
         $header = MetadataTemplate::generateHeader();
         $output = MetadataTemplate::generateOutput('str', $this->getList());
         break;
+      case "wkf":
+        $this->single_class_name = "WKF";
+        $this->plural_class_name = "WKFs";
+        $header = MetadataTemplate::generateHeader();
+        $output = MetadataTemplate::generateOutput('wkf', $this->getList());
+        break;
       default:
         \Drupal::messenger()->addError(t("[ERROR] Element [" . $this->element_type . "] is of unknown type."));
         $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
