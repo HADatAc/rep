@@ -112,7 +112,8 @@ class TreeForm extends FormBase {
       'person' => ["Person", EntryPoints::CLASS_EP_PERSON],
       'place' => ["Place", EntryPoints::CLASS_EP_PLACE],
       'platform' => ["Platform", EntryPoints::INSTANCE_EP_PLATFORM],
-      'workflowstem' => [ucfirst($preferred_process)." Stem", EntryPoints::CLASS_EP_WORKFLOW_STEM],
+      'processstem' => [ucfirst($preferred_process)." Stem", VSTOI::PROCESS_STEM],
+      'workflowstem' => [ucfirst($preferred_process)." Stem", VSTOI::PROCESS_STEM],
       // 'questionnaire' => ["Questionnaire", EntryPoints::EP_QUESTIONNAIRE],
       'responseoption' => ["Response Option", EntryPoints::CLASS_EP_RESPONSE_OPTION],
       'study' => [ucfirst($preferred_study), EntryPoints::CLASS_EP_STUDY],
@@ -196,9 +197,15 @@ class TreeForm extends FormBase {
       ],
       [
         'id' => 'processstem',
-        'uri' => EntryPoints::CLASS_EP_WORKFLOW_STEM,
+        'uri' => VSTOI::PROCESS_STEM,
         'label' => ucfirst($preferred_process).' Stem',
-        'uriNamespace' => EntryPoints::CLASS_EP_WORKFLOW_STEM
+        'uriNamespace' => VSTOI::PROCESS_STEM
+      ],
+      [
+        'id' => 'workflowstem',
+        'uri' => VSTOI::PROCESS_STEM,
+        'label' => ucfirst($preferred_process).' Stem',
+        'uriNamespace' => VSTOI::PROCESS_STEM,
       ],
       // [
       //   'id' => 'questionnaire',
@@ -302,9 +309,17 @@ class TreeForm extends FormBase {
     // dpm($api->getUri($nodeUri), 'Debug $nodeUri'); // See the URI being used
     // dpm($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'), 'Debug $api->parseObjectResponse'); // See the response from the API
     $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
+    if ($this->getRootNode() == NULL && in_array($firstType, ['processstem', 'workflowstem'], true)) {
+      $nodeUri = VSTOI::PROCESS_STEM;
+      $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
+      if (!empty($branches_param)) {
+        $branches_param[0]['uri'] = VSTOI::PROCESS_STEM;
+        $branches_param[0]['uriNamespace'] = VSTOI::PROCESS_STEM;
+      }
+    }
     if ($this->getRootNode() == NULL) {
-      \Drupal::messenger()->addError(t("Failed to retrieve root node " . $nodeUri . "."));
-      return [];
+      $this->setRootNode((object) ['uri' => $nodeUri]);
+      \Drupal::messenger()->addWarning($this->t('Could not resolve root node metadata for @uri. Loading tree from this URI directly.', ['@uri' => $nodeUri]));
     }
 
     // If output_field_selector is not provided, use the default

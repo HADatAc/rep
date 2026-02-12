@@ -15,6 +15,28 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 
 class FusekiAPIConnector {
+
+  /**
+   * Normalize UI-facing element types into the canonical HASCOAPI element types.
+   *
+   * The HASCOAPI SIRElementAPI supports "process"/"processstem" (not
+   * "workflow"/"workflowstem") for several list endpoints.
+   */
+  private function normalizeHascoApiElementType($elementType) {
+    if ($elementType === NULL) {
+      return $elementType;
+    }
+
+    $normalized = strtolower(trim((string) $elementType));
+    switch ($normalized) {
+      case 'workflow':
+        return 'process';
+      case 'workflowstem':
+        return 'processstem';
+      default:
+        return $elementType;
+    }
+  }
   private $client;
   private $query;
   private $error;
@@ -300,6 +322,7 @@ class FusekiAPIConnector {
   }
 
   public function listByKeyword($elementType, $keyword, $pageSize, $offset) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keyword/".
@@ -313,6 +336,7 @@ class FusekiAPIConnector {
   }
 
   public function listSizeByKeyword($elementType, $keyword) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keyword/total/".
@@ -325,10 +349,11 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listByManagerEmail($elementType, $manageremail, $pageSize, $offset) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/manageremail/".
-      $manageremail."/".
+      rawurlencode($manageremail)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
@@ -339,6 +364,7 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listByReviewStatus($elementType, $status, $pageSize, $offset) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/status/".
@@ -353,10 +379,11 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listSizeByManagerEmail($elementType, $manageremail, ) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType .
       "/manageremail/total/" .
-      $manageremail;
+      rawurlencode($manageremail);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -364,11 +391,12 @@ class FusekiAPIConnector {
   }
 
   public function listByManagerEmailByStudy($studyuri, $elementType, $manageremail, $pageSize, $offset) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/manageremailbystudy/".
       rawurlencode($studyuri)."/".
-      $manageremail."/".
+      rawurlencode($manageremail)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
@@ -379,11 +407,12 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listSizeByManagerEmailByStudy($studyuri, $elementType, $manageremail, ) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType .
       "/manageremailbystudy/total/" .
       rawurlencode($studyuri)."/".
-      $manageremail;
+      rawurlencode($manageremail);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -391,11 +420,12 @@ class FusekiAPIConnector {
   }
 
   public function listByManagerEmailBySOC($socuri, $elementType, $manageremail, $pageSize, $offset) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/manageremailbysoc/".
       rawurlencode($socuri)."/".
-      $manageremail."/".
+      rawurlencode($manageremail)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
@@ -405,11 +435,12 @@ class FusekiAPIConnector {
   }
 
   public function listSizeByManagerEmailBySOC($socuri, $elementType, $manageremail, ) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType .
       "/manageremailbysoc/total/" .
       rawurlencode($socuri)."/".
-      $manageremail;
+      rawurlencode($manageremail);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -417,11 +448,12 @@ class FusekiAPIConnector {
   }
 
   public function listByManagerEmailByContainer($containeruri, $elementType, $manageremail, $pageSize, $offset) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/manageremailbycontainer/".
       rawurlencode($containeruri)."/".
-      $manageremail."/".
+      rawurlencode($manageremail)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
@@ -431,11 +463,12 @@ class FusekiAPIConnector {
   }
 
   public function listSizeByManagerEmailByContainer($containeruri, $elementType, $manageremail, ) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".
       $elementType .
       "/manageremailbycontainer/total/" .
       rawurlencode($containeruri)."/".
-      $manageremail;
+      rawurlencode($manageremail);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -767,6 +800,7 @@ class FusekiAPIConnector {
   }
 
   public function elementAdd($elementType, $elementJson) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/" .
       $elementType .
       "/create/".
@@ -778,6 +812,7 @@ class FusekiAPIConnector {
   }
 
   public function elementDel($elementType, $elementUri) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/" .
       $elementType .
       "/delete/" .

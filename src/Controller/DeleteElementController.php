@@ -116,6 +116,11 @@ class DeleteElementController extends ControllerBase {
         $elementname = 'task';
     } elseif ($elementtype === 'taskstem') {
         $elementname = 'taskstem';
+    } elseif ($elementtype === 'workflowstem') {
+      $elementname = 'workflow stem';
+    } elseif ($elementtype === 'processstem') {
+      // Backward compatibility: some screens may still pass processstem.
+      $elementname = 'process stem';
     } else {
         \Drupal::messenger()->addMessage('Element ' . $elementtype . ' cannot be deleted via controller.');
         $response = new RedirectResponse($url);

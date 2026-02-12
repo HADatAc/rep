@@ -799,7 +799,7 @@
             hasSIRManagerEmail: item.hasSIRManagerEmail,
             hasWebDocument: item.hasWebDocument,
             hasImageUri: item.hasImageUri,
-            children: true,
+            children: (typeof item.children !== 'undefined') ? item.children : true,
             skip: false
           };
 
@@ -896,7 +896,7 @@
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
                     type: 'GET',
-                    data: { nodeUri: node.original.uri },
+                    data: { nodeUri: node.original.uri, elementtype: drupalSettings.rep_tree.elementType },
                     dataType: 'json',
                     success: function (data) {
   // NOTE: if the expanded node is a top-level branch (node.parent === '#')
@@ -950,7 +950,7 @@
     $.ajax({
       url: drupalSettings.rep_tree.apiEndpoint,
       type: 'GET',
-      data: { nodeUri: promotionTargetUri },
+      data: { nodeUri: promotionTargetUri, elementtype: drupalSettings.rep_tree.elementType },
       dataType: 'json',
       success: function (grandchildren) {
         processAndReturn(grandchildren);
@@ -1162,7 +1162,7 @@
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
                     type: 'GET',
-                    data: { nodeUri: node.original.uri },
+                    data: { nodeUri: node.original.uri, elementtype: drupalSettings.rep_tree.elementType },
                     dataType: 'json',
                     success: function (data) {
                       // NOTE: if the expanded node is a top-level branch (node.parent === '#')
@@ -1216,7 +1216,7 @@
                         $.ajax({
                           url: drupalSettings.rep_tree.apiEndpoint,
                           type: 'GET',
-                          data: { nodeUri: promotionTargetUri },
+                            data: { nodeUri: promotionTargetUri, elementtype: drupalSettings.rep_tree.elementType },
                           dataType: 'json',
                           success: function (grandchildren) {
                             processAndReturn(grandchildren);
@@ -1302,7 +1302,9 @@
 
         if ($treeRoot.length) {
           initializeJstree();
-          setupAutocomplete('#search_input');
+          if (drupalSettings.rep_tree.elementType !== 'component') {
+            setupAutocomplete('#search_input');
+          }
 
           // Pressing Enter in the search field triggers a search
           $('#search_input').on('keypress', function (e) {

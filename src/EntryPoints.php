@@ -3,6 +3,7 @@
   namespace Drupal\rep;
 
   use Drupal\rep\Vocabulary\HASCO;
+  use Drupal\rep\Vocabulary\VSTOI;
 
   class EntryPoints {
 
@@ -19,7 +20,7 @@
     const CLASS_EP_ORGANIZATION              = HASCO::ORGANIZATION_CLASS_ENTRY_POINT;
     const CLASS_EP_PERSON                    = HASCO::PERSON_CLASS_ENTRY_POINT;
     const CLASS_EP_PLACE                     = HASCO::PLACE_CLASS_ENTRY_POINT;
-    const CLASS_EP_WORKFLOW_STEM             = HASCO::WORKFLOW_STEM_CLASS_ENTRY_POINT;
+    const CLASS_EP_WORKFLOW_STEM             = VSTOI::PROCESS_STEM;
     // const EP_QUESTIONNAIRE             = HASCO::QUESTIONNAIRE_ENTRY_POINT;
     const CLASS_EP_RESPONSE_OPTION           = HASCO::RESPONSE_OPTION_CLASS_ENTRY_POINT;
     const CLASS_EP_STUDY                     = HASCO::STUDY_CLASS_ENTRY_POINT;
