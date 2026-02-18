@@ -11,6 +11,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Drupal\rep\Entity\Tables;
 use Drupal\rep\EntryPoints;
 use Drupal\rep\ListManagerEmailPage;
+use Drupal\rep\Vocabulary\VSTOI;
 
 class TreeController extends ControllerBase {
 
@@ -37,6 +38,42 @@ class TreeController extends ControllerBase {
     // When selecting a Component for a ContainerSlot we want instances (created components),
     // not the ontology class hierarchy (Detector/Actuator/etc.).
     $elementtype = $request->query->get('elementtype');
+
+    // When selecting a Workflow Stem (a.k.a. ProcessStem), we want manager-owned instances,
+    // not just the ontology class hierarchy.
+    if (in_array($elementtype, ['processstem', 'workflowstem'], true) && $nodeUri === VSTOI::PROCESS_STEM) {
+      $managerEmail = \Drupal::currentUser()->getEmail();
+      $elements = ListManagerEmailPage::exec($elementtype, $managerEmail, 1, 9999);
+      if (!is_array($elements)) {
+        $elements = [];
+      }
+
+      $items = [];
+      foreach ($elements as $el) {
+        if (empty($el->uri)) {
+          continue;
+        }
+        $items[] = (object) [
+          'uri' => $el->uri,
+          'label' => $el->label ?? $el->hasContent ?? $el->uri,
+          'comment' => $el->comment ?? '',
+          'typeNamespace' => $el->typeNamespace ?? '',
+          'hasStatus' => $el->hasStatus ?? NULL,
+          'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $managerEmail,
+          'hasWebDocument' => $el->hasWebDocument ?? '',
+          'hasImageUri' => $el->hasImageUri ?? '',
+          // Leaf nodes in the tree.
+          'children' => false,
+        ];
+      }
+
+      usort($items, function($a, $b) {
+        return strcasecmp((string) $a->label, (string) $b->label);
+      });
+
+      return new JsonResponse($items);
+    }
+
     if ($elementtype === 'component' && $nodeUri === EntryPoints::CLASS_EP_COMPONENT) {
       $managerEmail = \Drupal::currentUser()->getEmail();
       $elements = ListManagerEmailPage::exec('component', $managerEmail, 1, 9999);
