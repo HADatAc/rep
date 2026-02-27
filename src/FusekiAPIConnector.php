@@ -44,6 +44,23 @@ class FusekiAPIConnector {
   private $bearer;
 
   /**
+   * Debug info from the most recent HTTP call.
+   *
+   * @var int|null
+   */
+  private $last_status_code;
+
+  /**
+   * @var string|null
+   */
+  private $last_response_body;
+
+  /**
+   * @var string|null
+   */
+  private $last_request_url;
+
+  /**
    * Settings Variable.
    */
   Const CONFIGNAME = "rep.settings";
@@ -817,7 +834,9 @@ class FusekiAPIConnector {
       $elementType .
       "/delete/" .
       rawurlencode($elementUri);
-    $method = "POST";
+    // hascoapi's Play CSRF filter blocks POST deletes (403) in some deployments.
+    // hascoapi exposes GET delete routes as well; use GET for compatibility.
+    $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -1210,7 +1229,8 @@ class FusekiAPIConnector {
 
   public function datafileDel($datafileUri) {
     $endpoint = "/hascoapi/api/datafile/delete/".rawurlencode($datafileUri);
-    $method = "POST";
+    // Use GET to avoid Play CSRF 403 on POST delete.
+    $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
@@ -2295,26 +2315,97 @@ class FusekiAPIConnector {
 
   public function perform_http_request($method, $url, $data = false) {
     $client = new Client();
-    $res=NULL;
-    $this->error=NULL;
-    $this->error_message="";
+    $res = NULL;
+    $this->error = NULL;
+    $this->error_message = "";
+    $this->last_status_code = NULL;
+    $this->last_response_body = NULL;
+    $this->last_request_url = $url;
+
+    $options = [];
+    if (is_array($data)) {
+      $options = $data;
+    }
+
+    // Always capture the status/body instead of throwing exceptions.
+    if (!array_key_exists('http_errors', $options)) {
+      $options['http_errors'] = FALSE;
+    }
+
     try {
-      $res = $client->request($method,$url,$data);
+      $res = $client->request($method, $url, $options);
     }
-    catch(ConnectException $e){
-      $this->error="CON";
+    catch (ConnectException $e) {
+      $this->error = "CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
-      return(NULL);
+      try {
+        \Drupal::logger('rep.api')->error('API connection error for {method} {url}: {message}', [
+          'method' => $method,
+          'url' => $url,
+          'message' => $e->getMessage(),
+        ]);
+      }
+      catch (\Throwable $t) {
+        // Ignore logging failures.
+      }
+      return NULL;
     }
-    catch(ClientException $e){
+    catch (RequestException $e) {
+      // For completeness; should be rare when http_errors=FALSE.
       $res = $e->getResponse();
-      if($res->getStatusCode() != '200') {
-        $this->error=$res->getStatusCode();
-        $this->error_message = "API request returned the following status code: " . $res->getStatusCode();
-        return(NULL);
+      if ($res === NULL) {
+        $this->error = "REQ";
+        $this->error_message = "Request error the following message: " . $e->getMessage();
+        try {
+          \Drupal::logger('rep.api')->error('API request error for {method} {url}: {message}', [
+            'method' => $method,
+            'url' => $url,
+            'message' => $e->getMessage(),
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
+        return NULL;
       }
     }
-    return (string) ($res->getBody());
+
+    $status = (int) $res->getStatusCode();
+    $body = (string) $res->getBody();
+    $this->last_status_code = $status;
+    $this->last_response_body = $body;
+
+    if ($status !== 200) {
+      $this->error = (string) $status;
+      $snippet = substr(preg_replace('/\s+/', ' ', $body), 0, 500);
+      $this->error_message = "API request returned the following status code: " . $status;
+      if ($snippet !== '') {
+        $this->error_message .= "; response: " . $snippet;
+      }
+
+      // Always log non-200 responses so they are visible even when UI
+      // messenger messages are not.
+      try {
+        $context = [
+          'method' => $method,
+          'url' => $url,
+          'status' => $status,
+          'snippet' => $snippet ?: '(empty)',
+        ];
+        if ($status >= 500) {
+          \Drupal::logger('rep.api')->error('API {method} {url} returned HTTP {status}: {snippet}', $context);
+        }
+        else {
+          \Drupal::logger('rep.api')->warning('API {method} {url} returned HTTP {status}: {snippet}', $context);
+        }
+      }
+      catch (\Throwable $t) {
+        // Ignore logging failures.
+      }
+      return NULL;
+    }
+
+    return $body;
   }
 
   /**
@@ -2401,9 +2492,17 @@ class FusekiAPIConnector {
     // 5) Now decode the JSON string.
     $obj = json_decode($response);
     if ($obj === NULL) {
-      // \Drupal::messenger()->addError(t('API service has failed with following RAW message: [@raw]', [
-      //   '@raw' => $response,
-      // ]));
+      $raw = is_string($response) ? $response : json_encode($response);
+      $snippet = substr(preg_replace('/\s+/', ' ', (string) $raw), 0, 500);
+      $status = $this->last_status_code !== NULL ? (string) $this->last_status_code : 'unknown';
+      $url = $this->last_request_url ?: 'unknown';
+      
+      \Drupal::messenger()->addError(t('API service returned a non-JSON response for @method (HTTP @status). URL: @url Response: @snippet', [
+        '@method' => $methodCalled,
+        '@status' => $status,
+        '@url' => $url,
+        '@snippet' => $snippet ?: '(empty)',
+      ]));
       return NULL;
     }
 
@@ -2547,6 +2646,10 @@ class FusekiAPIConnector {
 
   // POST     /hascoapi/api/mt/get/generated/:filename
   public function downloadGeneratedFile($filename) {
+    // Ensure bearer token is initialized even if this is the first API call
+    // in the request lifecycle.
+    $this->getHeader();
+
     $endpoint = "/hascoapi/api/mt/get/generated/" . rawurlencode($filename);
     $api_url = $this->getApiUrl();
     $client = new Client();
@@ -2561,7 +2664,25 @@ class FusekiAPIConnector {
 
       $status = $res->getStatusCode();
       if ($status !== 200) {
-        // Not ready yet or not found.
+        $this->last_status_code = (int) $status;
+        $this->last_request_url = $api_url . $endpoint;
+        $this->last_response_body = (string) $res->getBody();
+        $snippet = substr(preg_replace('/\s+/', ' ', (string) $this->last_response_body), 0, 500);
+        $this->error = (string) $status;
+        $this->error_message = "API request returned the following status code: " . $status;
+        if ($snippet !== '') {
+          $this->error_message .= "; response: " . $snippet;
+        }
+        try {
+          \Drupal::logger('rep.api')->warning('API POST {url} returned HTTP {status}: {snippet}', [
+            'url' => $this->last_request_url,
+            'status' => (int) $status,
+            'snippet' => $snippet ?: '(empty)',
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
         return NULL;
       }
 
@@ -2628,6 +2749,10 @@ class FusekiAPIConnector {
 
   // POST    /hascoapi/api/downloadFile/:elementuri/:filename  org.hascoapi.console.controllers.restapi.DataFileAPI.downloadFile(elementuri: String, filename: String)
   public function downloadFile($elementuri, $filename) {
+    // Ensure bearer token is initialized even if this is the first API call
+    // in the request lifecycle.
+    $this->getHeader();
+
     $endpoint = "/hascoapi/api/downloadFile/" . rawurlencode($elementuri) . "/" . rawurlencode($filename);
     $api_url = $this->getApiUrl();
     $client = new Client();
@@ -2637,9 +2762,35 @@ class FusekiAPIConnector {
         'headers' => [
           'Authorization' => $this->bearer,
         ],
+        'http_errors' => false,
       ]);
+
+      $status = $res->getStatusCode();
+      if ($status !== 200) {
+        $this->last_status_code = (int) $status;
+        $this->last_request_url = $api_url . $endpoint;
+        $this->last_response_body = (string) $res->getBody();
+        $snippet = substr(preg_replace('/\s+/', ' ', (string) $this->last_response_body), 0, 500);
+        $this->error = (string) $status;
+        $this->error_message = "API request returned the following status code: " . $status;
+        if ($snippet !== '') {
+          $this->error_message .= "; response: " . $snippet;
+        }
+        try {
+          \Drupal::logger('rep.api')->warning('API POST {url} returned HTTP {status}: {snippet}', [
+            'url' => $this->last_request_url,
+            'status' => (int) $status,
+            'snippet' => $snippet ?: '(empty)',
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
+        return NULL;
+      }
+
       $file_content = $res->getBody()->getContents();
-      $content_type = $res->getHeaderLine('Content-Type');
+      $content_type = $res->getHeaderLine('Content-Type') ?: 'application/octet-stream';
     }
     catch (\Exception $e) {
       // \Drupal::messenger()->addError(t('Error Downloading image: @msg', ['@msg' => $e->getMessage()]));

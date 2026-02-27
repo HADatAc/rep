@@ -815,43 +815,89 @@ class REPSelectMTForm extends FormBase {
     $api = \Drupal::service('rep.api_connector');
     $file_system = \Drupal::service('file_system');
 
+    $deleted = 0;
+    $failed = 0;
+
     foreach ($uris as $uri) {
-        $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
-        if ($mt != NULL && $mt->hasDataFile != NULL) {
+      // Resolve template (best-effort) so we can also clean up its cached DataFile.
+      $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
 
-            // DELETE FILE
+      $datafileUri = NULL;
+      $cachedFileId = NULL;
+
+      if (is_object($mt)) {
+        // Common shape: hasDataFile is an object with { uri, id, filename, ... }
+        if (isset($mt->hasDataFile)) {
+          if (is_object($mt->hasDataFile)) {
+            if (isset($mt->hasDataFile->uri) && is_string($mt->hasDataFile->uri) && $mt->hasDataFile->uri !== '') {
+              $datafileUri = $mt->hasDataFile->uri;
+            }
             if (isset($mt->hasDataFile->id)) {
-                $file = File::load($mt->hasDataFile->id);
-                if ($file) {
-                    // Remove referências do file_usage
-                    \Drupal::service('file.usage')->delete($file, 'custom_module', 'entity_type', $file->id());
-
-                    // Obtém o caminho real do ficheiro
-                    $file_path = $file->getFileUri();
-                    $real_path = $file_system->realpath($file_path);
-
-                    // Eliminar o ficheiro fisicamente
-                    if ($real_path && file_exists($real_path)) {
-                        $file_system->delete($file_path);
-                    }
-
-                    // Remover da base de dados
-                    \Drupal::database()->delete('file_managed')->condition('fid', $file->id())->execute();
-
-                    // Irrelevant info for user
-                    // \Drupal::messenger()->addMessage(t("File with ID " . $mt->hasDataFile->id . " deleted."));
-                }
+              $cachedFileId = $mt->hasDataFile->id;
             }
-
-            // DELETE DATAFILE
-            if (isset($mt->hasDataFile->uri)) {
-                $api->dataFileDel($mt->hasDataFile->uri);
-                \Drupal::messenger()->addMessage(t("DataFile with URI " . $mt->hasDataFile->uri . " deleted."));
-            }
+          }
+          elseif (is_string($mt->hasDataFile) && $mt->hasDataFile !== '') {
+            // Sometimes API returns just the URI string.
+            $datafileUri = $mt->hasDataFile;
+          }
         }
+
+        // Alternate shape used by some WKF payloads.
+        if ($datafileUri === NULL && isset($mt->hasDataFileUri) && is_string($mt->hasDataFileUri) && $mt->hasDataFileUri !== '') {
+          $datafileUri = $mt->hasDataFileUri;
+        }
+      }
+
+      // 1) Delete the Metadata Template / WKF itself (this is what removes it from the list).
+      $deleteResult = $api->parseObjectResponse($api->elementDel($this->element_type, $uri), 'elementDel');
+      if ($deleteResult !== NULL) {
+        $deleted++;
+      }
+      else {
+        $failed++;
+      }
+
+      // 2) Best-effort cleanup: delete associated DataFile (if known).
+      if (!empty($datafileUri)) {
+        $api->parseObjectResponse($api->datafileDel($datafileUri), 'datafileDel');
+      }
+
+      // 3) Best-effort cleanup: delete cached Drupal File entity + binary.
+      if (!empty($cachedFileId)) {
+        $file = File::load($cachedFileId);
+        if ($file) {
+          $file_uri = $file->getFileUri();
+          if (!empty($file_uri)) {
+            $real_path = $file_system->realpath($file_uri);
+            if ($real_path && file_exists($real_path)) {
+              try {
+                $file_system->delete($file_uri);
+              }
+              catch (\Throwable $e) {
+                // ignore
+              }
+            }
+          }
+          try {
+            $file->delete();
+          }
+          catch (\Throwable $e) {
+            // ignore
+          }
+        }
+      }
     }
 
-    \Drupal::messenger()->addMessage(t("The " . $this->plural_class_name . " selected were deleted successfully."));
+    if ($deleted > 0 && $failed === 0) {
+      \Drupal::messenger()->addMessage(t("The " . $this->plural_class_name . " selected were deleted successfully."));
+    }
+    elseif ($deleted > 0) {
+      \Drupal::messenger()->addWarning(t("Some items were deleted, but @n deletions failed.", ['@n' => $failed]));
+    }
+    else {
+      \Drupal::messenger()->addError(t("Failed to delete the selected " . $this->plural_class_name . "."));
+    }
+
     \Drupal::service('cache.default')->invalidateAll();
     $form_state->setRebuild();
   }

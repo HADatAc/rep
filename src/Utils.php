@@ -1075,6 +1075,39 @@ class Utils {
     return \Drupal::service('file_url_generator')->generateAbsoluteString($file_uri);
   }
 
+  /**
+   * Resolve an existing file entity id (fid) for a private resource file.
+   *
+   * Many forms store staged uploads under:
+   * - private://resources/{modUri}/image/{filename}
+   * - private://resources/{modUri}/webdoc/{filename}
+   *
+   * Some legacy forms used alternate folders (e.g., webdocument or image).
+   */
+  public static function resolvePrivateResourceFid(string $modUri, string $subdir, string $filename, array $fallbackSubdirs = []): ?int {
+    $modUri = trim($modUri);
+    $subdir = trim($subdir);
+    $filename = trim($filename);
+
+    if ($modUri === '' || $subdir === '' || $filename === '') {
+      return NULL;
+    }
+
+    $storage = \Drupal::entityTypeManager()->getStorage('file');
+    $subdirs = array_values(array_unique(array_filter(array_merge([$subdir], $fallbackSubdirs))));
+
+    foreach ($subdirs as $dir) {
+      $desired_uri = 'private://resources/' . $modUri . '/' . $dir . '/' . $filename;
+      $files = $storage->loadByProperties(['uri' => $desired_uri]);
+      $file = reset($files);
+      if ($file && method_exists($file, 'id')) {
+        return (int) $file->id();
+      }
+    }
+
+    return NULL;
+  }
+
   // public static function getAPIImage($uri, $apiImage, $placeholder_image) {
 
   //   // Empty Value return Placeholder

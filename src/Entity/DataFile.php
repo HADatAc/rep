@@ -2,6 +2,7 @@
 
 namespace Drupal\rep\Entity;
 
+use Drupal\Core\Url;
 use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Constant;
 use Drupal\rep\Utils;
@@ -49,8 +50,8 @@ class DataFile {
         $file_entity = \Drupal\file\Entity\File::load($element->id);
         if ($file_entity != NULL) {
           $id .= " (available)";
-          $downloadLink = $root_url.REPGUI::DATAFILE_DOWNLOAD.base64_encode($element->uri);
-          $download = '<a href="'.$downloadLink.'" class="btn btn-primary btn-sm download-button download-button" role="button" disabled>Get It</a>';
+          $downloadLink = Url::fromRoute('rep.datafile_download', ['datafileuri' => base64_encode($element->uri)])->toString();
+          $download = '<a href="' . $downloadLink . '" class="btn btn-primary btn-sm download-button" role="button">Get It</a>';
           //dpm($file_entity);
         } else {
           $id .= " (unavailable)";

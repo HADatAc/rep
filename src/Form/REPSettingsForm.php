@@ -190,6 +190,13 @@ class REPSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('api_url'),
     ];
 
+    $form['ctt_url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('CTT Editor URL (optional)'),
+      '#default_value' => $config->get('ctt_url') ?? '',
+      '#description' => $this->t('External CTT URL used as fallback when embedded Drupal editor is unavailable (example: http://localhost:5173).'),
+    ];
+
     // JWT secret selection (using the Key module).
     $form['jwt_secret'] = [
       '#type' => 'key_select',
@@ -246,6 +253,13 @@ class REPSettingsForm extends ConfigFormBase {
         $form_state->setErrorByName('repository_namespace_url', $this->t("Namespace URL must start with 'http://' or 'https://'."));
       }
     }
+
+    $cttUrl = trim((string) $form_state->getValue('ctt_url'));
+    if ($cttUrl !== '' &&
+      (strtolower(substr($cttUrl, 0, 7)) !== 'http://') &&
+      (strtolower(substr($cttUrl, 0, 8)) !== 'https://')) {
+      $form_state->setErrorByName('ctt_url', $this->t("CTT Editor URL must start with 'http://' or 'https://'."));
+    }
   }
 
   /**
@@ -297,6 +311,7 @@ class REPSettingsForm extends ConfigFormBase {
     $config->set('repository_description', trim($form_state->getValue('repository_description')));
     $config->set('sagres_base_url', $form_state->getValue('sagres_base_url'));
     $config->set('api_url', $form_state->getValue('api_url'));
+    $config->set('ctt_url', trim((string) $form_state->getValue('ctt_url')));
     $config->set('jwt_secret', $form_state->getValue('jwt_secret'));
     $config->save();
 

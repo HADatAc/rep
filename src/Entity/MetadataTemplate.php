@@ -169,7 +169,7 @@ class MetadataTemplate
           $element->hasDataFile->fileStatus != NULL &&
           $element->hasDataFile->fileStatus != ''
         ) {
-          if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED && $element->streamUri == NULL) {
+          if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED && (!isset($element->streamUri) || $element->streamUri == NULL)) {
             $filestatus = '<b><font style="color:#000000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
             $filestatus = '<b><font style="color:#ff0000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
@@ -195,14 +195,14 @@ class MetadataTemplate
         }
         $download = ' ';
         if (!empty($element->hasDataFile->id)) {
-          $download_url = Url::fromRoute('rep.file_download', ['fid' => $element->hasDataFile->id])->toString();
+          $download_url = Url::fromRoute('rep.datafile_download', ['datafileuri' => base64_encode($element->hasDataFile->uri)])->toString();
           $download = '<a href="' . $download_url . '" class="btn btn-primary btn-sm download-button" role="button">Get It</a>';
         }
       }
 
       // STREAM RELATED
       // dpm($element->streamUri);
-      if ($element->streamUri !== null) {
+      if (isset($element->streamUri) && $element->streamUri !== null) {
         $stream = array();
         $api = \Drupal::service('rep.api_connector');
         $strRawResponse = $api->getUri($element->streamUri);
@@ -335,7 +335,7 @@ class MetadataTemplate
 
         $download_bto = Link::fromTextAndUrl(
           Markup::create('<i class="fa-solid fa-download"></i>'),
-          Url::fromRoute('rep.file_download', ['fid' => $element->hasDataFile->id])
+          Url::fromRoute('rep.datafile_download', ['datafileuri' => base64_encode($element->hasDataFile->uri)])
         )->toRenderable();
         $download_bto['#attributes'] = [
           'title' => t('Download file'),
@@ -426,7 +426,7 @@ class MetadataTemplate
           $element->hasDataFile->fileStatus != NULL &&
           $element->hasDataFile->fileStatus != ''
         ) {
-          if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED && $element->streamUri == NULL) {
+          if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED && (!isset($element->streamUri) || $element->streamUri == NULL)) {
             $filestatus = '<b><font style="color:#000000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
             $filestatus = '<b><font style="color:#ff0000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
@@ -452,15 +452,15 @@ class MetadataTemplate
         if ($element->hasDataFile->id != NULL && $element->hasDataFile->id != '') {
           $file_entity = \Drupal\file\Entity\File::load($element->hasDataFile->id);
           if ($file_entity != NULL) {
-            $downloadLink = base64_encode($element->hasDataFile->uri);
-            $download = '<a href="#" data-view-url="' . $downloadLink . '" class="btn btn-primary btn-sm download-button" role="button" disabled>Get It</a>';
+            $downloadLink = Url::fromRoute('rep.datafile_download', ['datafileuri' => base64_encode($element->hasDataFile->uri)])->toString();
+            $download = '<a href="' . $downloadLink . '" class="btn btn-primary btn-sm download-button" role="button">Get It</a>';
           }
         }
       }
 
       // STREAM RELATED
       // dpm($element->streamUri);
-      if ($element->streamUri !== null) {
+      if (isset($element->streamUri) && $element->streamUri !== null) {
         $stream = array();
         $strRawResponse = $api->getUri($element->streamUri);
         $strObj = json_decode($strRawResponse);
@@ -577,7 +577,7 @@ class MetadataTemplate
 
       $download_bto = Link::fromTextAndUrl(
         Markup::create('<i class="fa-solid fa-download"></i>'),
-        Url::fromRoute('rep.file_download', ['fid' => $element->hasDataFile->id])
+        Url::fromRoute('rep.datafile_download', ['datafileuri' => base64_encode($element->hasDataFile->uri)])
       )->toRenderable();
       $download_bto['#attributes'] = [
         'class' => ['btn', 'btn-sm', 'btn-secondary'],
@@ -789,7 +789,7 @@ class MetadataTemplate
 
       // Link for Download.
       $download_da = !empty($element->hasDataFile->id)
-        ? Url::fromRoute('rep.file_download', ['fid' => $element->hasDataFile->id])
+        ? Url::fromRoute('rep.datafile_download', ['datafileuri' => base64_encode($element->hasDataFile->uri)])
         : Url::fromRoute('<nolink>');
 
       // Create the card outer container.
