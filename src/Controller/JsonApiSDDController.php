@@ -6,6 +6,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Drupal\Component\Utility\Xss;
+use Drupal\rep\Utils;
 
 /**
  * Class JsonApiSDDController
@@ -32,7 +33,7 @@ class JsonApiSDDController extends ControllerBase{
     }
     foreach ($sdds as $sdd) {
       $results[] = [
-        'value' => $sdd->label . ' [' . $sdd->uri . ']',
+        'value' => Utils::trimPreserveBracket(Utils::fieldToAutocomplete($sdd->uri, $sdd->label), 127),
         'label' => $sdd->label,
       ];
     }
