@@ -11,34 +11,37 @@
               return;
             }
   
-            const drupalModal = document.getElementById("drupal-modal");
-            if (!drupalModal) {
-              console.error("Modal container #drupal-modal não encontrado.");
-              return;
+            // Use a dedicated container to avoid interfering with Drupal core dialogs (#drupal-modal).
+            let repModal = document.getElementById('rep-webdoc-modal');
+            if (!repModal) {
+              repModal = document.createElement('div');
+              repModal.id = 'rep-webdoc-modal';
+              document.body.appendChild(repModal);
             }
+            repModal.innerHTML = '';
   
             const modalMarkup = `
-              <div class="modal-content">
-                <button id="modal-close" class="close-btn" type="button">&times;</button>
-                <div id="terms-container">
+              <div class="rep-webdoc-modal__backdrop"></div>
+              <div class="rep-webdoc-modal__content">
+                <button type="button" class="rep-webdoc-modal__close" aria-label="Close">&times;</button>
+                <div class="rep-webdoc-modal__media">
                   <iframe src="${termsUrl}" width="100%" height="600px" style="border:none;"></iframe>
                 </div>
               </div>
-              <div class="my-modal-backdrop"></div>
             `;
-  
-            drupalModal.innerHTML = modalMarkup;
-            drupalModal.style.display = "block";
+
+            repModal.innerHTML = modalMarkup;
+            repModal.style.display = 'block';
           });
         });
   
         once('termsModalClose', 'body', context).forEach(function () {
-          $(document).on('click', '#modal-close, .my-modal-backdrop', function (e) {
+          $(document).on('click', '.rep-webdoc-modal__close, .rep-webdoc-modal__backdrop', function (e) {
             e.preventDefault();
-            const drupalModal = document.getElementById("drupal-modal");
-            if (drupalModal) {
-              drupalModal.style.display = "none";
-              drupalModal.innerHTML = "";
+            const repModal = document.getElementById('rep-webdoc-modal');
+            if (repModal) {
+              repModal.style.display = 'none';
+              repModal.innerHTML = '';
             }
           });
         });

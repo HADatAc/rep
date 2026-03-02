@@ -18,12 +18,14 @@
           return;
         }
 
-        // Get the native Drupal modal container.
-        var drupalModal = document.getElementById('drupal-modal');
-        if (drupalModal) {
-          // Clear any existing content in the modal.
-          drupalModal.innerHTML = '';
+        // Use a dedicated container to avoid interfering with Drupal core dialogs (#drupal-modal).
+        var repModal = document.getElementById('rep-webdoc-modal');
+        if (!repModal) {
+          repModal = document.createElement('div');
+          repModal.id = 'rep-webdoc-modal';
+          document.body.appendChild(repModal);
         }
+        repModal.innerHTML = '';
 
         // Configure PDF.js worker source.
         pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -59,28 +61,24 @@
             }
 
             // Append the pages to the media container.
-            document.getElementById('media-container').appendChild(container);
+            repModal.querySelector('.rep-webdoc-modal__media').appendChild(container);
           }).catch(function (error) {
             console.error('Error loading PDF:', error);
-            document.getElementById('media-container').innerHTML = '<p>Error loading PDF.</p>';
+            repModal.querySelector('.rep-webdoc-modal__media').innerHTML = '<p>Error loading PDF.</p>';
           });
         }
 
         // Build the HTML markup for the modal, with backdrop and content wrapper.
         var modalMarkup = "" +
-          '<div class="my-modal-backdrop"></div>' +
-          '<div class="modal-content">' +
-            '<button id="modal-close" class="close-btn" type="button">&times;</button>' +
-            '<div id="media-container" style="text-align:center; padding:1em;"></div>' +
+          '<div class="rep-webdoc-modal__backdrop"></div>' +
+          '<div class="rep-webdoc-modal__content">' +
+            '<button type="button" class="rep-webdoc-modal__close" aria-label="Close">&times;</button>' +
+            '<div class="rep-webdoc-modal__media" style="text-align:center; padding:1em;"></div>' +
           '</div>';
 
         // Inject the modal markup and display the modal.
-        if (drupalModal) {
-          drupalModal.innerHTML = modalMarkup;
-          drupalModal.style.display = 'block';
-          // Scroll to top to ensure modal is visible.
-          // window.scrollTo(0, 0);
-        }
+        repModal.innerHTML = modalMarkup;
+        repModal.style.display = 'block';
 
         // Perform AJAX request to fetch file as binary data.
         $.ajax({
@@ -103,35 +101,35 @@
               img.style.maxWidth = '100%';
               img.style.height = 'auto';
 
-              document.getElementById('media-container').appendChild(img);
+              repModal.querySelector('.rep-webdoc-modal__media').appendChild(img);
 
               // Revoke the object URL when modal closes to free memory.
-              $(document).one('click', '#modal-close, .my-modal-backdrop', function () {
+              $(document).one('click', '.rep-webdoc-modal__close, .rep-webdoc-modal__backdrop', function () {
                 URL.revokeObjectURL(imgUrl);
               });
 
             } else {
               // For unsupported file types, show download link.
-              document.getElementById('media-container').innerHTML =
+              repModal.querySelector('.rep-webdoc-modal__media').innerHTML =
                 '<p>Unsupported file type: ' + contentType + '</p>';
             }
           },
           error: function () {
             // On error, provide a download link as fallback.
-            document.getElementById('media-container').innerHTML =
+            repModal.querySelector('.rep-webdoc-modal__media').innerHTML =
               '<p>Error loading file. <a href="' + modalUrl + '" download>Click here to download</a>.</p>';
           }
         });
       });
 
       // Bind close event on close button and backdrop to hide modal.
-      $(document).off('click', '#modal-close, .my-modal-backdrop')
-        .on('click', '#modal-close, .my-modal-backdrop', function (e) {
+      $(document).off('click', '.rep-webdoc-modal__close, .rep-webdoc-modal__backdrop')
+        .on('click', '.rep-webdoc-modal__close, .rep-webdoc-modal__backdrop', function (e) {
           e.preventDefault();
-          var drupalModal = document.getElementById('drupal-modal');
-          if (drupalModal) {
-            drupalModal.style.display = 'none';
-            drupalModal.innerHTML = '';
+          var repModal = document.getElementById('rep-webdoc-modal');
+          if (repModal) {
+            repModal.style.display = 'none';
+            repModal.innerHTML = '';
           }
         });
     }
