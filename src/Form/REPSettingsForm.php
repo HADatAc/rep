@@ -97,10 +97,16 @@ class REPSettingsForm extends ConfigFormBase {
     $hasPmsrGui = FALSE;
     try {
       $moduleList = \Drupal::service('extension.list.module');
-      $modulePath = (string) $moduleList->getPath('pmsr');
-      if ($modulePath === '') {
-        $modulePath = (string) $moduleList->getPath('pmsr_gui');
+      $extensions = $moduleList->getList();
+      $moduleName = '';
+      if (isset($extensions['pmsr'])) {
+        $moduleName = 'pmsr';
       }
+      elseif (isset($extensions['pmsr_gui'])) {
+        $moduleName = 'pmsr_gui';
+      }
+
+      $modulePath = $moduleName !== '' ? (string) $moduleList->getPath($moduleName) : '';
       $hasPmsrGui = $modulePath !== '';
     }
     catch (\Throwable $e) {
