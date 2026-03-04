@@ -30,10 +30,27 @@ class GraphController extends ControllerBase {
     };
     $from = $expandCurie($from);
 
-    $raw = $api->getUri($from);
-    if (!$raw) { return new JsonResponse(['nodes' => [], 'edges' => []]); }
-    $obj = json_decode($raw);
-    if (!$obj) { return new JsonResponse(['nodes' => [], 'edges' => []]); }
+    try {
+      $raw = $api->getUri($from);
+      if (!$raw) {
+        return new JsonResponse(['nodes' => [], 'edges' => [], 'meta' => ['error' => 'Element not found']]);
+      }
+      $obj = json_decode($raw);
+      if (!$obj) {
+        return new JsonResponse(['nodes' => [], 'edges' => [], 'meta' => ['error' => 'Invalid element JSON']]);
+      }
+    }
+    catch (\Throwable $e) {
+      // Never throw 500 to the frontend graph: return an empty payload so the UI keeps working.
+      $out = ['nodes' => [], 'edges' => []];
+      if ($debug) {
+        $out['meta'] = [
+          'error' => 'Service unavailable',
+          'message' => $e->getMessage(),
+        ];
+      }
+      return new JsonResponse($out);
+    }
 
     $nodes = [];
     $edges = [];

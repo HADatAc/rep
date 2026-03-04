@@ -2,3 +2,4 @@ rep_home: 0
 api_url: "http://x.x.x.x:9000"
 ctt_url: ""
 rep_gui_version: "0.6"
+pmsr_new_landing_enabled: 0

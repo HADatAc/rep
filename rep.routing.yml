@@ -524,6 +524,26 @@ rep.graph.expand:
     _permission: 'access content'
   methods: [GET]
 
+rep.api_image:
+  path: '/rep/api-image/{element}/{image}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\ApiImageController::image'
+  requirements:
+    _permission: 'access content'
+    element: '[A-Za-z0-9\-_]+'
+    image: '[A-Za-z0-9\-_]+'
+  methods: [GET]
+
+rep.contributors.cards:
+  path: '/rep/contributors/cards'
+  defaults:
+    _controller: '\Drupal\rep\Controller\ContributorsController::cards'
+  requirements:
+    _permission: 'access content'
+  methods: [POST]
+  options:
+    no_cache: TRUE
+
 rep.mt_list_element:
   path: 'rep/mtlist/{elementtype}/{keyword}/{page}/{pagesize}'
   defaults:

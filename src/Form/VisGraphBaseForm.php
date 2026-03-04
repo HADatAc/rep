@@ -5,6 +5,7 @@ namespace Drupal\rep\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Drupal\Core\Render\Markup;
 use Drupal\rep\Entity\GenericObject;
 use Drupal\rep\Utils;
 use Drupal\rep\Vocabulary\HASCO;
@@ -313,6 +314,9 @@ if (!empty($element->typeUri)) {
     unset($e);
 
     // Attach behavior libraries (vis.js + icons).
+    // NOTE: This form is sometimes embedded via array union ("+") which can drop
+    // root-level #attached. So we also attach critical libraries to the canvas
+    // render array (which always bubbles up).
     $form['#attached']['library'][] = 'rep/vis_graph_panel';
     $form['#attached']['library'][] = 'rep/fontawesome';
 
@@ -323,6 +327,9 @@ if (!empty($element->typeUri)) {
       $linkedEdges,  // extraEdges: cached/hidden
       []             // baseEdges: none initially
     );
+
+    // Make the graph collapse work even when Bootstrap JS isn't present.
+    $canvas['#attached']['library'][] = 'rep/graph_collapse';
 
     // Ensure drupalSettings and expose the lazy endpoint + limits to JS.
     $canvas['#attached']['library'][] = 'core/drupalSettings';
@@ -336,13 +343,68 @@ if (!empty($element->typeUri)) {
       'autoShowOnFetch'  => $AUTO_SHOW_ON_FETCH,
     ];
 
-    // Place the canvas on the form.
-    $form['my_network_graph'] = $canvas;
+    // Graph wrapper (match CienciaPT markup) and default to collapsed.
+    $collapseId = 'graph-canvas-collapse-' . substr(md5((string) $baseUri), 0, 10);
+
+    $form['graph_canvas_block'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#attributes' => [
+        'class' => ['graph-canvas-block'],
+        'style' => 'margin:20px auto;padding:20px;max-width:100%;border:2px solid #ccc;border-radius:12px;background:#fff;',
+        'data-graph-toggle-init' => '1',
+      ],
+    ];
+
+    $form['graph_canvas_block']['graph_canvas_header'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#attributes' => [
+        'class' => ['graph-canvas-header'],
+        'style' => 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;',
+      ],
+    ];
+
+    $form['graph_canvas_block']['graph_canvas_header']['title'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'h2',
+      '#value' => $this->t('Graph Visualization'),
+      '#attributes' => [
+        'style' => 'margin:0;',
+      ],
+    ];
+
+    $form['graph_canvas_block']['graph_canvas_header']['toggle'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => Markup::create('<span class="graph-toggle-icon" aria-hidden="true">⤢</span><span class="graph-toggle-label">' . $this->t('Show') . '</span>'),
+      '#attributes' => [
+        'type' => 'button',
+        'class' => ['graph-toggle-btn'],
+        'aria-expanded' => 'false',
+        'aria-controls' => $collapseId,
+        'data-canvas-id' => 'my-network',
+        'title' => $this->t('Show graph'),
+        'style' => 'display:inline-flex;align-items:center;gap:8px;border:1px solid #ddd;background:#f8f9fa;color:#333;border-radius:8px;padding:6px 10px;cursor:pointer;',
+      ],
+    ];
+
+    $form['graph_canvas_block']['graph_canvas_collapse'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#attributes' => [
+        'id' => $collapseId,
+        'class' => ['graph-canvas-collapse'],
+        'style' => 'display: none;',
+      ],
+    ];
+
+    $form['graph_canvas_block']['graph_canvas_collapse']['my_network_graph'] = $canvas;
 
     // Optional title below the canvas.
     $form['my_network_graph_title'] = [
       '#type'   => 'markup',
-      '#markup' => '<h3>Associated Elements</h3>',
+      '#markup' => '<h3 class="mt-4">Associated Elements</h3>',
     ];
 
     return $form;

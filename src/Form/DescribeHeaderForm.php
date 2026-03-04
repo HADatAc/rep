@@ -198,8 +198,8 @@ class DescribeHeaderForm extends FormBase {
       ];
     }
 
-    // --- Super URI () ---
-    if ($this->getElement()->superUri) {
+    // --- Super URI ---
+    if (!empty($this->getElement()->superUri ?? NULL)) {
       $form['element_super'] = [
         '#type' => 'inline_template',
         '#template' => '<b>Super URI</b>: <a href="{{ href }}" target="_blank">{{ superUri }}</a>

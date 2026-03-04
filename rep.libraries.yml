@@ -142,6 +142,29 @@ vis_graph_panel:
   dependencies:
     - core/jquery
 
+graph_collapse:
+  version: 1.0.5
+  js:
+    js/graph-collapse.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+
+contributors_infinite:
+  version: 1.0.3
+  js:
+    js/contributors-infinite.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+    - core/drupalSettings
+
+associate_cards:
+  version: 1.x
+  css:
+    theme:
+      css/associate_cards.css: {}
+
 fontawesome:
   version: 1.x
   css:

@@ -405,40 +405,75 @@ class Utils {
     return $uri;
   }
 
-  public static function placeholderImage($url, $default_element = 'unknown', $divider = '#', ) {
-    if ($url === NULL) {
-      return NULL;
+  public static function placeholderImage($url, $default_element = 'unknown', $divider = '#') {
+    if ($url === NULL || $url === '') {
+      $url = '';
     }
-
-    $pos = strrpos($url, $divider);
-    $placeholder = $pos === FALSE
-      ? ''
-      : strtolower(substr($url, $pos + strlen($divider)));
-
-    // FALLBACK TO DEFAULT ELEMENT IF NO PLACEHOLDER FOUND
-    $pos = strrpos($url, '#');
-    $placeholder = $pos === FALSE
-      ? ''
-      : strtolower(substr($url, $pos + strlen('#')));
 
     $module_path = \Drupal::service('extension.list.module')->getPath('rep');
+    $base = base_path() . $module_path . '/images/placeholders/';
+    $root = DRUPAL_ROOT . '/' . $module_path . '/images/placeholders/';
 
-    $fs_path = DRUPAL_ROOT . '/'
-            . $module_path
-            . '/images/placeholders/'
-            . $placeholder . '_placeholder.png';
+    $pick = static function (array $candidates) use ($root): ?string {
+      foreach ($candidates as $name) {
+        $name = trim((string) $name);
+        if ($name === '') {
+          continue;
+        }
+        $fs = $root . $name . '_placeholder.png';
+        if (file_exists($fs)) {
+          return $name;
+        }
+      }
+      return NULL;
+    };
 
-    if (!file_exists($fs_path)) {
-      $placeholder = $default_element;
-      $fs_path = DRUPAL_ROOT . '/'
-              . $module_path
-              . '/images/placeholders/'.$default_element.'_placeholder.png';
+    $candidates = [];
+
+    // 1) Try extracting from the URL (supports both '#' and '/' based IRIs).
+    if ($url !== '') {
+      $pos = strrpos($url, '#');
+      if ($pos !== FALSE) {
+        $candidates[] = strtolower(substr($url, $pos + 1));
+      }
+      $pos2 = strrpos($url, '/');
+      if ($pos2 !== FALSE) {
+        $candidates[] = strtolower(substr($url, $pos2 + 1));
+      }
+      // Honor the requested divider as an extra option.
+      if (!empty($divider) && is_string($divider)) {
+        $pos3 = strrpos($url, $divider);
+        if ($pos3 !== FALSE) {
+          $candidates[] = strtolower(substr($url, $pos3 + strlen($divider)));
+        }
+      }
     }
 
-    return base_path()
-        . $module_path
-        . '/images/placeholders/'
-        . $placeholder . '_placeholder.png';
+    // 2) Normalize default element (avoid 404 like Project_placeholder.png).
+    $def = strtolower((string) $default_element);
+    $map = [
+      'project' => 'projects',
+      'projects' => 'projects',
+      'fundingscheme' => 'fundingschemes',
+      'fundingschemes' => 'fundingschemes',
+      'person' => 'persons',
+      'persons' => 'persons',
+      'place' => 'places',
+      'places' => 'places',
+      'postaladdress' => 'postaladresses',
+      'postaladresses' => 'postaladresses',
+      'organization' => 'organization',
+      'unknown' => 'unknown',
+    ];
+    if ($def !== '') {
+      $candidates[] = $map[$def] ?? $def;
+    }
+
+    // 3) Final fallback.
+    $candidates[] = 'unknown';
+
+    $chosen = $pick(array_values(array_unique($candidates)));
+    return $base . ($chosen ?? 'unknown') . '_placeholder.png';
   }
 
   public static function repUriLink($uri) {
@@ -1204,69 +1239,42 @@ class Utils {
       return $apiImage;
     }
 
-    /** @var \Drupal\rep\ApiConnectorInterface $api */
-    $api = \Drupal::service('rep.api_connector');
-
-    // 3) Attempt legacy download.
-    // \Drupal::logger('rep')->debug('getAPIImage: attempting legacy download for @f', ['@f'=>$apiImage]);
-    $response = $api->downloadFile($uri, $apiImage);
-
-    // Inspect legacy response if present.
-    if ($response && method_exists($response, 'getStatusCode')) {
-      $status = $response->getStatusCode();
-      // \Drupal::logger('rep')->debug('Legacy downloadFile returned HTTP @s', ['@s'=>$status]);
+    // Drupal render sanitization strips data: URIs from <img src>, which breaks
+    // base64 inlining. Use a local proxy endpoint instead.
+    try {
+      $elementEnc = static::base64urlEncode((string) $uri);
+      $imageEnc = static::base64urlEncode((string) $apiImage);
+      $phEnc = static::base64urlEncode((string) $placeholder_image);
+      return \Drupal\Core\Url::fromRoute('rep.api_image', [
+        'element' => $elementEnc,
+        'image' => $imageEnc,
+      ], [
+        'absolute' => TRUE,
+        'query' => [
+          'ph' => $phEnc,
+        ],
+      ])->toString();
     }
-
-    // 4) If legacy failed (no object or non-200), try Social fallback.
-    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    if (
-      ! $response
-      || (method_exists($response, 'getStatusCode') && $status !== 200)
-    ) {
-      // \Drupal::logger('rep')->debug('getAPIImage: legacy failed, social_enabled=@e', ['@e'=> $socialEnabled?'yes':'no']);
-      if ($socialEnabled) {
-        // \Drupal::logger('rep')->debug('getAPIImage: attempting social download for @f', ['@f'=>$apiImage]);
-        $response = $api->downloadFileSocial($uri, $apiImage);
-        if ($response && method_exists($response, 'getStatusCode')) {
-          // \Drupal::logger('rep')->debug('Social downloadFileSocial returned HTTP @s', [
-          //   '@s' => $response->getStatusCode(),
-          // ]);
-        }
-      }
+    catch (\Throwable $e) {
+      return $placeholder_image;
     }
+  }
 
-    // 5) If we now have a 200‐response, inline it as data‐URI.
-    if ($response && method_exists($response, 'getStatusCode') && $response->getStatusCode() === 200) {
-      // a) Get bytes
-      if (method_exists($response, 'getContent')) {
-        $content = $response->getContent();
-      }
-      elseif (method_exists($response, 'getBody')) {
-        $content = $response->getBody()->getContents();
-      }
-      else {
-        \Drupal::logger('rep')->warning('getAPIImage: response has no getContent/getBody methods.');
-        return $placeholder_image;
-      }
+  public static function base64urlEncode(string $str): string {
+    return rtrim(strtr(base64_encode($str), '+/', '-_'), '=');
+  }
 
-      // b) Get MIME type
-      if (isset($response->headers)) {
-        $mime = $response->headers->get('Content-Type');
-      }
-      elseif (method_exists($response, 'getHeaderLine')) {
-        $mime = $response->getHeaderLine('Content-Type');
-      }
-      else {
-        $mime = 'application/octet-stream';
-      }
-
-      // \Drupal::logger('rep')->debug('getAPIImage: inlining image, MIME: @m', ['@m'=>$mime]);
-      return 'data:' . $mime . ';base64,' . base64_encode($content);
+  public static function base64urlDecode(string $str): string {
+    $str = trim($str);
+    if ($str === '') {
+      return '';
     }
-
-    // 6) On any failure, log and return placeholder.
-    // \Drupal::logger('rep')->warning('getAPIImage: all download attempts failed for @f, using placeholder.', ['@f'=>$apiImage]);
-    return $placeholder_image;
+    $remainder = strlen($str) % 4;
+    if ($remainder) {
+      $str .= str_repeat('=', 4 - $remainder);
+    }
+    $decoded = base64_decode(strtr($str, '-_', '+/'));
+    return $decoded === FALSE ? '' : $decoded;
   }
 
 
@@ -1403,10 +1411,7 @@ public static function buildGraphCanvas(array $baseNodes, array $extraNodes, arr
     'graph_canvas_block' => [
       '#type' => 'inline_template',
       '#template' => <<<'EOT'
-<div class="graph-canvas-block" style="margin: 20px auto; padding: 20px; max-width: 100%; border: 2px solid #ccc; border-radius: 12px; background: #fff;">
-  <h2 style="margin-bottom: 15px;">Graph Visualization</h2>
-  <div id="my-network" style="width: 100%; height: 700px; border: 2px solid #007bff; background: white; border-radius: 6px;"></div>
-</div>
+<div id="my-network" style="width: 100%; height: 700px; border: 2px solid #007bff; background: white; border-radius: 6px;"></div>
 EOT,
       '#context' => [
         'nodes' => json_encode($baseNodes),

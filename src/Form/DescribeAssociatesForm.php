@@ -13,6 +13,7 @@ use Drupal\rep\Form\Associates\AssocPlatformInstance;
 use Drupal\rep\Form\Associates\AssocStream;
 use Drupal\rep\Form\Associates\AssocStudy;
 use Drupal\rep\Form\Associates\AssocStudyObjectCollection;
+use Drupal\rep\Form\Associates\AssocProject;
 use Drupal\rep\Entity\GenericObject;
 use Drupal\rep\Vocabulary\FOAF;
 use Drupal\rep\Vocabulary\HASCO;
@@ -66,6 +67,11 @@ class DescribeAssociatesForm extends FormBase {
       \Drupal::messenger()->addError($this->t('The recovery object is empty or invalid.'));
       return $form;
     }
+
+    // Determine element type early so we can customize rendering.
+    $typeUri = $element->hascoTypeUri ?? ($element->typeUri ?? '');
+    $isProject = ($typeUri === SCHEMA::PROJECT);
+
      // ✅ Insert the graph as a panel using VisGraphBaseForm
     $graphForm = new VisGraphBaseForm();
     $graphForm->setVisElement($element);
@@ -75,10 +81,21 @@ class DescribeAssociatesForm extends FormBase {
     $objectProperties = GenericObject::inspectObject($element);
     $baseUri = $element->uri;
 
+    // For Projects, render Associated Elements (cards) right after the graph/title.
+    $projectAssociationsRendered = false;
+    if ($typeUri === SCHEMA::PROJECT) {
+      AssocProject::process($element, $form, $form_state);
+      $projectAssociationsRendered = true;
+    }
+
    
 
     // ✅ Properties (with eye icon)
     foreach ($objectProperties['objects'] as $propertyName => $propertyValue) {
+      // Project Funding is rendered as cards by AssocProject.
+      if ($isProject && in_array($propertyName, ['funding', 'fundingScheme', 'hasFunding', 'hasFundingScheme'], true)) {
+        continue;
+      }
       if ($propertyName === 'hasAddress') {
         $this->processPropertyAddress($propertyValue, $form, $form_state);
       } else {
@@ -96,6 +113,14 @@ class DescribeAssociatesForm extends FormBase {
 
     // ✅ Arrays (lists of values)
     foreach ($objectProperties['arrays'] as $propertyName => $propertyValue) {
+      // Project contributors are rendered as cards by AssocProject.
+      if ($propertyName === 'contributors' || $propertyName === 'contributorUris') {
+        continue;
+      }
+      // Project Funding is rendered as cards by AssocProject.
+      if ($isProject && in_array($propertyName, ['funding', 'fundingScheme', 'fundings', 'fundingSchemes'], true)) {
+        continue;
+      }
       if (!empty($propertyValue)) {
         $prettyName = DescribeForm::prettyProperty($propertyName);
         $list_items = '<ul>';
@@ -112,11 +137,15 @@ class DescribeAssociatesForm extends FormBase {
     }
 
     // ✅ Process associations by object type
-    $typeUri = $element->hascoTypeUri ?? $element->typeUri ?? '';
 
     switch ($typeUri) {
       case VSTOI::DEPLOYMENT:
         AssocDeployment::process($element, $form, $form_state);
+        break;
+      case SCHEMA::PROJECT:
+        if (!$projectAssociationsRendered) {
+          AssocProject::process($element, $form, $form_state);
+        }
         break;
       case SCHEMA::ORGANIZATION:
         AssocOrganization::process($element, $form, $form_state);

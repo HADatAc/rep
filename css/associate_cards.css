@@ -1,0 +1,32 @@
+.rep-card-logo-box {
+  height: 140px;
+  position: relative;
+  overflow: hidden;
+}
+
+.rep-card-logo-img {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-height: 120px;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.rep-card-uri-footer {
+  word-break: break-word;
+  height: 3.6em;
+  overflow: hidden;
+}
+
+.rep-contrib-spinner {
+  display: flex;
+}
+
+.rep-contrib-sentinel {
+  height: 1px;
+}

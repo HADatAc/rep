@@ -31,6 +31,17 @@
       const container = context.querySelector('#my-network');
       if (!container || container.dataset.loaded === 'true') return;
       if (typeof vis === 'undefined') return;
+
+      // If the graph canvas is inside a collapsed/hidden region, defer initialization.
+      // Initializing vis.Network while hidden commonly yields a 0x0 canvas and an
+      // off-center view when the region is later shown.
+      const isVisible = (el) => {
+        if (!el) return false;
+        const rect = el.getBoundingClientRect();
+        return (rect.width > 0 && rect.height > 0);
+      };
+      if (!isVisible(container)) return;
+
       container.dataset.loaded = 'true';
 
       // ----- Config & limits -----
@@ -157,6 +168,29 @@
         physics: { solver: 'repulsion', stabilization: { enabled: true, iterations: 500, updateInterval: 100 } }
       };
       const network = new vis.Network(container, { nodes, edges }, options);
+
+      // Expose for other behaviors (e.g., collapse/show) to re-fit on demand.
+      container.__repNetwork = network;
+      container.__repRootId = currentRootId;
+
+      function centerOnRoot() {
+        try {
+          if (currentRootId && nodes.get(currentRootId)) {
+            network.focus(currentRootId, { scale: 1.0, animation: { duration: 250 } });
+          } else {
+            network.fit({ animation: { duration: 250 } });
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // Center once vis.js finishes stabilization.
+      try {
+        network.once('stabilizationIterationsDone', centerOnRoot);
+      } catch (e) {
+        // ignore
+      }
 
       // ---------- Styling helpers ----------
       function isClassNode(n) {

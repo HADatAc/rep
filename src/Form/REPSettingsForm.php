@@ -71,16 +71,6 @@ class REPSettingsForm extends ConfigFormBase {
       ],
     ];
 
-    // Button to navigate to the "Associated Project" configuration form.
-    $form['project_submit'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Associated Project'),
-      '#name' => 'project',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'bookmark-button'],
-      ],
-    ];
-
     // Whether REP should be used as the Drupal front page.
     $form['rep_home'] = [
       '#type' => 'checkbox',
@@ -101,6 +91,27 @@ class REPSettingsForm extends ConfigFormBase {
       '#title' => $this->t('Do you want to connect this repository to a Social Knowledge Graph?'),
       '#default_value' => $config->get('social_conf'),
     ];
+
+    // PMSR landing page: only expose the feature flag if the PMSR GUI bundle
+    // exists in this installation (themes/custom/pmsrgui) and the pmsr module
+    // exists.
+    $hasPmsrGui = FALSE;
+    try {
+      $modulePath = \Drupal::service('extension.list.module')->getPath('pmsr');
+      $guiDir = rtrim((string) \Drupal::root(), '/\\') . '/themes/custom/pmsrgui';
+      $hasPmsrGui = !empty($modulePath) && is_dir($guiDir);
+    }
+    catch (\Throwable $e) {
+      $hasPmsrGui = FALSE;
+    }
+
+    if ($hasPmsrGui) {
+      $form['pmsr_new_landing_enabled'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Enable PMSR new landing page'),
+        '#default_value' => $config->get('pmsr_new_landing_enabled') ?? 0,
+      ];
+    }
 
     // Short name of the repository.
     $shortName = '';
@@ -190,13 +201,6 @@ class REPSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('api_url'),
     ];
 
-    $form['ctt_url'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('CTT Editor URL (optional)'),
-      '#default_value' => $config->get('ctt_url') ?? '',
-      '#description' => $this->t('External CTT URL used as fallback when embedded Drupal editor is unavailable (example: http://localhost:5173).'),
-    ];
-
     // JWT secret selection (using the Key module).
     $form['jwt_secret'] = [
       '#type' => 'key_select',
@@ -282,11 +286,6 @@ class REPSettingsForm extends ConfigFormBase {
       return;
     }
 
-    if ($button_name === 'project') {
-      $form_state->setRedirectUrl(Url::fromRoute('rep.admin_associated_project_custom'));
-      return;
-    }
-
     // Button to trigger Sagres synchronization (no config save).
     if ($button_name === 'sync_sagres') {
       \Drupal::logger('rep')->notice('Calling syncUsersWithSagres().');
@@ -303,6 +302,10 @@ class REPSettingsForm extends ConfigFormBase {
     $config->set('rep_home', $form_state->getValue('rep_home'));
     $config->set('sagres_conf', $form_state->getValue('sagres_conf'));
     $config->set('social_conf', $form_state->getValue('social_conf'));
+    $pmsrFlag = $form_state->getValue('pmsr_new_landing_enabled');
+    if ($pmsrFlag !== NULL) {
+      $config->set('pmsr_new_landing_enabled', $pmsrFlag);
+    }
     $config->set('site_label', trim($form_state->getValue('site_label')));
     $config->set('site_name', trim($form_state->getValue('site_name')));
     $config->set('repository_domain_url', trim($form_state->getValue('repository_domain_url')));
@@ -311,7 +314,10 @@ class REPSettingsForm extends ConfigFormBase {
     $config->set('repository_description', trim($form_state->getValue('repository_description')));
     $config->set('sagres_base_url', $form_state->getValue('sagres_base_url'));
     $config->set('api_url', $form_state->getValue('api_url'));
-    $config->set('ctt_url', trim((string) $form_state->getValue('ctt_url')));
+    $cttUrl = $form_state->getValue('ctt_url');
+    if ($cttUrl !== NULL) {
+      $config->set('ctt_url', trim((string) $cttUrl));
+    }
     $config->set('jwt_secret', $form_state->getValue('jwt_secret'));
     $config->save();
 
