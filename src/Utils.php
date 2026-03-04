@@ -1233,10 +1233,37 @@ class Utils {
       return $placeholder_image;
     }
 
+    $apiImage = trim((string) $apiImage);
+
     // 2) If it's already a full URL, return it.
     if (strpos($apiImage, 'http') === 0) {
       // \Drupal::logger('rep')->debug('getAPIImage: apiImage is full URL, returning it: @url', ['@url'=>$apiImage]);
       return $apiImage;
+    }
+
+    // 3) Inline data URIs (or raw base64 payloads) should not be proxied via
+    // route params, otherwise long values can trigger HTTP 414.
+    if (stripos($apiImage, 'data:image/') === 0) {
+      return $apiImage;
+    }
+
+    $isLikelyBase64Image = preg_match('/^[A-Za-z0-9+\/=\r\n]+$/', $apiImage) === 1
+      && strlen($apiImage) >= 64;
+    if ($isLikelyBase64Image) {
+      $normalized = preg_replace('/\s+/', '', $apiImage);
+      if (strpos($normalized, 'iVBOR') === 0) {
+        return 'data:image/png;base64,' . $normalized;
+      }
+      if (strpos($normalized, '/9j/') === 0) {
+        return 'data:image/jpeg;base64,' . $normalized;
+      }
+      if (strpos($normalized, 'R0lGOD') === 0) {
+        return 'data:image/gif;base64,' . $normalized;
+      }
+      if (strpos($normalized, 'UklGR') === 0) {
+        return 'data:image/webp;base64,' . $normalized;
+      }
+      return 'data:image/png;base64,' . $normalized;
     }
 
     // Drupal render sanitization strips data: URIs from <img src>, which breaks
@@ -1245,6 +1272,12 @@ class Utils {
       $elementEnc = static::base64urlEncode((string) $uri);
       $imageEnc = static::base64urlEncode((string) $apiImage);
       $phEnc = static::base64urlEncode((string) $placeholder_image);
+
+      // Guard very long URLs to avoid HTTP 414 from web server limits.
+      if (strlen($elementEnc) + strlen($imageEnc) + strlen($phEnc) > 3000) {
+        return $placeholder_image;
+      }
+
       return \Drupal\Core\Url::fromRoute('rep.api_image', [
         'element' => $elementEnc,
         'image' => $imageEnc,

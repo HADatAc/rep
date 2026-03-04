@@ -80,7 +80,7 @@ class AssocProject {
         $safeImg = Html::escape($fundingImageCache[$fundingUri]);
         $safeTitle = Html::escape($label);
         $safeUri = Html::escape($fundingUri);
-        $openHref = Html::escape($fundingUri);
+        $openHref = Html::escape(Url::fromUserInput('/rep/uri/' . base64_encode($fundingUri))->toString());
 
         $cards .= '<div class="col">'
           . '<div class="card h-100">'
