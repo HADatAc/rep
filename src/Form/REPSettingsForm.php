@@ -92,14 +92,16 @@ class REPSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('social_conf'),
     ];
 
-    // PMSR landing page: only expose the feature flag if the PMSR GUI bundle
-    // exists in this installation (themes/custom/pmsrgui) and the pmsr module
-    // exists.
+    // PMSR landing page: expose the feature flag when PMSR module exists.
+    // Support both possible machine names across environments.
     $hasPmsrGui = FALSE;
     try {
-      $modulePath = \Drupal::service('extension.list.module')->getPath('pmsr');
-      $guiDir = rtrim((string) \Drupal::root(), '/\\') . '/themes/custom/pmsrgui';
-      $hasPmsrGui = !empty($modulePath) && is_dir($guiDir);
+      $moduleList = \Drupal::service('extension.list.module');
+      $modulePath = (string) $moduleList->getPath('pmsr');
+      if ($modulePath === '') {
+        $modulePath = (string) $moduleList->getPath('pmsr_gui');
+      }
+      $hasPmsrGui = $modulePath !== '';
     }
     catch (\Throwable $e) {
       $hasPmsrGui = FALSE;
