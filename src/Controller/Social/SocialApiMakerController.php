@@ -48,10 +48,12 @@ class SocialApiMakerController extends ControllerBase {
     }
 
     // \Drupal::logger('rep')->debug('Legacy makers count: @c', ['@c' => count($makers)]);
+    $legacyMakers = $makers;
 
     // 3) Se houver resultados legacy, ou social_conf OFF, devolve-os já.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    if (!empty($makers) || !$socialEnabled) {
+    $forceSocialForOrganizations = $socialEnabled && $entityType === 'organization';
+    if ((!$forceSocialForOrganizations && !empty($makers)) || !$socialEnabled) {
       // \Drupal::logger('rep')->debug('Returning legacy results (or social disabled).');
       foreach ($makers as $m) {
         $label = $m->label ?? '';
@@ -159,6 +161,10 @@ class SocialApiMakerController extends ControllerBase {
     catch (\Throwable $e) {
       \Drupal::logger('rep')->error('Social autocomplete failed: @m', ['@m' => $e->getMessage()]);
       $makers = [];
+    }
+
+    if (empty($makers) && !empty($legacyMakers)) {
+      $makers = $legacyMakers;
     }
 
     // 6) Monta retorno final
