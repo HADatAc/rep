@@ -266,7 +266,7 @@ rep.admin_namespace_settings_custom:
     _form: '\Drupal\rep\Form\REPNameSpaceForm'
     _title: 'Manage Ontologies'
   requirements:
-    _permission: 'administer site NameSpace configuration'
+    _permission: 'administer semantic ontologies'
   options:
     _admin_route: FALSE
     no_cache: 'TRUE'
@@ -277,7 +277,7 @@ rep.update_namespace_settings_custom:
     _form: '\Drupal\rep\Form\REPUpdateNameSpaceForm'
     _title: 'Update NameSpace'
   requirements:
-    _permission: 'administer site NameSpace configuration'
+    _permission: 'administer semantic ontologies'
   options:
     _admin_route: TRUE
     no_cache: 'TRUE'
@@ -425,7 +425,7 @@ rep.add_ontologies:
     _form: '\Drupal\rep\Form\AddOntologiesForm'
     _title: 'Add Ontology'
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'
 
 rep.map_entry_points:
   path: '/rep/manage/map-entry-points'
@@ -433,7 +433,7 @@ rep.map_entry_points:
     _form: '\Drupal\rep\Form\MapEntryPointsForm'
     _title: 'Manage Class Entry Points'
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'
 
 rep.map_instance_entry_points:
   path: '/rep/manage/map-instance-entry-points'
@@ -441,21 +441,21 @@ rep.map_instance_entry_points:
     _form: '\Drupal\rep\Form\MapInstanceEntryPointsForm'
     _title: 'Manage Instance Entry Points'
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'
 
 rep.map_delete:
   path: '/rep/map/delete/{entryPoint}/{mappedUri}'
   defaults:
     _controller: '\Drupal\rep\Controller\MapController::deleteMapping'
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'
 
 rep.tree.entry_point_mappings:
   path: '/rep/entry-point-mappings'
   defaults:
     _controller: '\Drupal\rep\Controller\TreeController::getEntryPointMappings'
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'
 
 # ONT
 rep.ont_view:
@@ -463,7 +463,7 @@ rep.ont_view:
   defaults:
     _controller: '\Drupal\rep\Controller\OntController::view'
   requirements:
-    _permission: 'access content'
+    _permission: 'administer semantic ontologies'
   options:
     no_cache: TRUE
 
@@ -473,7 +473,7 @@ rep.ont_edit:
     _form: '\Drupal\rep\Form\OntEditForm'
     _title: 'Edit Application Ontology File'
   requirements:
-    _permission: 'access content'
+    _permission: 'administer semantic ontologies'
   options:
     no_cache: TRUE
 
@@ -484,7 +484,7 @@ rep.ont_injest:
     _title: 'Injest Application Ontology File'
     returnPathway: 'rep.ont_edit'
   requirements:
-    _permission: 'access content'
+    _permission: 'administer semantic ontologies'
   options:
     no_cache: TRUE
 
@@ -493,7 +493,7 @@ rep.api.get:
   defaults:
     _controller: 'Drupal\rep\Controller\OntController::apiGet'
   requirements:
-    _permission: 'access content'
+    _permission: 'administer semantic ontologies'
   options:
     no_cache: TRUE
 
@@ -502,7 +502,7 @@ rep.api.save:
   defaults:
     _controller: 'Drupal\rep\Controller\OntController::apiSave'
   requirements:
-    _permission: 'access content'
+    _permission: 'administer semantic ontologies'
   methods: ['POST']
   options:
     no_cache: TRUE

@@ -295,7 +295,7 @@ rep.ontologies_root:
   route_name: '<nolink>'
   weight: 49
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'
 
 rep.manage_ontologies:
   title: 'Manage Ontologies'
@@ -305,7 +305,7 @@ rep.manage_ontologies:
   menu_name: main
   weight: 0
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'
 
 rep.map_entry_points:
   title: 'Manage Class Entry Points'
@@ -315,7 +315,7 @@ rep.map_entry_points:
   menu_name: main
   weight: 1
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'
 
 rep.map_instance_entry_points:
   title: 'Manage Instance Entry Points'
@@ -325,7 +325,7 @@ rep.map_instance_entry_points:
   menu_name: main
   weight: 2
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'
 
 rep.view_app_ontology:
   title: 'View Application Ontologiy'
@@ -348,4 +348,4 @@ rep.edit_app_ontology:
   menu_name: main
   weight: 4
   requirements:
-    _role: 'content_editor'
+    _permission: 'administer semantic ontologies'

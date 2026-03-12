@@ -1,0 +1,4 @@
+administer semantic ontologies:
+  title: 'Administer Semantic Ontologies'
+  description: 'Manage ontology configurations, entry points, and application ontology.'
+  restrict access: true
