@@ -104,6 +104,47 @@ function rep_preprocess_block(&$variables) {
   $variables['#attached']['library'][] = 'rep/rep_js_css';
 }
 
+function rep_preprocess_menu(&$variables) {
+  if (($variables['menu_name'] ?? '') !== 'main') {
+    return;
+  }
+
+  if (!empty($variables['items']) && is_array($variables['items'])) {
+    $variables['items'] = _rep_filter_empty_nolink_parents($variables['items']);
+  }
+}
+
+function _rep_filter_empty_nolink_parents(array $items): array {
+  $filtered = [];
+
+  foreach ($items as $key => $item) {
+    if (!empty($item['below']) && is_array($item['below'])) {
+      $item['below'] = _rep_filter_empty_nolink_parents($item['below']);
+    }
+
+    $has_children = !empty($item['below']);
+    if (_rep_is_nolink_menu_item($item) && !$has_children) {
+      continue;
+    }
+
+    $filtered[$key] = $item;
+  }
+
+  return $filtered;
+}
+
+function _rep_is_nolink_menu_item(array $item): bool {
+  if (empty($item['url']) || !($item['url'] instanceof \Drupal\Core\Url)) {
+    return FALSE;
+  }
+
+  if (!$item['url']->isRouted()) {
+    return FALSE;
+  }
+
+  return $item['url']->getRouteName() === '<nolink>';
+}
+
 /**
  * Implements hook_help().
  *

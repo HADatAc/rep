@@ -215,42 +215,17 @@ use Drupal\rep\Entity\Ontology;
       $triggering_element = $form_state->getTriggeringElement();
       $button_name = $triggering_element['#name'];
 
-      $namespaces = [];
-      foreach ($abbrevs as $abbr) {
-        foreach ($this->getList() as $nsObj) {
-          if ($nsObj->label === $abbr) {
-            $namespaces[] = $nsObj->uri;
-            break;
-          }
-        }
-      }
-
-      if (empty($namespaces)) {
-        \Drupal::messenger()->addWarning($this->t('Please select at least one namespace.'));
-      }
-      else {
-        $api = \Drupal::service('rep.api_connector');
-        // kint($namespaces);
-        $response = $api->repoReloadSelectedNamespaceTriples($namespaces);
-        if (!empty($message)) {
-          \Drupal::messenger()->addMessage(
-            $this->t('@msg', ['@msg' => $message])
-          );
-        }
-        else {
-          \Drupal::messenger()
-            ->addWarning($this->t('No response received from the API.'));
-        }
-        $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
-      }
-
       // RETRIEVE SELECTED ROWS, IF ANY
       $selected_rows = $form_state->getValue('element_table');
+      if (!is_array($selected_rows)) {
+        $selected_rows = [];
+      }
+
       $rows = [];
       foreach ($selected_rows as $index => $selected) {
-          if ($selected) {
-              $rows[$index] = $index;
-          }
+        if ($selected) {
+          $rows[$index] = $index;
+        }
       }
 
       // BUTTON ACTIONS
@@ -261,6 +236,47 @@ use Drupal\rep\Entity\Ontology;
       }
 
       $APIservice = \Drupal::service('rep.api_connector');
+
+      // SELECTED TRIPLES ACTIONS
+      if ($button_name === 'reload_selected' || $button_name === 'delete_selected') {
+        if (empty($rows)) {
+          \Drupal::messenger()->addWarning($this->t('Please select at least one namespace.'));
+          return;
+        }
+
+        $namespaces = [];
+        foreach ($rows as $abbr) {
+          foreach ($this->getList() as $nsObj) {
+            if (isset($nsObj->label) && $nsObj->label === $abbr && isset($nsObj->uri)) {
+              $namespaces[] = $nsObj->uri;
+              break;
+            }
+          }
+        }
+
+        if (empty($namespaces)) {
+          \Drupal::messenger()->addWarning($this->t('Please select at least one namespace.'));
+          return;
+        }
+
+        if ($button_name === 'reload_selected') {
+          $message = $APIservice->parseObjectResponse(
+            $APIservice->repoReloadSelectedNamespaceTriples($namespaces),
+            'repoReloadSelectedNamespaceTriples'
+          );
+          \Drupal::messenger()->addMessage(t($message));
+          $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+          return;
+        }
+
+        $message = $APIservice->parseObjectResponse(
+          $APIservice->repoDeleteSelectedNamespaceTriples($namespaces),
+          'repoDeleteSelectedNamespaceTriples'
+        );
+        \Drupal::messenger()->addMessage(t($message));
+        $form_state->setRedirectUrl(Url::fromRoute('rep.admin_namespace_settings_custom'));
+        return;
+      }
 
       if ($button_name === 'reload') {
         $message = $APIservice->parseObjectResponse($APIservice->repoReloadNamespaceTriples(),'repoReloadNamespaceTriples');

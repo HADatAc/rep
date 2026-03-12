@@ -238,8 +238,7 @@ rep.socialm_manageConsumer:
   menu_name: main
   weight: 25
   requirements:
-    _permission: 'access content'
-    _role: 'authenticated'
+    _permission: 'administer semantic ontologies'
 #
 # REVIEWER
 #

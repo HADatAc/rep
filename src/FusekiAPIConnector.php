@@ -2070,17 +2070,292 @@ class FusekiAPIConnector {
   }
 
   public function repoReloadSelectedNamespaceTriples(array $namespaces) {
-    $endpoint = '/hascoapi/api/repo/ont/reload';
-    $url      = $this->getApiUrl() . $endpoint;
+    // HASCO API does not expose a "reload selected ontologies" route.
+    // Implement it directly via Fuseki:
+    //  1) CLEAR GRAPH <namespaceUri>
+    //  2) PUT triples to graph store endpoint (?graph=<namespaceUri>)
 
-    $jsonBody = ['namespaceUris' => $namespaces];
-    $headers = $this->getHeader();
-    $options = [
-      'headers' => $headers,
-      'json'    => $jsonBody,
-    ];
+    $namespaces = array_values(array_filter($namespaces, static fn($v) => is_string($v) && trim($v) !== ''));
+    if (empty($namespaces)) {
+      return json_encode([
+        'isSuccessful' => false,
+        'body' => 'No namespaceUris have been provided.',
+      ]);
+    }
 
-    return $this->perform_http_request('POST', $url, $options);
+    // Load current namespace list to map URI -> source + mime.
+    $rawList = $this->namespaceList();
+    $list = $rawList ? $this->parseObjectResponse($rawList, 'namespaceList') : NULL;
+    if (!is_array($list)) {
+      return json_encode([
+        'isSuccessful' => false,
+        'body' => 'Could not retrieve namespace list from the API.',
+      ]);
+    }
+
+    $byUri = [];
+    foreach ($list as $nsObj) {
+      if (is_object($nsObj) && !empty($nsObj->uri)) {
+        $byUri[(string) $nsObj->uri] = $nsObj;
+      }
+    }
+
+    // 1) Clear selected graphs.
+    $clearSparql = '';
+    foreach ($namespaces as $graphUri) {
+      $graphUri = (string) $graphUri;
+      $clearSparql .= 'CLEAR SILENT GRAPH <' . $graphUri . ">;\n";
+    }
+
+    $clearResult = $this->fusekiSparqlUpdate($clearSparql);
+    if (empty($clearResult['ok'])) {
+      return json_encode([
+        'isSuccessful' => false,
+        'body' => $clearResult['message'] ?? 'Failed to clear selected graphs in Fuseki.',
+      ]);
+    }
+
+    // 2) Reload triples for each namespace.
+    $loaded = 0;
+    $skipped = 0;
+    $errors = [];
+
+    foreach ($namespaces as $graphUri) {
+      $graphUri = (string) $graphUri;
+      $nsObj = $byUri[$graphUri] ?? NULL;
+      if (!$nsObj || empty($nsObj->source)) {
+        $skipped++;
+        continue;
+      }
+
+      $source = (string) $nsObj->source;
+      $mime = !empty($nsObj->sourceMime) ? (string) $nsObj->sourceMime : 'text/turtle';
+
+      $contentResult = $this->fetchRemoteContent($source, $mime);
+      if (empty($contentResult['ok'])) {
+        $errors[] = 'Failed to fetch ' . $source . ': ' . ($contentResult['message'] ?? 'unknown error');
+        continue;
+      }
+
+      $putResult = $this->fusekiPutGraph($graphUri, (string) $contentResult['body'], $mime);
+      if (empty($putResult['ok'])) {
+        $errors[] = 'Failed to load graph <' . $graphUri . '>: ' . ($putResult['message'] ?? 'unknown error');
+        continue;
+      }
+      $loaded++;
+    }
+
+    $msg = "Reload requested for selected ontologies. Loaded=$loaded Skipped=$skipped";
+    if (!empty($errors)) {
+      $msg .= '. Errors: ' . implode(' | ', array_slice($errors, 0, 5));
+      if (count($errors) > 5) {
+        $msg .= ' | ...';
+      }
+    }
+
+    return json_encode([
+      'isSuccessful' => true,
+      'body' => $msg,
+    ]);
+  }
+
+  public function repoDeleteSelectedNamespaceTriples(array $namespaces) {
+    $namespaces = array_values(array_filter($namespaces, static fn($v) => is_string($v) && trim($v) !== ''));
+    if (empty($namespaces)) {
+      return json_encode([
+        'isSuccessful' => false,
+        'body' => 'No namespaceUris have been provided.',
+      ]);
+    }
+
+    $sparql = '';
+    foreach ($namespaces as $graphUri) {
+      $graphUri = (string) $graphUri;
+      $sparql .= 'CLEAR SILENT GRAPH <' . $graphUri . ">;\n";
+    }
+
+    $result = $this->fusekiSparqlUpdate($sparql);
+    if (empty($result['ok'])) {
+      return json_encode([
+        'isSuccessful' => false,
+        'body' => $result['message'] ?? 'Failed to delete triples from selected graphs in Fuseki.',
+      ]);
+    }
+
+    return json_encode([
+      'isSuccessful' => true,
+      'body' => 'Selected ontology triples have been requested to be DELETED.',
+    ]);
+  }
+
+  private function getFusekiUpdateUrlCandidates(): array {
+    $config = \Drupal::config(static::CONFIGNAME);
+    $explicit = $config->get('fuseki_update_url');
+    $candidates = [];
+
+    if (is_string($explicit) && trim($explicit) !== '') {
+      $candidates[] = trim($explicit);
+    }
+
+    $apiUrl = (string) ($this->getApiUrl() ?? '');
+    $parts = $apiUrl ? @parse_url($apiUrl) : false;
+    $scheme = (is_array($parts) && !empty($parts['scheme'])) ? $parts['scheme'] : 'http';
+    $host = (is_array($parts) && !empty($parts['host'])) ? $parts['host'] : 'localhost';
+
+    foreach ([3030, 6060] as $port) {
+      $candidates[] = $scheme . '://' . $host . ':' . $port . '/store/update';
+    }
+
+    // Common Docker service name.
+    $candidates[] = 'http://fuseki:3030/store/update';
+    $candidates[] = 'http://localhost:3030/store/update';
+
+    // De-dup while preserving order.
+    $out = [];
+    foreach ($candidates as $c) {
+      if (!in_array($c, $out, true)) {
+        $out[] = $c;
+      }
+    }
+    return $out;
+  }
+
+  private function getFusekiGraphStoreUrlCandidates(): array {
+    $config = \Drupal::config(static::CONFIGNAME);
+    $explicit = $config->get('fuseki_gsp_url');
+    $candidates = [];
+
+    if (is_string($explicit) && trim($explicit) !== '') {
+      $candidates[] = trim($explicit);
+    }
+
+    $apiUrl = (string) ($this->getApiUrl() ?? '');
+    $parts = $apiUrl ? @parse_url($apiUrl) : false;
+    $scheme = (is_array($parts) && !empty($parts['scheme'])) ? $parts['scheme'] : 'http';
+    $host = (is_array($parts) && !empty($parts['host'])) ? $parts['host'] : 'localhost';
+
+    foreach ([3030, 6060] as $port) {
+      $candidates[] = $scheme . '://' . $host . ':' . $port . '/store/data';
+    }
+
+    $candidates[] = 'http://fuseki:3030/store/data';
+    $candidates[] = 'http://localhost:3030/store/data';
+
+    $out = [];
+    foreach ($candidates as $c) {
+      if (!in_array($c, $out, true)) {
+        $out[] = $c;
+      }
+    }
+    return $out;
+  }
+
+  private function fusekiSparqlUpdate(string $sparql): array {
+    $client = new Client();
+    $last = ['url' => null, 'status' => null, 'body' => null];
+
+    foreach ($this->getFusekiUpdateUrlCandidates() as $url) {
+      try {
+        $res = $client->request('POST', $url, [
+          'http_errors' => false,
+          'headers' => [
+            'Content-Type' => 'application/sparql-update',
+            'Accept' => 'application/json',
+          ],
+          'body' => $sparql,
+        ]);
+
+        $status = (int) $res->getStatusCode();
+        $body = (string) $res->getBody();
+        $last = ['url' => $url, 'status' => $status, 'body' => $body];
+
+        if ($status === 200 || $status === 204) {
+          return ['ok' => true, 'url' => $url, 'status' => $status, 'body' => $body];
+        }
+      }
+      catch (\Throwable $e) {
+        $last = ['url' => $url, 'status' => null, 'body' => $e->getMessage()];
+        continue;
+      }
+    }
+
+    $msg = 'Failed to execute SPARQL Update in Fuseki.';
+    if (!empty($last['url'])) {
+      $msg .= ' Last tried: ' . $last['url'];
+    }
+    if (!empty($last['status'])) {
+      $msg .= ' (HTTP ' . $last['status'] . ')';
+    }
+    if (!empty($last['body'])) {
+      $msg .= ' Response: ' . substr(preg_replace('/\s+/', ' ', (string) $last['body']), 0, 500);
+    }
+
+    return ['ok' => false, 'message' => $msg];
+  }
+
+  private function fetchRemoteContent(string $url, string $preferredMime = 'text/turtle'): array {
+    $client = new Client();
+    try {
+      $res = $client->request('GET', $url, [
+        'http_errors' => false,
+        'allow_redirects' => true,
+        'headers' => [
+          'Accept' => $preferredMime ?: '*/*',
+        ],
+      ]);
+      $status = (int) $res->getStatusCode();
+      $body = (string) $res->getBody();
+      if ($status >= 200 && $status < 300 && $body !== '') {
+        return ['ok' => true, 'body' => $body, 'status' => $status];
+      }
+      return ['ok' => false, 'message' => 'HTTP ' . $status . ' when fetching ' . $url];
+    }
+    catch (\Throwable $e) {
+      return ['ok' => false, 'message' => $e->getMessage()];
+    }
+  }
+
+  private function fusekiPutGraph(string $graphUri, string $content, string $contentType): array {
+    $client = new Client();
+    $last = ['url' => null, 'status' => null, 'body' => null];
+
+    foreach ($this->getFusekiGraphStoreUrlCandidates() as $base) {
+      $url = rtrim($base, '/') . '?graph=' . rawurlencode($graphUri);
+      try {
+        $res = $client->request('PUT', $url, [
+          'http_errors' => false,
+          'headers' => [
+            'Content-Type' => $contentType ?: 'text/turtle',
+            'Accept' => 'application/json',
+          ],
+          'body' => $content,
+        ]);
+
+        $status = (int) $res->getStatusCode();
+        $body = (string) $res->getBody();
+        $last = ['url' => $url, 'status' => $status, 'body' => $body];
+
+        if ($status === 200 || $status === 201 || $status === 204) {
+          return ['ok' => true, 'url' => $url, 'status' => $status, 'body' => $body];
+        }
+      }
+      catch (\Throwable $e) {
+        $last = ['url' => $url, 'status' => null, 'body' => $e->getMessage()];
+        continue;
+      }
+    }
+
+    $msg = 'Failed to load triples into Fuseki graph store.';
+    if (!empty($last['url'])) {
+      $msg .= ' Last tried: ' . $last['url'];
+    }
+    if (!empty($last['status'])) {
+      $msg .= ' (HTTP ' . $last['status'] . ')';
+    }
+    if (!empty($last['body'])) {
+      $msg .= ' Response: ' . substr(preg_replace('/\s+/', ' ', (string) $last['body']), 0, 500);
+    }
+    return ['ok' => false, 'message' => $msg];
   }
 
   public function repoDeleteSelectedNamespace($abbreviation) {
