@@ -116,10 +116,16 @@ function rep_preprocess_menu(&$variables) {
 
 function _rep_filter_empty_nolink_parents(array $items): array {
   $filtered = [];
+  $current_user = \Drupal::currentUser();
+  $can_see_reviewer_root = $current_user->hasRole('content_editor') || $current_user->hasPermission('administer semantic ontologies');
 
   foreach ($items as $key => $item) {
     if (!empty($item['below']) && is_array($item['below'])) {
       $item['below'] = _rep_filter_empty_nolink_parents($item['below']);
+    }
+
+    if (_rep_get_menu_item_plugin_id($item) === 'reviewer.top_level' && !$can_see_reviewer_root) {
+      continue;
     }
 
     $has_children = !empty($item['below']);
@@ -143,6 +149,19 @@ function _rep_is_nolink_menu_item(array $item): bool {
   }
 
   return $item['url']->getRouteName() === '<nolink>';
+}
+
+function _rep_get_menu_item_plugin_id(array $item): string {
+  if (empty($item['original_link'])) {
+    return '';
+  }
+
+  $original_link = $item['original_link'];
+  if (is_object($original_link) && method_exists($original_link, 'getPluginId')) {
+    return (string) $original_link->getPluginId();
+  }
+
+  return '';
 }
 
 /**

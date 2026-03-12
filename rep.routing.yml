@@ -103,7 +103,7 @@ rep.select_mt_element:
   defaults:
     _form: '\Drupal\rep\Form\REPSelectMTForm'
   requirements:
-    _permission: 'administer semantic ontologies'
+    _permission: 'access content'
     _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
@@ -553,7 +553,7 @@ rep.mt_list_element:
     page: 1
     pagesize: 9
   requirements:
-    _permission: 'administer semantic ontologies'
+    _permission: 'access content'
     _custom_access_check: 'TRUE'
   options:
     no_cache: 'TRUE'
