@@ -344,7 +344,7 @@ class AddMTForm extends FormBase {
 
       // Confirm file actually exists at destination
       if (!file_exists($destination_real)) {
-        \Drupal::messenger()->addError(t("File move failed — destination file does not exist: @path", ['@path' => $destination_real]));
+        \Drupal::messenger()->addError(t("File move failed - destination file does not exist: @path", ['@path' => $destination_real]));
         return;
       }
 

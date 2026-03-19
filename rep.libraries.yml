@@ -111,7 +111,7 @@ rdf_graph_editor:
       minified: true
       weight: -10
 
-    # 4) Nosso init — como módulo para podermos usar import()
+    # 4) Nosso init - como módulo para podermos usar import()
     js/rdf-graph-editor.js:
       attributes:
         type: module

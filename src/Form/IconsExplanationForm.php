@@ -242,7 +242,7 @@ final class IconsExplanationForm extends FormBase {
         $uriCell = Link::fromTextAndUrl($label, $url)->toRenderable();
       }
       else {
-        $uriCell = ['#markup' => '—'];
+        $uriCell = ['#markup' => '-'];
       }
 
       $concept_rows[] = [
@@ -335,7 +335,7 @@ final class IconsExplanationForm extends FormBase {
         $uriCell = Link::fromTextAndUrl($label, $url)->toRenderable();
       }
       else {
-        $uriCell = ['#markup' => '—'];
+        $uriCell = ['#markup' => '-'];
       }
 
       $metadata_rows[] = [

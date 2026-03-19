@@ -376,7 +376,7 @@ class Utils {
       }
     }
 
-    // No prefix matched—return original.
+    // No prefix matched-return original.
     return $uri;
   }
 

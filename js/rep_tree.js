@@ -696,7 +696,7 @@
               var forcedRootUri = elementTypeUri || drupalSettings.rep_tree.superclass || null;
               var rootNode = buildHierarchy(data, forcedRootUri);
 
-              // —— Case A: no results
+              // -- Case A: no results
               if (data.length === 0) {
                 var $message = $(
                   '<div id="no-results-message" style="color: #b00; margin-bottom: 10px;">' +
@@ -718,7 +718,7 @@
                 return;
               }
 
-              // —— Case B: results exist or prefixIsActive=false
+              // -- Case B: results exist or prefixIsActive=false
               var treeData = rootNode ? [rootNode] : [];
               var treeInstance = $treeRoot.jstree(true);
               if (!treeInstance) {

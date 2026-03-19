@@ -669,7 +669,7 @@
             const totalPagesTxt = totalPagesKnown ?? (state.hasMoreServer ? '…' : Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC)));
             const totalCountTxt = knownTotal ?? (totalFetched + (state.hasMoreServer ? '+' : ''));
 
-            info.textContent = `Page ${pageNum} / ${totalPagesTxt} — showing ${page.length} of ${totalCountTxt}`;
+            info.textContent = `Page ${pageNum} / ${totalPagesTxt} - showing ${page.length} of ${totalCountTxt}`;
 
             const left = document.createElement('button');
             left.type = 'button'; left.className = 'btn btn-sm btn-light';

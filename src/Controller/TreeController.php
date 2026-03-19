@@ -33,6 +33,7 @@ class TreeController extends ControllerBase {
   public function getChildren(Request $request) {
     $api     = \Drupal::service('rep.api_connector');
     $nodeUri = $request->query->get('nodeUri');
+    $fieldId = $request->query->get('field_id');
 
     // Optional hint sent by the tree widget.
     // When selecting a Component for a ContainerSlot we want instances (created components),
@@ -74,7 +75,9 @@ class TreeController extends ControllerBase {
       return new JsonResponse($items);
     }
 
-    if ($elementtype === 'component' && $nodeUri === EntryPoints::CLASS_EP_COMPONENT) {
+    if ($elementtype === 'component' &&
+        $nodeUri === EntryPoints::CLASS_EP_COMPONENT &&
+        $fieldId === 'containerslot_component') {
       $managerEmail = \Drupal::currentUser()->getEmail();
       $elements = ListManagerEmailPage::exec('component', $managerEmail, 1, 9999);
       if (!is_array($elements)) {
@@ -96,6 +99,70 @@ class TreeController extends ControllerBase {
           'hasWebDocument' => $el->hasWebDocument ?? '',
           'hasImageUri' => $el->hasImageUri ?? '',
           // Leaf nodes in the tree.
+          'children' => false,
+        ];
+      }
+
+      usort($items, function($a, $b) {
+        return strcasecmp((string) $a->label, (string) $b->label);
+      });
+
+      return new JsonResponse($items);
+    }
+
+    if ($elementtype === 'componentinstance' && $nodeUri === EntryPoints::INSTANCE_EP_COMPONENT) {
+      $managerEmail = \Drupal::currentUser()->getEmail();
+      $elements = ListManagerEmailPage::exec('componentinstance', $managerEmail, 1, 9999);
+      if (!is_array($elements)) {
+        $elements = [];
+      }
+
+      $items = [];
+      foreach ($elements as $el) {
+        if (empty($el->uri)) {
+          continue;
+        }
+        $items[] = (object) [
+          'uri' => $el->uri,
+          'label' => $el->label ?? $el->hasContent ?? $el->uri,
+          'comment' => $el->comment ?? '',
+          'typeNamespace' => $el->typeNamespace ?? '',
+          'hasStatus' => $el->hasStatus ?? NULL,
+          'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $managerEmail,
+          'hasWebDocument' => $el->hasWebDocument ?? '',
+          'hasImageUri' => $el->hasImageUri ?? '',
+          'children' => false,
+        ];
+      }
+
+      usort($items, function($a, $b) {
+        return strcasecmp((string) $a->label, (string) $b->label);
+      });
+
+      return new JsonResponse($items);
+    }
+
+    if ($elementtype === 'platforminstance' && $nodeUri === EntryPoints::INSTANCE_EP_PLATFORM) {
+      $managerEmail = \Drupal::currentUser()->getEmail();
+      $elements = ListManagerEmailPage::exec('platforminstance', $managerEmail, 1, 9999);
+      if (!is_array($elements)) {
+        $elements = [];
+      }
+
+      $items = [];
+      foreach ($elements as $el) {
+        if (empty($el->uri)) {
+          continue;
+        }
+        $items[] = (object) [
+          'uri' => $el->uri,
+          'label' => $el->label ?? $el->hasContent ?? $el->uri,
+          'comment' => $el->comment ?? '',
+          'typeNamespace' => $el->typeNamespace ?? '',
+          'hasStatus' => $el->hasStatus ?? NULL,
+          'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $managerEmail,
+          'hasWebDocument' => $el->hasWebDocument ?? '',
+          'hasImageUri' => $el->hasImageUri ?? '',
           'children' => false,
         ];
       }
