@@ -2486,24 +2486,21 @@ class FusekiAPIConnector {
     }
 
     // CHECK IF FILE ID EXISTS TO DETERMINE WHICH APPROACH TO USE
-    $file_content = NULL;
-    $content_type = 'application/json';
-
     if (isset($template->hasDataFile->id) && $template->hasDataFile->id != NULL) {
-      // TRADITIONAL APPROACH: RETRIEVE FILE CONTENT FROM FID
-      $file_entity = \Drupal\file\Entity\File::load($template->hasDataFile->id);
-      if ($file_entity == NULL) {
-        \Drupal::messenger()->addError(t('Could not retrieve file with following FID: [' . $template->hasDataFile->id . ']'));
+      // TWO-STEP APPROACH: First upload file, then trigger ingestion
+      
+      // STEP 1: Upload the file to hascoapi
+      \Drupal::logger('rep')->notice('UploadTemplate: Uploading file first for template: @uri', [
+        '@uri' => $template->uri,
+      ]);
+      
+      $uploadResult = $this->uploadFile($template->hasDataFileUri, $template->hasDataFile->id);
+      if ($uploadResult == NULL) {
+        \Drupal::messenger()->addError(t('Could not upload file to API before ingestion for template: @uri', ['@uri' => $template->uri]));
         return FALSE;
       }
-      $file_uri = $file_entity->getFileUri();
-      $file_content = file_get_contents($file_uri);
-      if ($file_content == NULL) {
-        \Drupal::messenger()->addError(t('Could not retrieve file content from file with following FID: [' . $template->hasDataFile->id . ']'));
-        return FALSE;
-      }
-      $content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      \Drupal::logger('rep')->notice('UploadTemplate: Using traditional approach with file content for template: @uri', [
+      
+      \Drupal::logger('rep')->notice('UploadTemplate: File uploaded successfully, now triggering ingestion for template: @uri', [
         '@uri' => $template->uri,
       ]);
     } else {
@@ -2513,7 +2510,7 @@ class FusekiAPIConnector {
       ]);
     }
 
-    // APPEND DATAFILE URI AND STATUS TO ENDPOINT'S URL
+    // STEP 2: Trigger ingestion (without file content in body)
     $endpoint = "/hascoapi/api/ingest/".rawurlencode($status)."/".$concept."/".rawurlencode($template->uri);
 
     // MAKE CALL TO API ENDPOINT
@@ -2522,15 +2519,10 @@ class FusekiAPIConnector {
     try {
       $request_options = [
         'headers' => [
-          'Content-Type' => $content_type,
+          'Content-Type' => 'application/json',
           // 'Authorization' => $this->bearer
         ],
       ];
-
-      // Only add body if we have file content
-      if ($file_content !== NULL) {
-        $request_options['body'] = $file_content;
-      }
 
       $res = $client->post($api_url.$endpoint, $request_options);
     } catch(ConnectException $e){
