@@ -19,6 +19,37 @@
 
 
 (function ($, Drupal, drupalSettings) {
+  
+  // =============================================================================
+  // Helper function: trimPreserveBracket
+  // Truncates a string to maxLength while preserving the bracketed URI part.
+  // Equivalent to PHP Utils::trimPreserveBracket()
+  // =============================================================================
+  function trimPreserveBracket(input, maxLength) {
+    maxLength = maxLength || 127;
+    
+    if (input.length <= maxLength) {
+      return input;
+    }
+    
+    var bracketStart = input.indexOf('[');
+    if (bracketStart === -1) {
+      return input.substring(0, maxLength);
+    }
+    
+    var bracketPart = input.substring(bracketStart);
+    var bracketLen = bracketPart.length;
+    
+    if (bracketLen > maxLength) {
+      return "";
+    }
+    
+    var prefixMaxLen = maxLength - bracketLen;
+    var prefix = input.substring(0, Math.min(bracketStart, prefixMaxLen));
+    
+    return prefix + bracketPart;
+  }
+  
   // =============================================================================
   // 2) Drupal.behaviors.tree
   //    - Responsible for initializing/destroying the jsTree each time the modal opens.
@@ -352,7 +383,7 @@
                 .removeClass('disabled')
                 .data(
                   'selected-value',
-                  selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace
+                  selectedNode.uri ? trimPreserveBracket(selectedNode.text + " [" + selectedNode.uri + "]") : selectedNode.typeNamespace
                 )
                 .data('field-id', $('#tree-root').data('field-id'));
             }
@@ -371,7 +402,7 @@
                 .removeClass('disabled')
                 .data(
                   'selected-value',
-                  selectedNode.uri ? selectedNode.text + " [" + selectedNode.uri + "]" : selectedNode.typeNamespace
+                  selectedNode.uri ? trimPreserveBracket(selectedNode.text + " [" + selectedNode.uri + "]") : selectedNode.typeNamespace
                 )
                 .data('field-id', $('#tree-root').data('field-id'));
             }
