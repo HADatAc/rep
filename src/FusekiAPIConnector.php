@@ -2935,6 +2935,12 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+    
+    \Drupal::logger('rep.api')->info('generateMTPerStatus: @method @url', [
+      '@method' => $method,
+      '@url' => $api_url . $endpoint,
+    ]);
+    
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
@@ -2944,6 +2950,12 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+    
+    \Drupal::logger('rep.api')->info('generateMTPerElement: @method @url', [
+      '@method' => $method,
+      '@url' => $api_url . $endpoint,
+    ]);
+    
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
