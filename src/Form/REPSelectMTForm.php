@@ -1027,6 +1027,19 @@ class REPSelectMTForm extends FormBase {
         if ($file) {
           $origin = $originMgr->getOrigin((int) $file->id());
 
+          // For legacy files without origin tracking, assume 'api' as a reasonable default
+          // since most existing files came from the API. Mark it now for future operations.
+          if ($origin === NULL) {
+            \Drupal::logger('rep')->notice('performUningest: File @fid has unknown origin, assuming API and marking it.', [
+              '@fid' => $file->id(),
+            ]);
+            $originMgr->markApi((int) $file->id(), [
+              'df_uri' => $df->uri ?? NULL,
+              'migrated' => TRUE,
+            ]);
+            $origin = 'api';
+          }
+
           if ($origin === 'api') {
             // Purge only the physical binary; keep the File entity record.
             $file_uri  = $file->getFileUri();
@@ -1049,8 +1062,10 @@ class REPSelectMTForm extends FormBase {
             \Drupal::messenger()->addWarning(t('Binary was NOT purged because its origin is local. The API does not own this asset.'));
           }
           else {
-            // Unknown origin -> conservative: do nothing.
-            \Drupal::messenger()->addWarning(t('Binary was NOT purged due to unknown origin. No action taken.'));
+            // Unexpected origin value (should never reach here after migration logic above).
+            \Drupal::messenger()->addWarning(t('Binary was NOT purged due to unexpected origin value "@origin". No action taken.', [
+              '@origin' => $origin,
+            ]));
           }
         }
       }

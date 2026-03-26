@@ -171,6 +171,12 @@ class DataFileController extends ControllerBase {
     $file_entity->setMimeType($final_mime);
     $file_entity->save();
 
+    // Mark this file as originating from the API for proper uningest behavior.
+    $originMgr = \Drupal::service('rep.file_origin_manager');
+    $originMgr->markApi((int) $file_entity->id(), [
+      'df_uri' => $dataFileUri,
+    ]);
+
     $realpath = $fs->realpath($saved_uri);
     $response = new BinaryFileResponse($realpath);
     $response->setPrivate();

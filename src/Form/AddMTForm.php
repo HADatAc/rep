@@ -365,6 +365,10 @@ class AddMTForm extends FormBase {
       $file_entity->save();
       $file_id = $file_entity->id(); // This is your $fid
 
+      // Mark this file as local origin (user uploaded, not from API).
+      $originMgr = \Drupal::service('rep.file_origin_manager');
+      $originMgr->markLocal((int) $file_id);
+
       // Build URIs (same as before)
       $ddUri = NULL;
       if ($form_state->getValue('mt_dd') != NULL && $form_state->getValue('mt_dd') != '') {
