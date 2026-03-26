@@ -930,9 +930,9 @@ class REPSelectMTForm extends FormBase {
         $template->hasDataFile = $dataFile;
         
         // DEBUG: Show ALL DataFile properties
-        \Drupal::messenger()->addStatus(t('[DEBUG] DataFile fetched - ALL PROPERTIES: @props', [
-          '@props' => print_r($dataFile, TRUE),
-        ]));
+        // \Drupal::messenger()->addStatus(t('[DEBUG] DataFile fetched - ALL PROPERTIES: @props', [
+        //   '@props' => print_r($dataFile, TRUE),
+        // ]));
         
         \Drupal::logger('rep')->notice('performIngest: DataFile attached - id: @id, filename: @filename, ALL: @all', [
           '@id' => isset($dataFile->id) ? $dataFile->id : 'NULL',

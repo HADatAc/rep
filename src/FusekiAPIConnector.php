@@ -2516,19 +2516,19 @@ class FusekiAPIConnector {
     ]);
     
     // DEBUG: Show on screen too
-    if (isset($template->hasDataFile)) {
-      \Drupal::messenger()->addStatus(t('[DEBUG] DataFile structure: @props', [
-        '@props' => print_r($template->hasDataFile, TRUE),
-      ]));
-    }
+    // if (isset($template->hasDataFile)) {
+    //   \Drupal::messenger()->addStatus(t('[DEBUG] DataFile structure: @props', [
+    //     '@props' => print_r($template->hasDataFile, TRUE),
+    //   ]));
+    // }
     
-    if (isset($template->hasDataFile->id) && $template->hasDataFile->id != NULL) {
-      \Drupal::messenger()->addStatus(t('[DEBUG] DataFile has ID: @id - Will upload file!', ['@id' => $template->hasDataFile->id]));
-    } else {
-      \Drupal::messenger()->addWarning(t('[DEBUG] DataFile ID is NULL or missing - File will NOT be uploaded! hasDataFile exists: @exists', [
-        '@exists' => isset($template->hasDataFile) ? 'YES' : 'NO',
-      ]));
-    }
+    // if (isset($template->hasDataFile->id) && $template->hasDataFile->id != NULL) {
+    //   \Drupal::messenger()->addStatus(t('[DEBUG] DataFile has ID: @id - Will upload file!', ['@id' => $template->hasDataFile->id]));
+    // } else {
+    //   \Drupal::messenger()->addWarning(t('[DEBUG] DataFile ID is NULL or missing - File will NOT be uploaded! hasDataFile exists: @exists', [
+    //     '@exists' => isset($template->hasDataFile) ? 'YES' : 'NO',
+    //   ]));
+    // }
 
     // Ensure we have DataFile embedded (some API responses only include hasDataFileUri).
     if ((!isset($template->hasDataFile) || !isset($template->hasDataFile->id) || $template->hasDataFile->id == NULL)
@@ -3046,10 +3046,10 @@ class FusekiAPIConnector {
     // Ensure bearer token exists.
     $this->getHeader();
 
-    \Drupal::messenger()->addStatus(t('[DEBUG] uploadFile() CALLED with elementUri: @uri, fileId: @fid', [
-      '@uri' => $elementuri,
-      '@fid' => $fileId,
-    ]));
+    // \Drupal::messenger()->addStatus(t('[DEBUG] uploadFile() CALLED with elementUri: @uri, fileId: @fid', [
+    //   '@uri' => $elementuri,
+    //   '@fid' => $fileId,
+    // ]));
     
     // RETRIEVE FILE CONTENT FROM FID
     $file_entity = \Drupal\file\Entity\File::load($fileId);
@@ -3062,11 +3062,11 @@ class FusekiAPIConnector {
     $file_uri = $file_entity->getFileUri();
     $file_content = file_get_contents($file_uri);
     
-    \Drupal::messenger()->addStatus(t('[DEBUG] File loaded - filename: @name, size: @size bytes, URI: @uri', [
-      '@name' => $filename,
-      '@size' => strlen($file_content),
-      '@uri' => $file_uri,
-    ]));
+    // \Drupal::messenger()->addStatus(t('[DEBUG] File loaded - filename: @name, size: @size bytes, URI: @uri', [
+    //   '@name' => $filename,
+    //   '@size' => strlen($file_content),
+    //   '@uri' => $file_uri,
+    // ]));
 
     if ($file_content === FALSE || $file_content === '') {
       \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $fileId . ']'));
@@ -3076,9 +3076,9 @@ class FusekiAPIConnector {
     // APPEND ELEMENT URI ENDPOINT'S URL
     $endpoint = "/hascoapi/api/uploadFile/".rawurlencode($elementuri). "/" . rawurlencode($filename);
     
-    \Drupal::messenger()->addStatus(t('[DEBUG] Uploading to endpoint: @endpoint', [
-      '@endpoint' => $endpoint,
-    ]));
+    // \Drupal::messenger()->addStatus(t('[DEBUG] Uploading to endpoint: @endpoint', [
+    //   '@endpoint' => $endpoint,
+    // ]));
 
     // MAKE CALL TO API ENDPOINT
     $api_url = $this->getApiUrl();
