@@ -781,6 +781,27 @@ class MTListForm extends FormBase {
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
+    
+    // FIX: If template doesn't have hasDataFile embedded, fetch it separately
+    if (!isset($template->hasDataFile) && isset($template->hasDataFileUri)) {
+      \Drupal::logger('rep')->notice('performIngest: Template missing hasDataFile, fetching separately from: @uri', [
+        '@uri' => $template->hasDataFileUri,
+      ]);
+      
+      $dataFile = $api->parseObjectResponse($api->getUri($template->hasDataFileUri), 'getUri');
+      if ($dataFile != NULL) {
+        $template->hasDataFile = $dataFile;
+        \Drupal::logger('rep')->notice('performIngest: DataFile attached - id: @id, filename: @filename', [
+          '@id' => isset($dataFile->id) ? $dataFile->id : 'NULL',
+          '@filename' => isset($dataFile->filename) ? $dataFile->filename : 'NULL',
+        ]);
+      } else {
+        \Drupal::logger('rep')->warning('performIngest: Failed to retrieve DataFile from: @uri', [
+          '@uri' => $template->hasDataFileUri,
+        ]);
+      }
+    }
+    
     $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $template, $status), 'uploadTemplateStatus');
     if ($msg == NULL) {
       \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion."));

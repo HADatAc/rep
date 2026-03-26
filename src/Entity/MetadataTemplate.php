@@ -619,11 +619,14 @@ class MetadataTemplate
     }
 
     try {
+      // Ensure filename is always basename (no paths)
+      $cleanFilename = basename($this->getPreservedDF()->filename);
+      
       $datafileJSON = '{"uri":"' . $this->getPreservedDF()->uri . '",' .
         '"typeUri":"' . HASCO::DATAFILE . '",' .
         '"hascoTypeUri":"' . HASCO::DATAFILE . '",' .
         '"label":"' . $this->getPreservedDF()->label . '",' .
-        '"filename":"' . $this->getPreservedDF()->filename . '",' .
+        '"filename":"' . $cleanFilename . '",' .
         '"id":"' . $this->getPreservedDF()->id . '",' .
         '"fileStatus":"' . Constant::FILE_STATUS_UNPROCESSED . '",' .
         '"hasSIRManagerEmail":"' . $this->getPreservedDF()->hasSIRManagerEmail . '"}';

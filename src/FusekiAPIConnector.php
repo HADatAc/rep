@@ -1220,6 +1220,26 @@ class FusekiAPIConnector {
    */
 
    public function datafileAdd($datafileJson) {
+    // SANITIZE: Ensure filename is always basename (no absolute paths)
+    // This is a safety net in case filename contains full path
+    $datafileObj = json_decode($datafileJson, true);
+    if (isset($datafileObj['filename']) && !empty($datafileObj['filename'])) {
+      $originalFilename = $datafileObj['filename'];
+      $cleanFilename = basename($originalFilename);
+      
+      // Log if we had to clean the filename
+      if ($originalFilename !== $cleanFilename) {
+        \Drupal::logger('rep')->warning('datafileAdd: Cleaned filename from "@original" to "@clean"', [
+          '@original' => $originalFilename,
+          '@clean' => $cleanFilename,
+        ]);
+        
+        // Update the JSON with clean filename
+        $datafileObj['filename'] = $cleanFilename;
+        $datafileJson = json_encode($datafileObj);
+      }
+    }
+
     $endpoint = "/hascoapi/api/datafile/create/".rawurlencode($datafileJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
@@ -2479,23 +2499,66 @@ class FusekiAPIConnector {
 
   public function uploadTemplate($concept,$template,$status) {
 
+    // Ensure bearer token is initialized for any downstream calls (e.g., uploadFile).
+    $this->getHeader();
     // VALIDATE STATUS
     if ($status != "_" && $status != VSTOI::DRAFT && $status != VSTOI::CURRENT) {
       \Drupal::messenger()->addError(t('UploadTemplate: Invalid value for status: [' . $status . ']'));
       return FALSE;
     }
 
-    // CHECK IF FILE ID EXISTS TO DETERMINE WHICH APPROACH TO USE
+    // DEBUG: Log template structure
+    \Drupal::logger('rep')->debug('uploadTemplate: Template structure - hasDataFile exists: @exists, id: @id, filename: @filename, ALL PROPERTIES: @all', [
+      '@exists' => isset($template->hasDataFile) ? 'YES' : 'NO',
+      '@id' => isset($template->hasDataFile->id) ? $template->hasDataFile->id : 'NULL',
+      '@filename' => isset($template->hasDataFile->filename) ? $template->hasDataFile->filename : 'NULL',
+      '@all' => isset($template->hasDataFile) ? print_r($template->hasDataFile, TRUE) : 'N/A',
+    ]);
+    
+    // DEBUG: Show on screen too
+    if (isset($template->hasDataFile)) {
+      \Drupal::messenger()->addStatus(t('[DEBUG] DataFile structure: @props', [
+        '@props' => print_r($template->hasDataFile, TRUE),
+      ]));
+    }
+    
     if (isset($template->hasDataFile->id) && $template->hasDataFile->id != NULL) {
+      \Drupal::messenger()->addStatus(t('[DEBUG] DataFile has ID: @id - Will upload file!', ['@id' => $template->hasDataFile->id]));
+    } else {
+      \Drupal::messenger()->addWarning(t('[DEBUG] DataFile ID is NULL or missing - File will NOT be uploaded! hasDataFile exists: @exists', [
+        '@exists' => isset($template->hasDataFile) ? 'YES' : 'NO',
+      ]));
+    }
+
+    // Ensure we have DataFile embedded (some API responses only include hasDataFileUri).
+    if ((!isset($template->hasDataFile) || !isset($template->hasDataFile->id) || $template->hasDataFile->id == NULL)
+        && isset($template->hasDataFileUri) && $template->hasDataFileUri != NULL && $template->hasDataFileUri != '') {
+      $dataFile = $this->parseObjectResponse($this->getUri($template->hasDataFileUri), 'getUri');
+      if ($dataFile != NULL) {
+        $template->hasDataFile = $dataFile;
+      }
+    }
+
+    // If we still don't have a DataFile URI, we cannot upload any content.
+    if (!isset($template->hasDataFileUri) || $template->hasDataFileUri == NULL || $template->hasDataFileUri == '') {
+      \Drupal::messenger()->addError(t('UploadTemplate: Missing hasDataFileUri for template: @uri', [
+        '@uri' => isset($template->uri) ? $template->uri : '(unknown)',
+      ]));
+      return FALSE;
+    }
+
+    // CHECK IF FILE ID EXISTS TO DETERMINE WHICH APPROACH TO USE
+    if (isset($template->hasDataFile->id) && $template->hasDataFile->id != NULL && $template->hasDataFile->id != '') {
       // TWO-STEP APPROACH: First upload file, then trigger ingestion
       
       // STEP 1: Upload the file to hascoapi
-      \Drupal::logger('rep')->notice('UploadTemplate: Uploading file first for template: @uri', [
+      \Drupal::logger('rep')->notice('UploadTemplate: Uploading file first for template: @uri with file ID: @fid', [
         '@uri' => $template->uri,
+        '@fid' => $template->hasDataFile->id,
       ]);
       
       $uploadResult = $this->uploadFile($template->hasDataFileUri, $template->hasDataFile->id);
-      if ($uploadResult == NULL) {
+      if ($uploadResult === NULL || $uploadResult === FALSE || $uploadResult === '') {
         \Drupal::messenger()->addError(t('Could not upload file to API before ingestion for template: @uri', ['@uri' => $template->uri]));
         return FALSE;
       }
@@ -2775,7 +2838,20 @@ class FusekiAPIConnector {
 
     // 6) If the call indicated success, return its body.
     if (!empty($obj->isSuccessful)) {
-      return $obj->body;
+      // SANITIZE DataFile.filename if present (remove absolute paths)
+      $body = $obj->body;
+      if (is_object($body) && isset($body->filename) && !empty($body->filename)) {
+        // Single DataFile object
+        $body->filename = basename($body->filename);
+      } elseif (is_array($body)) {
+        // Array of objects (e.g., list results)
+        foreach ($body as $item) {
+          if (is_object($item) && isset($item->filename) && !empty($item->filename)) {
+            $item->filename = basename($item->filename);
+          }
+        }
+      }
+      return $body;
     }
 
     // 7) Handle “no results” case specifically.
@@ -2967,6 +3043,14 @@ class FusekiAPIConnector {
 
   // POST    /hascoapi/api/uploadFile/:elementuri  org.hascoapi.console.controllers.restapi.DataFileAPI.uploadFile(elementuri: String, request: play.mvc.Http.Request)
   public function uploadFile($elementuri, $fileId) {
+    // Ensure bearer token exists.
+    $this->getHeader();
+
+    \Drupal::messenger()->addStatus(t('[DEBUG] uploadFile() CALLED with elementUri: @uri, fileId: @fid', [
+      '@uri' => $elementuri,
+      '@fid' => $fileId,
+    ]));
+    
     // RETRIEVE FILE CONTENT FROM FID
     $file_entity = \Drupal\file\Entity\File::load($fileId);
     if ($file_entity == NULL) {
@@ -2977,14 +3061,24 @@ class FusekiAPIConnector {
     $filename = $file_entity->getFilename();
     $file_uri = $file_entity->getFileUri();
     $file_content = file_get_contents($file_uri);
+    
+    \Drupal::messenger()->addStatus(t('[DEBUG] File loaded - filename: @name, size: @size bytes, URI: @uri', [
+      '@name' => $filename,
+      '@size' => strlen($file_content),
+      '@uri' => $file_uri,
+    ]));
 
-    if ($file_content == NULL) {
+    if ($file_content === FALSE || $file_content === '') {
       \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $fileId . ']'));
       return FALSE;
     }
 
     // APPEND ELEMENT URI ENDPOINT'S URL
-    $endpoint = "/hascoapi/api/uploadFile/".rawurlencode($elementuri). "/" . rawurlencode($filename);;
+    $endpoint = "/hascoapi/api/uploadFile/".rawurlencode($elementuri). "/" . rawurlencode($filename);
+    
+    \Drupal::messenger()->addStatus(t('[DEBUG] Uploading to endpoint: @endpoint', [
+      '@endpoint' => $endpoint,
+    ]));
 
     // MAKE CALL TO API ENDPOINT
     $api_url = $this->getApiUrl();
@@ -2996,20 +3090,33 @@ class FusekiAPIConnector {
           'Authorization' => $this->bearer
         ],
         'body' => $file_content,
+        'http_errors' => FALSE,
       ]);
+
+      $status = $res->getStatusCode();
+      if ($status !== 200) {
+        $this->last_status_code = (int) $status;
+        $this->last_request_url = $api_url . $endpoint;
+        $this->last_response_body = (string) $res->getBody();
+        $snippet = substr(preg_replace('/\s+/', ' ', (string) $this->last_response_body), 0, 500);
+        $this->error = (string) $status;
+        $this->error_message = 'API request returned HTTP ' . $status . ($snippet ? '; response: ' . $snippet : '');
+        \Drupal::messenger()->addError(t('Upload failed (HTTP @status): @msg', [
+          '@status' => $status,
+          '@msg' => $snippet ?: '(empty)',
+        ]));
+        return FALSE;
+      }
     } catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
       \Drupal::messenger()->addError(t('Upload: Invalid value for status: [' . $this->error_message . ']'));
       return(NULL);
-    } catch(ClientException $e){
-      $res = $e->getResponse();
-      if($res->getStatusCode() != '200') {
-        $this->error=$res->getStatusCode();
-        $this->error_message = "API request returned the following status code: " . $res->getStatusCode();
-        \Drupal::messenger()->addError(t('Upload: Invalid value for status: [' . $this->error_message . ']'));
-        return(NULL);
-      }
+    } catch(\Throwable $e){
+      $this->error = 'EXC';
+      $this->error_message = $e->getMessage();
+      \Drupal::messenger()->addError(t('Upload exception: @msg', ['@msg' => $this->error_message]));
+      return NULL;
     }
     return($res->getBody());
   }
@@ -3083,7 +3190,7 @@ class FusekiAPIConnector {
     $file_uri = $file_entity->getFileUri();
     $file_content = file_get_contents($file_uri);
 
-    if ($file_content == NULL) {
+    if ($file_content === FALSE || $file_content === '') {
       \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $fileId . ']'));
       return FALSE;
     }
@@ -3101,7 +3208,22 @@ class FusekiAPIConnector {
           'Authorization' => $this->bearer
         ],
         'body' => $file_content,
+        'http_errors' => FALSE,
       ]);
+      // Treat non-200 as failure.
+      if ($res->getStatusCode() !== 200) {
+        $this->last_status_code = (int) $res->getStatusCode();
+        $this->last_request_url = $api_url . $endpoint;
+        $this->last_response_body = (string) $res->getBody();
+        $snippet = substr(preg_replace('/\s+/', ' ', (string) $this->last_response_body), 0, 500);
+        $this->error = (string) $this->last_status_code;
+        $this->error_message = 'API request returned HTTP ' . $this->last_status_code . ($snippet ? '; response: ' . $snippet : '');
+        \Drupal::messenger()->addError(t('Upload failed (HTTP @status): @msg', [
+          '@status' => $this->last_status_code,
+          '@msg' => $snippet ?: '(empty)',
+        ]));
+        return FALSE;
+      }
     } catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
@@ -3115,6 +3237,18 @@ class FusekiAPIConnector {
         \Drupal::messenger()->addError(t('Upload: Invalid value for status: [' . $this->error_message . ']'));
         return(NULL);
       }
+    } catch(\GuzzleHttp\Exception\ServerException $e){
+      $res = $e->getResponse();
+      $status = $res ? $res->getStatusCode() : 500;
+      $body = $res ? (string) $res->getBody() : $e->getMessage();
+      $snippet = substr(preg_replace('/\s+/', ' ', (string) $body), 0, 500);
+      $this->error = (string) $status;
+      $this->error_message = $snippet;
+      \Drupal::messenger()->addError(t('Upload: Server error (HTTP @status): @msg', [
+        '@status' => $status,
+        '@msg' => $snippet ?: '(empty)',
+      ]));
+      return NULL;
     }
     return($res->getBody());
   }

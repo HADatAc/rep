@@ -910,11 +910,42 @@ class REPSelectMTForm extends FormBase {
     $api = \Drupal::service('rep.api_connector');
     $uri = reset($uris);
     $template = $api->parseObjectResponse($api->getUri($uri), 'getUri');
+    
+    // Debugging is handled via Drupal logger/messenger when needed.
+    
     if ($template == NULL) {
       \Drupal::messenger()->addError(t("Failed to retrieve the datafile to be ingested."));
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
+    
+    // FIX: If template doesn't have hasDataFile embedded, fetch it separately
+    if (!isset($template->hasDataFile) && isset($template->hasDataFileUri)) {
+      \Drupal::logger('rep')->notice('performIngest: Template missing hasDataFile, fetching separately from: @uri', [
+        '@uri' => $template->hasDataFileUri,
+      ]);
+      
+      $dataFile = $api->parseObjectResponse($api->getUri($template->hasDataFileUri), 'getUri');
+      if ($dataFile != NULL) {
+        $template->hasDataFile = $dataFile;
+        
+        // DEBUG: Show ALL DataFile properties
+        \Drupal::messenger()->addStatus(t('[DEBUG] DataFile fetched - ALL PROPERTIES: @props', [
+          '@props' => print_r($dataFile, TRUE),
+        ]));
+        
+        \Drupal::logger('rep')->notice('performIngest: DataFile attached - id: @id, filename: @filename, ALL: @all', [
+          '@id' => isset($dataFile->id) ? $dataFile->id : 'NULL',
+          '@filename' => isset($dataFile->filename) ? $dataFile->filename : 'NULL',
+          '@all' => print_r($dataFile, TRUE),
+        ]);
+      } else {
+        \Drupal::logger('rep')->warning('performIngest: Failed to retrieve DataFile from: @uri', [
+          '@uri' => $template->hasDataFileUri,
+        ]);
+      }
+    }
+    
     $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $template, $status), 'uploadTemplateStatus');
     if ($msg == NULL) {
       \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion."));
@@ -956,6 +987,13 @@ class REPSelectMTForm extends FormBase {
     $newMT->setPreservedMT($mt);
 
     // 2) Retrieve and preserve DF.
+    // Validate that MT has a DataFile URI
+    if (empty($mt->hasDataFileUri)) {
+      \Drupal::messenger()->addError(t('The @type does not have an associated DataFile URI. Cannot uningest.', ['@type' => $this->single_class_name]));
+      \Drupal::logger('rep')->error('performUningest: MT @uri has no hasDataFileUri', ['@uri' => $uri]);
+      return;
+    }
+    
     $df = $api->parseObjectResponse($api->getUri($mt->hasDataFileUri), 'getUri');
     if ($df == NULL) {
       \Drupal::messenger()->addError(t('Failed to recover DataFile of @type before uningestion.', ['@type' => $this->single_class_name]));
