@@ -19,7 +19,7 @@ class ListKeywordPage {
       $offset = ($page - 1) * $pagesize;
     }
 
-    if ($keyword == NULL) {
+    if ($keyword === NULL || $keyword === '') {
       $keyword = "_";
     }
     $api = \Drupal::service('rep.api_connector');
@@ -32,7 +32,7 @@ class ListKeywordPage {
     if ($elementtype == NULL) {
       return -1;
     }
-    if ($keyword == NULL) {
+    if ($keyword === NULL || $keyword === '') {
       $keyword = "_";
     }
         
@@ -59,6 +59,9 @@ class ListKeywordPage {
       $module = Utils::elementTypeModule($elementtype);
       if ($module == NULL) {
         return '';
+      }
+      if ($keyword === NULL || $keyword === '') {
+        $keyword = "_";
       }
       return $root_url . '/' . $module . REPGUI::LIST_PAGE . 
           $elementtype . '/' .

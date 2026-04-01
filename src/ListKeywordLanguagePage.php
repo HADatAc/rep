@@ -19,19 +19,19 @@ class ListKeywordLanguagePage {
       $offset = ($page - 1) * $pagesize;
     }
 
-    if ($keyword == NULL) {
+    if ($keyword === NULL || $keyword === '') {
       $keyword = "_";
     }
-    if ($language == NULL) {
+    if ($language === NULL || $language === '') {
       $language = "_";
     }
-    if ($type == NULL) {
+    if ($type === NULL || $type === '') {
       $type = "_";
     }
-    if ($manageremail == NULL) {
+    if ($manageremail === NULL || $manageremail === '') {
       $manageremail = "_";
     }
-    if ($status == NULL) {
+    if ($status === NULL || $status === '') {
       $status = "_";
     }
 
@@ -70,19 +70,19 @@ class ListKeywordLanguagePage {
     if ($elementtype == NULL) {
       return -1;
     }
-    if ($keyword == NULL) {
+    if ($keyword === NULL || $keyword === '') {
       $keyword = "_";
     }
-    if ($language == NULL) {
+    if ($language === NULL || $language === '') {
       $language = "_";
     }
-    if ($type == NULL) {
+    if ($type === NULL || $type === '') {
       $type = "_";
     }
-    if ($manageremail == NULL) {
+    if ($manageremail === NULL || $manageremail === '') {
       $manageremail = "_";
     }
-    if ($status == NULL) {
+    if ($status === NULL || $status === '') {
       $status = "_";
     }
     // dpm("ListKeywordLanguagePage::total: elementtype=$elementtype, keyword=$keyword, language=$language, type=$type, manageremail=$manageremail, status=$status");
@@ -119,6 +119,21 @@ class ListKeywordLanguagePage {
         $manageremail = "_";
       }
       if ($status == NULL) {
+        $status = "_";
+      }
+      if ($keyword === NULL || $keyword === '') {
+        $keyword = "_";
+      }
+      if ($language === NULL || $language === '') {
+        $language = "_";
+      }
+      if ($type === '') {
+        $type = "_";
+      }
+      if ($manageremail === '') {
+        $manageremail = "_";
+      }
+      if ($status === '') {
         $status = "_";
       }
       return $root_url . '/' . $module . REPGUI::LIST_PAGE .

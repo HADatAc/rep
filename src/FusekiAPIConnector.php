@@ -37,6 +37,36 @@ class FusekiAPIConnector {
         return $elementType;
     }
   }
+
+  /**
+   * Normalize element types specifically for MT generation endpoints.
+   *
+   * The UI sometimes uses short codes (e.g. "ins", "wkf") while the API
+   * routes may expect canonical names (e.g. "instrument", "process").
+   *
+   * This method keeps the mapping conservative and reuses
+   * normalizeHascoApiElementType() for the workflow→process normalization.
+   */
+  private function normalizeMtGenElementType($elementType) {
+    if ($elementType === NULL) {
+      return $elementType;
+    }
+
+    $normalized = strtolower(trim((string) $elementType));
+    switch ($normalized) {
+      case 'ins':
+        $elementType = 'instrument';
+        break;
+
+      case 'wkf':
+        // Keep as workflow and let normalizeHascoApiElementType map it to
+        // process when needed.
+        $elementType = 'workflow';
+        break;
+    }
+
+    return $this->normalizeHascoApiElementType($elementType);
+  }
   private $client;
   private $query;
   private $error;
@@ -392,6 +422,19 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
+  public function listSizeByReviewStatus($elementType, $status) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/status/total/".
+      rawurlencode($status);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
   }
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
@@ -2855,12 +2898,14 @@ class FusekiAPIConnector {
     }
 
     // 7) Handle “no results” case specifically.
+    // Different HASCOAPI versions may return slightly different text
+    // (e.g., with trailing punctuation or pluralization).
     $message = $obj->body ?? '';
-    if (is_string($message)
-        && str_starts_with($message, 'No')
-        && str_ends_with($message, 'has been found')
-    ) {
-      return [];
+    if (is_string($message)) {
+      $normalized = trim($message);
+      if ($normalized !== '' && preg_match('/^No\b.*\b(has|have)\sbeen\sfound\.?$/i', $normalized)) {
+        return [];
+      }
     }
 
     // 8) Otherwise surface the API error.
@@ -2923,49 +2968,98 @@ class FusekiAPIConnector {
   // GET     /hascoapi/api/mt/gen/perstatus/:elementtype/:datafileuri/:status/:filename/:mediafolder/:verifyuri                   org.hascoapi.console.controllers.restapi.IngestionAPI.mtGenByStatus(elementtype : String, datafileuri : String, status: String, filename: String, mediafolder : String, verifyuri : String)
   // Per status (KGR)
   public function generateMTKGRPerStatus($elementtype, $datafileuri, $status, $filename, $mediafolder, $verifyuri) {
-    $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
-    $method = "GET";
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+    // Keep historical method name for compatibility.
+    return $this->generateMTPerStatus($elementtype, $datafileuri, $status, $filename, $mediafolder, $verifyuri);
   }
   // Per status
   public function generateMTPerStatus($elementtype, $datafileuri, $status, $filename, $mediafolder, $verifyuri) {
+    $originalElementType = $elementtype;
+    $normalizedElementType = $this->normalizeMtGenElementType($elementtype);
+
     $endpoint = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+
+    // Generator calls can legitimately take longer.
+    $data += [
+      'connect_timeout' => 10,
+      'timeout' => 120,
+    ];
     
     \Drupal::logger('rep.api')->info('generateMTPerStatus: @method @url', [
       '@method' => $method,
       '@url' => $api_url . $endpoint,
     ]);
     
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+    $response = $this->perform_http_request($method,$api_url.$endpoint,$data);
+
+    // If the UI used a short code and the API route expects a canonical name,
+    // retry once with the normalized element type.
+    if ($response === NULL && $normalizedElementType !== NULL && $normalizedElementType !== $originalElementType) {
+      $endpoint2 = "/hascoapi/api/mt/gen/perstatus/".rawurlencode($normalizedElementType)."/".rawurlencode($datafileuri)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+      $response = $this->perform_http_request($method, $api_url . $endpoint2, $data);
+    }
+
+    return $response;
   }
 
   // GET     /hascoapi/api/mt/gen/perelement/:elementtype/:datafileuri/:elementuri/:filename/:mediafolder/:verifyuri              org.hascoapi.console.controllers.restapi.IngestionAPI.mtGenByElement(elementtype : String, datafileuri : String, elementuri: String, filename: String, mediafolder : String, verifyuri : String)
   public function generateMTPerElement($elementtype, $datafileuri, $elementUri, $filename, $mediafolder, $verifyuri) {
+    $originalElementType = $elementtype;
+    $normalizedElementType = $this->normalizeMtGenElementType($elementtype);
+
     $endpoint = "/hascoapi/api/mt/gen/perelement/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($elementUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+
+    $data += [
+      'connect_timeout' => 10,
+      'timeout' => 120,
+    ];
     
     \Drupal::logger('rep.api')->info('generateMTPerElement: @method @url', [
       '@method' => $method,
       '@url' => $api_url . $endpoint,
     ]);
     
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+    $response = $this->perform_http_request($method,$api_url.$endpoint,$data);
+    if ($response === NULL && $normalizedElementType !== NULL && $normalizedElementType !== $originalElementType) {
+      $endpoint2 = "/hascoapi/api/mt/gen/perelement/".rawurlencode($normalizedElementType)."/".rawurlencode($datafileuri)."/".rawurlencode($elementUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+      $response = $this->perform_http_request($method, $api_url . $endpoint2, $data);
+    }
+    return $response;
   }
 
   // GET     /hascoapi/api/mt/gen/peruser/:elementtype/:datafileuri/:useremail/:status/:filename/:mediafolder/:verifyuri          org.hascoapi.console.controllers.restapi.IngestionAPI.mtGenByManager(elementtype : String, datafileuri : String, useremail: String, status: String, filename: String, mediafolder : String, verifyuri : String)
-  public function generateMTPerUserStatus($elementtype,$datafileuri, $userEmail, $status, $filename, $mediafolder, $verifyuri, $datafileUri) {
+  public function generateMTPerUserStatus($elementtype, $datafileuri, $userEmail, $status, $filename, $mediafolder, $verifyuri, $datafileUri = NULL) {
+    $originalElementType = $elementtype;
+    $normalizedElementType = $this->normalizeMtGenElementType($elementtype);
+
+    // Backward compatibility: some callers historically provided the datafile
+    // uri in the last argument; prefer the explicit one if present.
+    if (($datafileuri === NULL || $datafileuri === '') && ($datafileUri !== NULL && $datafileUri !== '')) {
+      $datafileuri = $datafileUri;
+    }
+
     $endpoint = "/hascoapi/api/mt/gen/peruser/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+
+    $data += [
+      'connect_timeout' => 10,
+      'timeout' => 120,
+    ];
+
+    $response = $this->perform_http_request($method,$api_url.$endpoint,$data);
+    if ($response === NULL && $normalizedElementType !== NULL && $normalizedElementType !== $originalElementType) {
+      $endpoint2 = "/hascoapi/api/mt/gen/peruser/".rawurlencode($normalizedElementType)."/".rawurlencode($datafileuri)."/".rawurlencode($userEmail)."/".rawurlencode($status)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+      $response = $this->perform_http_request($method, $api_url . $endpoint2, $data);
+    }
+
+    return $response;
   }
 
   // GET     /hascoapi/api/mt/gen/perfundingscheme/:elementtype/:fundingschemeuri/:filename

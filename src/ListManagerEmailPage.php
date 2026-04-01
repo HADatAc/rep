@@ -68,6 +68,24 @@ class ListManagerEmailPage {
 
   }
 
+  public static function totalByReviewStatus($elementtype, $status) {
+    if ($elementtype == NULL || $status == NULL) {
+      return -1;
+    }
+    $api = \Drupal::service('rep.api_connector');
+    $response = $api->listSizeByReviewStatus($elementtype, $status);
+    $listSize = -1;
+    if ($response != NULL) {
+      $obj = json_decode($response);
+      if ($obj != NULL && $obj->isSuccessful) {
+        $listSizeStr = $obj->body;
+        $obj2 = json_decode($listSizeStr);
+        $listSize = $obj2->total;
+      }
+    }
+    return $listSize;
+  }
+
   public static function link($elementtype, $page, $pagesize) {
 
     //dpr($elementtype.'-'.$page.'-'.$pagesize.'-'.$module);

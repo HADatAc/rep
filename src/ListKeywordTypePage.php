@@ -20,11 +20,20 @@ class ListKeywordTypePage {
       $offset = ($page - 1) * $pagesize;
     }
 
-    if ($project == NULL) {
+    if ($project === NULL || $project === '') {
       $project = "_";
     }
-    if ($keyword == NULL) {
+    if ($keyword === NULL || $keyword === '') {
       $keyword = "_";
+    }
+    if ($type === NULL || $type === '') {
+      $type = "_";
+    }
+    if ($manageremail === NULL || $manageremail === '') {
+      $manageremail = "_";
+    }
+    if ($status === NULL || $status === '') {
+      $status = "_";
     }
     // dpm("E=".$elementtype.", PR=".$project.", K=".$keyword.", T=".$type.", M=".$manageremail.", S=".$status.", P=".$page.", O=".$pagesize);
 
@@ -62,8 +71,20 @@ class ListKeywordTypePage {
     if ($elementtype == NULL) {
       return -1;
     }
-    if ($keyword == NULL) {
+    if ($project === NULL || $project === '') {
+      $project = "_";
+    }
+    if ($keyword === NULL || $keyword === '') {
       $keyword = "_";
+    }
+    if ($type === NULL || $type === '') {
+      $type = "_";
+    }
+    if ($manageremail === NULL || $manageremail === '') {
+      $manageremail = "_";
+    }
+    if ($status === NULL || $status === '') {
+      $status = "_";
     }
 
     $api = \Drupal::service('rep.api_connector');
@@ -90,6 +111,21 @@ class ListKeywordTypePage {
       $module = Utils::elementTypeModule($elementtype);
       if ($module == NULL) {
         return '';
+      }
+      if ($project === NULL || $project === '') {
+        $project = "_";
+      }
+      if ($keyword === NULL || $keyword === '') {
+        $keyword = "_";
+      }
+      if ($type === NULL || $type === '') {
+        $type = "_";
+      }
+      if ($manageremail === NULL || $manageremail === '') {
+        $manageremail = "_";
+      }
+      if ($status === NULL || $status === '') {
+        $status = "_";
       }
       return $root_url . '/' . $module . REPGUI::LIST_PAGE .
           $elementtype . '/' .
