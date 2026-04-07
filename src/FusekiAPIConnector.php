@@ -409,6 +409,37 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  // valid values for elementType include SIR/STD/SEM/DPL types supported by HASCOAPI's getElementsByStatusManagerEmail
+  public function listByStatusManagerEmail($elementType, $status, $manageremail, $withCurrent, $pageSize, $offset) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremail/status/".
+      rawurlencode($status)."/".
+      rawurlencode($manageremail)."/".
+      ($withCurrent ? 'true' : 'false')."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+  public function listSizeByStatusManagerEmail($elementType, $status, $manageremail, $withCurrent) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremail/status/total/".
+      rawurlencode($status)."/".
+      rawurlencode($manageremail)."/".
+      ($withCurrent ? 'true' : 'false');
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listByReviewStatus($elementType, $status, $pageSize, $offset) {
     $elementType = $this->normalizeHascoApiElementType($elementType);

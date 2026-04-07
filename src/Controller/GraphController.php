@@ -35,9 +35,9 @@ class GraphController extends ControllerBase {
       if (!$raw) {
         return new JsonResponse(['nodes' => [], 'edges' => [], 'meta' => ['error' => 'Element not found']]);
       }
-      $obj = json_decode($raw);
-      if (!$obj) {
-        return new JsonResponse(['nodes' => [], 'edges' => [], 'meta' => ['error' => 'Invalid element JSON']]);
+      $obj = $api->parseObjectResponse($raw, 'getUri');
+      if (!$obj || !is_object($obj)) {
+        return new JsonResponse(['nodes' => [], 'edges' => [], 'meta' => ['error' => 'Invalid element payload']]);
       }
     }
     catch (\Throwable $e) {
@@ -342,6 +342,34 @@ LIMIT {$limit} OFFSET {$offset}
       }
       $meta['count'] = $cnt;
     }
+    elseif ($label === 'children') {
+      // OWL/HASCO class hierarchy: immediate subclasses of a class URI.
+      $rawChildren = $api->getChildren($from);
+      $children = $rawChildren ? $api->parseObjectResponse($rawChildren, 'getChildren') : [];
+      if (!is_array($children)) {
+        $children = [];
+      }
+
+      $total = count($children);
+      $slice = array_slice($children, $offset, $limit);
+      $cnt = 0;
+      foreach ($slice as $ch) {
+        if (!is_object($ch) || empty($ch->uri)) continue;
+        $cnt++;
+        $chUri = $expandCurie((string) $ch->uri);
+        $nodes[] = Utils::buildNode($chUri, $ch->label ?? Utils::namespaceUri($chUri), $ch->typeUri ?? null);
+        $edges[] = [
+          'id'     => "{$from}_{$chUri}_children",
+          'from'   => $from,
+          'to'     => $chUri,
+          'label'  => 'children',
+          'arrows' => 'to',
+        ];
+      }
+      $meta['count'] = $cnt;
+      $meta['totalGuess'] = $total;
+      $addTypeEdges();
+    }
     else {
       if ($label && array_key_exists($label, $properties)) {
         $val = $properties[$label];
@@ -372,12 +400,17 @@ LIMIT {$limit} OFFSET {$offset}
             $nodes[] = Utils::buildNode($childUri, $val->label ?? Utils::namespaceUri($childUri), $val->typeUri ?? null);
             $edges[] = ['id' => "{$from}_{$childUri}_{$prop}", 'from' => $from, 'to' => $childUri, 'label' => $prop, 'arrows' => 'to'];
           } elseif (is_array($val)) {
+            $i = 0;
+            $added = 0;
             foreach ($val as $v) {
-              if (is_object($v) && !empty($v->uri)) {
-                $childUri = $expandCurie((string) $v->uri);
-                $nodes[] = Utils::buildNode($childUri, $v->label ?? Utils::namespaceUri($childUri), $v->typeUri ?? null);
-                $edges[] = ['id' => "{$from}_{$childUri}_{$prop}", 'from' => $from, 'to' => $childUri, 'label' => $prop, 'arrows' => 'to'];
-              }
+              if (!is_object($v) || empty($v->uri)) continue;
+              if ($i++ < $offset) continue;
+              if ($added >= $limit) break;
+
+              $childUri = $expandCurie((string) $v->uri);
+              $nodes[] = Utils::buildNode($childUri, $v->label ?? Utils::namespaceUri($childUri), $v->typeUri ?? null);
+              $edges[] = ['id' => "{$from}_{$childUri}_{$prop}", 'from' => $from, 'to' => $childUri, 'label' => $prop, 'arrows' => 'to'];
+              $added++;
             }
           }
         }

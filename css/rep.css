@@ -500,6 +500,13 @@ button.table-view-button {
   transform: translateY(-50%);
 }
 
+.selected-button {
+  background-color: rgb(0, 100, 0) !important;
+  color: white !important;
+  border-radius: 6px;
+  border: 2px solid rgb(0, 56, 0) !important;
+}
+
 button.map-view-button {
   position: relative;
   padding-left: 1.5rem!important;

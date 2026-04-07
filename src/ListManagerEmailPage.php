@@ -49,6 +49,21 @@ class ListManagerEmailPage {
 
   }
 
+  public static function execByStatusManagerEmail($elementtype, $status, $manageremail, $withCurrent, $page, $pagesize) {
+    if ($elementtype == NULL || $status == NULL || $manageremail == NULL || $page == NULL || $pagesize == NULL) {
+      return [];
+    }
+
+    $offset = ($page <= 1) ? 0 : (($page - 1) * $pagesize);
+
+    $api = \Drupal::service('rep.api_connector');
+    $elements = $api->parseObjectResponse(
+      $api->listByStatusManagerEmail($elementtype, $status, $manageremail, (bool) $withCurrent, $pagesize, $offset),
+      'listByStatusManagerEmail'
+    );
+    return $elements;
+  }
+
   public static function total($elementtype, $manageremail) {
     if ($elementtype == NULL) {
       return -1;
@@ -66,6 +81,24 @@ class ListManagerEmailPage {
     }
     return $listSize;
 
+  }
+
+  public static function totalByStatusManagerEmail($elementtype, $status, $manageremail, $withCurrent) {
+    if ($elementtype == NULL || $status == NULL || $manageremail == NULL) {
+      return -1;
+    }
+    $api = \Drupal::service('rep.api_connector');
+    $response = $api->listSizeByStatusManagerEmail($elementtype, $status, $manageremail, (bool) $withCurrent);
+    $listSize = -1;
+    if ($response != NULL) {
+      $obj = json_decode($response);
+      if ($obj != NULL && $obj->isSuccessful) {
+        $listSizeStr = $obj->body;
+        $obj2 = json_decode($listSizeStr);
+        $listSize = $obj2->total;
+      }
+    }
+    return $listSize;
   }
 
   public static function totalByReviewStatus($elementtype, $status) {

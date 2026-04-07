@@ -494,8 +494,8 @@ class Utils {
     $sir = ['instrument', 'containerslot', 'componentstem', 'component', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'processstem', 'process', 'workflowstem', 'workflow'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
-    $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'stream'];
-    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'componentinstance', 'deployment'];
+    $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
+    $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'componentinstance', 'deployment', 'stream'];
     $socialm = ['kgr','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
@@ -1444,7 +1444,10 @@ public static function buildGraphCanvas(array $baseNodes, array $extraNodes, arr
     'graph_canvas_block' => [
       '#type' => 'inline_template',
       '#template' => <<<'EOT'
-<div id="my-network" style="width: 100%; height: 700px; border: 2px solid #007bff; background: white; border-radius: 6px;"></div>
+<div class="rep-graph-shell" style="display:flex; gap:12px; width:100%; align-items:stretch;">
+  <div id="my-network" style="flex:1 1 auto; height:700px; border:2px solid #007bff; background:white; border-radius:6px;"></div>
+  <div id="rep-graph-explorer" class="rep-graph-explorer" style="width:380px; max-width:45%; height:700px; border:1px solid #ccc; background:#f8f9fa; border-radius:6px; padding:10px; overflow:auto;"></div>
+</div>
 EOT,
       '#context' => [
         'nodes' => json_encode($baseNodes),

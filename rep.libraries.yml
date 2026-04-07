@@ -9,6 +9,16 @@ rep_js_css:
     - core/jquery
     - core/drupal
     - core/jquery.once
+
+# JS-only infinite scroll (used by card-view lazyload).
+infinitescroll:
+  version: 1.x
+  js:
+    js/infinitescroll.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
 scrollable_table:
   version: 1.x
   css:

@@ -37,7 +37,7 @@ class VisGraphBaseForm extends FormBase {
 
     // -------- Limits exposed to the frontend --------
     $MAX_MEMBERS_PER_SOC = 5;   // how many SOC members to preload / show initially
-    $PAGE_SIZE            = 5;  // "Load more..." page size
+    $PAGE_SIZE            = 25;  // "Load more..." page size
     $MAX_LIVE_NODES       = 600; // safety cap for visible nodes
     $AUTO_SHOW_ON_FETCH   = 0;   // don't auto-add nodes fetched via AJAX
 
@@ -68,7 +68,7 @@ class VisGraphBaseForm extends FormBase {
     $data  = (array) $element;
     $graph = Utils::buildGraphFromArray($data, function ($uri) use ($api, $expandCurie) {
       $response = $api->getUri($expandCurie($uri));
-      return json_decode($response);
+      return $api->parseObjectResponse($response, 'getUri');
     });
 
     $linkedNodes = $graph['nodes'] ?? [];

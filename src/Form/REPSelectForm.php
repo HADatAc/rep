@@ -8,6 +8,7 @@ use Drupal\Core\Url;
 use Drupal\rep\ListManagerEmailPage;
 use Drupal\rep\Entity\DataFile;
 use Drupal\file\Entity\File;
+use Drupal\rep\Vocabulary\VSTOI;
 
 class REPSelectForm extends FormBase
 {
@@ -66,21 +67,39 @@ class REPSelectForm extends FormBase
     $user = \Drupal\user\Entity\User::load($uid);
     $this->manager_name = $user->name->value;
 
+    // Persist filter state in session
+    $session = \Drupal::request()->getSession();
+    $status_filter = $form_state->getValue('status_filter');
+    if ($status_filter === NULL) {
+      $status_filter = $session->get('rep_select_status_filter', '_');
+    }
+    else {
+      $session->set('rep_select_status_filter', $status_filter);
+    }
+
     // GET TOTAL NUMBER OF ELEMENTS AND TOTAL NUMBER OF PAGES
     $this->element_type = $elementtype;
     $this->setListSize(-1);
     if ($this->element_type != NULL) {
-      $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
-    }
-    if (gettype($this->list_size) == 'string') {
-      $total_pages = "0";
-    } else {
-      if ($this->list_size % $pagesize == 0) {
-        $total_pages = $this->list_size / $pagesize;
-      } else {
-        $total_pages = floor($this->list_size / $pagesize) + 1;
+      if ($status_filter === '_' || $status_filter === NULL || $status_filter === '') {
+        $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
+      }
+      else {
+        $this->setListSize(ListManagerEmailPage::totalByStatusManagerEmail($this->element_type, $status_filter, $this->manager_email, FALSE));
       }
     }
+
+    // Total pages (at least 1)
+    $total_pages = 1;
+    if (is_numeric($this->list_size) && $pagesize > 0) {
+      $size = (int) $this->list_size;
+      if ($size > 0) {
+        $total_pages = (int) ceil($size / $pagesize);
+      }
+    }
+
+    // Clamp current page
+    $page = max(1, min((int) $page, (int) $total_pages));
 
     // CREATE LINK FOR NEXT PAGE AND PREVIOUS PAGE
     if ($page < $total_pages) {
@@ -97,7 +116,12 @@ class REPSelectForm extends FormBase
     }
 
     // RETRIEVE ELEMENTS
-    $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
+    if ($status_filter === '_' || $status_filter === NULL || $status_filter === '') {
+      $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
+    }
+    else {
+      $this->setList(ListManagerEmailPage::execByStatusManagerEmail($this->element_type, $status_filter, $this->manager_email, FALSE, $page, $pagesize));
+    }
 
     $this->single_class_name = "";
     $this->plural_class_name = "";
@@ -125,7 +149,20 @@ class REPSelectForm extends FormBase
       '#type' => 'item',
       '#title' => $this->t('<h4>' . $this->plural_class_name . ' maintained by <font color="DarkGreen">' . $this->manager_name . ' (' . $this->manager_email . ')</font></h4>'),
     ];
-    $form['delete_selected_element'] = [
+    $form['actions_wrapper'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['d-flex', 'align-items-center', 'justify-content-between', 'mb-0'],
+        'style' => 'margin-bottom:0!important;'
+      ],
+    ];
+
+    $form['actions_wrapper']['buttons_container'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['d-flex', 'gap-2']],
+    ];
+
+    $form['actions_wrapper']['buttons_container']['delete_selected_element'] = [
       '#type' => 'submit',
       '#value' => $this->t('Delete Selected ' . $this->plural_class_name),
       '#name' => 'delete_element',
@@ -134,19 +171,63 @@ class REPSelectForm extends FormBase
         'class' => ['btn', 'btn-primary', 'delete-element-button']
       ],
     ];
+
+    $status_options = [
+      '_' => $this->t('All Status'),
+      VSTOI::DRAFT => $this->t('Draft'),
+      VSTOI::UNDER_REVIEW => $this->t('Under Review'),
+      VSTOI::CURRENT => $this->t('Current'),
+      VSTOI::DEPRECATED => $this->t('Deprecated'),
+    ];
+
+    $form['actions_wrapper']['filter_container'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['d-flex', 'ms-auto', 'mb-0'],
+        'style' => 'margin-bottom:0!important;'
+      ],
+    ];
+
+    $form['actions_wrapper']['filter_container']['filter_label'] = [
+      '#type' => 'label',
+      '#title' => $this->t('Filter(s): '),
+      '#attributes' => [
+        'class' => ['pt-3', 'me-2', 'fw-bold'],
+      ],
+    ];
+
+    $form['actions_wrapper']['filter_container']['status_filter'] = [
+      '#type' => 'select',
+      '#options' => $status_options,
+      '#default_value' => $status_filter,
+      '#ajax' => [
+        'callback' => '::ajaxReloadTable',
+        'wrapper' => 'element-table-wrapper',
+        'event' => 'change',
+      ],
+      '#attributes' => [
+        'class' => ['form-select', 'w-auto', 'mt-2'],
+        'style' => 'margin-bottom:0!important;float:right;'
+      ],
+    ];
     //$form['my_tableselect_wrapper'] = array(
     //  '#type' => 'container',
     //  '#attributes' => array('class' => array('my-tableselect-wrapper')),
     //);
     //$form['my_tableselect_wrapper']['element_table'] = [
-    $form['element_table'] = [
+    $form['element_table_wrapper'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'element-table-wrapper'],
+    ];
+
+    $form['element_table_wrapper']['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
       '#options' => $output,
       '#js_select' => FALSE,
       '#empty' => t('No ' . $this->plural_class_name . ' found'),
     ];
-    $form['pager'] = [
+    $form['element_table_wrapper']['pager'] = [
       '#theme' => 'list-page',
       '#items' => [
         'page' => strval($page),
@@ -173,6 +254,14 @@ class REPSelectForm extends FormBase
     ];
 
     return $form;
+  }
+
+  /**
+   * AJAX callback to reload list when filters change.
+   */
+  public function ajaxReloadTable(array &$form, FormStateInterface $form_state) {
+    $form_state->setRebuild(TRUE);
+    return $form['element_table_wrapper'];
   }
 
   /**

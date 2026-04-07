@@ -136,13 +136,13 @@ class ListKeywordLanguagePage {
       if ($status === '') {
         $status = "_";
       }
-      return $root_url . '/' . $module . REPGUI::LIST_PAGE .
+        // Route patterns across modules use only {elementtype}/{keyword}/{language}/{page}/{pagesize}.
+        // Additional filter dimensions (type/manager/status) are supported by the API,
+        // but are not encoded in the route path.
+        return $root_url . '/' . $module . REPGUI::LIST_PAGE .
           $elementtype . '/' .
           $keyword . '/' .
           $language . '/' .
-          $type . '/' .
-          $manageremail . '/' .
-          $status . '/' .
           strval($page) . '/' .
           strval($pagesize);
     }

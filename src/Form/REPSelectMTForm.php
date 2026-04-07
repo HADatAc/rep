@@ -90,26 +90,50 @@ class REPSelectMTForm extends FormBase {
       $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
     }
 
-    /// GET VIEW MODE
+    /// GET VIEW MODE + FILTER STATE
     $session = \Drupal::request()->getSession();
     $view_type = $form_state->get('view_type') ?? $session->get('rep_select_mt_view_type') ?? 'table';
     $form_state->set('view_type', $view_type);
+    $table_active_class = ($view_type === 'table') ? ['selected-button'] : [];
+    $card_active_class = ($view_type === 'card') ? ['selected-button'] : [];
+
+    if ($view_type === 'card') {
+      $form['#attached']['library'][] = 'rep/infinitescroll';
+    }
+
+    $status_filter_key = 'rep_select_mt_status_filter.' . (string) $elementtype;
+    $status_filter = $form_state->getValue('status_filter');
+    if ($status_filter === NULL) {
+      $status_filter = $session->get($status_filter_key, '_');
+    }
+    else {
+      $session->set($status_filter_key, $status_filter);
+    }
 
     if ($view_type == 'table') {
 
+      // Total + list (optionally filtered by status)
       $this->setListSize(-1);
       if ($this->element_type != NULL) {
+        if ($status_filter === '_' || $status_filter === NULL || $status_filter === '') {
           $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
-      }
-      if (gettype($this->list_size) == 'string') {
-        $total_pages = "0";
-      } else {
-        if ($this->list_size % $pagesize == 0) {
-            $total_pages = $this->list_size / $pagesize;
-        } else {
-            $total_pages = (int) floor($this->list_size / $pagesize) + 1;
+        }
+        else {
+          $this->setListSize(ListManagerEmailPage::totalByStatusManagerEmail($this->element_type, $status_filter, $this->manager_email, FALSE));
         }
       }
+
+      // Total pages (at least 1)
+      $total_pages = 1;
+      if (is_numeric($this->list_size) && $pagesize > 0) {
+        $size = (int) $this->list_size;
+        if ($size > 0) {
+          $total_pages = (int) ceil($size / $pagesize);
+        }
+      }
+
+      // Clamp current page
+      $page = max(1, min((int) $page, (int) $total_pages));
 
       // CREATE LINK FOR NEXT PAGE AND PREVIOUS PAGE
       if ($page < $total_pages) {
@@ -128,13 +152,35 @@ class REPSelectMTForm extends FormBase {
       $form_state->set('current_page', $page);
       $form_state->set('page_size', $pagesize);
 
-      $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
+      if ($status_filter === '_' || $status_filter === NULL || $status_filter === '') {
+        $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
+      }
+      else {
+        $this->setList(ListManagerEmailPage::execByStatusManagerEmail($this->element_type, $status_filter, $this->manager_email, FALSE, $page, $pagesize));
+      }
 
     } else {
       // SET PAGE_SIZE
       $pagesize = $form_state->get('page_size') ?? $pagesize ?? 9;
       $form_state->set('page_size', $pagesize);
-      $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, 1, $pagesize));
+
+      // Total + list (optionally filtered by status) for card view too.
+      $this->setListSize(-1);
+      if ($this->element_type != NULL) {
+        if ($status_filter === '_' || $status_filter === NULL || $status_filter === '') {
+          $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
+        }
+        else {
+          $this->setListSize(ListManagerEmailPage::totalByStatusManagerEmail($this->element_type, $status_filter, $this->manager_email, FALSE));
+        }
+      }
+
+      if ($status_filter === '_' || $status_filter === NULL || $status_filter === '') {
+        $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, 1, $pagesize));
+      }
+      else {
+        $this->setList(ListManagerEmailPage::execByStatusManagerEmail($this->element_type, $status_filter, $this->manager_email, FALSE, 1, $pagesize));
+      }
     }
 
     $this->single_class_name = "";
@@ -226,7 +272,7 @@ class REPSelectMTForm extends FormBase {
       '#name' => 'view_table',
       '#attributes' => [
         'style' => 'padding: 20px;',
-        'class' => ['table-view-button', 'fa-xl', 'mx-1'],
+        'class' => array_merge(['table-view-button', 'fa-xl', 'mx-1'], $table_active_class),
         'title' => $this->t('Table View'),
       ],
       '#submit' => ['::viewTableSubmit'],
@@ -239,14 +285,28 @@ class REPSelectMTForm extends FormBase {
       '#name' => 'view_card',
       '#attributes' => [
         'style' => 'padding: 20px;',
-        'class' => ['card-view-button', 'fa-xl'],
+        'class' => array_merge(['card-view-button', 'fa-xl'], $card_active_class),
         'title' => $this->t('Card View'),
       ],
       '#submit' => ['::viewCardSubmit'],
       '#limit_validation_errors' => [],
     ];
 
-    $form['add_element'] = [
+    // Actions row (Add + filters)
+    $form['actions_wrapper'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['d-flex', 'align-items-center', 'justify-content-between', 'mb-0'],
+        'style' => 'margin-bottom:0!important;'
+      ],
+    ];
+
+    $form['actions_wrapper']['buttons_container'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['d-flex', 'gap-2']],
+    ];
+
+    $form['actions_wrapper']['buttons_container']['add_element'] = [
       '#type' => 'submit',
       '#value' => $this->t('Add New ' . $this->single_class_name),
       '#name' => 'add_element',
@@ -255,33 +315,84 @@ class REPSelectMTForm extends FormBase {
       ],
     ];
 
+    if ($view_type == 'table') {
+      $status_options = [
+        '_' => $this->t('All Status'),
+        VSTOI::DRAFT => $this->t('Draft'),
+        VSTOI::UNDER_REVIEW => $this->t('Under Review'),
+        VSTOI::CURRENT => $this->t('Current'),
+        VSTOI::DEPRECATED => $this->t('Deprecated'),
+      ];
+
+      $form['actions_wrapper']['filter_container'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['d-flex', 'ms-auto', 'mb-0'],
+          'style' => 'margin-bottom:0!important;'
+        ],
+      ];
+
+      $form['actions_wrapper']['filter_container']['filter_label'] = [
+        '#type' => 'label',
+        '#title' => $this->t('Filter(s): '),
+        '#attributes' => [
+          'class' => ['pt-3', 'me-2', 'fw-bold'],
+        ],
+      ];
+
+      $form['actions_wrapper']['filter_container']['status_filter'] = [
+        '#type' => 'select',
+        '#options' => $status_options,
+        '#default_value' => $status_filter,
+        '#ajax' => [
+          'callback' => '::ajaxReloadTable',
+          'wrapper' => 'element-table-wrapper',
+          'event' => 'change',
+        ],
+        '#attributes' => [
+          'class' => ['form-select', 'w-auto', 'mt-2'],
+          'style' => 'margin-bottom:0!important;float:right;'
+        ],
+      ];
+    }
+
     // RENDER BASED ON VIEW TYPE
     if ($view_type == 'table') {
 
-      $this->buildTableView($form, $form_state, $header, $output);
+      $form['element_table_wrapper'] = [
+        '#type' => 'container',
+        '#attributes' => ['id' => 'element-table-wrapper'],
+      ];
 
-      $form['pager'] = [
+      $this->buildTableView($form['element_table_wrapper'], $form_state, $header, $output);
+
+      $form['element_table_wrapper']['pager'] = [
         '#theme' => 'list-page',
         '#items' => [
-            'page' => strval($page),
-            'first' => ListManagerEmailPage::linkdpl($this->element_type, 1, $pagesize, 'rep'),
-            'last' => ListManagerEmailPage::linkdpl($this->element_type, $total_pages, $pagesize, 'rep'),
-            'previous' => $previous_page_link,
-            'next' => $next_page_link,
-            'last_page' => strval($total_pages),
-            'links' => null,
-            'title' => ' ',
+          'page' => strval($page),
+          'first' => ListManagerEmailPage::linkdpl($this->element_type, 1, $pagesize, 'rep'),
+          'last' => ListManagerEmailPage::linkdpl($this->element_type, $total_pages, $pagesize, 'rep'),
+          'previous' => $previous_page_link,
+          'next' => $next_page_link,
+          'last_page' => strval($total_pages),
+          'links' => null,
+          'title' => ' ',
         ],
       ];
 
     } elseif ($view_type == 'card') {
-      $this->buildCardView($form, $form_state, $header, $output);
+      $form['cards_lazy_wrapper'] = [
+        '#type' => 'container',
+        '#attributes' => ['id' => 'cards-lazy-wrapper'],
+      ];
+
+      $this->buildCardView($form['cards_lazy_wrapper'], $form_state, $header, $output);
 
       $total_items = $this->getListSize();
       $current_page_size = $form_state->get('page_size') ?? 9;
 
       if ($total_items > $current_page_size) {
-        $form['load_more'] = [
+        $form['cards_lazy_wrapper']['load_more'] = [
           '#type' => 'submit',
           '#value' => $this->t('Load More'),
           '#name' => 'load_more',
@@ -291,11 +402,16 @@ class REPSelectMTForm extends FormBase {
             'style' => 'display: none;',
           ],
           '#submit' => ['::loadMoreSubmit'],
+          '#ajax' => [
+            'callback' => '::ajaxReloadCards',
+            'wrapper' => 'cards-lazy-wrapper',
+            'event' => 'click',
+          ],
           '#limit_validation_errors' => [],
         ];
 
         // ADD LOADING OVERLAY
-        $form['loading_overlay'] = [
+        $form['cards_lazy_wrapper']['loading_overlay'] = [
           '#type' => 'container',
           '#attributes' => [
             'id' => 'loading-overlay',
@@ -305,7 +421,7 @@ class REPSelectMTForm extends FormBase {
           '#markup' => '<div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>',
         ];
 
-        $form['list_state'] = [
+        $form['cards_lazy_wrapper']['list_state'] = [
           '#type' => 'hidden',
           '#value' => ($this->getListSize() > $form_state->get('page_size')) ? 1 : 0,
           '#attributes' => [
@@ -329,6 +445,22 @@ class REPSelectMTForm extends FormBase {
     ];
 
     return $form;
+  }
+
+  /**
+   * AJAX callback to reload list when filters change.
+   */
+  public function ajaxReloadTable(array &$form, FormStateInterface $form_state) {
+    $form_state->setRebuild(TRUE);
+    return $form['element_table_wrapper'];
+  }
+
+  /**
+   * AJAX callback to reload cards wrapper when loading more.
+   */
+  public function ajaxReloadCards(array &$form, FormStateInterface $form_state) {
+    $form_state->setRebuild(TRUE);
+    return $form['cards_lazy_wrapper'];
   }
 
   /**

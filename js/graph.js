@@ -115,6 +115,7 @@
         e = { ...e };
         e.from = expandCurie(e.from);
         e.to   = expandCurie(e.to);
+        if (e.predUri) e.predUri = expandCurie(e.predUri);
         return e;
       }
       for (let i = 0; i < extraNodes.length; i++) extraNodes[i] = normalizeNode(extraNodes[i]);
@@ -237,6 +238,13 @@
         nodes.update({ id, ...upd });
       }
 
+      // ----- Explorer panel (preferred v2 UI) -----
+      const explorer = (container.parentElement && container.parentElement.querySelector('#rep-graph-explorer')) || null;
+      if (explorer && !explorer.dataset.repInit) {
+        explorer.dataset.repInit = '1';
+        explorer.innerHTML = '<div style="opacity:.8;font-size:13px;">Clique num nó para explorar relações.</div>';
+      }
+
       // ----- Floating menu -----
       const expandMenu = document.createElement("div");
       expandMenu.id = "expand-menu";
@@ -303,14 +311,14 @@
           cursor:pointer; font-size:12px; color:#007bff; white-space:nowrap;
           padding:2px 6px; border-radius:4px;
         `;
-        link.title = 'Copy to clipboard';
+        link.title = 'Copiar para a área de transferência';
         link.addEventListener('click', (ev) => {
           ev.stopPropagation();
           const valRaw = (typeof valueSupplier === 'function') ? valueSupplier() : valueSupplier;
           const val = String(valRaw ?? ''); // copy RAW IRI (not local proxy)
           copyToClipboard(val, () => {
             const old = link.textContent;
-            link.textContent = 'Copied!';
+            link.textContent = 'Copiado!';
             setTimeout(() => { link.textContent = old; }, 900);
           });
         });
@@ -321,7 +329,8 @@
       function edgeIdOf(e) {
         const from = expandCurie(e.from);
         const to   = expandCurie(e.to);
-        return e.id || `${from}_${to}_${e.label}`;
+        const key  = e.predUri ? expandCurie(e.predUri) : e.label;
+        return e.id || `${from}_${to}_${key}`;
       }
       function isDisplayableLabel(label) {
         if (!label) return false;
@@ -370,7 +379,7 @@
         const current = nodes.length ? nodes.length : nodes.getIds().length;
         return (current + addCount) <= MAX_LIVE_NODES;
       }
-      function warnNodeCap() { alert(`Node limit reached (${MAX_LIVE_NODES}). Hide some items before loading more.`); }
+      function warnNodeCap() { alert(`Limite de nós atingido (${MAX_LIVE_NODES}). Oculte alguns itens antes de carregar mais.`); }
 
       // ---------- Seed type edges from the node itself ----------
       function seedTypeEdgesForNode(node) {
@@ -413,11 +422,17 @@
       }
 
       // ---------- Slim payload ----------
-      function slimPayloadForLabel(data, nodeId, label, maxKeep) {
+      function slimPayloadForLabel(data, nodeId, label, maxKeep, direction = 'out', predUri = null) {
         const normNodes = (data.nodes || []).map(normalizeNode);
         const normEdges = (data.edges || []).map(normalizeEdge);
 
         const accept = (e) => {
+          if (direction === 'in') {
+            if (e.to !== nodeId) return false;
+            if (predUri) return String(e.predUri || '') === String(predUri);
+            return e.label === label;
+          }
+
           if (e.from !== nodeId) return false;
           if (label === 'contains') return isMemberLabel(e.label);
           if (label === 'hascoTypeUri') return e.label === 'hascoTypeUri';
@@ -433,7 +448,7 @@
           const lbl = (label === 'contains') ? 'contains' : e.label;
           const id  = edgeIdOf({ ...e, label: lbl });
           keptEdges.push({ ...e, id, label: lbl });
-          keptNodeIds.add(e.to);
+          keptNodeIds.add(direction === 'in' ? e.from : e.to);
           if (keptEdges.length >= maxKeep) break;
         }
 
@@ -567,7 +582,7 @@
             fetchMoreForLabel(nodeId, label, state, { textContent:'', disabled:false }, () => { renderPage(); });
             const loading = document.createElement('div');
             loading.style.cssText = "padding:6px 4px; opacity:.7;";
-            loading.textContent = 'Loading...';
+            loading.textContent = 'A carregar...';
             submenu.appendChild(loading);
             return;
           }
@@ -607,7 +622,7 @@
             s.textContent = displayLabel;
             s.style.cssText = "flex:1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
 
-            const copyChild = makeCopyLink('Copy URI', () => child.id);
+            const copyChild = makeCopyLink('Copiar URI', () => child.id);
             copyChild.style.marginLeft = '4px';
 
             leftWrap.appendChild(s);
@@ -669,7 +684,7 @@
             const totalPagesTxt = totalPagesKnown ?? (state.hasMoreServer ? '…' : Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC)));
             const totalCountTxt = knownTotal ?? (totalFetched + (state.hasMoreServer ? '+' : ''));
 
-            info.textContent = `Page ${pageNum} / ${totalPagesTxt} - showing ${page.length} of ${totalCountTxt}`;
+            info.textContent = `Página ${pageNum} / ${totalPagesTxt} - a mostrar ${page.length} de ${totalCountTxt}`;
 
             const left = document.createElement('button');
             left.type = 'button'; left.className = 'btn btn-sm btn-light';
@@ -696,8 +711,9 @@
 
             footer.append(left, info, right);
           } else {
-            const plural = totalFetched === 1 ? '' : 's';
-            info.textContent = `Showing ${totalFetched} item${plural}`;
+            info.textContent = (totalFetched === 1)
+              ? 'A mostrar 1 item'
+              : `A mostrar ${totalFetched} itens`;
             footer.appendChild(info);
           }
 
@@ -748,6 +764,463 @@
           network.redraw();
           unfreezeNodes(nodes, addedIds);
         }
+      }
+
+      // ---------- Explorer panel (v2 UI) ----------
+      const explorerState = {
+        currentNodeId: null,
+        tab: 'out', // 'out' | 'in'
+        outLabel: null,
+        inLabel: null,
+      };
+      const primedIncomingNodes = Object.create(null);
+
+      function primeIncomingOnce(nodeId, done) {
+        if (!explorer || !socEndpoint) {
+          if (done) done();
+          return;
+        }
+        if (primedIncomingNodes[nodeId] === true) {
+          if (done) done();
+          return;
+        }
+        if (primedIncomingNodes[nodeId] === 'pending') {
+          // avoid duplicate inflight calls; poll once
+          window.setTimeout(() => { if (done) done(); }, 150);
+          return;
+        }
+        primedIncomingNodes[nodeId] = 'pending';
+        $.getJSON(socEndpoint, { from: nodeId, direction: 'in', limit: PAGE_SIZE, offset: 0, debug: 1 })
+          .done(data => mergeGraphPayload(data, nodeId))
+          .always(() => { primedIncomingNodes[nodeId] = true; if (done) done(); });
+      }
+
+      function itemsForIncomingLabel(nodeId, label) {
+        const norms = extraEdges.map(normalizeEdge);
+        return norms
+          .filter(e => e.to === nodeId && e.label === label)
+          .map(e => ({ edge: { ...e }, id: edgeIdOf(e) }));
+      }
+
+      function inferIncomingPredUri(nodeId, label) {
+        const one = extraEdges.map(normalizeEdge).find(e => e.to === nodeId && e.label === label && e.predUri);
+        return one ? one.predUri : null;
+      }
+
+      function fetchMoreIncomingForLabel(nodeId, label, state, btn, after) {
+        if (!socEndpoint) return;
+
+        const params = {
+          from: nodeId,
+          direction: 'in',
+          limit: PAGE_SIZE,
+          offset: state.fetched || 0,
+          debug: 1,
+        };
+        if (state.predUri) params.predUri = state.predUri;
+        else params.label = label;
+
+        const prev = btn.textContent;
+        btn.disabled = true; btn.textContent = '…';
+
+        const finish = (returned) => {
+          state.fetched = (state.fetched || 0) + returned;
+          state.hasMoreServer = returned === PAGE_SIZE;
+          if (returned === 0) state.exhausted = true;
+          btn.textContent = prev; btn.disabled = false;
+          if (after) after(returned);
+        };
+
+        $.getJSON(socEndpoint, params)
+          .done(data => {
+            const slim = slimPayloadForLabel(data, nodeId, label, PAGE_SIZE, 'in', state.predUri || null);
+            if (!state.predUri && slim.edges && slim.edges.length && slim.edges[0].predUri) {
+              state.predUri = slim.edges[0].predUri;
+            }
+            mergeGraphPayload(slim, nodeId);
+            finish((slim.edges || []).length);
+          })
+          .fail(() => finish(0));
+      }
+
+      function ensureExtraNodeById(id, opts = {}) {
+        const nid = expandCurie(id);
+        let n = nodes.get(nid) || extraNodes.find(x => x.id === nid);
+        if (n) return n;
+
+        const fallbackLabel = opts.label || (nid.split('/').pop() || nid);
+        n = normalizeNode({ id: nid, label: fallbackLabel, shape: 'box' });
+        if (opts.typeUri) n.typeUri = expandCurie(opts.typeUri);
+        if (opts.asClass) n.typeUri = nid;
+        extraNodes.push(n);
+        return n;
+      }
+
+      function removeDanglingNodes(exceptIds = new Set()) {
+        const liveEdges = edges.get();
+        const connected = new Set();
+        liveEdges.forEach(e => { connected.add(e.from); connected.add(e.to); });
+        nodes.getIds().forEach(id => {
+          if (exceptIds.has(id)) return;
+          if (!connected.has(id)) {
+            try { nodes.remove(id); } catch (e) {}
+          }
+        });
+      }
+
+      function setEdgeVisible(desiredEdgeRaw, on, anchorId) {
+        const desiredEdge = normalizeEdge(desiredEdgeRaw);
+        const eid = edgeIdOf(desiredEdge);
+
+        if (on) {
+          if (edges.get(eid)) return { changed: false, addedNodeIds: [] };
+
+          const addedNodeIds = [];
+          const ensureVisible = (id) => {
+            if (!id) return;
+            if (nodes.get(id)) return;
+            if (!canAddMoreVisibleNodes(1)) { warnNodeCap(); return; }
+            const n = ensureExtraNodeById(id);
+            nodes.add(ensureNodeStyle({ ...n }));
+            addedNodeIds.push(id);
+          };
+
+          ensureVisible(desiredEdge.from);
+          ensureVisible(desiredEdge.to);
+
+          // Ensure it exists in cache as well
+          if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === eid)) {
+            extraEdges.push({ ...desiredEdge, id: eid });
+          }
+
+          if (nodes.get(desiredEdge.from) && nodes.get(desiredEdge.to)) {
+            addEdgeVisible({ ...desiredEdge, id: eid });
+          }
+
+          if (addedNodeIds.length && anchorId) {
+            freezeAllNodes(nodes);
+            placeAround(network, anchorId, addedNodeIds, 160);
+            network.redraw();
+            unfreezeNodes(nodes, addedNodeIds);
+          }
+          return { changed: true, addedNodeIds };
+        }
+
+        // off
+        if (!edges.get(eid)) return { changed: false, addedNodeIds: [] };
+        edges.remove(eid);
+        removeDanglingNodes(new Set([currentRootId]));
+        return { changed: true, addedNodeIds: [] };
+      }
+
+      function renderExplorer(nodeId, selectedNode) {
+        if (!explorer) return;
+
+        explorerState.currentNodeId = nodeId;
+
+        const cleanTitle = selectedNode?.label
+          ? String(selectedNode.label).replace(/\n?➕$/, '')
+          : (nodeId.split('/').pop() || nodeId);
+
+        const kindByTypeUri = (typeUri) => {
+          if (!typeUri) return 'other';
+          if (typeUri.includes('/hasco/Study')) return 'study';
+          if (
+            typeUri.includes('/hasco/SampleCollection') ||
+            typeUri.includes('/hasco/SubjectGroup') ||
+            typeUri.includes('/hasco/StudyObjectCollection') ||
+            typeUri.includes('/hasco/SpaceCollection') ||
+            typeUri.includes('/hasco/TimeCollection')
+          ) return 'soc';
+          return 'other';
+        };
+        const kind = kindByTypeUri(selectedNode?.typeUri);
+
+        const renderBody = () => {
+          // Tabs
+          const tab = explorerState.tab;
+          const dir = (tab === 'in') ? 'in' : 'out';
+
+          // Labels
+          let labels = [];
+          if (dir === 'out') {
+            const related = extraEdges.map(normalizeEdge).filter(e => e.from === nodeId);
+            const map = buildLabelEdgesMap(related);
+            labels = Array.from(map.keys()).filter(isDisplayableLabel);
+            labels = Array.from(new Set(labels.concat(['typeUri', 'hascoTypeUri'])));
+            if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
+            if (isClassNode(selectedNode) && !labels.includes('children')) labels.unshift('children');
+          } else {
+            const incoming = extraEdges.map(normalizeEdge).filter(e => e.to === nodeId);
+            labels = Array.from(new Set(incoming.map(e => e.label))).filter(isDisplayableLabel);
+          }
+
+          // Ensure stable ordering: keep contains/children first if present.
+          const preferred = ['contains', 'children', 'super', 'typeUri', 'hascoTypeUri'];
+          labels.sort((a, b) => {
+            const ia = preferred.indexOf(a);
+            const ib = preferred.indexOf(b);
+            if (ia !== -1 || ib !== -1) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+            return String(a).localeCompare(String(b));
+          });
+
+          const picked = (dir === 'out') ? explorerState.outLabel : explorerState.inLabel;
+          let currentLabel = (picked && labels.includes(picked)) ? picked : (labels[0] || null);
+          if (dir === 'out') explorerState.outLabel = currentLabel;
+          else explorerState.inLabel = currentLabel;
+
+          // Header
+          explorer.innerHTML = '';
+
+          const header = document.createElement('div');
+          header.style.cssText = 'display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding-bottom:8px; border-bottom:1px solid #ddd; margin-bottom:10px;';
+          const left = document.createElement('div');
+          left.style.cssText = 'min-width:0;';
+          const h = document.createElement('div');
+          h.textContent = cleanTitle;
+          h.style.cssText = 'font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+          h.title = nodeId;
+          const sub = document.createElement('div');
+          sub.style.cssText = 'font-size:12px; opacity:.8; word-break:break-all;';
+          sub.textContent = nodeId;
+          left.appendChild(h);
+          left.appendChild(sub);
+
+          const actions = document.createElement('div');
+          actions.style.cssText = 'display:flex; align-items:center; gap:10px; flex:0 0 auto;';
+          const copyNode = makeCopyLink('Copiar URI', () => nodeId);
+          const makeBase = document.createElement('span');
+          makeBase.textContent = 'Definir como base';
+          makeBase.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
+          makeBase.title = 'Definir este nó como base do grafo e abrir a sua página';
+          makeBase.addEventListener('click', (ev) => { ev.stopPropagation(); promoteToRoot(nodeId); });
+          actions.appendChild(copyNode);
+          actions.appendChild(makeBase);
+
+          header.appendChild(left);
+          header.appendChild(actions);
+          explorer.appendChild(header);
+
+          // Tab buttons
+          const tabs = document.createElement('div');
+          tabs.style.cssText = 'display:flex; gap:8px; margin-bottom:10px;';
+          const mkTab = (id, text) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn btn-sm ' + (explorerState.tab === id ? 'btn-secondary' : 'btn-outline-secondary');
+            b.textContent = text;
+            b.addEventListener('click', (e) => {
+              e.preventDefault();
+              if (explorerState.tab === id) return;
+              explorerState.tab = id;
+              renderExplorer(nodeId, selectedNode);
+            });
+            return b;
+          };
+          tabs.appendChild(mkTab('out', '→ Saídas'));
+          explorer.appendChild(tabs);
+
+          if (!currentLabel) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'opacity:.75; font-size:13px;';
+            empty.textContent = (dir === 'out')
+              ? 'Sem relações carregadas. Clique novamente ou use “Carregar mais”.'
+              : 'Sem relações de entrada carregadas.';
+            explorer.appendChild(empty);
+            return;
+          }
+
+          // Label select
+          const labelRow = document.createElement('div');
+          labelRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;';
+
+          const sel = document.createElement('select');
+          sel.className = 'form-control form-control-sm';
+          sel.style.maxWidth = '240px';
+          labels.forEach(lbl => {
+            const opt = document.createElement('option');
+            opt.value = lbl;
+            const count = (dir === 'out') ? itemsForLabel(nodeId, lbl).length : itemsForIncomingLabel(nodeId, lbl).length;
+            opt.textContent = `${lbl} (${count})`;
+            if (lbl === currentLabel) opt.selected = true;
+            sel.appendChild(opt);
+          });
+          sel.addEventListener('change', () => {
+            if (dir === 'out') explorerState.outLabel = sel.value;
+            else explorerState.inLabel = sel.value;
+            renderExplorer(nodeId, selectedNode);
+          });
+
+          labelRow.appendChild(sel);
+
+          const controls = document.createElement('div');
+          controls.style.cssText = 'display:flex; gap:8px; align-items:center;';
+          const showAllBtn = document.createElement('button');
+          showAllBtn.type = 'button';
+          showAllBtn.className = 'btn btn-sm btn-light';
+          showAllBtn.textContent = 'Mostrar tudo';
+
+          const hideAllBtn = document.createElement('button');
+          hideAllBtn.type = 'button';
+          hideAllBtn.className = 'btn btn-sm btn-light';
+          hideAllBtn.textContent = 'Ocultar tudo';
+
+          const loadBtn = document.createElement('button');
+          loadBtn.type = 'button';
+          loadBtn.className = 'btn btn-sm btn-light';
+          loadBtn.textContent = 'Carregar mais';
+
+          controls.appendChild(showAllBtn);
+          controls.appendChild(hideAllBtn);
+          controls.appendChild(loadBtn);
+          labelRow.appendChild(controls);
+          explorer.appendChild(labelRow);
+
+          const key = `${dir}:${nodeId}:${currentLabel}`;
+          const list = (dir === 'out') ? itemsForLabel(nodeId, currentLabel) : itemsForIncomingLabel(nodeId, currentLabel);
+          if (!pageState[key]) {
+            pageState[key] = {
+              fetched: list.length,
+              hasMoreServer: true,
+              exhausted: false,
+              prefetchTried: false,
+              triedGeneric: false,
+              predUri: (dir === 'in') ? inferIncomingPredUri(nodeId, currentLabel) : null,
+            };
+          }
+          const state = pageState[key];
+
+          const prefetchIfNeeded = () => {
+            if (list.length > 0 || state.prefetchTried) return false;
+            state.prefetchTried = true;
+            const loading = document.createElement('div');
+            loading.style.cssText = 'padding:6px 4px; opacity:.7;';
+            loading.textContent = 'A carregar...';
+            explorer.appendChild(loading);
+
+            if (dir === 'out') {
+              fetchMoreForLabel(nodeId, currentLabel, state, loadBtn, () => { renderExplorer(nodeId, selectedNode); });
+            } else {
+              fetchMoreIncomingForLabel(nodeId, currentLabel, state, loadBtn, () => { renderExplorer(nodeId, selectedNode); });
+            }
+            return true;
+          };
+
+          if (prefetchIfNeeded()) {
+            loadBtn.disabled = true;
+            return;
+          }
+
+          // Wire load more
+          loadBtn.disabled = !socEndpoint || !!state.exhausted || state.hasMoreServer === false;
+          loadBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            if (dir === 'out') {
+              fetchMoreForLabel(nodeId, currentLabel, state, loadBtn, () => { renderExplorer(nodeId, selectedNode); });
+            } else {
+              fetchMoreIncomingForLabel(nodeId, currentLabel, state, loadBtn, () => { renderExplorer(nodeId, selectedNode); });
+            }
+          });
+
+          // Bulk show/hide
+          showAllBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            const items = (dir === 'out') ? itemsForLabel(nodeId, currentLabel) : itemsForIncomingLabel(nodeId, currentLabel);
+            const added = [];
+            items.forEach(({ edge: e }) => {
+              const otherId = (dir === 'out') ? e.to : e.from;
+              const other = ensureExtraNodeById(otherId, { asClass: (currentLabel === 'typeUri' || currentLabel === 'hascoTypeUri') });
+              const desired = (dir === 'out')
+                ? { from: nodeId, to: other.id, label: currentLabel }
+                : { from: other.id, to: nodeId, label: currentLabel, predUri: e.predUri };
+              if (currentLabel === 'contains') desired.label = 'contains';
+              if (currentLabel === 'typeUri' || currentLabel === 'hascoTypeUri') desired.to = other.id;
+              const r = setEdgeVisible(desired, true, nodeId);
+              if (r.addedNodeIds && r.addedNodeIds.length) added.push(...r.addedNodeIds);
+            });
+            if (added.length) {
+              freezeAllNodes(nodes);
+              placeAround(network, nodeId, Array.from(new Set(added)), 160);
+              network.redraw();
+              unfreezeNodes(nodes, Array.from(new Set(added)));
+            }
+            renderExplorer(nodeId, selectedNode);
+          });
+
+          hideAllBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            const items = (dir === 'out') ? itemsForLabel(nodeId, currentLabel) : itemsForIncomingLabel(nodeId, currentLabel);
+            items.forEach(({ edge: e }) => {
+              const otherId = (dir === 'out') ? e.to : e.from;
+              const desired = (dir === 'out')
+                ? { from: nodeId, to: otherId, label: currentLabel }
+                : { from: otherId, to: nodeId, label: currentLabel, predUri: e.predUri };
+              if (currentLabel === 'contains') desired.label = 'contains';
+              setEdgeVisible(desired, false);
+            });
+            renderExplorer(nodeId, selectedNode);
+          });
+
+          // Items list
+          const listWrap = document.createElement('div');
+          listWrap.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
+          const items = (dir === 'out') ? itemsForLabel(nodeId, currentLabel) : itemsForIncomingLabel(nodeId, currentLabel);
+          if (!items.length) {
+            const none = document.createElement('div');
+            none.style.cssText = 'opacity:.75; font-size:13px;';
+            none.textContent = 'Sem itens.';
+            listWrap.appendChild(none);
+          } else {
+            items.forEach(({ edge: e }) => {
+              const otherId = (dir === 'out') ? e.to : e.from;
+              let other = extraNodes.find(n => n.id === otherId) || nodes.get(otherId);
+              if (!other) {
+                other = ensureExtraNodeById(otherId, { asClass: (currentLabel === 'typeUri' || currentLabel === 'hascoTypeUri') });
+              }
+              const displayLabel = (other.label && String(other.label).trim())
+                ? String(other.label).replace(/\n?➕$/, '')
+                : (other.id?.split('/').pop() || other.id || '(no label)');
+
+              const desired = (dir === 'out')
+                ? { from: nodeId, to: other.id, label: currentLabel }
+                : { from: other.id, to: nodeId, label: currentLabel, predUri: e.predUri };
+              if (currentLabel === 'contains') desired.label = 'contains';
+              const desiredId = edgeIdOf(desired);
+              const edgeOn = !!edges.get(desiredId);
+
+              const row = document.createElement('div');
+              row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:4px 6px; border:1px solid #e5e5e5; border-radius:6px; background:white;';
+
+              const left = document.createElement('div');
+              left.style.cssText = 'min-width:0; display:flex; align-items:center; gap:8px; flex:1 1 auto;';
+              const name = document.createElement('div');
+              name.textContent = displayLabel;
+              name.style.cssText = 'white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+              name.title = other.id;
+              const copy = makeCopyLink('Copiar URI', () => other.id);
+              left.appendChild(name);
+              left.appendChild(copy);
+
+              const toggle = document.createElement('button');
+              toggle.type = 'button';
+              toggle.className = 'btn btn-sm btn-light';
+              toggle.innerHTML = edgeOn ? eyeOffSVG : eyeSVG;
+              toggle.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                setEdgeVisible(desired, !edges.get(desiredId), nodeId);
+                renderExplorer(nodeId, selectedNode);
+              });
+
+              row.appendChild(left);
+              row.appendChild(toggle);
+              listWrap.appendChild(row);
+            });
+          }
+          explorer.appendChild(listWrap);
+        };
+
+        renderBody();
       }
 
       // ----- Snapshot & Navigation helpers -----
@@ -870,6 +1343,12 @@
 
         if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
 
+        // Prefer the fixed explorer panel when present.
+        if (explorer) {
+          renderExplorer(selectedNodeId, selectedNode);
+          return;
+        }
+
         // Render menu
         expandMenu.innerHTML = '';
         closeAllSubmenus();
@@ -888,14 +1367,14 @@
         const actions = document.createElement('div');
         actions.style.cssText = 'display:flex; align-items:center; gap:10px;';
 
-        const copyNode = makeCopyLink('Copy URI', () => selectedNode.id);
+        const copyNode = makeCopyLink('Copiar URI', () => selectedNode.id);
         copyNode.style.alignSelf = 'flex-start';
 
         // "Make it base" -> promote to root and navigate, restoring the graph on next page
         const makeBold = document.createElement('span');
-        makeBold.textContent = 'Make it base';
+        makeBold.textContent = 'Definir como base';
         makeBold.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
-        makeBold.title = 'Promote this node to be the graph root and open its page';
+        makeBold.title = 'Definir este nó como base do grafo e abrir a sua página';
         makeBold.addEventListener('click', (ev) => {
           ev.stopPropagation();
           promoteToRoot(selectedNodeId);

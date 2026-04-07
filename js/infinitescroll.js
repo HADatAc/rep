@@ -47,11 +47,18 @@
       // Bind the debounced scroll event on window (using a custom event namespace).
       $(window).on('scroll.repInfiniteScroll', debounce(onScroll, 1000));
 
+      // Trigger once on attach (covers cases where the page has no scroll yet).
+      setTimeout(onScroll, 0);
+
       // After each AJAX request completes, hide the loading overlay and reset isLoading flag.
       $(document).ajaxComplete(function () {
         $('#loading-overlay').hide();
         window.myInfiniteScroll.isLoading = false;
         // console.log("finito");
+
+        // If we still don't have enough content to scroll,
+        // keep loading until list_state turns off.
+        setTimeout(onScroll, 0);
       });
     }
   };
