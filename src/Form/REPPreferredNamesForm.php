@@ -15,7 +15,7 @@ use Drupal\Core\Url;
  * Class REPPreferredNamesForm.
  *
  * Provides a configuration form to set preferred names (Instrument, Component,
- * Process, Study) used across the repository and related modules.
+ * Process, Study, Platform) used across the repository and related modules.
  */
 class REPPreferredNamesForm extends ConfigFormBase {
 
@@ -93,6 +93,15 @@ class REPPreferredNamesForm extends ConfigFormBase {
       '#default_value' => $study,
     ];
 
+    // Preferred name for "Platform".
+    $platform = $config->get('preferred_platform') ?: 'Platform';
+    $form['preferred_platform'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t("Platform's preferred name"),
+      '#default_value' => $platform,
+      '#description' => $this->t('Use singular form, e.g. "Laboratory".'),
+    ];
+
     // Simple filler to add some vertical spacing.
     $form['filler'] = [
       '#type' => 'item',
@@ -136,6 +145,9 @@ class REPPreferredNamesForm extends ConfigFormBase {
     if (strlen($form_state->getValue('preferred_study')) < 1) {
       $form_state->setErrorByName('preferred_study', $this->t("Please inform a preferred name for study."));
     }
+    if (strlen($form_state->getValue('preferred_platform')) < 1) {
+      $form_state->setErrorByName('preferred_platform', $this->t("Please inform a preferred name for platform."));
+    }
   }
 
   /**
@@ -162,12 +174,15 @@ class REPPreferredNamesForm extends ConfigFormBase {
         $form_state->getValue('preferred_process') !== NULL &&
         $form_state->getValue('preferred_process') !== '' &&
         $form_state->getValue('preferred_study') !== NULL &&
-        $form_state->getValue('preferred_study') !== '') {
+        $form_state->getValue('preferred_study') !== '' &&
+        $form_state->getValue('preferred_platform') !== NULL &&
+        $form_state->getValue('preferred_platform') !== '') {
 
       $config->set('preferred_instrument', $form_state->getValue('preferred_instrument'));
       $config->set('preferred_component', $form_state->getValue('preferred_component'));
       $config->set('preferred_process', $form_state->getValue('preferred_process'));
       $config->set('preferred_study', $form_state->getValue('preferred_study'));
+      $config->set('preferred_platform', $form_state->getValue('preferred_platform'));
       $config->save();
 
       // IMPORTANT:

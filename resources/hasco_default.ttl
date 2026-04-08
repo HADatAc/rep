@@ -25,11 +25,11 @@ vstoi:AnnotationStem
 
 sio:Attribute
 	a rdfs:Class;
-	rdfs:subclassOf hasco:AttributeEntryPoint.
+	rdfs:subClassOf hasco:AttributeEntryPoint.
 
 vstoi:CodeBook
 	a rdfs:Class;
-	rdfs:subclassOf hasco:CodeBookEntryPoint.
+	rdfs:subClassOf hasco:CodeBookEntryPoint.
 
 vstoi:ComponentStem
 	a rdfs:Class;

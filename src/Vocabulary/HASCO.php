@@ -85,6 +85,7 @@ use PHPUnit\Event\Application\Started;
     const ORGANIZATION_CLASS_ENTRY_POINT              = HASCO::HASCO . "OrganizationEntryPoint";
     const PERSON_CLASS_ENTRY_POINT                    = HASCO::HASCO . "PersonEntryPoint";
     const PLACE_CLASS_ENTRY_POINT                     = HASCO::HASCO . "PlaceEntryPoint";
+    const PLATFORM_CLASS_ENTRY_POINT                  = HASCO::HASCO . "PlatformEntryPoint";
     const WORKFLOW_STEM_CLASS_ENTRY_POINT             = HASCO::HASCO . "WorkflowEntryPoint";
     // const QUESTIONNAIRE_ENTRY_POINT             = HASCO::HASCO . "QuestionnaireEntryPoint";
     const RESPONSE_OPTION_CLASS_ENTRY_POINT           = HASCO::HASCO . "ResponseOptionEntryPoint";

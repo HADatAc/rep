@@ -55,6 +55,7 @@ class TreeForm extends FormBase {
     $preferred_component = \Drupal::config('rep.settings')->get('preferred_component') ?? 'component';
     $preferred_process = \Drupal::config('rep.settings')->get('preferred_process') ?? 'workflow';
     $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
+    $preferred_platform = \Drupal::config('rep.settings')->get('preferred_platform') ?? 'platform';
 
     // Toggles
     $hide_draft = $form_state->getValue('hide_draft') ?? true;
@@ -111,7 +112,7 @@ class TreeForm extends FormBase {
       'organization' => ["Organization", EntryPoints::CLASS_EP_ORGANIZATION],
       'person' => ["Person", EntryPoints::CLASS_EP_PERSON],
       'place' => ["Place", EntryPoints::CLASS_EP_PLACE],
-      'platform' => ["Platform", EntryPoints::INSTANCE_EP_PLATFORM],
+      'platform' => [ucfirst($preferred_platform), EntryPoints::CLASS_EP_PLATFORM],
       'processstem' => [ucfirst($preferred_process)." Stem", VSTOI::PROCESS_STEM],
       'workflowstem' => [ucfirst($preferred_process)." Stem", VSTOI::PROCESS_STEM],
       // 'questionnaire' => ["Questionnaire", EntryPoints::EP_QUESTIONNAIRE],
@@ -191,9 +192,9 @@ class TreeForm extends FormBase {
       ],
       [
         'id' => 'platform',
-        'uri' => EntryPoints::INSTANCE_EP_PLATFORM,
-        'label' => 'Platform',
-        'uriNamespace' => EntryPoints::INSTANCE_EP_PLATFORM
+        'uri' => EntryPoints::CLASS_EP_PLATFORM,
+        'label' => ucfirst($preferred_platform),
+        'uriNamespace' => EntryPoints::CLASS_EP_PLATFORM
       ],
       [
         'id' => 'processstem',

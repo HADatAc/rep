@@ -283,12 +283,25 @@ function rep_menu_links_discovered_alter(&$links) {
   $preferred_component  = $config->get('preferred_component') ?: 'Component';
   $preferred_process    = $config->get('preferred_process') ?: 'Workflow';
   $preferred_study      = $config->get('preferred_study') ?: 'Study';
+  $preferred_platform   = $config->get('preferred_platform') ?: 'Platform';
+
+  $to_plural = static function (string $label): string {
+    if (preg_match('/[^aeiou]y$/i', $label)) {
+      return substr($label, 0, -1) . 'ies';
+    }
+    if (preg_match('/s$/i', $label)) {
+      return $label;
+    }
+    return $label . 's';
+  };
 
   // Normalized labels for UI (first letter uppercase).
   $label_instrument = ucfirst($preferred_instrument);
   $label_component  = ucfirst($preferred_component);
   $label_process    = ucfirst($preferred_process);
   $label_study      = ucfirst($preferred_study);
+  $label_platform   = ucfirst($preferred_platform);
+  $label_platform_plural = $to_plural($label_platform);
 
   // ------------------------------------------------------------
   // STD: Study-related menus.
@@ -357,6 +370,18 @@ function rep_menu_links_discovered_alter(&$links) {
     ],
     // dpl.manage_component_instances in dpl.links.menu.yml
     'dpl.manage_component_instances' => [
+      'title' => 'Manage @label instances',
+      'description' => 'Manage @label instances',
+    ],
+  ];
+
+  // DPL: Platform-related menus.
+  $platform_map = [
+    'dpl.manage_platforms' => [
+      'title' => 'Manage @plural',
+      'description' => 'Manage @plural',
+    ],
+    'dpl.manage_platform_instances' => [
       'title' => 'Manage @label instances',
       'description' => 'Manage @label instances',
     ],
@@ -440,6 +465,31 @@ function rep_menu_links_discovered_alter(&$links) {
       $links[$plugin_id]['description'] = new TranslatableMarkup(
         $texts['description'],
         ['@label' => $label_component]
+      );
+    }
+  }
+
+  // Platform.
+  foreach ($platform_map as $plugin_id => $texts) {
+    if (!isset($links[$plugin_id])) {
+      continue;
+    }
+    if (!empty($texts['title'])) {
+      $links[$plugin_id]['title'] = new TranslatableMarkup(
+        $texts['title'],
+        [
+          '@label' => $label_platform,
+          '@plural' => $label_platform_plural,
+        ]
+      );
+    }
+    if (!empty($texts['description'])) {
+      $links[$plugin_id]['description'] = new TranslatableMarkup(
+        $texts['description'],
+        [
+          '@label' => $label_platform,
+          '@plural' => $label_platform_plural,
+        ]
       );
     }
   }
@@ -552,12 +602,25 @@ function rep_block_view_alter(array &$build, BlockPluginInterface $block) {
   $preferred_component  = $config->get('preferred_component') ?: 'Component';
   $preferred_process    = $config->get('preferred_process') ?: 'Workflow';
   $preferred_study      = $config->get('preferred_study') ?: 'Study';
+  $preferred_platform   = $config->get('preferred_platform') ?: 'Platform';
+
+  $to_plural = static function (string $label): string {
+    if (preg_match('/[^aeiou]y$/i', $label)) {
+      return substr($label, 0, -1) . 'ies';
+    }
+    if (preg_match('/s$/i', $label)) {
+      return $label;
+    }
+    return $label . 's';
+  };
 
   // Normalized labels for UI (first letter uppercase).
   $label_instrument = ucfirst($preferred_instrument);
   $label_component  = ucfirst($preferred_component);
   $label_process    = ucfirst($preferred_process);
   $label_study      = ucfirst($preferred_study);
+  $label_platform   = ucfirst($preferred_platform);
+  $label_platform_plural = $to_plural($label_platform);
 
   // Get current label from the build array.
   if (!isset($build['#configuration']['label'])) {
@@ -586,6 +649,10 @@ function rep_block_view_alter(array &$build, BlockPluginInterface $block) {
   //   "Search RGPD Criteria" (from "Search Studies Criteria"),
   // which is acceptable for this use case.
   $replacements = [
+    'Platform Instances' => $label_platform . ' Instances',
+    'Platform Instance' => $label_platform . ' Instance',
+    'Platforms'   => $label_platform_plural,
+    'Platform'    => $label_platform,
     'Study'      => $label_study,
     'Studies'    => $label_study,
     'Instrument' => $label_instrument,

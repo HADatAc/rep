@@ -303,7 +303,10 @@ class REPSelectMTForm extends FormBase {
 
     $form['actions_wrapper']['buttons_container'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['d-flex', 'gap-2']],
+      '#attributes' => [
+        'class' => ['d-flex', 'gap-2', 'flex-nowrap'],
+        'style' => 'flex-wrap:nowrap;overflow-x:auto;'
+      ],
     ];
 
     $form['actions_wrapper']['buttons_container']['add_element'] = [
@@ -316,6 +319,58 @@ class REPSelectMTForm extends FormBase {
     ];
 
     if ($view_type == 'table') {
+      $form['actions_wrapper']['buttons_container']['edit_selected_element'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Edit ' . $this->single_class_name . ' Selected'),
+        '#name' => 'edit_element',
+        '#attributes' => [
+          'class' => ['btn', 'btn-primary', 'edit-element-button'],
+        ],
+      ];
+
+      $form['actions_wrapper']['buttons_container']['delete_selected_element'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Delete ' . $this->plural_class_name . ' Selected'),
+        '#name' => 'delete_element',
+        '#attributes' => [
+          'onclick' => 'if(!confirm("Really Delete?")){return false;}',
+          'class' => ['btn', 'btn-primary', 'delete-element-button'],
+        ],
+      ];
+
+      $uid = \Drupal::currentUser()->id();
+      $user = \Drupal\user\Entity\User::load($uid);
+      if ($user && $user->hasRole('content_editor')) {
+        $form['actions_wrapper']['buttons_container']['ingest_mt'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected as Draft'),
+          '#name' => 'ingest_mt_draft',
+          '#attributes' => [
+            'onclick' => 'if(!confirm("Really Ingest file has DRAFT?")){return false;}',
+            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+          ],
+        ];
+
+        $form['actions_wrapper']['buttons_container']['ingest_mt_current'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Current'),
+          '#name' => 'ingest_mt_current',
+          '#attributes' => [
+            'onclick' => 'if(!confirm("Really Ingest file has CURRENT?")){return false;}',
+            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+          ],
+        ];
+
+        $form['actions_wrapper']['buttons_container']['uningest_mt'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Uningest ' . $this->plural_class_name . ' Selected'),
+          '#name' => 'uningest_mt',
+          '#attributes' => [
+            'class' => ['btn', 'btn-primary', 'uningest_mt-element-button'],
+          ],
+        ];
+      }
+
       $status_options = [
         '_' => $this->t('All Status'),
         VSTOI::DRAFT => $this->t('Draft'),
@@ -566,64 +621,6 @@ class REPSelectMTForm extends FormBase {
    */
   protected function buildTableView(array &$form, FormStateInterface $form_state, $header, $output)
   {
-    $form['edit_selected_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Edit ' . $this->single_class_name . ' Selected'),
-      '#name' => 'edit_element',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'edit-element-button'],
-      ],
-    ];
-    $form['delete_selected_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Delete ' . $this->plural_class_name . ' Selected'),
-      '#name' => 'delete_element',
-      '#attributes' => [
-        'onclick' => 'if(!confirm("Really Delete?")){return false;}',
-        'class' => ['btn', 'btn-primary', 'delete-element-button'],
-      ],
-    ];
-
-    $uid = \Drupal::currentUser()->id();
-    $user = \Drupal\user\Entity\User::load($uid);
-    if ($user && $user->hasRole('content_editor')) {
-      // $form['ingest_mt'] = [
-      //   '#type' => 'submit',
-      //   '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Draft'),
-      //   '#name' => 'ingest_mt_draft',
-      //   '#attributes' => [
-      //     'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-      //   ],
-      // ];
-      $form['ingest_mt'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected as Draft'),
-        '#name' => 'ingest_mt_draft',
-        '#attributes' => [
-          'onclick' => 'if(!confirm("Really Ingest file has DRAFT?")){return false;}',
-          'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-        ],
-      ];
-      $form['ingest_mt_current'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Current'),
-        '#name' => 'ingest_mt_current',
-        '#attributes' => [
-          'onclick' => 'if(!confirm("Really Ingest file has CURRENT?")){return false;}',
-          'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-        ],
-      ];
-
-      $form['uningest_mt'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Uningest ' . $this->plural_class_name . ' Selected'),
-        '#name' => 'uningest_mt',
-        '#attributes' => [
-          'class' => ['btn', 'btn-primary', 'uningest_mt-element-button'],
-        ],
-      ];
-    }
-
     $form['element_table'] = [
       '#type' => 'tableselect',
       '#header' => $header,
