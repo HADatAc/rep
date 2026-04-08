@@ -49,13 +49,13 @@ class VisGraphBaseBlock extends BlockBase implements ContainerFactoryPluginInter
    * {@inheritdoc}
    */
   public function build() {
-    // O elemento a ser exibido deve ser injetado aqui. Exemplo fictício:
+    // The element to display must be injected here.
     $request = \Drupal::request();
     $uriParam = $request->query->get('uri');
 
     if (!$uriParam) {
       return [
-        '#markup' => t('Nenhum elemento foi fornecido para o grafo.'),
+        '#markup' => t('No element was provided for the graph.'),
       ];
     }
 
@@ -66,11 +66,11 @@ class VisGraphBaseBlock extends BlockBase implements ContainerFactoryPluginInter
 
     if (!$element || !isset($element->uri)) {
       return [
-        '#markup' => t('Elemento não encontrado ou inválido.'),
+        '#markup' => t('Element not found or invalid.'),
       ];
     }
 
-    // Cria e renderiza o formulário do grafo
+    // Create and render the graph form.
     $graphForm = new VisGraphBaseForm();
     $graphForm->setVisElement($element);
 

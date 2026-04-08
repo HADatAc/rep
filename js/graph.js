@@ -242,7 +242,7 @@
       const explorer = (container.parentElement && container.parentElement.querySelector('#rep-graph-explorer')) || null;
       if (explorer && !explorer.dataset.repInit) {
         explorer.dataset.repInit = '1';
-        explorer.innerHTML = '<div style="opacity:.8;font-size:13px;">Clique num nó para explorar relações.</div>';
+        explorer.innerHTML = '<div style="opacity:.8;font-size:13px;">Click a node to explore relationships.</div>';
       }
 
       // ----- Floating menu -----
@@ -311,14 +311,14 @@
           cursor:pointer; font-size:12px; color:#007bff; white-space:nowrap;
           padding:2px 6px; border-radius:4px;
         `;
-        link.title = 'Copiar para a área de transferência';
+        link.title = 'Copy to clipboard';
         link.addEventListener('click', (ev) => {
           ev.stopPropagation();
           const valRaw = (typeof valueSupplier === 'function') ? valueSupplier() : valueSupplier;
           const val = String(valRaw ?? ''); // copy RAW IRI (not local proxy)
           copyToClipboard(val, () => {
             const old = link.textContent;
-            link.textContent = 'Copiado!';
+            link.textContent = 'Copied!';
             setTimeout(() => { link.textContent = old; }, 900);
           });
         });
@@ -379,7 +379,7 @@
         const current = nodes.length ? nodes.length : nodes.getIds().length;
         return (current + addCount) <= MAX_LIVE_NODES;
       }
-      function warnNodeCap() { alert(`Limite de nós atingido (${MAX_LIVE_NODES}). Oculte alguns itens antes de carregar mais.`); }
+      function warnNodeCap() { alert(`Node limit reached (${MAX_LIVE_NODES}). Hide some items before loading more.`); }
 
       // ---------- Seed type edges from the node itself ----------
       function seedTypeEdgesForNode(node) {
@@ -582,7 +582,7 @@
             fetchMoreForLabel(nodeId, label, state, { textContent:'', disabled:false }, () => { renderPage(); });
             const loading = document.createElement('div');
             loading.style.cssText = "padding:6px 4px; opacity:.7;";
-            loading.textContent = 'A carregar...';
+            loading.textContent = 'Loading...';
             submenu.appendChild(loading);
             return;
           }
@@ -622,7 +622,7 @@
             s.textContent = displayLabel;
             s.style.cssText = "flex:1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
 
-            const copyChild = makeCopyLink('Copiar URI', () => child.id);
+            const copyChild = makeCopyLink('Copy URI', () => child.id);
             copyChild.style.marginLeft = '4px';
 
             leftWrap.appendChild(s);
@@ -684,7 +684,7 @@
             const totalPagesTxt = totalPagesKnown ?? (state.hasMoreServer ? '…' : Math.max(1, Math.ceil(totalFetched / MAX_MEMBERS_PER_SOC)));
             const totalCountTxt = knownTotal ?? (totalFetched + (state.hasMoreServer ? '+' : ''));
 
-            info.textContent = `Página ${pageNum} / ${totalPagesTxt} - a mostrar ${page.length} de ${totalCountTxt}`;
+            info.textContent = `Page ${pageNum} / ${totalPagesTxt} - showing ${page.length} of ${totalCountTxt}`;
 
             const left = document.createElement('button');
             left.type = 'button'; left.className = 'btn btn-sm btn-light';
@@ -712,8 +712,8 @@
             footer.append(left, info, right);
           } else {
             info.textContent = (totalFetched === 1)
-              ? 'A mostrar 1 item'
-              : `A mostrar ${totalFetched} itens`;
+              ? 'Showing 1 item'
+              : `Showing ${totalFetched} items`;
             footer.appendChild(info);
           }
 
@@ -988,11 +988,11 @@
 
           const actions = document.createElement('div');
           actions.style.cssText = 'display:flex; align-items:center; gap:10px; flex:0 0 auto;';
-          const copyNode = makeCopyLink('Copiar URI', () => nodeId);
+          const copyNode = makeCopyLink('Copy URI', () => nodeId);
           const makeBase = document.createElement('span');
-          makeBase.textContent = 'Definir como base';
+          makeBase.textContent = 'Set as base';
           makeBase.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
-          makeBase.title = 'Definir este nó como base do grafo e abrir a sua página';
+          makeBase.title = 'Set this node as the graph base and open its page';
           makeBase.addEventListener('click', (ev) => { ev.stopPropagation(); promoteToRoot(nodeId); });
           actions.appendChild(copyNode);
           actions.appendChild(makeBase);
@@ -1017,15 +1017,15 @@
             });
             return b;
           };
-          tabs.appendChild(mkTab('out', '→ Saídas'));
+          tabs.appendChild(mkTab('out', '→ Outgoing'));
           explorer.appendChild(tabs);
 
           if (!currentLabel) {
             const empty = document.createElement('div');
             empty.style.cssText = 'opacity:.75; font-size:13px;';
             empty.textContent = (dir === 'out')
-              ? 'Sem relações carregadas. Clique novamente ou use “Carregar mais”.'
-              : 'Sem relações de entrada carregadas.';
+              ? 'No relationships loaded. Click again or use "Load more".'
+              : 'No incoming relationships loaded.';
             explorer.appendChild(empty);
             return;
           }
@@ -1058,17 +1058,17 @@
           const showAllBtn = document.createElement('button');
           showAllBtn.type = 'button';
           showAllBtn.className = 'btn btn-sm btn-light';
-          showAllBtn.textContent = 'Mostrar tudo';
+          showAllBtn.textContent = 'Show all';
 
           const hideAllBtn = document.createElement('button');
           hideAllBtn.type = 'button';
           hideAllBtn.className = 'btn btn-sm btn-light';
-          hideAllBtn.textContent = 'Ocultar tudo';
+          hideAllBtn.textContent = 'Hide all';
 
           const loadBtn = document.createElement('button');
           loadBtn.type = 'button';
           loadBtn.className = 'btn btn-sm btn-light';
-          loadBtn.textContent = 'Carregar mais';
+          loadBtn.textContent = 'Load more';
 
           controls.appendChild(showAllBtn);
           controls.appendChild(hideAllBtn);
@@ -1095,7 +1095,7 @@
             state.prefetchTried = true;
             const loading = document.createElement('div');
             loading.style.cssText = 'padding:6px 4px; opacity:.7;';
-            loading.textContent = 'A carregar...';
+            loading.textContent = 'Loading...';
             explorer.appendChild(loading);
 
             if (dir === 'out') {
@@ -1168,7 +1168,7 @@
           if (!items.length) {
             const none = document.createElement('div');
             none.style.cssText = 'opacity:.75; font-size:13px;';
-            none.textContent = 'Sem itens.';
+            none.textContent = 'No items.';
             listWrap.appendChild(none);
           } else {
             items.forEach(({ edge: e }) => {
@@ -1197,7 +1197,7 @@
               name.textContent = displayLabel;
               name.style.cssText = 'white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
               name.title = other.id;
-              const copy = makeCopyLink('Copiar URI', () => other.id);
+              const copy = makeCopyLink('Copy URI', () => other.id);
               left.appendChild(name);
               left.appendChild(copy);
 
@@ -1367,14 +1367,14 @@
         const actions = document.createElement('div');
         actions.style.cssText = 'display:flex; align-items:center; gap:10px;';
 
-        const copyNode = makeCopyLink('Copiar URI', () => selectedNode.id);
+        const copyNode = makeCopyLink('Copy URI', () => selectedNode.id);
         copyNode.style.alignSelf = 'flex-start';
 
         // "Make it base" -> promote to root and navigate, restoring the graph on next page
         const makeBold = document.createElement('span');
-        makeBold.textContent = 'Definir como base';
+        makeBold.textContent = 'Set as base';
         makeBold.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
-        makeBold.title = 'Definir este nó como base do grafo e abrir a sua página';
+        makeBold.title = 'Set this node as the graph base and open its page';
         makeBold.addEventListener('click', (ev) => {
           ev.stopPropagation();
           promoteToRoot(selectedNodeId);

@@ -138,7 +138,7 @@ class VisGraphBaseForm extends FormBase {
 
     // Type edge for the base element (menu key must be 'hascoTypeUri').
     $typeUriValue = $element->typeUri ?? ($element->hascoTypeUri ?? null);
-    // ----- Type edges for the base element (mostrar ambos) -----
+    // ----- Type edges for the base element (show both) -----
 if (!empty($element->hascoTypeUri)) {
   $typeHasco = $expandCurie($element->hascoTypeUri);
   $typeHascoLbl = $element->hascoTypeLabel ?? 'HASCO Type';
