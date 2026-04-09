@@ -119,23 +119,11 @@
 
   Drupal.behaviors.repTreeSelection = {
     attach: function (context, settings) {
-      const $treeRoot = $('#tree-root', context);
       const $selectNodeButton = $('#select-tree-node', context);
 
-      $selectNodeButton.prop('disabled', true);
-
-      $treeRoot
-        .off('select_node.jstree')
-        .on('select_node.jstree', function (e, data) {
-          const selectedNode = data.node.original;
-          const typeNamespace = selectedNode.uri;
-
-          // console.log(selectedNode);
-        });
-
       $selectNodeButton
-        .off('click')
-        .on('click', function (e) {
+        .off('click.repTreeSelection')
+        .on('click.repTreeSelection', function (e) {
           e.preventDefault();
 
           const selectedValue = $(this).data('selected-value');

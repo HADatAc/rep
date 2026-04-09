@@ -330,6 +330,8 @@ class TreeForm extends FormBase {
 
     $form['#attached']['library'][] = 'rep/rep_tree';
 
+    $field_id = \Drupal::request()->query->get('field_id') ?? '';
+
     $tables = new Tables;
 
     $base_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
@@ -342,7 +344,8 @@ class TreeForm extends FormBase {
       'searchSuperClassEndPoint' => $base_url . '/rep/getsuperclasses',
       'superclass' => $branches_param[0]["uri"],
       'branches' => $branches_param,
-      'outputField' => '[name="' . \Drupal::request()->query->get('field_id') . '"]',
+      'outputField' => '[name="' . $field_id . '"]',
+      'fieldId' => $field_id,
       'elementType' => $elementtype,
       'typeNameSpace' => $branches_param[0]["uriNamespace"],
       'hideDraft' => $hide_draft,
@@ -517,6 +520,7 @@ class TreeForm extends FormBase {
                       id="select-tree-node"
                       class="{{ classes|join(" ") }}"
                       data-field-id="{{ field_id }}"
+                      disabled="disabled"
                       {% if auto_close %}data-dialog-close="true"{% endif %}>
                 {{ label }}
               </button>

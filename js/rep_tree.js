@@ -345,94 +345,114 @@
 
           // When a node is selected:
           $treeRoot.on('select_node.jstree', function (e, data) {
-            var selectedNode = data.node.original;
+            var selectedNode = (data && data.node && data.node.original) ? data.node.original : {};
+            var nodeData = (data && data.node && data.node.data) ? data.node.data : {};
+
+            var selectedUri = selectedNode.uri || data.node.uri || nodeData.realUri || nodeData.uri || '';
+            var selectedLabel = selectedNode.label || data.node.text || '';
+            var selectedTypeNamespace = selectedNode.typeNamespace || data.node.typeNamespace || nodeData.typeNamespace || '';
+            var selectedStatus = selectedNode.hasStatus || data.node.hasStatus || nodeData.hasStatus || '';
+            var selectedManagerEmail = selectedNode.hasSIRManagerEmail || data.node.hasSIRManagerEmail || nodeData.hasSIRManagerEmail || '';
             var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
             var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
             var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
 
             // console.log("[tree] Node selected:", selectedNode.uri, ", status =", selectedNode.hasStatus);
 
-            var $selectNodeButton = $('#select-tree-node');
+            var $selectNodeButton = $treeRoot.closest('form').find('#select-tree-node').first();
+            if (!$selectNodeButton.length) {
+              $selectNodeButton = $('#select-tree-node').first();
+            }
             $selectNodeButton.prop('disabled', true)
                              .addClass('disabled')
                              .removeData('selected-value');
 
             // Rule 1: Node is restricted (Draft/Deprecated/UnderReview) and not owned by current user → keep disabled
             if (
-              (selectedNode.hasStatus === DRAFT_URI     && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) ||
-              (selectedNode.hasStatus === DEPRECATED_URI && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail) ||
-              (selectedNode.hasStatus === UNDERREVIEW_URI && selectedNode.hasSIRManagerEmail !== drupalSettings.rep_tree.managerEmail)
+              (selectedStatus === DRAFT_URI      && selectedManagerEmail && selectedManagerEmail !== drupalSettings.rep_tree.managerEmail) ||
+              (selectedStatus === DEPRECATED_URI && selectedManagerEmail && selectedManagerEmail !== drupalSettings.rep_tree.managerEmail) ||
+              (selectedStatus === UNDERREVIEW_URI && selectedManagerEmail && selectedManagerEmail !== drupalSettings.rep_tree.managerEmail)
             ) {
               // console.log("[tree] Node cannot be selected (restricted & not owned).");
             }
             // Rule 2: Node is Deprecated and is owned by current user → still disabled
             else if (
-              selectedNode.hasStatus === DEPRECATED_URI &&
-              selectedNode.hasSIRManagerEmail === drupalSettings.rep_tree.managerEmail
+              selectedStatus === DEPRECATED_URI
             ) {
               // console.log("[tree] Node is deprecated and owned by user → still cannot select.");
             }
             // Rule 3: Node is Draft and owned by current user → enable selection
             else if (
-              selectedNode.hasStatus === DRAFT_URI &&
-              selectedNode.hasSIRManagerEmail === drupalSettings.rep_tree.managerEmail
+              selectedStatus === DRAFT_URI &&
+              (!selectedManagerEmail || selectedManagerEmail === drupalSettings.rep_tree.managerEmail)
             ) {
               // console.log("[tree] Node is draft and owned by user → enabling selection.");
-              $selectNodeButton
-                .prop('disabled', false)
-                .removeClass('disabled')
-                .data(
-                  'selected-value',
-                  selectedNode.uri ? trimPreserveBracket(selectedNode.text + " [" + selectedNode.uri + "]") : selectedNode.typeNamespace
-                )
-                .data('field-id', $('#tree-root').data('field-id'));
+              var selectedValueDraft = selectedUri
+                ? trimPreserveBracket((selectedLabel || selectedUri) + " [" + selectedUri + "]")
+                : selectedTypeNamespace;
+
+              if (selectedValueDraft) {
+                $selectNodeButton
+                  .prop('disabled', false)
+                  .removeClass('disabled')
+                  .data('selected-value', selectedValueDraft)
+                  .data('field-id', $treeRoot.data('field-id') || $('#tree-root').data('field-id'));
+              }
             }
             // Rule 4: Node is UnderReview and is owned by current user → still disabled
-            else if (
-              selectedNode.hasStatus === UNDERREVIEW_URI &&
-              selectedNode.hasSIRManagerEmail === drupalSettings.rep_tree.managerEmail
-            ) {
+            else if (selectedStatus === UNDERREVIEW_URI) {
               // console.log("[tree] Node is under review and owned by user → still cannot select.");
             }
             // Rule 5: Otherwise (normal or Draft by user) → enable
             else {
               // console.log("[tree] Node is normal or draft by user → enabling selection.");
-              $selectNodeButton
-                .prop('disabled', false)
-                .removeClass('disabled')
-                .data(
-                  'selected-value',
-                  selectedNode.uri ? trimPreserveBracket(selectedNode.text + " [" + selectedNode.uri + "]") : selectedNode.typeNamespace
-                )
-                .data('field-id', $('#tree-root').data('field-id'));
+              var selectedValue = selectedUri
+                ? trimPreserveBracket((selectedLabel || selectedUri) + " [" + selectedUri + "]")
+                : selectedTypeNamespace;
+
+              if (selectedValue) {
+                $selectNodeButton
+                  .prop('disabled', false)
+                  .removeClass('disabled')
+                  .data('selected-value', selectedValue)
+                  .data('field-id', $treeRoot.data('field-id') || $('#tree-root').data('field-id'));
+              }
             }
 
             // Build HTML for node details (Label, URI, Web Document, Description)
             var html = ''
-              + '<strong>Label:</strong> ' + selectedNode.label + '<br/>'
-              + '<strong>URI:</strong> '
-              + '<a href="' + drupalSettings.rep_tree.baseUrl + '/rep/uri/' + base64EncodeUnicode(selectedNode.uri) + '" target="_new">'
-              + selectedNode.uri + '</a><br/>';
+              + '<strong>Label:</strong> ' + (selectedLabel || '') + '<br/>'
+              + '<strong>URI:</strong> ';
 
-            var webDocument = data.node.data.hasWebDocument || "";
+            if (selectedUri) {
+              html += ''
+                + '<a href="' + drupalSettings.rep_tree.baseUrl + '/rep/uri/' + base64EncodeUnicode(selectedUri) + '" target="_new">'
+                + selectedUri + '</a><br/>';
+            } else {
+              html += '-<br/>';
+            }
+
+            var webDocument = nodeData.hasWebDocument || selectedNode.hasWebDocument || "";
             if (webDocument.trim().length > 0) {
               if (webDocument.trim().toLowerCase().startsWith("http")) {
                 html += ''
                   + '<strong>Web Document:</strong> '
                   + '<a href="' + webDocument + '" target="_new">' + webDocument + '</a><br/>';
               } else {
-                var uriPart = selectedNode.uri.includes('#/') ? selectedNode.uri.split('#/')[1] : selectedNode.uri;
-                var downloadUrl = drupalSettings.rep_tree.baseUrl
-                  + '/rep/webdocdownload/' + encodeURIComponent(uriPart)
-                  + '?doc=' + encodeURIComponent(webDocument);
-                html += ''
-                  + '<strong>Web Document:</strong> '
-                  + '<a href="#" class="view-media-button" data-view-url="' + downloadUrl + '">'
-                  + webDocument + '</a><br/>';
+                var uriPart = selectedUri && selectedUri.includes('#/') ? selectedUri.split('#/')[1] : selectedUri;
+                if (uriPart) {
+                  var downloadUrl = drupalSettings.rep_tree.baseUrl
+                    + '/rep/webdocdownload/' + encodeURIComponent(uriPart)
+                    + '?doc=' + encodeURIComponent(webDocument);
+                  html += ''
+                    + '<strong>Web Document:</strong> '
+                    + '<a href="#" class="view-media-button" data-view-url="' + downloadUrl + '">'
+                    + webDocument + '</a><br/>';
+                }
               }
             }
 
-            var comment = data.node.data.comment || "";
+            var comment = nodeData.comment || selectedNode.comment || "";
             if (comment.trim().length > 0) {
               html += '<br/><strong>Description:</strong><br/>' + comment;
             }
@@ -927,7 +947,11 @@
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
                     type: 'GET',
-                    data: { nodeUri: node.original.uri, elementtype: drupalSettings.rep_tree.elementType },
+                    data: {
+                      nodeUri: node.original.uri,
+                      elementtype: drupalSettings.rep_tree.elementType,
+                      field_id: drupalSettings.rep_tree.fieldId || ''
+                    },
                     dataType: 'json',
                     success: function (data) {
   // NOTE: if the expanded node is a top-level branch (node.parent === '#')
@@ -939,25 +963,15 @@
   if (isTopLevelBranch && Array.isArray(data) && data.length > 0) {
     var first = data[0];
 
-    // --- NEW: safe helpers for comparison ---
+                      // Promote ONLY when backend returns the same node URI as a child
+                      // (self-duplication). Do not promote by label/superUri, because
+                      // valid roots such as ComponentStemEntryPoint would become empty.
     var rootUri   = (node.original && node.original.uri)   ? node.original.uri   : null;
-    var rootLabel = (node.original && node.original.label) ? node.original.label : (node.text || '');
-    var childSup  = (first && first.superUri) ? first.superUri : null;
-    var childLbl  = (first && first.label)    ? first.label    : '';
+                      var childUri  = (first && first.uri) ? first.uri : null;
 
-    // --- PROMOTION RULE ---
-    // Promote if:
-    //  (A) child's superUri equals root uri
-    //   OR
-    //  (B) child's label equals root label (case/space trimmed)
-    if (
-      (childSup && rootUri && childSup === rootUri) ||
-      (String(childLbl).trim() !== '' &&
-       String(rootLabel).trim() !== '' &&
-       String(childLbl).trim() === String(rootLabel).trim())
-    ) {
+                      if (childUri && rootUri && childUri === rootUri) {
       shouldPromote = true;
-      promotionTargetUri = first.uri; // we will fetch grandchildren of this child
+                        promotionTargetUri = childUri;
     }
   }
 
@@ -981,7 +995,11 @@
     $.ajax({
       url: drupalSettings.rep_tree.apiEndpoint,
       type: 'GET',
-      data: { nodeUri: promotionTargetUri, elementtype: drupalSettings.rep_tree.elementType },
+      data: {
+        nodeUri: promotionTargetUri,
+        elementtype: drupalSettings.rep_tree.elementType,
+        field_id: drupalSettings.rep_tree.fieldId || ''
+      },
       dataType: 'json',
       success: function (grandchildren) {
         processAndReturn(grandchildren);
@@ -1193,7 +1211,11 @@
                   $.ajax({
                     url: drupalSettings.rep_tree.apiEndpoint,
                     type: 'GET',
-                    data: { nodeUri: node.original.uri, elementtype: drupalSettings.rep_tree.elementType },
+                    data: {
+                      nodeUri: node.original.uri,
+                      elementtype: drupalSettings.rep_tree.elementType,
+                      field_id: drupalSettings.rep_tree.fieldId || ''
+                    },
                     dataType: 'json',
                     success: function (data) {
                       // NOTE: if the expanded node is a top-level branch (node.parent === '#')
@@ -1247,7 +1269,11 @@
                         $.ajax({
                           url: drupalSettings.rep_tree.apiEndpoint,
                           type: 'GET',
-                            data: { nodeUri: promotionTargetUri, elementtype: drupalSettings.rep_tree.elementType },
+                            data: {
+                              nodeUri: promotionTargetUri,
+                              elementtype: drupalSettings.rep_tree.elementType,
+                              field_id: drupalSettings.rep_tree.fieldId || ''
+                            },
                           dataType: 'json',
                           success: function (grandchildren) {
                             processAndReturn(grandchildren);

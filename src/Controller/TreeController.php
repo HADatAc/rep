@@ -15,6 +15,62 @@ use Drupal\rep\Vocabulary\VSTOI;
 
 class TreeController extends ControllerBase {
 
+  /**
+   * Formats API list payloads to jsTree-compatible selectable leaves.
+   */
+  private function formatTreeItems(array $elements, $defaultManagerEmail = '') {
+    $items = [];
+    foreach ($elements as $el) {
+      if (empty($el->uri)) {
+        continue;
+      }
+      $items[] = (object) [
+        'uri' => $el->uri,
+        'label' => $el->label ?? $el->hasContent ?? $el->uri,
+        'comment' => $el->comment ?? '',
+        'typeNamespace' => $el->typeNamespace ?? '',
+        'hasStatus' => $el->hasStatus ?? NULL,
+        'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $defaultManagerEmail,
+        'hasWebDocument' => $el->hasWebDocument ?? '',
+        'hasImageUri' => $el->hasImageUri ?? '',
+        // Leaf nodes in the tree.
+        'children' => false,
+      ];
+    }
+
+    usort($items, function($a, $b) {
+      return strcasecmp((string) $a->label, (string) $b->label);
+    });
+
+    return $items;
+  }
+
+  /**
+   * Builds a flat, selectable list of manager-owned elements for tree modals.
+   */
+  private function getManagerOwnedItems($elementtype) {
+    $managerEmail = \Drupal::currentUser()->getEmail();
+    $elements = ListManagerEmailPage::exec($elementtype, $managerEmail, 1, 9999);
+    if (!is_array($elements)) {
+      $elements = [];
+    }
+
+    return $this->formatTreeItems($elements, $managerEmail);
+  }
+
+  /**
+   * Builds a flat list using keyword API (project-wide) as fallback.
+   */
+  private function getKeywordItems($elementtype) {
+    $api = \Drupal::service('rep.api_connector');
+    $elements = $api->parseObjectResponse($api->listByKeyword($elementtype, '_', 9999, 0), 'listByKeyword');
+    if (!is_array($elements)) {
+      $elements = [];
+    }
+
+    return $this->formatTreeItems($elements, \Drupal::currentUser()->getEmail());
+  }
+
   // public function getChildren(Request $request) {
   //   $api = \Drupal::service('rep.api_connector');
 
@@ -43,33 +99,55 @@ class TreeController extends ControllerBase {
     // When selecting a Workflow Stem (a.k.a. ProcessStem), we want manager-owned instances,
     // not just the ontology class hierarchy.
     if (in_array($elementtype, ['processstem', 'workflowstem'], true) && $nodeUri === VSTOI::PROCESS_STEM) {
-      $managerEmail = \Drupal::currentUser()->getEmail();
-      $elements = ListManagerEmailPage::exec($elementtype, $managerEmail, 1, 9999);
-      if (!is_array($elements)) {
-        $elements = [];
+      return new JsonResponse($this->getManagerOwnedItems($elementtype));
+    }
+
+    // Context-specific selectors that should prefer manager-owned definitions
+    // at class roots, with keyword fallback when manager-scoped list is empty.
+    $instanceFieldRoots = [
+      'component' => EntryPoints::CLASS_EP_COMPONENT,
+      'instrument' => EntryPoints::CLASS_EP_INSTRUMENT,
+      'platform' => EntryPoints::CLASS_EP_PLATFORM,
+    ];
+    if (($fieldId === 'instance_type' || $fieldId === NULL || $fieldId === '')
+      && isset($instanceFieldRoots[$elementtype])
+      && $nodeUri === $instanceFieldRoots[$elementtype]) {
+      $items = $this->getManagerOwnedItems($elementtype);
+      if (!empty($items)) {
+        return new JsonResponse($items);
       }
 
-      $items = [];
-      foreach ($elements as $el) {
-        if (empty($el->uri)) {
+      // If manager-scoped list is empty, use project-wide listing so instance
+      // creation can still select existing definitions.
+      $items = $this->getKeywordItems($elementtype);
+      if (!empty($items)) {
+        return new JsonResponse($items);
+      }
+
+      // Fallback to ontology classes when manager has no owned elements.
+    }
+
+    if ($fieldId === 'component_isAttributeOf'
+      && $elementtype === 'componentattribute'
+      && $nodeUri === EntryPoints::CLASS_EP_COMPONENT_ATTRIBUTE) {
+      $items = $api->parseObjectResponse($api->getChildren($nodeUri), 'getChildren');
+      if (!is_array($items)) {
+        $items = [];
+      }
+
+      // Keep ontology semantics: selector is for ComponentAttribute classes.
+      // If a returned class has no subclasses, mark it as a leaf so it can be
+      // selected directly in the modal tree.
+      foreach ($items as $item) {
+        if (empty($item->uri)) {
           continue;
         }
-        $items[] = (object) [
-          'uri' => $el->uri,
-          'label' => $el->label ?? $el->hasContent ?? $el->uri,
-          'comment' => $el->comment ?? '',
-          'typeNamespace' => $el->typeNamespace ?? '',
-          'hasStatus' => $el->hasStatus ?? NULL,
-          'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $managerEmail,
-          'hasWebDocument' => $el->hasWebDocument ?? '',
-          'hasImageUri' => $el->hasImageUri ?? '',
-          // Leaf nodes in the tree.
-          'children' => false,
-        ];
+        $sub = $api->parseObjectResponse($api->getChildren($item->uri), 'getChildren');
+        $item->children = is_array($sub) && !empty($sub);
       }
 
       usort($items, function($a, $b) {
-        return strcasecmp((string) $a->label, (string) $b->label);
+        return strcasecmp((string) ($a->label ?? ''), (string) ($b->label ?? ''));
       });
 
       return new JsonResponse($items);
@@ -78,100 +156,19 @@ class TreeController extends ControllerBase {
     if ($elementtype === 'component' &&
         $nodeUri === EntryPoints::CLASS_EP_COMPONENT &&
         $fieldId === 'containerslot_component') {
-      $managerEmail = \Drupal::currentUser()->getEmail();
-      $elements = ListManagerEmailPage::exec('component', $managerEmail, 1, 9999);
-      if (!is_array($elements)) {
-        $elements = [];
-      }
-
-      $items = [];
-      foreach ($elements as $el) {
-        if (empty($el->uri)) {
-          continue;
-        }
-        $items[] = (object) [
-          'uri' => $el->uri,
-          'label' => $el->label ?? $el->hasContent ?? $el->uri,
-          'comment' => $el->comment ?? '',
-          'typeNamespace' => $el->typeNamespace ?? '',
-          'hasStatus' => $el->hasStatus ?? NULL,
-          'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $managerEmail,
-          'hasWebDocument' => $el->hasWebDocument ?? '',
-          'hasImageUri' => $el->hasImageUri ?? '',
-          // Leaf nodes in the tree.
-          'children' => false,
-        ];
-      }
-
-      usort($items, function($a, $b) {
-        return strcasecmp((string) $a->label, (string) $b->label);
-      });
-
-      return new JsonResponse($items);
+      return new JsonResponse($this->getManagerOwnedItems('component'));
     }
 
     if ($elementtype === 'componentinstance' && $nodeUri === EntryPoints::INSTANCE_EP_COMPONENT) {
-      $managerEmail = \Drupal::currentUser()->getEmail();
-      $elements = ListManagerEmailPage::exec('componentinstance', $managerEmail, 1, 9999);
-      if (!is_array($elements)) {
-        $elements = [];
-      }
+      return new JsonResponse($this->getManagerOwnedItems('componentinstance'));
+    }
 
-      $items = [];
-      foreach ($elements as $el) {
-        if (empty($el->uri)) {
-          continue;
-        }
-        $items[] = (object) [
-          'uri' => $el->uri,
-          'label' => $el->label ?? $el->hasContent ?? $el->uri,
-          'comment' => $el->comment ?? '',
-          'typeNamespace' => $el->typeNamespace ?? '',
-          'hasStatus' => $el->hasStatus ?? NULL,
-          'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $managerEmail,
-          'hasWebDocument' => $el->hasWebDocument ?? '',
-          'hasImageUri' => $el->hasImageUri ?? '',
-          'children' => false,
-        ];
-      }
-
-      usort($items, function($a, $b) {
-        return strcasecmp((string) $a->label, (string) $b->label);
-      });
-
-      return new JsonResponse($items);
+    if ($elementtype === 'instrumentinstance' && $nodeUri === EntryPoints::INSTANCE_EP_INSTRUMENT) {
+      return new JsonResponse($this->getManagerOwnedItems('instrumentinstance'));
     }
 
     if ($elementtype === 'platforminstance' && $nodeUri === EntryPoints::INSTANCE_EP_PLATFORM) {
-      $managerEmail = \Drupal::currentUser()->getEmail();
-      $elements = ListManagerEmailPage::exec('platforminstance', $managerEmail, 1, 9999);
-      if (!is_array($elements)) {
-        $elements = [];
-      }
-
-      $items = [];
-      foreach ($elements as $el) {
-        if (empty($el->uri)) {
-          continue;
-        }
-        $items[] = (object) [
-          'uri' => $el->uri,
-          'label' => $el->label ?? $el->hasContent ?? $el->uri,
-          'comment' => $el->comment ?? '',
-          'typeNamespace' => $el->typeNamespace ?? '',
-          'hasStatus' => $el->hasStatus ?? NULL,
-          'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $managerEmail,
-          'hasWebDocument' => $el->hasWebDocument ?? '',
-          'hasImageUri' => $el->hasImageUri ?? '',
-          'children' => false,
-        ];
-      }
-
-      usort($items, function($a, $b) {
-        return strcasecmp((string) $a->label, (string) $b->label);
-      });
-
-      return new JsonResponse($items);
+      return new JsonResponse($this->getManagerOwnedItems('platforminstance'));
     }
 
     $children = $api->parseObjectResponse($api->getChildren($nodeUri), 'getChildren');
