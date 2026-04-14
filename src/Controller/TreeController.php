@@ -176,6 +176,15 @@ class TreeController extends ControllerBase {
       $children = [];
     }
 
+    if (empty($children) && $nodeUri === EntryPoints::CLASS_EP_COMPONENT_ATTRIBUTE) {
+      $fallback = $api->parseObjectResponse($api->getUri(VSTOI::COMPONENT_ATTRIBUTE), 'getUri');
+      if (is_object($fallback) && !empty($fallback->uri)) {
+        $sub = $api->parseObjectResponse($api->getChildren($fallback->uri), 'getChildren');
+        $fallback->children = is_array($sub) && !empty($sub);
+        $children = [$fallback];
+      }
+    }
+
     $tables       = new Tables(\Drupal::database());
     $all_mappings = $tables->getAllMappings();
     $mapped_nodes = [];

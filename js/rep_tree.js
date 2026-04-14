@@ -1227,25 +1227,15 @@
                       if (isTopLevelBranch && Array.isArray(data) && data.length > 0) {
                         var first = data[0];
 
-                        // --- NEW: safe helpers for comparison ---
+                        // Promote ONLY when backend returns the same node URI as a child
+                        // (self-duplication). Do not promote by label/superUri, because
+                        // valid roots (e.g., ComponentAttributeEntryPoint) would become empty.
                         var rootUri   = (node.original && node.original.uri)   ? node.original.uri   : null;
-                        var rootLabel = (node.original && node.original.label) ? node.original.label : (node.text || '');
-                        var childSup  = (first && first.superUri) ? first.superUri : null;
-                        var childLbl  = (first && first.label)    ? first.label    : '';
+                        var childUri  = (first && first.uri) ? first.uri : null;
 
-                        // --- PROMOTION RULE ---
-                        // Promote if:
-                        //  (A) child's superUri equals root uri
-                        //   OR
-                        //  (B) child's label equals root label (case/space trimmed)
-                        if (
-                          (childSup && rootUri && childSup === rootUri) ||
-                          (String(childLbl).trim() !== '' &&
-                          String(rootLabel).trim() !== '' &&
-                          String(childLbl).trim() === String(rootLabel).trim())
-                        ) {
+                        if (childUri && rootUri && childUri === rootUri) {
                           shouldPromote = true;
-                          promotionTargetUri = first.uri; // we will fetch grandchildren of this child
+                          promotionTargetUri = childUri;
                         }
                       }
 
@@ -1276,7 +1266,11 @@
                             },
                           dataType: 'json',
                           success: function (grandchildren) {
-                            processAndReturn(grandchildren);
+                            if (Array.isArray(grandchildren) && grandchildren.length > 0) {
+                              processAndReturn(grandchildren);
+                            } else {
+                              processAndReturn(data);
+                            }
                           },
                           error: function () {
                             console.warn('[tree] promotion hop failed for', promotionTargetUri, '→ falling back to original children.');
