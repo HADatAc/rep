@@ -1387,3 +1387,18 @@ form.rep-form-namespace legend {
   margin-right: 6px;
   border: 1px solid rgba(0,0,0,0.15);
 }
+
+/* Autocomplete UX feedback (REP). */
+.rep-autocomplete-status {
+  display: none;
+  margin-top: 4px;
+}
+
+.rep-autocomplete-status--info {
+  color: #555;
+}
+
+.rep-autocomplete-status--error {
+  color: #b10e1e;
+  font-weight: 600;
+}

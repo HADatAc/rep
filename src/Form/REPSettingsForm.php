@@ -217,6 +217,63 @@ class REPSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('jwt_secret'),
     ];
 
+    // Graph visualization (vis-network).
+    $form['graph_settings'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Graph visualization'),
+      '#open' => FALSE,
+    ];
+
+    $form['graph_settings']['graph_max_live_nodes'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Max visible nodes'),
+      '#default_value' => (int) ($config->get('graph_max_live_nodes') ?? 600),
+      '#min' => 50,
+      '#step' => 1,
+      '#description' => $this->t('Safety cap for nodes shown on the canvas.'),
+    ];
+
+    $form['graph_settings']['graph_page_size'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Page size (Load more)'),
+      '#default_value' => (int) ($config->get('graph_page_size') ?? 25),
+      '#min' => 1,
+      '#step' => 1,
+      '#description' => $this->t('How many relationships are fetched per request.'),
+    ];
+
+    $form['graph_settings']['graph_max_members_per_soc'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Items per page (menus)'),
+      '#default_value' => (int) ($config->get('graph_max_members_per_soc') ?? 5),
+      '#min' => 1,
+      '#step' => 1,
+      '#description' => $this->t('How many items are shown per page in relationship lists/menus.'),
+    ];
+
+    $form['graph_settings']['graph_auto_show_on_fetch'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Auto-show nodes when fetched'),
+      '#default_value' => (int) ($config->get('graph_auto_show_on_fetch') ?? 0),
+      '#min' => 0,
+      '#step' => 1,
+      '#description' => $this->t('0 disables auto-adding fetched nodes to the canvas.'),
+    ];
+
+    $form['graph_settings']['graph_predicates_hidden'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Hidden predicates'),
+      '#default_value' => $config->get('graph_predicates_hidden') ?? '',
+      '#description' => $this->t('One predicate per line. These labels will be hidden from the graph explorer/menu.'),
+    ];
+
+    $form['graph_settings']['graph_predicates_auto_expand'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Auto-expand predicates (double-click)'),
+      '#default_value' => $config->get('graph_predicates_auto_expand') ?? '',
+      '#description' => $this->t('One predicate per line. On double-click, the graph will prefetch one page for each predicate (without automatically showing everything).'),
+    ];
+
     // Simple fillers to add vertical spacing in the form.
     $form['filler_1'] = [
       '#type' => 'item',
@@ -271,6 +328,27 @@ class REPSettingsForm extends ConfigFormBase {
       (strtolower(substr($cttUrl, 0, 7)) !== 'http://') &&
       (strtolower(substr($cttUrl, 0, 8)) !== 'https://')) {
       $form_state->setErrorByName('ctt_url', $this->t("CTT Editor URL must start with 'http://' or 'https://'."));
+    }
+
+    // Graph settings validation.
+    $maxLive = (int) $form_state->getValue('graph_max_live_nodes');
+    if ($maxLive < 50) {
+      $form_state->setErrorByName('graph_max_live_nodes', $this->t('Max visible nodes must be at least 50.'));
+    }
+
+    $pageSize = (int) $form_state->getValue('graph_page_size');
+    if ($pageSize < 1) {
+      $form_state->setErrorByName('graph_page_size', $this->t('Page size must be at least 1.'));
+    }
+
+    $itemsPerPage = (int) $form_state->getValue('graph_max_members_per_soc');
+    if ($itemsPerPage < 1) {
+      $form_state->setErrorByName('graph_max_members_per_soc', $this->t('Items per page must be at least 1.'));
+    }
+
+    $autoShow = (int) $form_state->getValue('graph_auto_show_on_fetch');
+    if ($autoShow < 0) {
+      $form_state->setErrorByName('graph_auto_show_on_fetch', $this->t('Auto-show must be 0 or greater.'));
     }
   }
 
@@ -327,6 +405,15 @@ class REPSettingsForm extends ConfigFormBase {
       $config->set('ctt_url', trim((string) $cttUrl));
     }
     $config->set('jwt_secret', $form_state->getValue('jwt_secret'));
+
+    // Graph settings.
+    $config->set('graph_max_live_nodes', (int) $form_state->getValue('graph_max_live_nodes'));
+    $config->set('graph_page_size', (int) $form_state->getValue('graph_page_size'));
+    $config->set('graph_max_members_per_soc', (int) $form_state->getValue('graph_max_members_per_soc'));
+    $config->set('graph_auto_show_on_fetch', (int) $form_state->getValue('graph_auto_show_on_fetch'));
+    $config->set('graph_predicates_hidden', trim((string) ($form_state->getValue('graph_predicates_hidden') ?? '')));
+    $config->set('graph_predicates_auto_expand', trim((string) ($form_state->getValue('graph_predicates_auto_expand') ?? '')));
+
     $config->save();
 
     // IMPORTANT:

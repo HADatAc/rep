@@ -55,6 +55,23 @@
       const MAX_LIVE_NODES      = Number(limits.maxLiveNodes     || 600);
       const AUTO_SHOW_ON_FETCH  = Number(limits.autoShowOnFetch  || 0);
 
+      const nodeInfoEndpoint =
+        (drupalSettings && drupalSettings.rep && drupalSettings.rep.nodeInfoEndpoint) ||
+        (window.Drupal && Drupal.url ? Drupal.url('rep/graph/node') : '/rep/graph/node');
+
+      const predCfg = (drupalSettings && drupalSettings.rep && drupalSettings.rep.graphPredicateConfig) || {};
+      const normalizePredForApi = (v) => {
+        const s = String(v || '').trim();
+        if (!s) return '';
+        const l = s.toLowerCase();
+        if (l === 'super' || l === 'superuri' || l === 'hassuperuri' || l === 'superclassuri' || l === 'hassuperclassuri') return 'super';
+        return s;
+      };
+      const normalizePredKey = (v) => normalizePredForApi(v).toLowerCase();
+
+      const hiddenPredicateKeys = new Set(((predCfg.hidden || [])).map(normalizePredKey).filter(Boolean));
+      const autoExpandPredicates = ((predCfg.autoExpand || [])).map(normalizePredForApi).filter(Boolean);
+
       const eyeSVG = `<i class="fa fa-eye"></i>`;
       const eyeOffSVG = `<i class="fa fa-eye-slash"></i>`;
 
@@ -116,6 +133,16 @@
         e.from = expandCurie(e.from);
         e.to   = expandCurie(e.to);
         if (e.predUri) e.predUri = expandCurie(e.predUri);
+
+        // Normalize label variants for the direct parent pointer.
+        if (typeof e.label === 'string' && e.label) {
+          const l = e.label.trim();
+          const lk = l.toLowerCase();
+          if (lk === 'super' || lk === 'superuri' || lk === 'hassuperuri' || lk === 'superclassuri' || lk === 'hassuperclassuri') {
+            e.label = 'super';
+          }
+        }
+
         return e;
       }
       for (let i = 0; i < extraNodes.length; i++) extraNodes[i] = normalizeNode(extraNodes[i]);
@@ -127,16 +154,43 @@
       const pageState = Object.create(null);
 
       // ----- Layout helpers -----
-      function freezeAllNodes(ds) { ds.get().forEach(n => ds.update({ id: n.id, fixed: { x: true, y: true } })); }
-      function unfreezeNodes(ds, ids) { ids.forEach(id => ds.update({ id, fixed: { x: false, y: false } })); }
+      // Users must be able to drag nodes and keep their manual layout.
+      const pinnedNodes = new Set();
+
+      // Kept for compatibility with older placement logic. (no-op)
+      function freezeAllNodes() {}
+      function unfreezeNodes() {}
+
+      function isPinned(id) { return pinnedNodes.has(id); }
+
       function placeAround(network, centerId, newIds, radius = 140) {
+        const ids = (newIds || []).filter(id => id && !isPinned(id));
+        if (!ids.length) return;
         const pos = network.getPositions([centerId])[centerId];
         if (!pos) return;
-        const N = newIds.length || 1;
-        newIds.forEach((id, i) => {
+        const N = ids.length || 1;
+        ids.forEach((id, i) => {
           const a = (2 * Math.PI * i) / N;
           network.moveNode(id, pos.x + radius * Math.cos(a), pos.y + radius * Math.sin(a));
         });
+      }
+
+      function placeInRow(network, centerId, idsRaw, dy, spacing = 170) {
+        const ids = (idsRaw || []).filter(id => id && !isPinned(id));
+        if (!ids.length) return;
+        const pos = network.getPositions([centerId])[centerId];
+        if (!pos) return;
+        const startX = pos.x - ((ids.length - 1) * spacing) / 2;
+        ids.forEach((id, i) => {
+          network.moveNode(id, startX + (i * spacing), pos.y + dy);
+        });
+      }
+
+      function placeByPredicate(network, anchorId, ids, predicate) {
+        const lbl = normalizePredForApi(predicate);
+        if (lbl === 'super') return placeInRow(network, anchorId, ids, -170);
+        if (lbl === 'children' || lbl === 'contains') return placeInRow(network, anchorId, ids, 170);
+        return placeAround(network, anchorId, ids, 160);
       }
 
       // ----- Virtualize loop edges so they are clickable -----
@@ -152,7 +206,7 @@
             color: { background: '#ffc107', border: '#e0a800' }
           });
         }
-        extraEdges.push({ from: e.from, to: virtualNodeId, label: e.label });
+        extraEdges.push(normalizeEdge({ from: e.from, to: virtualNodeId, label: e.label }));
       });
       extraEdges = extraEdges.filter(e => e.from !== e.to);
 
@@ -164,11 +218,68 @@
           widthConstraint: { minimum: 70, maximum: 70 },
           heightConstraint: { minimum: 35 }
         },
-        edges: { arrows: "to", smooth: true },
-        layout: { improvedLayout: true },
-        physics: { solver: 'repulsion', stabilization: { enabled: true, iterations: 500, updateInterval: 100 } }
+        edges: {
+          arrows: { to: { enabled: true, scaleFactor: 0.85 } },
+          smooth: false,
+        },
+        layout: {
+          improvedLayout: false,
+        },
+        interaction: {
+          dragNodes: true,
+          dragView: true,
+          zoomView: true,
+          navigationButtons: true,
+          keyboard: { enabled: true },
+          hideEdgesOnDrag: false,
+          hideEdgesOnZoom: false,
+          zoomSpeed: 0.9,
+          tooltipDelay: 200,
+        },
+        // Physics disabled: we place new nodes deterministically and keep the graph responsive.
+        physics: { enabled: false }
       };
       const network = new vis.Network(container, { nodes, edges }, options);
+
+      // Ensure mouse wheel zoom works (some themes/plugins can swallow wheel events).
+      try {
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+        container.addEventListener('wheel', (ev) => {
+          // Let Shift+wheel scroll the page normally.
+          if (ev.shiftKey) return;
+
+          // Only handle wheel events that happen over the graph container.
+          if (!container.contains(ev.target)) return;
+
+          ev.preventDefault();
+          ev.stopPropagation();
+
+          const deltaY = (typeof ev.deltaY === 'number') ? ev.deltaY : 0;
+          if (deltaY === 0) return;
+
+          const current = network.getScale();
+          const factor = Math.exp(-deltaY * 0.0015);
+          const next = clamp(current * factor, 0.1, 4.0);
+
+          const rect = container.getBoundingClientRect();
+          const domX = (typeof ev.clientX === 'number') ? (ev.clientX - rect.left) : (container.clientWidth / 2);
+          const domY = (typeof ev.clientY === 'number') ? (ev.clientY - rect.top)  : (container.clientHeight / 2);
+
+          const cx = container.clientWidth / 2;
+          const cy = container.clientHeight / 2;
+
+          const pointerCanvas = network.DOMtoCanvas({ x: domX, y: domY });
+          const newView = {
+            x: pointerCanvas.x - (domX - cx) / next,
+            y: pointerCanvas.y - (domY - cy) / next,
+          };
+
+          network.moveTo({ position: newView, scale: next, animation: false });
+        }, { passive: false, capture: true });
+      } catch (e) {
+        // ignore
+      }
 
       // Expose for other behaviors (e.g., collapse/show) to re-fit on demand.
       container.__repNetwork = network;
@@ -184,11 +295,19 @@
         } catch (e) {
           // ignore
         }
+
+        // Critical: disable physics after the initial layout so the graph becomes
+        // responsive and nodes stay where the user drags them.
+        try {
+          network.setOptions({ physics: { enabled: false } });
+        } catch (e2) {
+          // ignore
+        }
       }
 
-      // Center once vis.js finishes stabilization.
+      // Center once the first draw happens.
       try {
-        network.once('stabilizationIterationsDone', centerOnRoot);
+        network.once('afterDrawing', centerOnRoot);
       } catch (e) {
         // ignore
       }
@@ -201,6 +320,9 @@
         return !!id && !!tu && id === tu;
       }
       function ensureNodeStyle(n) {
+        // Always keep nodes draggable.
+        n.fixed = false;
+
         if (!n.label || !String(n.label).trim()) {
           const p = (n.id || '').split('/');
           n.label = p[p.length - 1] || (n.id || '');
@@ -242,7 +364,7 @@
       const explorer = (container.parentElement && container.parentElement.querySelector('#rep-graph-explorer')) || null;
       if (explorer && !explorer.dataset.repInit) {
         explorer.dataset.repInit = '1';
-        explorer.innerHTML = '<div style="opacity:.8;font-size:13px;">Click a node to explore relationships.</div>';
+        explorer.innerHTML = '<div style="opacity:.8;font-size:13px;">Click a node to see details. Double-click to load relationships.</div>';
       }
 
       // ----- Floating menu -----
@@ -334,16 +456,22 @@
       }
       function isDisplayableLabel(label) {
         if (!label) return false;
-        if (label === 'hasCollection') return false;
+        const raw = String(label);
+        const key = normalizePredKey(raw);
+        if (!key) return false;
+        if (hiddenPredicateKeys.has(key)) return false;
+
+        if (raw === 'hasCollection') return false;
         const blacklist = new Set(['label','comment','body','hasImageUri','hasWebDocument','hasStatus','id']);
-        return !blacklist.has(label);
+        return !blacklist.has(raw);
       }
       function buildLabelEdgesMap(relEdges) {
         const map = new Map();
         relEdges.forEach(e => {
-          const E = normalizeEdge(e);
+          // relEdges are expected to be normalized already; normalize defensively only if needed.
+          const E = (e && typeof e === 'object' && typeof e.from === 'string' && typeof e.to === 'string') ? e : normalizeEdge(e);
           const target = extraNodes.find(n => n.id === E.to);
-          let lbl = e.label;
+          let lbl = E.label;
           if (lbl === 'hasCollection' && target) {
             const tu = (target.typeUri || '');
             if (tu.includes('/hasco/SampleCollection')) lbl = 'hasSampleCollection';
@@ -364,12 +492,11 @@
 
       function synthesizeContainsFromReverse(nodeId) {
         const rev = extraEdges
-          .map(normalizeEdge)
           .filter(e => e.to === nodeId && isReverseMemberLabel(e.label));
         rev.forEach(e => {
           const synth = normalizeEdge({ from: nodeId, to: e.from, label: 'contains' });
           const id = edgeIdOf(synth);
-          if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === id)) {
+          if (!extraEdges.some(x => edgeIdOf(x) === id)) {
             extraEdges.push({ ...synth, id });
           }
         });
@@ -393,8 +520,8 @@
           }
           const e = { from: nid, to: tid, label };
           const id = edgeIdOf(e);
-          if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === id)) {
-            extraEdges.push({ ...e, id });
+          if (!extraEdges.some(x => edgeIdOf(x) === id)) {
+            extraEdges.push(normalizeEdge({ ...e, id }));
           }
         }
         ensureTypeEdge('typeUri', node.typeUri);
@@ -458,7 +585,7 @@
 
       // ---------- Items for label (with fallback for hascoTypeUri) ----------
       function itemsForLabel(nodeId, label) {
-        const norms = extraEdges.map(normalizeEdge);
+        const norms = extraEdges;
 
         if (label === 'contains') {
           return norms
@@ -636,24 +763,23 @@
               ev.stopPropagation();
 
               if (!edges.get(desiredEdgeId)) {
-                if (!nodes.get(child.id)) nodes.add(ensureNodeStyle({ ...child }));
+                const wasVisible = !!nodes.get(child.id);
+
+                if (!wasVisible) nodes.add(ensureNodeStyle({ ...child }));
                 if (!nodes.get(nodeId))  nodes.add(ensureNodeStyle({ id: nodeId, label: (nodeId.split('/').pop()||nodeId), shape:'box'}));
 
-                if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === desiredEdgeId)) {
-                  extraEdges.push({ ...desiredEdge, id: desiredEdgeId });
+                if (!extraEdges.some(x => edgeIdOf(x) === desiredEdgeId)) {
+                  extraEdges.push(normalizeEdge({ ...desiredEdge, id: desiredEdgeId }));
                 }
 
                 addEdgeVisible({ ...desiredEdge, id: desiredEdgeId });
 
-                const neighborIds = edges.get()
-                  .filter(ed => ed.from === nodeId)
-                  .map(ed => ed.to)
-                  .filter((v, i, arr) => arr.indexOf(v) === i);
-                if (neighborIds.length) {
+                // Only position the newly shown node; never reposition existing nodes.
+                if (!wasVisible) {
                   freezeAllNodes(nodes);
-                  placeAround(network, nodeId, neighborIds, 140);
+                  placeByPredicate(network, nodeId, [child.id], label);
                   network.redraw();
-                  unfreezeNodes(nodes, neighborIds);
+                  unfreezeNodes(nodes, [child.id]);
                 }
 
                 toggle.innerHTML = eyeOffSVG;
@@ -733,7 +859,7 @@
         newNodes.forEach(n => { if (!extraNodes.find(x => x.id === n.id)) extraNodes.push(n); });
         newEdges.forEach(e => {
           const id = edgeIdOf(e);
-          if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === id)) {
+          if (!extraEdges.some(x => edgeIdOf(x) === id)) {
             extraEdges.push({ ...e, id });
           }
         });
@@ -775,6 +901,278 @@
       };
       const primedIncomingNodes = Object.create(null);
 
+      const nodeInfoCache = Object.create(null);
+      const nodeInfoWaiters = Object.create(null);
+      const nodeInfoRenderQueued = Object.create(null);
+
+      // Simple modal for long text (e.g., comment).
+      let repTextModal = null;
+      let repTextModalTitle = null;
+      let repTextModalBody = null;
+      let repTextModalKeyListenerBound = false;
+
+      function ensureTextModal() {
+        if (repTextModal) return;
+
+        repTextModal = document.createElement('div');
+        repTextModal.id = 'rep-graph-text-modal';
+        repTextModal.style.cssText = [
+          'position:fixed',
+          'inset:0',
+          'z-index:20000',
+          'display:none',
+          'align-items:center',
+          'justify-content:center',
+          'background:rgba(0,0,0,0.45)',
+          'padding:20px',
+        ].join(';');
+
+        const box = document.createElement('div');
+        box.style.cssText = [
+          'background:#fff',
+          'border-radius:10px',
+          'max-width:900px',
+          'width:90vw',
+          'max-height:80vh',
+          'overflow:auto',
+          'box-shadow:0 10px 30px rgba(0,0,0,0.25)',
+          'padding:12px 14px',
+        ].join(';');
+
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;';
+
+        repTextModalTitle = document.createElement('div');
+        repTextModalTitle.style.cssText = 'font-weight:600; font-size:14px;';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn btn-sm btn-light';
+        closeBtn.textContent = 'Close';
+        closeBtn.addEventListener('click', () => { repTextModal.style.display = 'none'; });
+
+        header.appendChild(repTextModalTitle);
+        header.appendChild(closeBtn);
+
+        repTextModalBody = document.createElement('div');
+        repTextModalBody.style.cssText = 'white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.35;';
+
+        box.appendChild(header);
+        box.appendChild(repTextModalBody);
+        repTextModal.appendChild(box);
+        document.body.appendChild(repTextModal);
+
+        repTextModal.addEventListener('click', (ev) => {
+          if (ev.target === repTextModal) {
+            repTextModal.style.display = 'none';
+          }
+        });
+
+        if (!repTextModalKeyListenerBound) {
+          repTextModalKeyListenerBound = true;
+          document.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Escape' && repTextModal && repTextModal.style.display !== 'none') {
+              repTextModal.style.display = 'none';
+            }
+          });
+        }
+      }
+
+      function openTextModal(title, text) {
+        ensureTextModal();
+        if (!repTextModal) return;
+        repTextModalTitle.textContent = String(title || 'Details');
+        repTextModalBody.textContent = String(text || '');
+        repTextModal.style.display = 'flex';
+      }
+
+      function ensureNodeInfo(nodeId, done) {
+        const id = expandCurie(nodeId);
+
+        if (!nodeInfoEndpoint) {
+          if (done) done(null);
+          return;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(nodeInfoCache, id)) {
+          if (done) done(nodeInfoCache[id]);
+          return;
+        }
+
+        if (Array.isArray(nodeInfoWaiters[id])) {
+          nodeInfoWaiters[id].push(done);
+          return;
+        }
+
+        nodeInfoWaiters[id] = [done];
+
+        $.getJSON(nodeInfoEndpoint, { uri: id })
+          .done((data) => { nodeInfoCache[id] = data || null; })
+          .fail(() => { nodeInfoCache[id] = null; })
+          .always(() => {
+            const q = nodeInfoWaiters[id] || [];
+            delete nodeInfoWaiters[id];
+            q.forEach((fn) => {
+              try { if (fn) fn(nodeInfoCache[id]); } catch (e) {}
+            });
+          });
+      }
+
+      function setExplorerStatus(nodeId, text) {
+        if (!explorer) return;
+        const el = explorer.querySelector('#rep-graph-status');
+        if (!el) return;
+        if (el.getAttribute('data-node-id') !== nodeId) return;
+        el.textContent = String(text || '');
+      }
+
+      function renderNodeInfoBox(box, nodeId, fallbackNode) {
+        if (!box) return;
+
+        const rebuild = (info, statusText) => {
+          if (!box.isConnected) return;
+          box.setAttribute('data-node-id', nodeId);
+          box.innerHTML = '';
+
+          const status = document.createElement('div');
+          status.id = 'rep-graph-status';
+          status.setAttribute('data-node-id', nodeId);
+          status.style.cssText = 'font-size:12px; opacity:.75; margin-bottom:6px;';
+          status.textContent = String(statusText || '');
+          box.appendChild(status);
+
+          const addRow = (k, v, copyVal = null) => {
+            if (v === null || typeof v === 'undefined' || v === '') return;
+
+            // Respect hidden predicates also in the node details panel.
+            const keyRaw = String(k || '').trim();
+            const keyNorm = normalizePredKey(keyRaw);
+            if (keyNorm && hiddenPredicateKeys.has(keyNorm)) return;
+
+            // Avoid duplicates: if we already show the normalized "super" row, do not
+            // also show superUri/superURI variants as plain fields.
+            if (keyNorm === 'super' && keyRaw !== 'super' && info?.superUri) return;
+
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; gap:10px; align-items:flex-start; font-size:12px; padding:2px 0;';
+
+            const kk = document.createElement('div');
+            kk.style.cssText = 'flex:0 0 130px; opacity:.75;';
+            kk.textContent = keyRaw;
+
+            const vv = document.createElement('div');
+            vv.style.cssText = 'flex:1 1 auto; word-break:break-all;';
+            vv.textContent = String(v);
+
+            // Clamp long comments in the panel (2-3 lines) and allow opening full text in a modal.
+            if (keyNorm === 'comment') {
+              vv.style.cssText = [
+                'flex:1 1 auto',
+                'word-break:break-word',
+                'white-space:normal',
+                'overflow:hidden',
+                'display:-webkit-box',
+                '-webkit-line-clamp:3',
+                '-webkit-box-orient:vertical',
+                'max-height:4.6em',
+              ].join(';');
+            }
+
+            row.appendChild(kk);
+            row.appendChild(vv);
+
+            if (copyVal) {
+              const raw = String(copyVal || '');
+              const c = makeCopyLink('Copy', () => raw);
+              c.style.marginLeft = '6px';
+              row.appendChild(c);
+
+              // Open links in a new tab (direct for http(s) URLs; otherwise open the REP page).
+              const isHttp = /^https?:\/\//i.test(raw);
+              const kLower = keyRaw.toLowerCase();
+              const preferDirect = isHttp && (
+                kLower.includes('webdocument') ||
+                kLower.includes('image') ||
+                kLower.endsWith('url') ||
+                kLower === 'url'
+              );
+              const href = preferDirect ? raw : buildLocalUriLink(raw);
+              if (href) {
+                const a = document.createElement('a');
+                a.href = href;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.textContent = 'Open';
+                a.style.cssText = 'margin-left:6px; font-size:12px; color:#007bff; white-space:nowrap;';
+                row.appendChild(a);
+              }
+            }
+
+            if (keyNorm === 'comment') {
+              const full = String(v || '');
+              if (full.length > 260) {
+                const more = document.createElement('span');
+                more.textContent = 'View full';
+                more.style.cssText = 'margin-left:6px; cursor:pointer; font-size:12px; color:#007bff; white-space:nowrap;';
+                more.addEventListener('click', (ev2) => {
+                  ev2.preventDefault();
+                  ev2.stopPropagation();
+                  openTextModal('comment', full);
+                });
+                row.appendChild(more);
+              }
+            }
+
+            box.appendChild(row);
+          };
+
+          const hascoType = info?.hascoTypeUri || fallbackNode?.hascoTypeUri || null;
+          const typeUri   = info?.typeUri || fallbackNode?.typeUri || null;
+
+          if (hascoType) addRow('hascoTypeUri', hascoType, hascoType);
+          if (typeUri && typeUri !== hascoType) addRow('typeUri', typeUri, typeUri);
+
+          if (info?.superUri) addRow('super', info.superUri, info.superUri);
+
+          const fields = Array.isArray(info?.fields) ? info.fields : [];
+          fields.slice(0, 10).forEach((f) => {
+            if (f && f.key) addRow(f.key, f.value);
+          });
+
+          const lists = Array.isArray(info?.lists) ? info.lists : [];
+          lists.slice(0, 8).forEach((it) => {
+            if (it && it.key && typeof it.count !== 'undefined') addRow(it.key, String(it.count));
+          });
+
+          const links = Array.isArray(info?.links) ? info.links : [];
+          links.slice(0, 6).forEach((lnk) => {
+            if (lnk && lnk.key && lnk.uri) {
+              addRow(lnk.key, lnk.label || lnk.uri, lnk.uri);
+            }
+          });
+        };
+
+        if (!nodeInfoEndpoint) {
+          rebuild(null, 'Node details endpoint not configured.');
+          return;
+        }
+
+        // Quick paint using whatever we already know.
+        const canonicalId = expandCurie(nodeId);
+        const cached = Object.prototype.hasOwnProperty.call(nodeInfoCache, canonicalId) ? nodeInfoCache[canonicalId] : null;
+        if (cached) {
+          rebuild(cached, '');
+          return;
+        }
+
+        rebuild(null, 'Loading node details…');
+        ensureNodeInfo(nodeId, (info) => {
+          if (!box.isConnected) return;
+          if (box.getAttribute('data-node-id') !== nodeId) return;
+          rebuild(info, info ? '' : 'Failed to load node details.');
+        });
+      }
+
       function primeIncomingOnce(nodeId, done) {
         if (!explorer || !socEndpoint) {
           if (done) done();
@@ -796,14 +1194,13 @@
       }
 
       function itemsForIncomingLabel(nodeId, label) {
-        const norms = extraEdges.map(normalizeEdge);
-        return norms
+        return extraEdges
           .filter(e => e.to === nodeId && e.label === label)
           .map(e => ({ edge: { ...e }, id: edgeIdOf(e) }));
       }
 
       function inferIncomingPredUri(nodeId, label) {
-        const one = extraEdges.map(normalizeEdge).find(e => e.to === nodeId && e.label === label && e.predUri);
+        const one = extraEdges.find(e => e.to === nodeId && e.label === label && e.predUri);
         return one ? one.predUri : null;
       }
 
@@ -889,7 +1286,7 @@
           ensureVisible(desiredEdge.to);
 
           // Ensure it exists in cache as well
-          if (!extraEdges.find(x => edgeIdOf(normalizeEdge(x)) === eid)) {
+          if (!extraEdges.some(x => edgeIdOf(x) === eid)) {
             extraEdges.push({ ...desiredEdge, id: eid });
           }
 
@@ -897,11 +1294,12 @@
             addEdgeVisible({ ...desiredEdge, id: eid });
           }
 
-          if (addedNodeIds.length && anchorId) {
+          const toPlace = anchorId ? addedNodeIds.filter(id => id !== anchorId) : addedNodeIds;
+          if (toPlace.length && anchorId) {
             freezeAllNodes(nodes);
-            placeAround(network, anchorId, addedNodeIds, 160);
+            placeByPredicate(network, anchorId, toPlace, desiredEdge.label);
             network.redraw();
-            unfreezeNodes(nodes, addedNodeIds);
+            unfreezeNodes(nodes, toPlace);
           }
           return { changed: true, addedNodeIds };
         }
@@ -916,7 +1314,21 @@
       function renderExplorer(nodeId, selectedNode) {
         if (!explorer) return;
 
+        nodeId = expandCurie(nodeId);
         explorerState.currentNodeId = nodeId;
+
+        // Fetch node info so users can see which predicates exist without guessing.
+        if (nodeInfoEndpoint && !Object.prototype.hasOwnProperty.call(nodeInfoCache, nodeId)) {
+          if (!nodeInfoRenderQueued[nodeId]) {
+            nodeInfoRenderQueued[nodeId] = true;
+            ensureNodeInfo(nodeId, () => {
+              nodeInfoRenderQueued[nodeId] = false;
+              if (explorerState.currentNodeId === nodeId) {
+                renderExplorer(nodeId, selectedNode);
+              }
+            });
+          }
+        }
 
         const cleanTitle = selectedNode?.label
           ? String(selectedNode.label).replace(/\n?➕$/, '')
@@ -940,19 +1352,47 @@
           // Tabs
           const tab = explorerState.tab;
           const dir = (tab === 'in') ? 'in' : 'out';
+          const info = nodeInfoCache[nodeId] || null;
 
           // Labels
           let labels = [];
           if (dir === 'out') {
-            const related = extraEdges.map(normalizeEdge).filter(e => e.from === nodeId);
+            const related = extraEdges.filter(e => e.from === nodeId);
             const map = buildLabelEdgesMap(related);
-            labels = Array.from(map.keys()).filter(isDisplayableLabel);
-            labels = Array.from(new Set(labels.concat(['typeUri', 'hascoTypeUri'])));
-            if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
-            if (isClassNode(selectedNode) && !labels.includes('children')) labels.unshift('children');
+            labels = Array.from(map.keys());
+
+            // Add predicates discovered from the node payload so users don't need to guess.
+            if (info) {
+              if (Array.isArray(info.predicates)) {
+                info.predicates.forEach((p) => { if (p && p.key) labels.push(p.key); });
+              } else {
+                (info.links || []).forEach((lnk) => { if (lnk && lnk.key) labels.push(lnk.key); });
+                (info.lists || []).forEach((it) => { if (it && it.key && it.expandable !== false) labels.push(it.key); });
+              }
+              if (info.superUri) labels.push('super');
+            }
+
+            // Always expose both type labels (unless hidden).
+            labels = labels.concat(['typeUri', 'hascoTypeUri']);
+
+            labels = labels
+              .map(normalizePredForApi)
+              .filter(Boolean)
+              .filter(isDisplayableLabel);
+            labels = Array.from(new Set(labels));
+
+            // Known Study predicates (even if not explicitly present in the payload).
+            if (kind === 'study') {
+              ['hasVirtualColumn', 'hasSampleCollection', 'hasSubjectCollection', 'hasSpaceCollection', 'hasTimeCollection']
+                .forEach((p) => { if (isDisplayableLabel(p) && !labels.includes(p)) labels.push(p); });
+            }
+
+            if (kind === 'soc' && !labels.includes('contains') && isDisplayableLabel('contains')) labels.unshift('contains');
+            if (isClassNode(selectedNode) && !labels.includes('children') && isDisplayableLabel('children')) labels.unshift('children');
+            if (!labels.includes('super') && isDisplayableLabel('super') && (isClassNode(selectedNode) || (info && info.superUri))) labels.unshift('super');
           } else {
-            const incoming = extraEdges.map(normalizeEdge).filter(e => e.to === nodeId);
-            labels = Array.from(new Set(incoming.map(e => e.label))).filter(isDisplayableLabel);
+            const incoming = extraEdges.filter(e => e.to === nodeId);
+            labels = Array.from(new Set(incoming.map(e => normalizePredForApi(e.label)))).filter(isDisplayableLabel);
           }
 
           // Ensure stable ordering: keep contains/children first if present.
@@ -1001,223 +1441,347 @@
           header.appendChild(actions);
           explorer.appendChild(header);
 
-          // Tab buttons
-          const tabs = document.createElement('div');
-          tabs.style.cssText = 'display:flex; gap:8px; margin-bottom:10px;';
-          const mkTab = (id, text) => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'btn btn-sm ' + (explorerState.tab === id ? 'btn-secondary' : 'btn-outline-secondary');
-            b.textContent = text;
-            b.addEventListener('click', (e) => {
-              e.preventDefault();
-              if (explorerState.tab === id) return;
-              explorerState.tab = id;
-              renderExplorer(nodeId, selectedNode);
-            });
-            return b;
-          };
-          tabs.appendChild(mkTab('out', '→ Outgoing'));
-          explorer.appendChild(tabs);
+          // Node details (single click)
+          const detailsBox = document.createElement('div');
+          detailsBox.id = 'rep-graph-node-details';
+          detailsBox.style.cssText = 'border:1px solid #e5e5e5; background:white; border-radius:6px; padding:8px; margin-bottom:10px;';
+          explorer.appendChild(detailsBox);
+          renderNodeInfoBox(detailsBox, nodeId, selectedNode);
 
-          if (!currentLabel) {
+          // Predicates / relationships (collapsible)
+          const relPanel = document.createElement('details');
+          relPanel.open = true;
+          relPanel.style.cssText = 'border:1px solid #e5e5e5; background:white; border-radius:6px; padding:8px; margin-bottom:10px;';
+
+          const relSummary = document.createElement('summary');
+          relSummary.style.cssText = 'cursor:pointer; font-weight:600; font-size:13px;';
+          relSummary.textContent = 'Predicates';
+          relPanel.appendChild(relSummary);
+
+          const relInner = document.createElement('div');
+          relInner.style.cssText = 'margin-top:8px; display:flex; flex-direction:column; gap:8px;';
+          relPanel.appendChild(relInner);
+          explorer.appendChild(relPanel);
+
+          if (!labels || labels.length === 0) {
             const empty = document.createElement('div');
             empty.style.cssText = 'opacity:.75; font-size:13px;';
-            empty.textContent = (dir === 'out')
-              ? 'No relationships loaded. Click again or use "Load more".'
-              : 'No incoming relationships loaded.';
-            explorer.appendChild(empty);
+            empty.textContent = 'No predicates available for this node.';
+            relInner.appendChild(empty);
             return;
           }
 
-          // Label select
-          const labelRow = document.createElement('div');
-          labelRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;';
+          const countHintFor = (lbl) => {
+            let count = itemsForLabel(nodeId, lbl).length;
+            if (count > 0) return count;
+            if (!info) return count;
 
-          const sel = document.createElement('select');
-          sel.className = 'form-control form-control-sm';
-          sel.style.maxWidth = '240px';
-          labels.forEach(lbl => {
-            const opt = document.createElement('option');
-            opt.value = lbl;
-            const count = (dir === 'out') ? itemsForLabel(nodeId, lbl).length : itemsForIncomingLabel(nodeId, lbl).length;
-            opt.textContent = `${lbl} (${count})`;
-            if (lbl === currentLabel) opt.selected = true;
-            sel.appendChild(opt);
-          });
-          sel.addEventListener('change', () => {
-            if (dir === 'out') explorerState.outLabel = sel.value;
-            else explorerState.inLabel = sel.value;
-            renderExplorer(nodeId, selectedNode);
-          });
+            const normLbl = normalizePredForApi(lbl);
 
-          labelRow.appendChild(sel);
+            if (normLbl === 'super' && info.superUri) return 1;
 
-          const controls = document.createElement('div');
-          controls.style.cssText = 'display:flex; gap:8px; align-items:center;';
-          const showAllBtn = document.createElement('button');
-          showAllBtn.type = 'button';
-          showAllBtn.className = 'btn btn-sm btn-light';
-          showAllBtn.textContent = 'Show all';
-
-          const hideAllBtn = document.createElement('button');
-          hideAllBtn.type = 'button';
-          hideAllBtn.className = 'btn btn-sm btn-light';
-          hideAllBtn.textContent = 'Hide all';
-
-          const loadBtn = document.createElement('button');
-          loadBtn.type = 'button';
-          loadBtn.className = 'btn btn-sm btn-light';
-          loadBtn.textContent = 'Load more';
-
-          controls.appendChild(showAllBtn);
-          controls.appendChild(hideAllBtn);
-          controls.appendChild(loadBtn);
-          labelRow.appendChild(controls);
-          explorer.appendChild(labelRow);
-
-          const key = `${dir}:${nodeId}:${currentLabel}`;
-          const list = (dir === 'out') ? itemsForLabel(nodeId, currentLabel) : itemsForIncomingLabel(nodeId, currentLabel);
-          if (!pageState[key]) {
-            pageState[key] = {
-              fetched: list.length,
-              hasMoreServer: true,
-              exhausted: false,
-              prefetchTried: false,
-              triedGeneric: false,
-              predUri: (dir === 'in') ? inferIncomingPredUri(nodeId, currentLabel) : null,
-            };
-          }
-          const state = pageState[key];
-
-          const prefetchIfNeeded = () => {
-            if (list.length > 0 || state.prefetchTried) return false;
-            state.prefetchTried = true;
-            const loading = document.createElement('div');
-            loading.style.cssText = 'padding:6px 4px; opacity:.7;';
-            loading.textContent = 'Loading...';
-            explorer.appendChild(loading);
-
-            if (dir === 'out') {
-              fetchMoreForLabel(nodeId, currentLabel, state, loadBtn, () => { renderExplorer(nodeId, selectedNode); });
+            if (Array.isArray(info.predicates)) {
+              const p = info.predicates.find(x => normalizePredForApi(x?.key) === normLbl);
+              if (p) {
+                if (p.kind === 'link') return 1;
+                if (typeof p.count === 'number') return p.count;
+              }
             } else {
-              fetchMoreIncomingForLabel(nodeId, currentLabel, state, loadBtn, () => { renderExplorer(nodeId, selectedNode); });
+              const lnk = (info.links || []).find(x => normalizePredForApi(x?.key) === normLbl);
+              const lst = (info.lists || []).find(x => normalizePredForApi(x?.key) === normLbl && x?.expandable !== false);
+              if (lnk) return 1;
+              if (lst && typeof lst.count === 'number') return lst.count;
             }
-            return true;
+
+            return count;
           };
 
-          if (prefetchIfNeeded()) {
-            loadBtn.disabled = true;
-            return;
-          }
+          const renderPredicateBody = (lbl, bodyEl, summaryEl) => {
+            if (!bodyEl) return;
+            bodyEl.innerHTML = '';
 
-          // Wire load more
-          loadBtn.disabled = !socEndpoint || !!state.exhausted || state.hasMoreServer === false;
-          loadBtn.addEventListener('click', (ev) => {
-            ev.preventDefault();
-            if (dir === 'out') {
-              fetchMoreForLabel(nodeId, currentLabel, state, loadBtn, () => { renderExplorer(nodeId, selectedNode); });
-            } else {
-              fetchMoreIncomingForLabel(nodeId, currentLabel, state, loadBtn, () => { renderExplorer(nodeId, selectedNode); });
+            const list = itemsForLabel(nodeId, lbl);
+            const hint = countHintFor(lbl);
+            const shown = Math.max(list.length, hint);
+            if (summaryEl) summaryEl.textContent = `${lbl} (${shown})`;
+
+            const key = `out:${nodeId}:${lbl}`;
+            if (!pageState[key]) {
+              pageState[key] = {
+                offset: 0,
+                fetched: list.length,
+                hasMoreServer: true,
+                exhausted: false,
+                prefetchTried: false,
+                triedGeneric: false,
+                totalGuess: null,
+              };
             }
-          });
+            const state = pageState[key];
+            if (typeof state.offset !== 'number') state.offset = 0;
+            if (typeof state.fetched !== 'number') state.fetched = list.length;
+            if (state.fetched < list.length) state.fetched = list.length;
+            if (hint > list.length) state.hasMoreServer = true;
 
-          // Bulk show/hide
-          showAllBtn.addEventListener('click', (ev) => {
-            ev.preventDefault();
-            const items = (dir === 'out') ? itemsForLabel(nodeId, currentLabel) : itemsForIncomingLabel(nodeId, currentLabel);
-            const added = [];
-            items.forEach(({ edge: e }) => {
-              const otherId = (dir === 'out') ? e.to : e.from;
-              const other = ensureExtraNodeById(otherId, { asClass: (currentLabel === 'typeUri' || currentLabel === 'hascoTypeUri') });
-              const desired = (dir === 'out')
-                ? { from: nodeId, to: other.id, label: currentLabel }
-                : { from: other.id, to: nodeId, label: currentLabel, predUri: e.predUri };
-              if (currentLabel === 'contains') desired.label = 'contains';
-              if (currentLabel === 'typeUri' || currentLabel === 'hascoTypeUri') desired.to = other.id;
-              const r = setEdgeVisible(desired, true, nodeId);
-              if (r.addedNodeIds && r.addedNodeIds.length) added.push(...r.addedNodeIds);
-            });
-            if (added.length) {
-              freezeAllNodes(nodes);
-              placeAround(network, nodeId, Array.from(new Set(added)), 160);
-              network.redraw();
-              unfreezeNodes(nodes, Array.from(new Set(added)));
+            const controls = document.createElement('div');
+            controls.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;';
+
+            const showBtn = document.createElement('button');
+            showBtn.type = 'button';
+            showBtn.className = 'btn btn-sm btn-light';
+            showBtn.textContent = 'Show all';
+
+            const hideBtn = document.createElement('button');
+            hideBtn.type = 'button';
+            hideBtn.className = 'btn btn-sm btn-light';
+            hideBtn.textContent = 'Hide all';
+
+            const loadBtn = document.createElement('button');
+            loadBtn.type = 'button';
+            loadBtn.className = 'btn btn-sm btn-light';
+            loadBtn.textContent = (list.length === 0) ? 'Load' : 'Load more';
+
+            controls.appendChild(showBtn);
+            controls.appendChild(hideBtn);
+
+            const canLoad = !!socEndpoint && !state.exhausted && (state.hasMoreServer !== false || list.length === 0);
+            if (canLoad) {
+              controls.appendChild(loadBtn);
             }
-            renderExplorer(nodeId, selectedNode);
-          });
 
-          hideAllBtn.addEventListener('click', (ev) => {
-            ev.preventDefault();
-            const items = (dir === 'out') ? itemsForLabel(nodeId, currentLabel) : itemsForIncomingLabel(nodeId, currentLabel);
-            items.forEach(({ edge: e }) => {
-              const otherId = (dir === 'out') ? e.to : e.from;
-              const desired = (dir === 'out')
-                ? { from: nodeId, to: otherId, label: currentLabel }
-                : { from: otherId, to: nodeId, label: currentLabel, predUri: e.predUri };
-              if (currentLabel === 'contains') desired.label = 'contains';
-              setEdgeVisible(desired, false);
-            });
-            renderExplorer(nodeId, selectedNode);
-          });
+            bodyEl.appendChild(controls);
 
-          // Items list
-          const listWrap = document.createElement('div');
-          listWrap.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
-          const items = (dir === 'out') ? itemsForLabel(nodeId, currentLabel) : itemsForIncomingLabel(nodeId, currentLabel);
-          if (!items.length) {
-            const none = document.createElement('div');
-            none.style.cssText = 'opacity:.75; font-size:13px;';
-            none.textContent = 'No items.';
-            listWrap.appendChild(none);
-          } else {
-            items.forEach(({ edge: e }) => {
-              const otherId = (dir === 'out') ? e.to : e.from;
-              let other = extraNodes.find(n => n.id === otherId) || nodes.get(otherId);
-              if (!other) {
-                other = ensureExtraNodeById(otherId, { asClass: (currentLabel === 'typeUri' || currentLabel === 'hascoTypeUri') });
-              }
-              const displayLabel = (other.label && String(other.label).trim())
-                ? String(other.label).replace(/\n?➕$/, '')
-                : (other.id?.split('/').pop() || other.id || '(no label)');
-
-              const desired = (dir === 'out')
-                ? { from: nodeId, to: other.id, label: currentLabel }
-                : { from: other.id, to: nodeId, label: currentLabel, predUri: e.predUri };
-              if (currentLabel === 'contains') desired.label = 'contains';
-              const desiredId = edgeIdOf(desired);
-              const edgeOn = !!edges.get(desiredId);
-
-              const row = document.createElement('div');
-              row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:4px 6px; border:1px solid #e5e5e5; border-radius:6px; background:white;';
-
-              const left = document.createElement('div');
-              left.style.cssText = 'min-width:0; display:flex; align-items:center; gap:8px; flex:1 1 auto;';
-              const name = document.createElement('div');
-              name.textContent = displayLabel;
-              name.style.cssText = 'white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
-              name.title = other.id;
-              const copy = makeCopyLink('Copy URI', () => other.id);
-              left.appendChild(name);
-              left.appendChild(copy);
-
-              const toggle = document.createElement('button');
-              toggle.type = 'button';
-              toggle.className = 'btn btn-sm btn-light';
-              toggle.innerHTML = edgeOn ? eyeOffSVG : eyeSVG;
-              toggle.addEventListener('click', (ev) => {
-                ev.preventDefault();
-                ev.stopPropagation();
-                setEdgeVisible(desired, !edges.get(desiredId), nodeId);
-                renderExplorer(nodeId, selectedNode);
+            // Prefetch on first open if empty.
+            if (list.length === 0 && canLoad && !state.prefetchTried) {
+              state.prefetchTried = true;
+              const loading = document.createElement('div');
+              loading.style.cssText = 'padding:6px 4px; opacity:.7;';
+              loading.textContent = 'Loading…';
+              bodyEl.appendChild(loading);
+              fetchMoreForLabel(nodeId, lbl, state, loadBtn, () => {
+                renderPredicateBody(lbl, bodyEl, summaryEl);
               });
+              return;
+            }
 
-              row.appendChild(left);
-              row.appendChild(toggle);
-              listWrap.appendChild(row);
+            // Handlers
+            showBtn.addEventListener('click', (ev) => {
+              ev.preventDefault();
+
+              const itemsAll = itemsForLabel(nodeId, lbl);
+              if (!itemsAll.length) return;
+
+              let warned = false;
+              const addedNodeIds = [];
+
+              // Ensure anchor exists.
+              if (!nodes.get(nodeId)) {
+                nodes.add(ensureNodeStyle({ id: nodeId, label: (nodeId.split('/').pop()||nodeId), shape:'box'}));
+              }
+
+              for (const { edge: e } of itemsAll) {
+                const otherId = e.to;
+                const other = ensureExtraNodeById(otherId, { asClass: (lbl === 'typeUri' || lbl === 'hascoTypeUri') });
+
+                if (!nodes.get(other.id)) {
+                  if (!canAddMoreVisibleNodes(1)) {
+                    if (!warned) { warned = true; warnNodeCap(); }
+                    break;
+                  }
+                  nodes.add(ensureNodeStyle({ ...other }));
+                  addedNodeIds.push(other.id);
+                }
+
+                const desired = { from: nodeId, to: other.id, label: lbl };
+                if (lbl === 'contains') desired.label = 'contains';
+                if (lbl === 'typeUri' || lbl === 'hascoTypeUri') desired.to = other.id;
+
+                addEdgeVisible(desired);
+              }
+
+              if (addedNodeIds.length) {
+                placeByPredicate(network, nodeId, Array.from(new Set(addedNodeIds)), lbl);
+              }
+
+              network.redraw();
+              renderPredicateBody(lbl, bodyEl, summaryEl);
             });
-          }
-          explorer.appendChild(listWrap);
+
+            hideBtn.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              const itemsAll = itemsForLabel(nodeId, lbl);
+              const idsToRemove = [];
+              itemsAll.forEach(({ edge: e }) => {
+                const desired = { from: nodeId, to: e.to, label: lbl };
+                if (lbl === 'contains') desired.label = 'contains';
+                const id = edgeIdOf(desired);
+                if (edges.get(id)) idsToRemove.push(id);
+              });
+              if (idsToRemove.length) {
+                edges.remove(idsToRemove);
+                removeDanglingNodes(new Set([currentRootId, nodeId]));
+                network.redraw();
+              }
+              renderPredicateBody(lbl, bodyEl, summaryEl);
+            });
+
+            if (canLoad) {
+              loadBtn.disabled = state.hasMoreServer === false;
+              loadBtn.style.display = loadBtn.disabled ? 'none' : '';
+              loadBtn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                fetchMoreForLabel(nodeId, lbl, state, loadBtn, () => {
+                  renderPredicateBody(lbl, bodyEl, summaryEl);
+                });
+              });
+            }
+
+            // Items list (paged)
+            const totalFetched = list.length;
+            const start = Math.max(0, Math.min(state.offset, Math.max(0, totalFetched - MAX_MEMBERS_PER_SOC)));
+            const end = Math.min(start + MAX_MEMBERS_PER_SOC, totalFetched);
+            const page = list.slice(start, end);
+
+            const listWrap = document.createElement('div');
+            listWrap.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
+
+            if (!page.length) {
+              const none = document.createElement('div');
+              none.style.cssText = 'opacity:.75; font-size:13px;';
+              none.textContent = 'No items.';
+              listWrap.appendChild(none);
+            } else {
+              page.forEach(({ edge: e }) => {
+                const otherId = e.to;
+                let other = extraNodes.find(n => n.id === otherId) || nodes.get(otherId);
+                if (!other) {
+                  other = ensureExtraNodeById(otherId, { asClass: (lbl === 'typeUri' || lbl === 'hascoTypeUri') });
+                }
+
+                const displayLabel = (other.label && String(other.label).trim())
+                  ? String(other.label).replace(/\n?➕$/, '')
+                  : (other.id?.split('/').pop() || other.id || '(no label)');
+
+                const desired = { from: nodeId, to: other.id, label: lbl };
+                if (lbl === 'contains') desired.label = 'contains';
+                const desiredId = edgeIdOf(desired);
+                const edgeOn = !!edges.get(desiredId);
+
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:4px 6px; border:1px solid #e5e5e5; border-radius:6px; background:white;';
+
+                const left = document.createElement('div');
+                left.style.cssText = 'min-width:0; display:flex; align-items:center; gap:8px; flex:1 1 auto;';
+
+                const name = document.createElement('div');
+                name.textContent = displayLabel;
+                name.style.cssText = 'white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+                name.title = other.id;
+
+                const copy = makeCopyLink('Copy URI', () => other.id);
+
+                left.appendChild(name);
+                left.appendChild(copy);
+
+                const toggle = document.createElement('button');
+                toggle.type = 'button';
+                toggle.className = 'btn btn-sm btn-light';
+                toggle.innerHTML = edgeOn ? eyeOffSVG : eyeSVG;
+                toggle.addEventListener('click', (ev) => {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  setEdgeVisible(desired, !edges.get(desiredId), nodeId);
+                  renderPredicateBody(lbl, bodyEl, summaryEl);
+                });
+
+                row.appendChild(left);
+                row.appendChild(toggle);
+                listWrap.appendChild(row);
+              });
+            }
+
+            bodyEl.appendChild(listWrap);
+
+            // Pager
+            const footer = document.createElement('div');
+            footer.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px;';
+
+            const leftBtn = document.createElement('button');
+            leftBtn.type = 'button';
+            leftBtn.className = 'btn btn-sm btn-light';
+            leftBtn.textContent = '«';
+            leftBtn.disabled = (state.offset <= 0);
+            leftBtn.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              state.offset = Math.max(0, state.offset - MAX_MEMBERS_PER_SOC);
+              renderPredicateBody(lbl, bodyEl, summaryEl);
+            });
+
+            const infoTxt = document.createElement('span');
+            infoTxt.style.cssText = 'font-size:12px; opacity:.8;';
+            const pageNum = Math.floor(start / MAX_MEMBERS_PER_SOC) + 1;
+            const totalPages = Math.max(1, Math.ceil(Math.max(totalFetched, shown) / MAX_MEMBERS_PER_SOC));
+            infoTxt.textContent = `Page ${pageNum} / ${totalPages}`;
+
+            const rightBtn = document.createElement('button');
+            rightBtn.type = 'button';
+            rightBtn.className = 'btn btn-sm btn-light';
+            rightBtn.textContent = '»';
+
+            const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
+            const canFetchMore = canLoad && state.hasMoreServer !== false;
+            rightBtn.disabled = !canAdvanceCached && !canFetchMore;
+            rightBtn.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              if (canAdvanceCached) {
+                state.offset += MAX_MEMBERS_PER_SOC;
+                renderPredicateBody(lbl, bodyEl, summaryEl);
+              } else if (canFetchMore) {
+                fetchMoreForLabel(nodeId, lbl, state, rightBtn, (returned) => {
+                  if (returned > 0) {
+                    state.offset += MAX_MEMBERS_PER_SOC;
+                  }
+                  renderPredicateBody(lbl, bodyEl, summaryEl);
+                });
+              }
+            });
+
+            footer.appendChild(leftBtn);
+            footer.appendChild(infoTxt);
+            footer.appendChild(rightBtn);
+            bodyEl.appendChild(footer);
+          };
+
+          const predList = document.createElement('div');
+          predList.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
+          relInner.appendChild(predList);
+
+          labels.forEach((lbl, idx) => {
+            const det = document.createElement('details');
+            det.open = (idx === 0);
+            det.style.cssText = 'border:1px solid #eee; border-radius:6px; padding:6px; background:#f8f9fa;';
+
+            const sum = document.createElement('summary');
+            sum.style.cssText = 'cursor:pointer; font-size:13px;';
+            sum.textContent = `${lbl} (${countHintFor(lbl)})`;
+            det.appendChild(sum);
+
+            const body = document.createElement('div');
+            body.style.cssText = 'margin-top:8px;';
+            det.appendChild(body);
+
+            det.addEventListener('toggle', () => {
+              if (det.open) {
+                renderPredicateBody(lbl, body, sum);
+              }
+            });
+
+            predList.appendChild(det);
+
+            if (det.open) {
+              renderPredicateBody(lbl, body, sum);
+            }
+          });
         };
 
         renderBody();
@@ -1272,15 +1836,6 @@
 
         seedTypeEdgesForNode(selectedNode);
 
-        // Prime fetch once per node
-        if (socEndpoint && !primedNodes[selectedNodeId]) {
-          primedNodes[selectedNodeId] = true;
-          $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
-            .done(data => mergeGraphPayload(data, selectedNodeId))
-            .always(() => { setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0); });
-          return;
-        }
-
         function nodeKindByTypeUri(typeUri) {
           if (!typeUri) return 'other';
           if (typeUri.includes('/hasco/Study')) return 'study';
@@ -1296,52 +1851,32 @@
         const kind = nodeKindByTypeUri(selectedNode?.typeUri);
 
         const hasContains =
-          extraEdges.map(normalizeEdge).some(e => e.from === selectedNodeId && isMemberLabel(e.label)) ||
-          extraEdges.map(normalizeEdge).some(e => e.to   === selectedNodeId && isReverseMemberLabel(e.label));
+          extraEdges.some(e => e.from === selectedNodeId && isMemberLabel(e.label)) ||
+          extraEdges.some(e => e.to   === selectedNodeId && isReverseMemberLabel(e.label));
         if (hasContains) synthesizeContainsFromReverse(selectedNodeId);
 
-        // Lazy fetch SOC members
-        if (socEndpoint && kind === 'soc' && !hasContains && !openedNodes[selectedNodeId]) {
-          openedNodes[selectedNodeId] = true;
-          $.getJSON(socEndpoint, { from: selectedNodeId, relation: 'contains', limit: PAGE_SIZE, offset: 0, debug: 1 })
-            .done(data => {
-              const slim = slimPayloadForLabel(data, selectedNodeId, 'contains', PAGE_SIZE);
-              mergeGraphPayload(slim, selectedNodeId);
-              setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
-            })
-            .fail(() => { openedNodes[selectedNodeId] = false; });
-          return;
-        }
-
-        // Lazy fetch Study → SOCs
-        const hasSOC = extraEdges.map(normalizeEdge).some(e =>
-          e.from === selectedNodeId &&
-          (e.label === 'hasSampleCollection' ||
-           e.label === 'hasSubjectCollection' ||
-           e.label === 'hasSpaceCollection'   ||
-           e.label === 'hasTimeCollection'    ||
-           e.label === 'hasCollection')
-        );
-        if (socEndpoint && kind === 'study' && !hasSOC && !openedNodes[selectedNodeId]) {
-          openedNodes[selectedNodeId] = true;
-          $.getJSON(socEndpoint, { from: selectedNodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
-            .done(data => {
-              mergeGraphPayload(data, selectedNodeId);
-              setTimeout(() => network.emit && network.emit("click", { nodes: [selectedNodeId] }), 0);
-            })
-            .fail(() => { openedNodes[selectedNodeId] = false; });
-          return;
-        }
+        // Lazy loading happens on double-click (single click only shows details/UI).
 
         // Build labels from cached edges
-        const relatedEdges = extraEdges.map(normalizeEdge).filter(e => e.from === selectedNodeId);
+        const relatedEdges = extraEdges.filter(e => e.from === selectedNodeId);
         const labelEdgesMap = buildLabelEdgesMap(relatedEdges);
         let labels = Array.from(labelEdgesMap.keys()).filter(isDisplayableLabel);
 
-        // Always expose both type labels in the menu
-        labels = Array.from(new Set(labels.concat(['typeUri', 'hascoTypeUri'])));
+        // Always expose both type labels (unless hidden).
+        labels = Array.from(new Set(labels.concat(['typeUri', 'hascoTypeUri']))).filter(isDisplayableLabel);
 
-        if (kind === 'soc' && !labels.includes('contains')) labels.unshift('contains');
+        if (kind === 'soc' && !labels.includes('contains') && isDisplayableLabel('contains')) labels.unshift('contains');
+        if (isClassNode(selectedNode) && !labels.includes('children') && isDisplayableLabel('children')) labels.unshift('children');
+        if (isClassNode(selectedNode) && !labels.includes('super') && isDisplayableLabel('super')) labels.unshift('super');
+
+        // Keep a stable ordering.
+        const preferred = ['contains', 'children', 'super', 'typeUri', 'hascoTypeUri'];
+        labels.sort((a, b) => {
+          const ia = preferred.indexOf(a);
+          const ib = preferred.indexOf(b);
+          if (ia !== -1 || ib !== -1) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+          return String(a).localeCompare(String(b));
+        });
 
         // Prefer the fixed explorer panel when present.
         if (explorer) {
@@ -1415,8 +1950,103 @@
         setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
       });
 
+      // ----- Double-click: prefetch relationships (expand) -----
+      network.on("doubleClick", function (params) {
+        expandMenu.style.display = "none";
+        closeAllSubmenus();
+        if (!params.nodes || params.nodes.length === 0) return;
+
+        const nodeId = params.nodes[0];
+        const node   = nodes.get(nodeId) || extraNodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        seedTypeEdgesForNode(node);
+
+        const kindByTypeUri = (typeUri) => {
+          if (!typeUri) return 'other';
+          if (typeUri.includes('/hasco/Study')) return 'study';
+          if (
+            typeUri.includes('/hasco/SampleCollection') ||
+            typeUri.includes('/hasco/SubjectGroup') ||
+            typeUri.includes('/hasco/StudyObjectCollection') ||
+            typeUri.includes('/hasco/SpaceCollection') ||
+            typeUri.includes('/hasco/TimeCollection')
+          ) return 'soc';
+          return 'other';
+        };
+
+        // Pick predicates to prefetch.
+        let labels = (autoExpandPredicates || [])
+          .map(normalizePredForApi)
+          .filter((l) => l && !hiddenPredicateKeys.has(normalizePredKey(l)));
+
+        if (!labels.length) {
+          const kind = kindByTypeUri(node?.typeUri);
+          if (isClassNode(node)) {
+            labels = ['children', 'super'].filter(isDisplayableLabel);
+          } else if (kind === 'soc') {
+            labels = ['contains'].filter(isDisplayableLabel);
+          }
+        }
+
+        // Safety cap: avoid spamming too many HTTP calls per double-click.
+        labels = labels.slice(0, 6);
+
+        // Ensure the explorer is visible/up-to-date while we load.
+        if (explorer) {
+          renderExplorer(nodeId, node);
+          setExplorerStatus(nodeId, 'Loading relationships…');
+        }
+
+        const prefetchLabel = (lbl) => new Promise((resolve) => {
+          if (!socEndpoint) return resolve(0);
+
+          const key = `out:${nodeId}:${lbl}`;
+          if (!pageState[key]) {
+            pageState[key] = {
+              fetched: itemsForLabel(nodeId, lbl).length,
+              hasMoreServer: true,
+              exhausted: false,
+              prefetchTried: false,
+              triedGeneric: false,
+            };
+          }
+          const state = pageState[key];
+
+          const dummyBtn = { textContent: '»', disabled: false };
+          fetchMoreForLabel(nodeId, lbl, state, dummyBtn, (returned) => resolve(returned));
+        });
+
+        const prefetchGenericOnce = () => new Promise((resolve) => {
+          if (!socEndpoint) return resolve(0);
+          if (primedNodes[nodeId]) return resolve(0);
+          primedNodes[nodeId] = true;
+          $.getJSON(socEndpoint, { from: nodeId, limit: PAGE_SIZE, offset: 0, debug: 1 })
+            .done(data => mergeGraphPayload(data, nodeId))
+            .always(() => resolve(1));
+        });
+
+        const tasks = labels.length ? labels : [null];
+        let chain = Promise.resolve();
+        tasks.forEach((lbl) => {
+          chain = chain.then(() => {
+            if (!lbl) return prefetchGenericOnce();
+            return prefetchLabel(lbl);
+          });
+        });
+
+        chain
+          .then(() => { if (explorer) renderExplorer(nodeId, node); })
+          .catch(() => {})
+          .then(() => { if (explorer) setExplorerStatus(nodeId, ''); });
+      });
+
       // Keep menu positioned while dragging / drawing
       network.on("dragEnd", params => {
+        if (params && Array.isArray(params.nodes) && params.nodes.length) {
+          params.nodes.forEach((id) => pinnedNodes.add(id));
+        }
+
         if (expandMenu.style.display === "block" && params.nodes?.length) {
           setTimeout(() => updateExpandMenuPosition(params.nodes[0]), 0);
         }
@@ -1476,11 +2106,11 @@
           if (fromId) ensureVisibleNode(fromId);
 
           const related = extraEdges
-            .map(normalizeEdge)
             .filter(e => {
               if (onlyLabel) {
-                if (fromId) return e.from === fromId && e.to === nodeId && e.label === onlyLabel;
-                return (e.from === nodeId || e.to === nodeId) && e.label === onlyLabel;
+                const want = normalizePredForApi(onlyLabel);
+                if (fromId) return e.from === fromId && e.to === nodeId && normalizePredForApi(e.label) === want;
+                return (e.from === nodeId || e.to === nodeId) && normalizePredForApi(e.label) === want;
               }
               return (e.to === nodeId || e.from === nodeId);
             });

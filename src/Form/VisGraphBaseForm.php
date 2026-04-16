@@ -36,10 +36,34 @@ class VisGraphBaseForm extends FormBase {
     }
 
     // -------- Limits exposed to the frontend --------
-    $MAX_MEMBERS_PER_SOC = 5;   // how many SOC members to preload / show initially
-    $PAGE_SIZE            = 25;  // "Load more..." page size
-    $MAX_LIVE_NODES       = 600; // safety cap for visible nodes
-    $AUTO_SHOW_ON_FETCH   = 0;   // don't auto-add nodes fetched via AJAX
+    $cfg = \Drupal::config('rep.settings');
+
+    $MAX_MEMBERS_PER_SOC = (int) ($cfg->get('graph_max_members_per_soc') ?? 5);   // items per page in menus + SOC preload
+    if ($MAX_MEMBERS_PER_SOC < 1) { $MAX_MEMBERS_PER_SOC = 5; }
+
+    $PAGE_SIZE = (int) ($cfg->get('graph_page_size') ?? 25); // "Load more..." page size
+    if ($PAGE_SIZE < 1) { $PAGE_SIZE = 25; }
+
+    $MAX_LIVE_NODES = (int) ($cfg->get('graph_max_live_nodes') ?? 600); // safety cap for visible nodes
+    if ($MAX_LIVE_NODES < 50) { $MAX_LIVE_NODES = 600; }
+
+    $AUTO_SHOW_ON_FETCH = (int) ($cfg->get('graph_auto_show_on_fetch') ?? 0); // auto-add fetched nodes to canvas
+    if ($AUTO_SHOW_ON_FETCH < 0) { $AUTO_SHOW_ON_FETCH = 0; }
+
+    $splitPredLines = static function ($text): array {
+      $text = (string) ($text ?? '');
+      $lines = preg_split('/\R+/', $text) ?: [];
+      $out = [];
+      foreach ($lines as $ln) {
+        $ln = trim((string) $ln);
+        if ($ln === '' || str_starts_with($ln, '#')) continue;
+        $out[] = $ln;
+      }
+      return array_values(array_unique($out));
+    };
+
+    $hiddenPredicates = $splitPredLines($cfg->get('graph_predicates_hidden'));
+    $autoExpandPredicates = $splitPredLines($cfg->get('graph_predicates_auto_expand'));
 
     // Normalize CURIEs like "ahead:XYZ" into full IRIs.
     $expandCurie = static function (?string $v): ?string {
@@ -335,6 +359,14 @@ if (!empty($element->typeUri)) {
     $canvas['#attached']['library'][] = 'core/drupalSettings';
     $canvas['#attached']['drupalSettings']['rep']['socObjectsEndpoint'] =
       Url::fromRoute('rep.graph.expand')->toString();
+
+    $canvas['#attached']['drupalSettings']['rep']['nodeInfoEndpoint'] =
+      Url::fromRoute('rep.graph.node')->toString();
+
+    $canvas['#attached']['drupalSettings']['rep']['graphPredicateConfig'] = [
+      'hidden' => $hiddenPredicates,
+      'autoExpand' => $autoExpandPredicates,
+    ];
 
     $canvas['#attached']['drupalSettings']['rep']['graphLimits'] = [
       'maxMembersPerSOC' => $MAX_MEMBERS_PER_SOC,

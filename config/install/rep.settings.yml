@@ -4,3 +4,10 @@ ctt_url: ""
 rep_gui_version: "0.6"
 pmsr_new_landing_enabled: 0
 preferred_platform: "Platform"
+
+graph_max_members_per_soc: 5
+graph_page_size: 25
+graph_max_live_nodes: 600
+graph_auto_show_on_fetch: 0
+graph_predicates_hidden: ""
+graph_predicates_auto_expand: ""

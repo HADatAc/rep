@@ -524,6 +524,14 @@ rep.graph.expand:
     _permission: 'access content'
   methods: [GET]
 
+rep.graph.node:
+  path: '/rep/graph/node'
+  defaults:
+    _controller: '\Drupal\rep\Controller\GraphController::node'
+  requirements:
+    _permission: 'access content'
+  methods: [GET]
+
 rep.api_image:
   path: '/rep/api-image/{element}/{image}'
   defaults:

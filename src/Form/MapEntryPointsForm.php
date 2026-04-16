@@ -5,6 +5,9 @@ namespace Drupal\rep\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\InvokeCommand;
+use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\rep\Entity\Tables;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Url;
@@ -77,7 +80,11 @@ class MapEntryPointsForm extends FormBase {
     $ns_options  = array_combine(array_values($namespaces), array_keys($namespaces));
     $selected_ns = $form_state->getValue('namespace') ?: '';
 
-    $form['messages'] = ['#type' => 'status_messages'];
+    $form['messages'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'rep-map-entry-points-messages'],
+      'status' => ['#type' => 'status_messages'],
+    ];
 
     $form['row'] = [
       '#type' => 'container',
@@ -125,9 +132,10 @@ class MapEntryPointsForm extends FormBase {
     ];
 
     $form['row']['right_col']['load_tree'] = [
-      '#type'       => 'submit',
+      '#type'       => 'button',
       '#value'      => $this->t('Load Ontology Tree'),
       '#attributes' => [
+        'type'  => 'button',
         'style' => 'margin-bottom:35px',
         'class' => ['btn', 'load-more-button'],
         'id'    => 'edit-load-tree',
@@ -155,12 +163,14 @@ class MapEntryPointsForm extends FormBase {
 
     $form['#attached']['library'][] = 'rep/map_entry_points';
     $form['#attached']['drupalSettings']['repMap'] = [
-      'apiTopClassEndpoint' => $base . '/rep/gettopclass?_format=json',
-      'apiEndpoint'         => $base . '/rep/getchildren?_format=json',
-      'childParam'          => 'nodeUri',
-      'currentRootUri'      => $root_from_settings,
-      'currentRootLabel'    => $root_label,
-      'nameSpacesList'      => $tables->getNamespaces(),
+      'apiTopClassEndpoint'        => $base . '/rep/gettopclass?_format=json',
+      'apiEndpoint'                => $base . '/rep/getchildren?_format=json',
+      'apiSubclassKeywordEndpoint' => $base . '/rep/subclasskeyword?_format=json',
+      'apiNodeEndpoint'            => $base . '/rep/getnode?_format=json',
+      'childParam'                 => 'nodeUri',
+      'currentRootUri'             => $root_from_settings,
+      'currentRootLabel'           => $root_label,
+      'nameSpacesList'             => $tables->getNamespaces(),
     ];
 
     // Hidden fields used on submit.
@@ -168,6 +178,13 @@ class MapEntryPointsForm extends FormBase {
       '#type' => 'hidden',
       '#default_value' => '',
       '#attributes' => ['id' => 'edit-selected-node'],
+    ];
+
+    // Multi-select support: JSON array of selected node URIs.
+    $form['selected_nodes'] = [
+      '#type' => 'hidden',
+      '#default_value' => '[]',
+      '#attributes' => ['id' => 'edit-selected-nodes'],
     ];
 
     // Entry point to save under: defaults to the LEFT root,
@@ -191,6 +208,14 @@ class MapEntryPointsForm extends FormBase {
       '#attributes'  => [
         'id'    => 'rep-map-entry-points-submit',
         'class' => ['save-button'],
+      ],
+      '#ajax' => [
+        'callback' => '::ajaxSave',
+        'event' => 'click',
+        'progress' => [
+          'type' => 'throbber',
+          'message' => $this->t('Saving mappings and ingesting the App Ontology...'),
+        ],
       ],
     ];
 
@@ -219,11 +244,54 @@ class MapEntryPointsForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $entry_point_uri   = (string) $form_state->getValue('selected_entry_point');
-    $selected_node_uri = (string) $form_state->getValue('selected_node');
+    $entry_point_uri = (string) $form_state->getValue('selected_entry_point');
 
-    if ($selected_node_uri === '') {
+    // Multi-select support: read a JSON array from the hidden field.
+    $node_uris = [];
+
+    $selected_nodes_json = $form_state->getValue('selected_nodes');
+    if (is_string($selected_nodes_json) && $selected_nodes_json !== '') {
+      $decoded = json_decode($selected_nodes_json, TRUE);
+      if (is_array($decoded)) {
+        foreach ($decoded as $u) {
+          if (is_string($u) && trim($u) !== '') {
+            $node_uris[] = trim($u);
+          }
+        }
+      }
+    }
+
+    // Backward-compat: single selection.
+    $selected_node_uri = (string) $form_state->getValue('selected_node');
+    if (empty($node_uris) && trim($selected_node_uri) !== '') {
+      $node_uris[] = trim($selected_node_uri);
+    }
+
+    $node_uris = array_values(array_unique($node_uris));
+
+    if (empty($node_uris)) {
       $this->messenger()->addWarning($this->t('No node selected on the right tree.'));
+      return;
+    }
+
+    // Basic hardening: prevent Turtle injection via hidden fields.
+    $entry_point_uri = trim($entry_point_uri);
+    if ($entry_point_uri === '' || preg_match('/[\s<>"{}|^`\\\\]/', $entry_point_uri)) {
+      $this->messenger()->addError($this->t('Invalid entry point URI.'));
+      return;
+    }
+
+    $safe_node_uris = [];
+    foreach ($node_uris as $u) {
+      if ($u === '' || preg_match('/[\s<>"{}|^`\\\\]/', $u)) {
+        continue;
+      }
+      $safe_node_uris[] = $u;
+    }
+
+    $safe_node_uris = array_values(array_unique($safe_node_uris));
+    if (empty($safe_node_uris)) {
+      $this->messenger()->addError($this->t('No valid nodes were selected.'));
       return;
     }
 
@@ -267,28 +335,35 @@ class MapEntryPointsForm extends FormBase {
       $this->messenger()->addWarning($this->t('Versioning failed. Proceeding to write the mapping. Error: @e', ['@e' => $e->getMessage()]));
     }
 
-    // Build Turtle entry: selected_node_uri becomes a subclass of entry_point_uri.
-    $subject = $this->formatTurtleTerm($selected_node_uri);
-    $object  = $this->formatTurtleTerm($entry_point_uri);
+    // Build Turtle entries: each selected node becomes a subclass of the entry point.
+    $append = '';
+    $missing_prefixes = [];
 
-    $new_map_entry  = "\n# --- Mapping appended by MapEntryPointsForm ---\n";
-    $new_map_entry .= $subject . "\n\ta rdfs:Class;";
-    $new_map_entry .= "\n\trdfs:subClassOf " . $object . " .\n";
+    $object = $this->formatTurtleTerm($entry_point_uri);
 
-    // Check for missing prefix in the TTL header (best-effort warning).
-    $missing_prefix_warning = '';
-    $maybe_prefix = $this->extractCompactPrefix($selected_node_uri);
-    if ($maybe_prefix !== null && !$this->ttlHasPrefix($ttl_content_before, $maybe_prefix)) {
-      $missing_prefix_warning = $this->t(
-        'Heads up: prefix "@p:" was NOT found in the @prefix header. The mapping was saved, but you must add that @prefix to the TTL file manually.',
-        ['@p' => $maybe_prefix]
-      );
+    foreach ($safe_node_uris as $node_uri) {
+      $subject = $this->formatTurtleTerm($node_uri);
+
+      $append .= "\n# --- Mapping appended by MapEntryPointsForm ---\n";
+      $append .= $subject . "\n\ta rdfs:Class;";
+      $append .= "\n\trdfs:subClassOf " . $object . " .\n";
+
+      $maybe_prefix = $this->extractCompactPrefix($node_uri);
+      if ($maybe_prefix !== null && !$this->ttlHasPrefix($ttl_content_before, $maybe_prefix)) {
+        $missing_prefixes[$maybe_prefix] = true;
+      }
     }
 
-    // Append mapping to the TTL file.
-    $ok = (bool) file_put_contents($ttl_path, $new_map_entry, FILE_APPEND | LOCK_EX);
+    // Append all mappings in one write.
+    $ok = (bool) file_put_contents($ttl_path, $append, FILE_APPEND | LOCK_EX);
 
     if ($ok) {
+      $form_state->set('rep_map_saved_ok', true);
+
+      $this->messenger()->addStatus($this->t('@count mapping(s) saved.', [
+        '@count' => count($safe_node_uris),
+      ]));
+
       // Trigger ontology ingestion (same behavior as clicking "Ingest App Ontology").
       try {
         $ontController = new OntController();
@@ -298,14 +373,36 @@ class MapEntryPointsForm extends FormBase {
         $this->messenger()->addWarning($this->t('Error during automatic ingestion: @msg', ['@msg' => $e->getMessage()]));
       }
 
-      // Optional status message about the mapping could be added here.
-      if ($missing_prefix_warning) {
-        $this->messenger()->addWarning($missing_prefix_warning);
+      if (!empty($missing_prefixes)) {
+        $this->messenger()->addWarning($this->t(
+          'Heads up: missing @prefix declarations for: @list. The mappings were saved, but you must add those @prefix lines to the TTL header manually.',
+          ['@list' => implode(', ', array_keys($missing_prefixes))]
+        ));
       }
     }
     else {
+      $form_state->set('rep_map_saved_ok', false);
       $this->messenger()->addError($this->t('Failed to append the mapping to the TTL file.'));
     }
+  }
+
+  /**
+   * AJAX callback: keep the page state (trees/expansions) while showing messages.
+   */
+  public function ajaxSave(array &$form, FormStateInterface $form_state): AjaxResponse {
+    $response = new AjaxResponse();
+
+    // Update status messages in-place.
+    $rendered_messages = (string) \Drupal::service('renderer')->renderRoot($form['messages']);
+    $response->addCommand(new ReplaceCommand('#rep-map-entry-points-messages', $rendered_messages));
+
+    $saved_ok = (bool) $form_state->get('rep_map_saved_ok');
+    if ($saved_ok) {
+      // Let the client-side code refresh trees / clear selections safely.
+      $response->addCommand(new InvokeCommand('body', 'repMapAfterSave', []));
+    }
+
+    return $response;
   }
 
   // ---------------------------------------------------------------------------

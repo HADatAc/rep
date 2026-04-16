@@ -56,6 +56,10 @@ function rep_install() {
  *
  * Used here to remove the default submit button from specific REP forms,
  * because those forms use custom action buttons / redirects.
+ *
+ * Also adds consistent English helper text under:
+ * - fields that open the hierarchical tree pop-up (click-to-open)
+ * - autocomplete fields (type-to-search)
  */
 function rep_form_alter(&$form, &$form_state, $form_id) {
   // Check if the form ID matches one of the REP configuration forms.
@@ -65,6 +69,90 @@ function rep_form_alter(&$form, &$form_state, $form_id) {
     // Remove the default "Save configuration" button.
     unset($form['actions']['submit']);
   }
+
+  $ux_flags = [
+    'has_autocomplete' => FALSE,
+  ];
+  _rep_add_ux_hints_to_form($form, $ux_flags);
+
+  if (!empty($ux_flags['has_autocomplete'])) {
+    $form['#attached']['library'][] = 'rep/rep_autocomplete_ux';
+  }
+}
+
+function _rep_add_ux_hints_to_form(array &$element, array &$ux_flags): void {
+  // Tree picker fields (open a hierarchical tree pop-up on click).
+  if (_rep_is_tree_popup_element($element)) {
+    _rep_add_description_hint($element, 'Click the field to open the pop-up.');
+  }
+
+  // Autocomplete fields (remote suggestions while typing).
+  if (_rep_is_autocomplete_element($element)) {
+    $ux_flags['has_autocomplete'] = TRUE;
+    _rep_add_description_hint($element, 'Start typing to see results.');
+  }
+
+  foreach ($element as $key => &$child) {
+    if (is_string($key) && $key !== '' && $key[0] === '#') {
+      continue;
+    }
+    if (is_array($child)) {
+      _rep_add_ux_hints_to_form($child, $ux_flags);
+    }
+  }
+}
+
+function _rep_is_tree_popup_element(array $element): bool {
+  return _rep_element_has_class($element, 'open-tree-modal');
+}
+
+function _rep_is_autocomplete_element(array $element): bool {
+  if (!empty($element['#autocomplete_route_name']) || !empty($element['#autocomplete_path'])) {
+    return TRUE;
+  }
+
+  return !empty($element['#type']) && $element['#type'] === 'entity_autocomplete';
+}
+
+function _rep_element_has_class(array $element, string $class): bool {
+  if (empty($element['#attributes']['class'])) {
+    return FALSE;
+  }
+
+  $classes = $element['#attributes']['class'];
+  if (is_string($classes)) {
+    $classes = preg_split('/\s+/', $classes, -1, PREG_SPLIT_NO_EMPTY);
+  }
+
+  if (!is_array($classes)) {
+    return FALSE;
+  }
+
+  return in_array($class, $classes, TRUE);
+}
+
+function _rep_add_description_hint(array &$element, string $hint): void {
+  if ($hint == '') {
+    return;
+  }
+
+  $existing = $element['#description'] ?? '';
+  if ($existing === NULL || $existing === '') {
+    $element['#description'] = $hint;
+    return;
+  }
+
+  // Unexpected shape; do not modify.
+  if (is_array($existing)) {
+    return;
+  }
+
+  $existing_str = (string) $existing;
+  if (str_contains($existing_str, $hint)) {
+    return;
+  }
+
+  $element['#description'] = trim($existing_str . ' ' . $hint);
 }
 
 /**

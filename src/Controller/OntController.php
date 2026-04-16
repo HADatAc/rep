@@ -5,6 +5,7 @@ namespace Drupal\rep\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -123,16 +124,34 @@ class OntController extends ControllerBase {
     return new Response($report, 200, ['Content-Type' => 'text/plain']);
   }
 
-  public function apiGet($filename) {
+  public function apiGet($filename, Request $request) {
     if (!preg_match('/^[A-Za-z0-9_\-]+\.ttl$/', $filename)) {
       throw new NotFoundHttpException('Invalid filename.');
     }
-    $uri = 'private://ont/' . $filename;
+
     $fs = \Drupal::service('file_system');
+
+    // Optional history reference (e.g. "2" or "versions/v0001").
+    $ref = $request->query->get('ref');
+    $ref = is_string($ref) ? trim($ref) : '';
+
+    if ($ref !== '') {
+      $isNumericVersion = (bool) preg_match('/^\d+$/', $ref);
+      $isSnapshot = (bool) preg_match('#^versions/v\d{4}$#', $ref);
+      if (!$isNumericVersion && !$isSnapshot) {
+        throw new NotFoundHttpException('Invalid ref.');
+      }
+      $uri = 'private://ont/' . $ref . '/' . $filename;
+    }
+    else {
+      $uri = 'private://ont/' . $filename;
+    }
+
     $path = $fs->realpath($uri);
-    if (!is_file($path)) {
+    if (!$path || !is_file($path)) {
       throw new NotFoundHttpException('File not found.');
     }
+
     $ttl = file_get_contents($path);
     return new Response($ttl, 200, ['Content-Type' => 'text/turtle']);
   }

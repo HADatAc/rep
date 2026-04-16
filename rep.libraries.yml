@@ -43,6 +43,15 @@ rep_modal:
     - core/drupal.dialog
     - core/drupal.ajax
 
+rep_autocomplete_ux:
+  version: 1.x
+  js:
+    js/autocomplete-ux.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupal.autocomplete
+
 webdoc_modal:
   version: 1.x
   css:
@@ -114,6 +123,12 @@ rdf_graph_editor:
       type: external
       minified: true
       weight: -20
+
+    # 2.5) jsdiff (history diff)
+    https://unpkg.com/diff@5.2.0/dist/diff.min.js:
+      type: external
+      minified: true
+      weight: -19
 
     # 3) Cytoscape.js
     https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.2/cytoscape.min.js:
