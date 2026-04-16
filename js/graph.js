@@ -1441,11 +1441,21 @@
           header.appendChild(actions);
           explorer.appendChild(header);
 
-          // Node details (single click)
+          // Node details / attributes (single click)
+          const attrPanel = document.createElement('details');
+          attrPanel.open = true;
+          attrPanel.style.cssText = 'border:1px solid #e5e5e5; background:white; border-radius:6px; padding:8px; margin-bottom:10px;';
+
+          const attrSummary = document.createElement('summary');
+          attrSummary.style.cssText = 'cursor:pointer; font-weight:600; font-size:13px;';
+          attrSummary.textContent = 'Attributes';
+          attrPanel.appendChild(attrSummary);
+
           const detailsBox = document.createElement('div');
           detailsBox.id = 'rep-graph-node-details';
-          detailsBox.style.cssText = 'border:1px solid #e5e5e5; background:white; border-radius:6px; padding:8px; margin-bottom:10px;';
-          explorer.appendChild(detailsBox);
+          detailsBox.style.cssText = 'margin-top:8px;';
+          attrPanel.appendChild(detailsBox);
+          explorer.appendChild(attrPanel);
           renderNodeInfoBox(detailsBox, nodeId, selectedNode);
 
           // Predicates / relationships (collapsible)
