@@ -97,6 +97,9 @@ graph TB
     PI -->|"deployed at"| DEP
 ```
 
+![Diagram PNG: Relationship Diagram (including Scenarios and Workflows)](images/diagrams/en/d39-entity-relationship-diagram-with-scenarios-and-workflows.png)
+> _PNG equivalent of the Mermaid diagram above. Place the file with this name under docs/images/diagrams/en/._
+
 
 ---
 
@@ -2856,6 +2859,9 @@ graph TB
   S --> D["Data (DA/DataFile/Streams)"]
 ```
 
+![Diagram PNG: Conceptual diagram (Scenario ↔ Workflow)](images/diagrams/en/d40-scenario-workflow-conceptual-diagram.png)
+> _PNG equivalent of the Mermaid diagram above. Place the file with this name under docs/images/diagrams/en/._
+
 ---
 
 ## 2. Terminology and Key Concepts
@@ -3109,6 +3115,9 @@ flowchart TD
   F --> F1["Notes/incidents"]
   F --> F2["Save output / finish"]
 ```
+
+![Diagram PNG: Mini Workflow (Intubation/Aspiration)](images/diagrams/en/d41-mini-workflow-intubation-aspiration.png)
+> _PNG equivalent of the Mermaid diagram above. Place the file with this name under docs/images/diagrams/en/._
 
 > ℹ️ If your CTT editor supports attaching **Required Instruments/Simulators** to tasks, use examples like “**Vital Signs Monitor**” and “**Aspiration System Checklist**” (or the equivalent resources in your environment).
 

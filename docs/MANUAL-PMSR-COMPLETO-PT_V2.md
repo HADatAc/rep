@@ -96,6 +96,9 @@ graph TB
     PI -->|"deployed em"| DEP
 ```
 
+![PNG do diagrama: Diagrama de Relação (incluindo Cenários e Workflows)](images/diagrams/pt/d39-diagrama-de-relacao-incluindo-cenarios-e-workflows.png)
+> _Imagem PNG equivalente ao diagrama Mermaid acima. Coloque o ficheiro com este nome em docs/images/diagrams/pt/._
+
 ---
 
 ## Fluxo de Revisão e Aprovação
@@ -2815,6 +2818,9 @@ graph TB
   S --> D["Dados (DA/DataFile/Streams)"]
 ```
 
+![PNG do diagrama: Diagrama conceptual (Cenário ↔ Workflow)](images/diagrams/pt/d40-diagrama-conceptual-cenario-workflow.png)
+> _Imagem PNG equivalente ao diagrama Mermaid acima. Coloque o ficheiro com este nome em docs/images/diagrams/pt/._
+
 ---
 
 ## 2. Terminologia e Conceitos-Chave
@@ -3068,6 +3074,9 @@ flowchart TD
   F --> F1["Notas/ocorrências"]
   F --> F2["Guardar output / finalizar"]
 ```
+
+![PNG do diagrama: Mini Workflow (Entubamento/Aspiração)](images/diagrams/pt/d41-workflow-mini-entubamento-aspiracao.png)
+> _Imagem PNG equivalente ao diagrama Mermaid acima. Coloque o ficheiro com este nome em docs/images/diagrams/pt/._
 
 > ℹ️ Se o seu editor CTT suportar associação de **Required Instruments/Simulators** a tarefas, use exemplos como “**Vital Signs Monitor**” e “**Aspiration System Checklist**” (ou equivalentes no seu ambiente) nas tarefas relevantes.
 
