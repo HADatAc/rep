@@ -167,6 +167,17 @@ vis_graph_panel:
   dependencies:
     - core/jquery
 
+sigma_graph_panel:
+  version: 1.x
+  js:
+    https://unpkg.com/graphology@0.25.4/dist/graphology.umd.min.js: { type: external, minified: true }
+    https://unpkg.com/sigma@2.4.0/build/sigma.min.js: { type: external, minified: true }
+    js/graph-sigma.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+
 graph_collapse:
   version: 1.0.5
   js:

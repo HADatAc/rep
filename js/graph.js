@@ -55,6 +55,8 @@
       const MAX_LIVE_NODES      = Number(limits.maxLiveNodes     || 600);
       const AUTO_SHOW_ON_FETCH  = Number(limits.autoShowOnFetch  || 0);
 
+      const WHEEL_ZOOM_ENABLED = false;
+
       const nodeInfoEndpoint =
         (drupalSettings && drupalSettings.rep && drupalSettings.rep.nodeInfoEndpoint) ||
         (window.Drupal && Drupal.url ? Drupal.url('rep/graph/node') : '/rep/graph/node');
@@ -163,15 +165,27 @@
 
       function isPinned(id) { return pinnedNodes.has(id); }
 
-      function placeAround(network, centerId, newIds, radius = 140) {
+      function stableHash(str) {
+        const s = String(str || '');
+        let h = 0;
+        for (let i = 0; i < s.length; i++) {
+          h = ((h << 5) - h) + s.charCodeAt(i);
+          h |= 0;
+        }
+        return h;
+      }
+
+      function placeAround(network, centerId, newIds, radius = 140, angleOffset = 0) {
         const ids = (newIds || []).filter(id => id && !isPinned(id));
         if (!ids.length) return;
         const pos = network.getPositions([centerId])[centerId];
         if (!pos) return;
         const N = ids.length || 1;
+        const extra = Math.min(520, Math.max(0, (N - 8)) * 18);
+        const r = radius + extra;
         ids.forEach((id, i) => {
-          const a = (2 * Math.PI * i) / N;
-          network.moveNode(id, pos.x + radius * Math.cos(a), pos.y + radius * Math.sin(a));
+          const a = angleOffset + (2 * Math.PI * i) / N;
+          network.moveNode(id, pos.x + r * Math.cos(a), pos.y + r * Math.sin(a));
         });
       }
 
@@ -188,9 +202,16 @@
 
       function placeByPredicate(network, anchorId, ids, predicate) {
         const lbl = normalizePredForApi(predicate);
-        if (lbl === 'super') return placeInRow(network, anchorId, ids, -170);
-        if (lbl === 'children' || lbl === 'contains') return placeInRow(network, anchorId, ids, 170);
-        return placeAround(network, anchorId, ids, 160);
+        const k = normalizePredKey(lbl);
+        if (k === 'super') return placeInRow(network, anchorId, ids, -260);
+        if (k === 'children') return placeInRow(network, anchorId, ids, 260);
+        if (k === 'contains') return placeInRow(network, anchorId, ids, 360);
+
+        const seed = Math.abs(stableHash(k || lbl || ''));
+        const ring = seed % 4;
+        const radius = 220 + (ring * 100);
+        const angleOffset = (seed % 360) * (Math.PI / 180);
+        return placeAround(network, anchorId, ids, radius, angleOffset);
       }
 
       // ----- Virtualize loop edges so they are clickable -----
@@ -228,11 +249,14 @@
         interaction: {
           dragNodes: true,
           dragView: true,
-          zoomView: true,
-          navigationButtons: true,
+          zoomView: false,
+          navigationButtons: false,
           keyboard: { enabled: true },
-          hideEdgesOnDrag: false,
-          hideEdgesOnZoom: false,
+          hover: false,
+          hoverConnectedEdges: false,
+          selectConnectedEdges: false,
+          hideEdgesOnDrag: true,
+          hideEdgesOnZoom: true,
           zoomSpeed: 0.9,
           tooltipDelay: 200,
         },
@@ -240,6 +264,16 @@
         physics: { enabled: false }
       };
       const network = new vis.Network(container, { nodes, edges }, options);
+
+      // Harden interaction against browser gestures stealing events.
+      try {
+        container.style.touchAction = 'none';
+        container.style.userSelect = 'none';
+        container.style.webkitUserSelect = 'none';
+        container.style.cursor = 'grab';
+      } catch (e) {
+        // ignore
+      }
 
       // Ensure mouse wheel zoom works (some themes/plugins can swallow wheel events).
       try {
@@ -252,15 +286,27 @@
           // Only handle wheel events that happen over the graph container.
           if (!container.contains(ev.target)) return;
 
-          ev.preventDefault();
-          ev.stopPropagation();
+          // User preference: no wheel zoom (use +/- buttons instead).
+          if (!WHEEL_ZOOM_ENABLED) return;
 
           const deltaY = (typeof ev.deltaY === 'number') ? ev.deltaY : 0;
           if (deltaY === 0) return;
 
-          const current = network.getScale();
-          const factor = Math.exp(-deltaY * 0.0015);
-          const next = clamp(current * factor, 0.1, 4.0);
+          let current = 1.0;
+          try { current = network.getScale(); } catch (e0) { return; }
+
+          // Normalize delta across devices (mouse wheel vs trackpad) and keep zoom smooth.
+          let step = deltaY;
+          if (ev.deltaMode === 1) step = step * 18;       // lines -> px-ish
+          else if (ev.deltaMode === 2) step = step * 360; // pages -> px-ish
+
+          step = clamp(step, -120, 120);
+          const factor = Math.exp(-step * 0.0025);
+          const next = clamp(current * factor, 0.1, 6.0);
+          if (!Number.isFinite(next) || next === current) return;
+
+          ev.preventDefault();
+          ev.stopPropagation();
 
           const rect = container.getBoundingClientRect();
           const domX = (typeof ev.clientX === 'number') ? (ev.clientX - rect.left) : (container.clientWidth / 2);
@@ -284,6 +330,255 @@
       // Expose for other behaviors (e.g., collapse/show) to re-fit on demand.
       container.__repNetwork = network;
       container.__repRootId = currentRootId;
+
+      // ---------- Explorer collapse + Fullscreen controls ----------
+      try {
+        const shell = container.closest('.rep-graph-shell');
+        const explorerPanel = shell ? shell.querySelector('#rep-graph-explorer') : null;
+
+        if (shell) {
+          if (!shell.dataset.repGraphUiInit) {
+            shell.dataset.repGraphUiInit = '1';
+            // Allow absolute-positioned UI controls.
+            if (!shell.style.position) shell.style.position = 'relative';
+          }
+
+          // Collapsible right panel
+          if (explorerPanel && !shell.dataset.repExplorerCollapseInit) {
+            shell.dataset.repExplorerCollapseInit = '1';
+
+            const collapseBtn = document.createElement('button');
+            collapseBtn.type = 'button';
+            collapseBtn.className = 'btn btn-sm btn-light';
+            collapseBtn.textContent = '»';
+            collapseBtn.title = 'Collapse panel';
+            collapseBtn.style.cssText = 'position:absolute; z-index:30;';
+
+            const expandBtn = document.createElement('button');
+            expandBtn.type = 'button';
+            expandBtn.className = 'btn btn-sm btn-light';
+            expandBtn.textContent = '«';
+            expandBtn.title = 'Expand panel';
+            expandBtn.style.cssText = 'position:absolute; top:50%; right:10px; transform:translateY(-50%); z-index:30; display:none;';
+
+            shell.appendChild(collapseBtn);
+            shell.appendChild(expandBtn);
+
+            const positionHandle = () => {
+              try {
+                if (!explorerPanel || !shell) return;
+                if (explorerPanel.style.display === 'none') return;
+                const shellRect = shell.getBoundingClientRect();
+                const expRect = explorerPanel.getBoundingClientRect();
+                const left = Math.max(6, (expRect.left - shellRect.left) - 18);
+                collapseBtn.style.left = `${left}px`;
+                collapseBtn.style.top = '50%';
+                collapseBtn.style.transform = 'translateY(-50%)';
+              } catch (e) {}
+            };
+            positionHandle();
+            window.addEventListener('resize', positionHandle);
+
+            const setCollapsed = (collapsed) => {
+              explorerPanel.style.display = collapsed ? 'none' : '';
+              collapseBtn.style.display = collapsed ? 'none' : '';
+              expandBtn.style.display = collapsed ? '' : 'none';
+              if (!collapsed) positionHandle();
+              window.setTimeout(() => {
+                try { window.dispatchEvent(new Event('resize')); } catch (e1) {}
+                try { network.redraw(); } catch (e2) {}
+              }, 50);
+            };
+
+            collapseBtn.addEventListener('click', (ev) => { ev.preventDefault(); setCollapsed(true); });
+            expandBtn.addEventListener('click', (ev) => { ev.preventDefault(); setCollapsed(false); });
+          }
+        }
+
+        // Fullscreen button (bottom-right of the canvas)
+        if (!container.dataset.repFullscreenInit) {
+          container.dataset.repFullscreenInit = '1';
+
+          if (!container.style.position) container.style.position = 'relative';
+
+          const fsWrap = document.createElement('div');
+          fsWrap.className = 'rep-graph-ui';
+          fsWrap.style.cssText = 'position:absolute; right:10px; bottom:10px; z-index:30; pointer-events:auto; display:flex; flex-direction:column; gap:6px;';
+
+          const clampScale = (v, min, max) => Math.min(max, Math.max(min, v));
+          const zoomBy = (mult) => {
+            try {
+              const current = network.getScale();
+              const next = clampScale(current * mult, 0.1, 6.0);
+              const pos = network.getViewPosition();
+              network.moveTo({ position: pos, scale: next, animation: false });
+            } catch (e) {
+              // ignore
+            }
+          };
+
+          const zoomInBtn = document.createElement('button');
+          zoomInBtn.type = 'button';
+          zoomInBtn.className = 'btn btn-sm btn-light';
+          zoomInBtn.textContent = '+';
+          zoomInBtn.title = 'Zoom in';
+
+          const zoomOutBtn = document.createElement('button');
+          zoomOutBtn.type = 'button';
+          zoomOutBtn.className = 'btn btn-sm btn-light';
+          zoomOutBtn.textContent = '−';
+          zoomOutBtn.title = 'Zoom out';
+
+          let zoomBtnGuard = false;
+          const bindZoomBtn = (btn, mult) => {
+            const handler = (ev) => {
+              try {
+                if (typeof ev.button === 'number' && ev.button !== 0) return;
+                ev.preventDefault();
+                ev.stopPropagation();
+              } catch (e) {}
+
+              if (zoomBtnGuard) return;
+              zoomBtnGuard = true;
+              window.setTimeout(() => { zoomBtnGuard = false; }, 0);
+              zoomBy(mult);
+            };
+            btn.addEventListener('pointerdown', handler);
+            btn.addEventListener('click', handler);
+          };
+          bindZoomBtn(zoomInBtn, 1.2);
+          bindZoomBtn(zoomOutBtn, 1 / 1.2);
+
+          fsWrap.appendChild(zoomInBtn);
+          fsWrap.appendChild(zoomOutBtn);
+
+          const fsBtn = document.createElement('button');
+          fsBtn.type = 'button';
+          fsBtn.className = 'btn btn-sm btn-light';
+          fsBtn.textContent = '⤢';
+          fsBtn.title = 'Fullscreen';
+          fsWrap.appendChild(fsBtn);
+          container.appendChild(fsWrap);
+
+          const fsTarget = shell || container;
+          const orig = {
+            shell: fsTarget ? {
+              position: fsTarget.style.position,
+              top: fsTarget.style.top,
+              left: fsTarget.style.left,
+              right: fsTarget.style.right,
+              bottom: fsTarget.style.bottom,
+              width: fsTarget.style.width,
+              height: fsTarget.style.height,
+              zIndex: fsTarget.style.zIndex,
+              padding: fsTarget.style.padding,
+              background: fsTarget.style.background,
+            } : null,
+            containerHeight: container.style.height,
+            explorerHeight: explorerPanel ? explorerPanel.style.height : null,
+          };
+          let pseudoFs = false;
+
+          const applyFillHeights = (on) => {
+            if (on) {
+              container.style.height = '100%';
+              if (explorerPanel) explorerPanel.style.height = '100%';
+              if (fsTarget && fsTarget !== container) fsTarget.style.height = '100%';
+            } else {
+              container.style.height = orig.containerHeight || '';
+              if (explorerPanel) explorerPanel.style.height = orig.explorerHeight || '';
+              if (fsTarget && fsTarget !== container && orig.shell) fsTarget.style.height = orig.shell.height || '';
+            }
+          };
+
+          const isNativeOn = () => {
+            try { return document.fullscreenElement === fsTarget; } catch (e) { return false; }
+          };
+
+          const updateFsBtn = () => {
+            const on = isNativeOn() || pseudoFs;
+            fsBtn.textContent = on ? '⤡' : '⤢';
+            fsBtn.title = on ? 'Exit fullscreen' : 'Fullscreen';
+          };
+
+          const enterPseudo = () => {
+            if (!fsTarget || !orig.shell) return;
+            pseudoFs = true;
+            fsTarget.style.position = 'fixed';
+            fsTarget.style.top = '0';
+            fsTarget.style.left = '0';
+            fsTarget.style.right = '0';
+            fsTarget.style.bottom = '0';
+            fsTarget.style.width = '100vw';
+            fsTarget.style.height = '100vh';
+            fsTarget.style.zIndex = '99999';
+            fsTarget.style.padding = '12px';
+            if (!fsTarget.style.background) fsTarget.style.background = 'white';
+            applyFillHeights(true);
+            updateFsBtn();
+            window.setTimeout(() => {
+              try { window.dispatchEvent(new Event('resize')); } catch (e1) {}
+              try { network.redraw(); } catch (e2) {}
+            }, 80);
+          };
+
+          const exitPseudo = () => {
+            if (!fsTarget || !orig.shell) return;
+            pseudoFs = false;
+            fsTarget.style.position = orig.shell.position || '';
+            fsTarget.style.top = orig.shell.top || '';
+            fsTarget.style.left = orig.shell.left || '';
+            fsTarget.style.right = orig.shell.right || '';
+            fsTarget.style.bottom = orig.shell.bottom || '';
+            fsTarget.style.width = orig.shell.width || '';
+            fsTarget.style.height = orig.shell.height || '';
+            fsTarget.style.zIndex = orig.shell.zIndex || '';
+            fsTarget.style.padding = orig.shell.padding || '';
+            fsTarget.style.background = orig.shell.background || '';
+            applyFillHeights(false);
+            updateFsBtn();
+            window.setTimeout(() => {
+              try { window.dispatchEvent(new Event('resize')); } catch (e1) {}
+              try { network.redraw(); } catch (e2) {}
+            }, 80);
+          };
+
+          fsBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (isNativeOn()) {
+              try { document.exitFullscreen(); } catch (e) {}
+              return;
+            }
+            if (pseudoFs) {
+              exitPseudo();
+              return;
+            }
+            if (fsTarget && fsTarget.requestFullscreen && document.fullscreenEnabled) {
+              fsTarget.requestFullscreen().catch(() => enterPseudo());
+            } else {
+              enterPseudo();
+            }
+          });
+
+          if (!document.body.dataset.repGraphFullscreenListener) {
+            document.body.dataset.repGraphFullscreenListener = '1';
+            document.addEventListener('fullscreenchange', () => {
+              const on = isNativeOn();
+              applyFillHeights(on);
+              updateFsBtn();
+              window.setTimeout(() => {
+                try { window.dispatchEvent(new Event('resize')); } catch (e1) {}
+                try { network.redraw(); } catch (e2) {}
+              }, 80);
+            });
+          }
+
+          updateFsBtn();
+        }
+      } catch (e) {
+        // ignore
+      }
 
       function centerOnRoot() {
         try {
@@ -617,6 +912,8 @@
         const finish = (returned, hasMore, meta) => {
           state.fetched += returned;
           state.hasMoreServer = !!hasMore;
+          if (returned === 0) state.exhausted = true;
+          else state.exhausted = false;
           if (meta) {
             if (typeof meta.total === 'number') state.totalGuess = meta.total;
             else if (typeof meta.totalGuess === 'number') state.totalGuess = meta.totalGuess;
@@ -1023,7 +1320,19 @@
         const el = explorer.querySelector('#rep-graph-status');
         if (!el) return;
         if (el.getAttribute('data-node-id') !== nodeId) return;
-        el.textContent = String(text || '');
+        const msg = String(text || '');
+        el.innerHTML = '';
+        if (/\bloading\b/i.test(msg)) {
+          const icon = document.createElement('i');
+          icon.className = 'fa fa-spinner fa-spin';
+          icon.style.marginRight = '6px';
+          const t = document.createElement('span');
+          t.textContent = msg;
+          el.appendChild(icon);
+          el.appendChild(t);
+        } else {
+          el.textContent = msg;
+        }
       }
 
       function renderNodeInfoBox(box, nodeId, fallbackNode) {
@@ -1038,7 +1347,18 @@
           status.id = 'rep-graph-status';
           status.setAttribute('data-node-id', nodeId);
           status.style.cssText = 'font-size:12px; opacity:.75; margin-bottom:6px;';
-          status.textContent = String(statusText || '');
+          const msg = String(statusText || '');
+          if (/\bloading\b/i.test(msg)) {
+            const icon = document.createElement('i');
+            icon.className = 'fa fa-spinner fa-spin';
+            icon.style.marginRight = '6px';
+            const t = document.createElement('span');
+            t.textContent = msg;
+            status.appendChild(icon);
+            status.appendChild(t);
+          } else {
+            status.textContent = msg;
+          }
           box.appendChild(status);
 
           const addRow = (k, v, copyVal = null) => {
@@ -1481,29 +1801,33 @@
             return;
           }
 
-          const countHintFor = (lbl) => {
-            let count = itemsForLabel(nodeId, lbl).length;
-            if (count > 0) return count;
-            if (!info) return count;
+          const predicateMetaFor = (lbl) => {
+            if (!info) return null;
 
             const normLbl = normalizePredForApi(lbl);
-
-            if (normLbl === 'super' && info.superUri) return 1;
+            if (normLbl === 'super' && info.superUri) return { kind: 'link', count: 1 };
 
             if (Array.isArray(info.predicates)) {
               const p = info.predicates.find(x => normalizePredForApi(x?.key) === normLbl);
-              if (p) {
-                if (p.kind === 'link') return 1;
-                if (typeof p.count === 'number') return p.count;
-              }
+              if (p && p.kind === 'link') return { kind: 'link', count: 1 };
+              if (p && p.kind === 'list') return { kind: 'list', count: (typeof p.count === 'number') ? p.count : null };
             } else {
               const lnk = (info.links || []).find(x => normalizePredForApi(x?.key) === normLbl);
+              if (lnk) return { kind: 'link', count: 1 };
               const lst = (info.lists || []).find(x => normalizePredForApi(x?.key) === normLbl && x?.expandable !== false);
-              if (lnk) return 1;
-              if (lst && typeof lst.count === 'number') return lst.count;
+              if (lst) return { kind: 'list', count: (typeof lst.count === 'number') ? lst.count : null };
             }
 
-            return count;
+            return null;
+          };
+
+          const countHintFor = (lbl) => {
+            const cached = itemsForLabel(nodeId, lbl).length;
+            const meta = predicateMetaFor(lbl);
+            if (!meta) return cached;
+            if (meta.kind === 'link') return Math.max(cached, 1);
+            if (meta.kind === 'list' && typeof meta.count === 'number') return Math.max(cached, meta.count);
+            return cached;
           };
 
           const renderPredicateBody = (lbl, bodyEl, summaryEl) => {
@@ -1520,7 +1844,7 @@
               pageState[key] = {
                 offset: 0,
                 fetched: list.length,
-                hasMoreServer: true,
+                hasMoreServer: null,
                 exhausted: false,
                 prefetchTried: false,
                 triedGeneric: false,
@@ -1531,7 +1855,15 @@
             if (typeof state.offset !== 'number') state.offset = 0;
             if (typeof state.fetched !== 'number') state.fetched = list.length;
             if (state.fetched < list.length) state.fetched = list.length;
-            if (hint > list.length) state.hasMoreServer = true;
+
+            const meta = predicateMetaFor(lbl);
+            const knownTotal = (meta && typeof meta.count === 'number') ? meta.count : null;
+            if (meta && meta.kind === 'link' && list.length > 0) {
+              state.hasMoreServer = false;
+            }
+            if (knownTotal !== null && state.fetched >= knownTotal) {
+              state.hasMoreServer = false;
+            }
 
             const controls = document.createElement('div');
             controls.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;';
@@ -1551,15 +1883,25 @@
             loadBtn.className = 'btn btn-sm btn-light';
             loadBtn.textContent = (list.length === 0) ? 'Load' : 'Load more';
 
-            controls.appendChild(showBtn);
-            controls.appendChild(hideBtn);
+            const canGroupToggle = (list.length > 1);
+            if (canGroupToggle) {
+              controls.appendChild(showBtn);
+              controls.appendChild(hideBtn);
+            }
 
-            const canLoad = !!socEndpoint && !state.exhausted && (state.hasMoreServer !== false || list.length === 0);
+            const isType = (lbl === 'hascoTypeUri' || lbl === 'typeUri');
+            const canInitialLoad = (list.length === 0);
+            const canLoadMoreKnown = (knownTotal !== null) ? (list.length < knownTotal) : false;
+            const canLoadMoreServer = (state.hasMoreServer === true);
+            const canLoadUnknown = (!meta) && (state.hasMoreServer !== false) && (list.length >= MAX_MEMBERS_PER_SOC);
+            const canLoad = !!socEndpoint && !state.exhausted && (!isType || list.length === 0) && (canInitialLoad || canLoadMoreKnown || canLoadMoreServer || canLoadUnknown);
             if (canLoad) {
               controls.appendChild(loadBtn);
             }
 
-            bodyEl.appendChild(controls);
+            if (controls.childNodes.length) {
+              bodyEl.appendChild(controls);
+            }
 
             // Prefetch on first open if empty.
             if (list.length === 0 && canLoad && !state.prefetchTried) {
@@ -1609,8 +1951,9 @@
                 addEdgeVisible(desired);
               }
 
-              if (addedNodeIds.length) {
-                placeByPredicate(network, nodeId, Array.from(new Set(addedNodeIds)), lbl);
+              const toPlace = Array.from(new Set(addedNodeIds));
+              if (toPlace.length) {
+                placeByPredicate(network, nodeId, toPlace, lbl);
               }
 
               network.redraw();
@@ -1712,55 +2055,196 @@
 
             bodyEl.appendChild(listWrap);
 
-            // Pager
-            const footer = document.createElement('div');
-            footer.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px;';
+            // Pager (only when multiple pages are cached)
+            const showPager = totalFetched > MAX_MEMBERS_PER_SOC;
+            if (showPager) {
+              const footer = document.createElement('div');
+              footer.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px;';
 
-            const leftBtn = document.createElement('button');
-            leftBtn.type = 'button';
-            leftBtn.className = 'btn btn-sm btn-light';
-            leftBtn.textContent = '«';
-            leftBtn.disabled = (state.offset <= 0);
-            leftBtn.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              state.offset = Math.max(0, state.offset - MAX_MEMBERS_PER_SOC);
-              renderPredicateBody(lbl, bodyEl, summaryEl);
-            });
-
-            const infoTxt = document.createElement('span');
-            infoTxt.style.cssText = 'font-size:12px; opacity:.8;';
-            const pageNum = Math.floor(start / MAX_MEMBERS_PER_SOC) + 1;
-            const totalPages = Math.max(1, Math.ceil(Math.max(totalFetched, shown) / MAX_MEMBERS_PER_SOC));
-            infoTxt.textContent = `Page ${pageNum} / ${totalPages}`;
-
-            const rightBtn = document.createElement('button');
-            rightBtn.type = 'button';
-            rightBtn.className = 'btn btn-sm btn-light';
-            rightBtn.textContent = '»';
-
-            const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
-            const canFetchMore = canLoad && state.hasMoreServer !== false;
-            rightBtn.disabled = !canAdvanceCached && !canFetchMore;
-            rightBtn.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              if (canAdvanceCached) {
-                state.offset += MAX_MEMBERS_PER_SOC;
+              const leftBtn = document.createElement('button');
+              leftBtn.type = 'button';
+              leftBtn.className = 'btn btn-sm btn-light';
+              leftBtn.textContent = '«';
+              leftBtn.disabled = (state.offset <= 0);
+              leftBtn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                state.offset = Math.max(0, state.offset - MAX_MEMBERS_PER_SOC);
                 renderPredicateBody(lbl, bodyEl, summaryEl);
-              } else if (canFetchMore) {
-                fetchMoreForLabel(nodeId, lbl, state, rightBtn, (returned) => {
-                  if (returned > 0) {
-                    state.offset += MAX_MEMBERS_PER_SOC;
-                  }
-                  renderPredicateBody(lbl, bodyEl, summaryEl);
-                });
-              }
-            });
+              });
 
-            footer.appendChild(leftBtn);
-            footer.appendChild(infoTxt);
-            footer.appendChild(rightBtn);
-            bodyEl.appendChild(footer);
+              const infoTxt = document.createElement('span');
+              infoTxt.style.cssText = 'font-size:12px; opacity:.8;';
+              const pageNum = Math.floor(start / MAX_MEMBERS_PER_SOC) + 1;
+              const totalPages = Math.max(1, Math.ceil(Math.max(totalFetched, shown) / MAX_MEMBERS_PER_SOC));
+              infoTxt.textContent = `Page ${pageNum} / ${totalPages}`;
+
+              const rightBtn = document.createElement('button');
+              rightBtn.type = 'button';
+              rightBtn.className = 'btn btn-sm btn-light';
+              rightBtn.textContent = '»';
+
+              const canAdvanceCached = (state.offset + MAX_MEMBERS_PER_SOC) < totalFetched;
+              const canFetchMore = canLoad && state.hasMoreServer !== false;
+              rightBtn.disabled = !canAdvanceCached && !canFetchMore;
+              rightBtn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                if (canAdvanceCached) {
+                  state.offset += MAX_MEMBERS_PER_SOC;
+                  renderPredicateBody(lbl, bodyEl, summaryEl);
+                } else if (canFetchMore) {
+                  fetchMoreForLabel(nodeId, lbl, state, rightBtn, (returned) => {
+                    if (returned > 0) {
+                      state.offset += MAX_MEMBERS_PER_SOC;
+                    }
+                    renderPredicateBody(lbl, bodyEl, summaryEl);
+                  });
+                }
+              });
+
+              footer.appendChild(leftBtn);
+              footer.appendChild(infoTxt);
+              footer.appendChild(rightBtn);
+              bodyEl.appendChild(footer);
+            } else {
+              state.offset = 0;
+            }
           };
+
+          const predEls = {};
+
+          const globalControls = document.createElement('div');
+          globalControls.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap; align-items:center;';
+
+          const showAllPredsBtn = document.createElement('button');
+          showAllPredsBtn.type = 'button';
+          showAllPredsBtn.className = 'btn btn-sm btn-light';
+          showAllPredsBtn.textContent = 'Show all predicates';
+
+          globalControls.appendChild(showAllPredsBtn);
+          relInner.appendChild(globalControls);
+
+          showAllPredsBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+
+            const prevTxt = showAllPredsBtn.textContent;
+            showAllPredsBtn.disabled = true;
+            showAllPredsBtn.textContent = 'Working…';
+
+            let warned = false;
+
+            // Ensure anchor exists.
+            if (!nodes.get(nodeId)) {
+              nodes.add(ensureNodeStyle({ id: nodeId, label: (nodeId.split('/').pop()||nodeId), shape:'box'}));
+            }
+
+            const finish = () => {
+              try { network.redraw(); } catch (e) {}
+
+              Object.keys(predEls).forEach((lbl) => {
+                const p = predEls[lbl];
+                if (!p) return;
+                if (p.det && p.det.open) {
+                  renderPredicateBody(lbl, p.body, p.sum);
+                } else if (p.sum) {
+                  const hint = countHintFor(lbl);
+                  const shown = Math.max(itemsForLabel(nodeId, lbl).length, hint);
+                  p.sum.textContent = `${lbl} (${shown})`;
+                }
+              });
+
+              showAllPredsBtn.textContent = prevTxt;
+              showAllPredsBtn.disabled = false;
+            };
+
+            const processAt = (idx) => {
+              if (idx >= labels.length) {
+                finish();
+                return;
+              }
+
+              const lbl = labels[idx];
+              const key = `out:${nodeId}:${lbl}`;
+              if (!pageState[key]) {
+                pageState[key] = {
+                  offset: 0,
+                  fetched: itemsForLabel(nodeId, lbl).length,
+                  hasMoreServer: null,
+                  exhausted: false,
+                  prefetchTried: false,
+                  triedGeneric: false,
+                  totalGuess: null,
+                };
+              }
+              const state = pageState[key];
+
+              const list0 = itemsForLabel(nodeId, lbl);
+              if (typeof state.offset !== 'number') state.offset = 0;
+              if (typeof state.fetched !== 'number') state.fetched = list0.length;
+              if (state.fetched < list0.length) state.fetched = list0.length;
+
+              const isType = (lbl === 'hascoTypeUri' || lbl === 'typeUri');
+              const canLoadLbl = !!socEndpoint && !state.exhausted && (state.hasMoreServer !== false || list0.length === 0) && (!isType || list0.length === 0);
+
+              const showNow = () => {
+                const itemsAll = itemsForLabel(nodeId, lbl);
+                if (!itemsAll.length) {
+                  processAt(idx + 1);
+                  return;
+                }
+
+                let warnedHere = false;
+                const addedNodeIds = [];
+
+                for (const { edge: e } of itemsAll) {
+                  const otherId = e.to;
+                  const other = ensureExtraNodeById(otherId, { asClass: (lbl === 'typeUri' || lbl === 'hascoTypeUri') });
+
+                  if (!nodes.get(other.id)) {
+                    if (!canAddMoreVisibleNodes(1)) {
+                      if (!warned) { warned = true; warnNodeCap(); }
+                      warnedHere = true;
+                      break;
+                    }
+                    nodes.add(ensureNodeStyle({ ...other }));
+                    addedNodeIds.push(other.id);
+                  }
+
+                  const desired = { from: nodeId, to: other.id, label: lbl };
+                  if (lbl === 'contains') desired.label = 'contains';
+                  if (lbl === 'typeUri' || lbl === 'hascoTypeUri') desired.to = other.id;
+
+                  addEdgeVisible(desired);
+                }
+
+                const toPlace = Array.from(new Set(addedNodeIds));
+                if (toPlace.length) {
+                  placeByPredicate(network, nodeId, toPlace, lbl);
+                }
+
+                if (predEls[lbl]?.sum) {
+                  const hint = countHintFor(lbl);
+                  const shown = Math.max(itemsAll.length, hint);
+                  predEls[lbl].sum.textContent = `${lbl} (${shown})`;
+                }
+
+                if (warnedHere) {
+                  finish();
+                  return;
+                }
+
+                processAt(idx + 1);
+              };
+
+              if (list0.length === 0 && canLoadLbl && !state.prefetchTried) {
+                state.prefetchTried = true;
+                fetchMoreForLabel(nodeId, lbl, state, { textContent:'', disabled:false }, () => showNow());
+              } else {
+                showNow();
+              }
+            };
+
+            processAt(0);
+          });
 
           const predList = document.createElement('div');
           predList.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
@@ -1779,6 +2263,8 @@
             const body = document.createElement('div');
             body.style.cssText = 'margin-top:8px;';
             det.appendChild(body);
+
+            predEls[lbl] = { det, sum, body };
 
             det.addEventListener('toggle', () => {
               if (det.open) {
@@ -1835,6 +2321,7 @@
       }
 
       // ----- Click handler -----
+      let lastSelectedNodeId = null;
       network.on("click", function (params) {
         expandMenu.style.display = "none";
         closeAllSubmenus();
@@ -1843,6 +2330,8 @@
         const selectedNodeId = params.nodes[0];
         const selectedNode   = nodes.get(selectedNodeId) || extraNodes.find(n => n.id === selectedNodeId);
         if (!selectedNode) return;
+
+        lastSelectedNodeId = selectedNodeId;
 
         seedTypeEdgesForNode(selectedNode);
 
@@ -1958,6 +2447,16 @@
 
         expandMenu.style.display = "block";
         setTimeout(() => updateExpandMenuPosition(selectedNodeId), 0);
+      });
+
+      // Keep explorer in sync even when selection changes without a click handler running.
+      network.on('selectNode', (params) => {
+        if (!params || !Array.isArray(params.nodes) || params.nodes.length === 0) return;
+        const id = params.nodes[0];
+        if (!id || id === lastSelectedNodeId) return;
+        lastSelectedNodeId = id;
+        const n = nodes.get(id) || extraNodes.find(x => x.id === id) || null;
+        if (explorer) renderExplorer(id, n);
       });
 
       // ----- Double-click: prefetch relationships (expand) -----
