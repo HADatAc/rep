@@ -341,7 +341,7 @@ if (!empty($element->typeUri)) {
     // NOTE: This form is sometimes embedded via array union ("+") which can drop
     // root-level #attached. So we also attach critical libraries to the canvas
     // render array (which always bubbles up).
-    $form['#attached']['library'][] = 'rep/vis_graph_panel';
+    $form['#attached']['library'][] = 'rep/sigma_graph_panel';
     $form['#attached']['library'][] = 'rep/fontawesome';
 
     // Build the canvas render array.

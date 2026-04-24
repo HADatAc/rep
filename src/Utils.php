@@ -1456,7 +1456,7 @@ EOT,
         'extraEdges' => json_encode($extraEdges),
       ],
       '#attached' => [
-        'library' => ['rep/vis_graph_panel'], // ✅ includes new JS library
+        'library' => ['rep/sigma_graph_panel'],
         'drupalSettings' => [
           'graphData' => [
             'nodes' => $baseNodes,
