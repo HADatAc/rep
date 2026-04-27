@@ -60,13 +60,17 @@ class SocialReviewListForm extends FormBase {
       '#markup' => '<h3 class="mt-4">' . $this->t('Manage @title Reviews', ['@title' => $this->pluralTitle($elementtype)]) . '</h3>',
     ];
 
+    $form['elementtype'] = [
+      '#type' => 'hidden',
+      '#value' => $elementtype,
+    ];
+
     $header = [
       $this->t('Label'),
       $this->t('URI'),
-      $this->t('Actions'),
     ];
 
-    $rows = [];
+    $options = [];
     foreach ($items as $item) {
       if (is_array($item)) {
         $item = (object) $item;
@@ -82,56 +86,114 @@ class SocialReviewListForm extends FormBase {
 
       $label = (string) ($item->label ?? ($item->name ?? $uri));
 
-      $review_url = Url::fromRoute('rep.review_social_element', [
-        'elementtype' => $elementtype,
-        'elementuri' => base64_encode($uri),
-      ]);
-
-      $rows[] = [
-        'data' => [
-          $label,
-          $uri,
-          Link::fromTextAndUrl($this->t('Review'), $review_url)->toRenderable(),
-        ],
+      $options[$uri] = [
+        'label' => $label,
+        'uri' => $uri,
       ];
     }
 
-    $form['table'] = [
-      '#type' => 'table',
+    $form['actions'] = [
+      '#type' => 'actions',
+    ];
+
+    $form['actions']['review_selected'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Review Selected'),
+      '#name' => 'review_selected',
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'edit-element-button'],
+      ],
+    ];
+
+    $form['element_table_wrapper'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'element-table-wrapper'],
+    ];
+
+    $form['element_table_wrapper']['element_table'] = [
+      '#type' => 'tableselect',
       '#header' => $header,
-      '#rows' => $rows,
+      '#options' => $options,
+      '#js_select' => FALSE,
       '#empty' => $this->t('No items are currently Under Review.'),
     ];
 
-    $nav = [];
-    if ($page > 1) {
-      $nav[] = Link::fromTextAndUrl($this->t('Previous'), Url::fromRoute('rep.review_social_select', [
+    $previous_link = $page > 1
+      ? Url::fromRoute('rep.review_social_select', [
         'elementtype' => $elementtype,
         'page' => $page - 1,
         'pagesize' => $pagesize,
-      ]))->toString();
-    }
+      ])->toString()
+      : '';
 
-    $nav[] = $this->t('Page @p of @t', ['@p' => $page, '@t' => $total_pages]);
-
-    if ($page < $total_pages) {
-      $nav[] = Link::fromTextAndUrl($this->t('Next'), Url::fromRoute('rep.review_social_select', [
+    $next_link = $page < $total_pages
+      ? Url::fromRoute('rep.review_social_select', [
         'elementtype' => $elementtype,
         'page' => $page + 1,
         'pagesize' => $pagesize,
-      ]))->toString();
-    }
+      ])->toString()
+      : '';
 
-    $form['pager'] = [
-      '#type' => 'item',
-      '#markup' => '<div class="mt-3">' . implode(' | ', $nav) . '</div>',
+    $form['element_table_wrapper']['pager'] = [
+      '#theme' => 'list-page',
+      '#items' => [
+        'page' => (string) $page,
+        'first' => Url::fromRoute('rep.review_social_select', [
+          'elementtype' => $elementtype,
+          'page' => 1,
+          'pagesize' => $pagesize,
+        ])->toString(),
+        'last' => Url::fromRoute('rep.review_social_select', [
+          'elementtype' => $elementtype,
+          'page' => $total_pages,
+          'pagesize' => $pagesize,
+        ])->toString(),
+        'previous' => $previous_link,
+        'next' => $next_link,
+        'last_page' => (string) $total_pages,
+        'links' => NULL,
+        'title' => ' ',
+      ],
     ];
 
     return $form;
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // No submit actions.
+    $trigger = $form_state->getTriggeringElement();
+    $button_name = (string) ($trigger['#name'] ?? '');
+
+    if ($button_name !== 'review_selected') {
+      return;
+    }
+
+    $selected_rows = $form_state->getValue('element_table') ?? [];
+    $rows = [];
+    foreach ($selected_rows as $key => $selected) {
+      if ($selected) {
+        $rows[$key] = $key;
+      }
+    }
+
+    if (count($rows) < 1) {
+      \Drupal::messenger()->addWarning($this->t('Select exactly one item to review.'));
+      return;
+    }
+    if (count($rows) > 1) {
+      \Drupal::messenger()->addWarning($this->t('Select only one item at a time to review.'));
+      return;
+    }
+
+    $uri = (string) array_key_first($rows);
+    $elementtype = (string) $form_state->getValue('elementtype');
+    if (!$this->isAllowedElementType($elementtype)) {
+      $elementtype = 'person';
+    }
+
+    $form_state->setRedirect('rep.review_social_element', [
+      'elementtype' => $elementtype,
+      'elementuri' => base64_encode($uri),
+    ]);
   }
 
 }

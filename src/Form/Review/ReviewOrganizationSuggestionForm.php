@@ -2,7 +2,6 @@
 
 namespace Drupal\rep\Form\Review;
 
-use Drupal\Component\Serialization\Json;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
@@ -252,7 +251,14 @@ class ReviewOrganizationSuggestionForm extends FormBase {
 
     // Overwrite the same URI (no versioning).
     $ok_del = $api->parseObjectResponse($api->elementDel('organization', $organization_uri), 'elementDel');
-    $ok_add = $api->parseObjectResponse($api->elementAdd('organization', Json::encode($update)), 'elementAdd');
+
+    $json = json_encode($update, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if (!is_string($json) || $json === '') {
+      \Drupal::messenger()->addError($this->t('Failed to encode suggestion payload.'));
+      return;
+    }
+
+    $ok_add = $api->parseObjectResponse($api->elementAdd('organization', $json), 'elementAdd');
 
     if ($ok_add === NULL) {
       \Drupal::messenger()->addError($this->t('Failed to apply suggestion to the API.'));

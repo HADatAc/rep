@@ -70,10 +70,14 @@ class OrganizationSuggestionListForm extends FormBase {
 
       $rows[] = [
         'data' => [
-          Link::fromTextAndUrl($ns_uri, $describe_url)->toRenderable(),
+          [
+            'data' => Link::fromTextAndUrl($ns_uri, $describe_url)->toRenderable(),
+          ],
           (string) ($item->suggested_by_email ?? ''),
           $created_str,
-          Link::fromTextAndUrl($this->t('Review'), $review_url)->toRenderable(),
+          [
+            'data' => Link::fromTextAndUrl($this->t('Review'), $review_url)->toRenderable(),
+          ],
         ],
       ];
     }

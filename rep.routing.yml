@@ -430,6 +430,7 @@ rep.social_suggest_edit_organization_modal:
     _controller: '\Drupal\rep\Controller\Social\SuggestOrganizationEditModalController::openOrganization'
   requirements:
     _permission: 'access content'
+    _role: 'authenticated'
   methods: ['GET', 'POST']
   options:
     _admin_route: TRUE
