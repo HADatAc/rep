@@ -89,26 +89,38 @@ class OrganizationSuggestionListForm extends FormBase {
       '#empty' => $this->t('No edit suggestions are currently pending.'),
     ];
 
-    $nav = [];
-    if ($page > 1) {
-      $nav[] = Link::fromTextAndUrl($this->t('Previous'), Url::fromRoute('rep.review_org_suggestions', [
+    $previous_link = $page > 1
+      ? Url::fromRoute('rep.review_org_suggestions', [
         'page' => $page - 1,
         'pagesize' => $pagesize,
-      ]))->toString();
-    }
+      ])->toString()
+      : '';
 
-    $nav[] = $this->t('Page @p of @t', ['@p' => $page, '@t' => $total_pages]);
-
-    if ($page < $total_pages) {
-      $nav[] = Link::fromTextAndUrl($this->t('Next'), Url::fromRoute('rep.review_org_suggestions', [
+    $next_link = $page < $total_pages
+      ? Url::fromRoute('rep.review_org_suggestions', [
         'page' => $page + 1,
         'pagesize' => $pagesize,
-      ]))->toString();
-    }
+      ])->toString()
+      : '';
 
     $form['pager'] = [
-      '#type' => 'item',
-      '#markup' => '<div class="mt-3">' . implode(' | ', $nav) . '</div>',
+      '#theme' => 'list-page',
+      '#items' => [
+        'page' => (string) $page,
+        'first' => Url::fromRoute('rep.review_org_suggestions', [
+          'page' => 1,
+          'pagesize' => $pagesize,
+        ])->toString(),
+        'last' => Url::fromRoute('rep.review_org_suggestions', [
+          'page' => $total_pages,
+          'pagesize' => $pagesize,
+        ])->toString(),
+        'previous' => $previous_link,
+        'next' => $next_link,
+        'last_page' => (string) $total_pages,
+        'links' => NULL,
+        'title' => ' ',
+      ],
     ];
 
     return $form;

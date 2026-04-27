@@ -66,8 +66,8 @@ class SocialReviewListForm extends FormBase {
     ];
 
     $header = [
-      $this->t('Label'),
-      $this->t('URI'),
+      'label' => $this->t('Label'),
+      'uri' => $this->t('URI'),
     ];
 
     $options = [];
