@@ -399,6 +399,82 @@ rep.social_autocomplete:
   options:
     _format: 'json'
     # _auth: ['oauth2']
+
+# Quick-create Social elements (modal)
+rep.social_quick_add_person_modal:
+  path: '/rep/social/quick-add/person'
+  defaults:
+    _controller: '\Drupal\rep\Controller\Social\QuickAddSocialModalController::openPerson'
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+  methods: ['GET', 'POST', 'PUT', 'PATCH']
+  options:
+    _admin_route: TRUE
+
+rep.social_quick_add_organization_modal:
+  path: '/rep/social/quick-add/organization'
+  defaults:
+    _controller: '\Drupal\rep\Controller\Social\QuickAddSocialModalController::openOrganization'
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+  methods: ['GET', 'POST', 'PUT', 'PATCH']
+  options:
+    _admin_route: TRUE
+
+# Suggest edit for Organization (modal)
+rep.social_suggest_edit_organization_modal:
+  path: '/rep/social/suggest-edit/organization/{elementuri}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\Social\SuggestOrganizationEditModalController::openOrganization'
+  requirements:
+    _permission: 'access content'
+  methods: ['GET', 'POST']
+  options:
+    _admin_route: TRUE
+
+# Review Social elements (person/organization)
+rep.review_social_select:
+  path: 'rep/review/social/{elementtype}/{page}/{pagesize}'
+  defaults:
+    _form: '\Drupal\rep\Form\Review\SocialReviewListForm'
+  requirements:
+    _role: 'content_editor'
+  options:
+    no_cache: 'TRUE'
+
+rep.review_social_element:
+  path: 'rep/manage/review-social/{elementtype}/{elementuri}'
+  defaults:
+    _form: '\Drupal\rep\Form\Review\ReviewSocialElementForm'
+    _title: 'Review Social Element'
+  requirements:
+    _role: 'content_editor'
+  options:
+    no_cache: 'TRUE'
+
+# Review Organization edit suggestions
+rep.review_org_suggestions:
+  path: 'rep/review/organization-suggestions/{page}/{pagesize}'
+  defaults:
+    _form: '\Drupal\rep\Form\Review\OrganizationSuggestionListForm'
+    page: '1'
+    pagesize: '9'
+  requirements:
+    _role: 'content_editor'
+  options:
+    no_cache: 'TRUE'
+
+rep.review_org_suggestion:
+  path: 'rep/manage/review-organization-suggestion/{suggestion_id}'
+  defaults:
+    _form: '\Drupal\rep\Form\Review\ReviewOrganizationSuggestionForm'
+    _title: 'Review Organization Edit Suggestion'
+  requirements:
+    _role: 'content_editor'
+  options:
+    no_cache: 'TRUE'
 rep.terms_form:
   path: '/terms-aceptance'
   defaults:

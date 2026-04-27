@@ -77,6 +77,10 @@ function rep_form_alter(&$form, &$form_state, $form_id) {
 
   if (!empty($ux_flags['has_autocomplete'])) {
     $form['#attached']['library'][] = 'rep/rep_autocomplete_ux';
+
+    // Expose permissions to the autocomplete UX so it can show/hide
+    // quick-create actions for Social elements.
+    $form['#attached']['drupalSettings']['repAutocompleteUx']['canCreateSocial'] = \Drupal::currentUser()->hasRole('content_editor');
   }
 }
 

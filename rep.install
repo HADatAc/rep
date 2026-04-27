@@ -51,6 +51,53 @@ function rep_schema() {
     ],
     'primary key' => ['id'],
   ];
+
+  $schema['rep_org_edit_suggestions'] = [
+    'description' => 'Pending suggested edits for Organizations (review workflow).',
+    'fields' => [
+      'id' => [
+        'description' => 'Primary Key',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'organization_uri' => [
+        'description' => 'Organization URI being suggested for edit.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ],
+      'suggested_by_uid' => [
+        'description' => 'Drupal user id who submitted the suggestion.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'suggested_by_email' => [
+        'description' => 'Email of submitter (snapshot).',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ],
+      'created' => [
+        'description' => 'Unix timestamp when suggestion was created.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'payload' => [
+        'description' => 'JSON payload with suggested organization fields.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      'organization_uri' => ['organization_uri'],
+      'created' => ['created'],
+    ],
+  ];
   return $schema;
 }
 
@@ -76,5 +123,17 @@ function rep_update_9004() {
     if ($role && ! $role->hasPermission('administer semantic ontologies')) {
       $role->grantPermission('administer semantic ontologies')->save();
     }
+  }
+}
+
+/**
+ * Update #9010: Create rep_org_edit_suggestions table if missing.
+ */
+function rep_update_9010() {
+  $schema_def = rep_schema()['rep_org_edit_suggestions'];
+  $db = \Drupal::database();
+  $sm = $db->schema();
+  if (! $sm->tableExists('rep_org_edit_suggestions')) {
+    $sm->createTable('rep_org_edit_suggestions', $schema_def);
   }
 }

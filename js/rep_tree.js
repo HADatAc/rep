@@ -1383,12 +1383,20 @@
       if (!window._modalFixInitialized) {
         window._modalFixInitialized = true;
 
-        // When ANY dialog fires ‘dialogclose’:
+        // When a dialog containing the REP tree picker closes:
         $(document).on('dialogclose', function (event) {
           var $dialogContent = $(event.target);
 
           // Only proceed if it’s a jQuery UI Dialog container (class ui-dialog-content)
           if (!$dialogContent.hasClass('ui-dialog-content')) {
+            return;
+          }
+
+          // Only run this cleanup for the tree picker dialog.
+          // (Important: avoid interfering with other dialogs such as the
+          // parent form modal.)
+          var $treeRoot = $dialogContent.find('#tree-root');
+          if (!$treeRoot.length) {
             return;
           }
 
@@ -1399,21 +1407,13 @@
             'padding-right': ''
           });
 
-          // 2) If jsTree still exists, destroy it
-          var $treeRoot = $('#tree-root');
-          if ($treeRoot.length && $treeRoot.data('jstree')) {
+          // 2) If jsTree still exists, destroy it.
+          // NOTE: do NOT destroy/remove the dialog itself here. Drupal's dialog
+          // API handles closing/removing the dialog element and detaching
+          // behaviors. Doing it here causes double-destroy errors.
+          if ($treeRoot.data('jstree')) {
             $treeRoot.jstree('destroy');
           }
-          // Remove the <div id="tree-root"> element itself
-          $treeRoot.remove();
-
-          // 3) If the dialog widget is initialized, destroy it
-          if ($dialogContent.data('ui-dialog')) {
-            $dialogContent.dialog('destroy');
-          }
-
-          // 4) Remove the dialog container from the DOM
-          $dialogContent.remove();
         });
 
         // Also listen to ‘dialog:afterclose’ just to be sure

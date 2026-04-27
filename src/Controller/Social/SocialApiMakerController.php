@@ -6,6 +6,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Drupal\Component\Utility\Xss;
+use Drupal\rep\Vocabulary\VSTOI;
 
 /**
  * Autocomplete that uses legacy first, then (optionally) Social API.
@@ -48,6 +49,22 @@ class SocialApiMakerController extends ControllerBase {
     }
 
     // \Drupal::logger('rep')->debug('Legacy makers count: @c', ['@c' => count($makers)]);
+    $legacyMakers = $makers;
+
+    // Enforce: autocompletes should only list CURRENT elements.
+    $makers = array_values(array_filter($makers, function ($m) {
+      if (is_array($m)) {
+        $m = (object) $m;
+      }
+      if (!is_object($m)) {
+        return FALSE;
+      }
+      if (isset($m->hasStatus) && $m->hasStatus !== NULL && $m->hasStatus !== '' && $m->hasStatus !== VSTOI::CURRENT) {
+        return FALSE;
+      }
+      return TRUE;
+    }));
+
     $legacyMakers = $makers;
 
     // 3) Se houver resultados legacy, ou social_conf OFF, devolve-os já.
@@ -166,6 +183,20 @@ class SocialApiMakerController extends ControllerBase {
     if (empty($makers) && !empty($legacyMakers)) {
       $makers = $legacyMakers;
     }
+
+    // Enforce again after Social fallback.
+    $makers = array_values(array_filter($makers, function ($m) {
+      if (is_array($m)) {
+        $m = (object) $m;
+      }
+      if (!is_object($m)) {
+        return FALSE;
+      }
+      if (isset($m->hasStatus) && $m->hasStatus !== NULL && $m->hasStatus !== '' && $m->hasStatus !== VSTOI::CURRENT) {
+        return FALSE;
+      }
+      return TRUE;
+    }));
 
     // 6) Monta retorno final
     foreach ($makers as $m) {

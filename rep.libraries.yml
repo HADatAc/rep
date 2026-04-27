@@ -50,6 +50,8 @@ rep_autocomplete_ux:
   dependencies:
     - core/jquery
     - core/drupal
+    - core/drupalSettings
+    - core/drupal.dialog.ajax
     - core/drupal.autocomplete
 
 webdoc_modal:

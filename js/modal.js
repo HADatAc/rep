@@ -25,7 +25,13 @@
 
           const $searchField = $('#tree-search');
           const $clearButton = $('#clear-search');
-          const $existingModal = $('.ui-dialog-content');
+          const openedFromDrupalModal = $(this).closest('#drupal-modal').length > 0;
+          const requestedDialogType = $(this).data('dialog-type') || 'modal';
+          // Nested modal: avoid replacing the existing #drupal-modal.
+          const dialogType = (openedFromDrupalModal && requestedDialogType === 'modal') ? 'dialog' : requestedDialogType;
+          const $existingModal = dialogType === 'modal'
+            ? $('#drupal-modal.ui-dialog-content')
+            : $('#drupal-dialog.ui-dialog-content');
 
           if (
             $existingModal.length &&
@@ -57,6 +63,8 @@
           const dialogOptions = {
             title: Drupal.t('Knowledge Graph Hierarchy'),
             width: 800,
+            // Keep the tree picker modal even when we use the non-modal dialog
+            // container (#drupal-dialog) to avoid replacing the parent modal.
             modal: true,
             close: function () {
               const currentelementtype = $(this).data('elementtype') || ['unknown'];
@@ -76,7 +84,7 @@
 
           Drupal.ajax({
             url: modalUrl,
-            dialogType: 'modal',
+            dialogType: dialogType,
             dialog: dialogOptions,
           }).execute();
 
@@ -108,7 +116,9 @@
           }, 500);
 
           setTimeout(() => {
-            const $newModal = $('.ui-dialog-content');
+            const $newModal = dialogType === 'modal'
+              ? $('#drupal-modal.ui-dialog-content')
+              : $('#drupal-dialog.ui-dialog-content');
             if ($newModal.length) {
               $newModal.data('elementtype', elementtype);
             }
@@ -135,7 +145,16 @@
             //$(`[name="${fieldId}"], #${fieldId}`).val(selectedValue);
             $('#' + fieldId).val(selectedValue).trigger('change');
           }
-          $('.ui-dialog-content').dialog('close');
+
+          // Close only the dialog that contains this tree picker.
+          // (Never close all dialogs, otherwise we also close the parent form.)
+          const $dialogContent = $(this).closest('.ui-dialog-content');
+          if ($dialogContent.length && $dialogContent.data('ui-dialog')) {
+            $dialogContent.dialog('close');
+          }
+
+          // Prevent any other click handlers from also closing dialogs.
+          e.stopImmediatePropagation();
         });
     },
   };

@@ -9,6 +9,7 @@
 
  use Drupal\Core\Form\FormBase;
  use Drupal\Core\Form\FormStateInterface;
+ use Drupal\Component\Serialization\Json;
  use Drupal\Core\Url;
  use Symfony\Component\HttpFoundation\RedirectResponse;
  use Drupal\rep\ListUsage;
@@ -16,6 +17,7 @@
  use Drupal\rep\Entity\Tables;
  use Drupal\rep\Entity\GenericObject;
  use Drupal\rep\Vocabulary\REPGUI;
+ use Drupal\rep\Vocabulary\SCHEMA;
  use Drupal\rep\Vocabulary\VSTOI;
  use Drupal\Core\Render\Markup;
 
@@ -84,6 +86,37 @@
     // kint($this->getElement());
 
     $objectProperties = GenericObject::inspectObject($this->getElement());
+
+    // Organization edit suggestions (P1): available to non-owners.
+    $element = $this->getElement();
+    $is_organization = is_object($element) && ((string) ($element->hascoTypeUri ?? '') === SCHEMA::ORGANIZATION);
+    $current_email = (string) (\Drupal::currentUser()->getEmail() ?? '');
+    $owner_email = is_object($element) ? (string) ($element->hasSIRManagerEmail ?? ($element->managerEmail ?? '')) : '';
+    $is_owner = ($owner_email !== '' && $current_email !== '' && strcasecmp($owner_email, $current_email) === 0);
+
+    if ($is_organization && !$is_owner) {
+      $form['#attached']['library'][] = 'core/drupal.dialog.ajax';
+
+      $form['org_suggestion_status'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'id' => 'rep-org-suggestion-status',
+        ],
+      ];
+
+      $form['org_suggestion_link'] = [
+        '#type' => 'link',
+        '#title' => $this->t('Suggest Edit'),
+        '#url' => Url::fromRoute('rep.social_suggest_edit_organization_modal', [
+          'elementuri' => $elementuri,
+        ]),
+        '#attributes' => [
+          'class' => ['use-ajax', 'btn', 'btn-primary', 'mb-3'],
+          'data-dialog-type' => 'modal',
+          'data-dialog-options' => Json::encode(['width' => 700]),
+        ],
+      ];
+    }
 
     // dpm($objectProperties);
     //($objectProperties);

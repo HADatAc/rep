@@ -4,6 +4,43 @@
   const MSG_SEARCHING = 'Searching...';
   const MSG_NO_RESULTS = 'No results found.';
   const MSG_ERROR = 'Search error. Please try again.';
+  const MSG_SUBMITTED = 'Submitted for review.';
+
+  function canCreateSocial() {
+    try {
+      return !!(typeof drupalSettings !== 'undefined'
+        && drupalSettings.repAutocompleteUx
+        && drupalSettings.repAutocompleteUx.canCreateSocial);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isMakerOrOwnerField($input) {
+    const hay = `${$input.attr('name') || ''} ${$input.attr('id') || ''} ${$input.attr('data-drupal-selector') || ''}`.toLowerCase();
+    return /(^|[^a-z0-9])(maker|owner)([^a-z0-9]|$)/.test(hay);
+  }
+
+  function isSocialPersonOrOrganizationAutocomplete($input) {
+    const path = String($input.attr('data-autocomplete-path') || '').toLowerCase();
+    if (!path) {
+      return false;
+    }
+
+    // Covers both:
+    // - core Social routes: /social/autocomplete/{person|organization}
+    // - REP social wrapper: /api/socialm/autocomplete/{person|organization}
+    return (
+      path.includes('/social/autocomplete/person') ||
+      path.includes('/social/autocomplete/organization') ||
+      path.includes('/api/socialm/autocomplete/person') ||
+      path.includes('/api/socialm/autocomplete/organization')
+    );
+  }
+
+  function escapeHtml(str) {
+    return $('<div/>').text(str == null ? '' : String(str)).html();
+  }
 
   function getWrapper($input) {
     const $wrapper = $input.closest('.js-form-item');
@@ -35,6 +72,47 @@
       .addClass(type === 'error' ? 'rep-autocomplete-status--error' : 'rep-autocomplete-status--info')
       .text(message)
       .show();
+  }
+
+  function setStatusHtml($input, html, type) {
+    const $status = getStatusElement($input);
+    $status
+      .removeClass('rep-autocomplete-status--error rep-autocomplete-status--info')
+      .addClass(type === 'error' ? 'rep-autocomplete-status--error' : 'rep-autocomplete-status--info')
+      .html(html)
+      .show();
+
+    // Newly-inserted use-ajax links need behaviors attached.
+    if (Drupal && typeof Drupal.attachBehaviors === 'function') {
+      Drupal.attachBehaviors($status.get(0));
+    }
+  }
+
+  function buildQuickCreateActionsHtml($input) {
+    const inputId = $input.attr('id') || '';
+    if (!inputId) {
+      return escapeHtml(MSG_NO_RESULTS);
+    }
+
+    const term = $input.val() || '';
+    const dialogOptions = JSON.stringify({ width: 700 });
+
+    const personUrl = Drupal.url('rep/social/quick-add/person')
+      + '?input_id=' + encodeURIComponent(inputId)
+      + '&prefill=' + encodeURIComponent(term);
+
+    const orgUrl = Drupal.url('rep/social/quick-add/organization')
+      + '?input_id=' + encodeURIComponent(inputId)
+      + '&prefill=' + encodeURIComponent(term);
+
+    return (
+      `<div class="rep-autocomplete-no-results">${escapeHtml(MSG_NO_RESULTS)}</div>`
+      + `<div class="rep-autocomplete-actions" style="margin-top: 6px;">`
+      + `  <a href="${personUrl}" class="use-ajax btn btn-sm btn-primary" data-dialog-type="modal" data-dialog-options='${dialogOptions}'>Create person</a>`
+      + `  <a href="${orgUrl}" class="use-ajax btn btn-sm btn-primary" data-dialog-type="modal" data-dialog-options='${dialogOptions}' style="margin-left: 6px;">Create organization</a>`
+      + `</div>`
+      + `<div class="rep-autocomplete-help" style="margin-top: 6px;">Items are submitted as <b>Under Review</b> and will appear in autocomplete only after approval.</div>`
+    );
   }
 
   function clearStatus($input) {
@@ -128,6 +206,27 @@
 
   Drupal.behaviors.repAutocompleteUx = {
     attach: function (context) {
+      // Global handler for modal success events.
+      if (!Drupal.repAutocompleteUxSocialCreatedBound) {
+        Drupal.repAutocompleteUxSocialCreatedBound = true;
+        $(document).on('repSocialCreated.repAutocompleteUx', function (event, payload) {
+          if (!payload || !payload.targetInputId) {
+            return;
+          }
+
+          const el = document.getElementById(payload.targetInputId);
+          if (!el) {
+            return;
+          }
+
+          const $input = $(el);
+          const label = payload.label ? escapeHtml(payload.label) : '';
+          const badge = '<span class="badge bg-warning text-dark" style="margin-left: 6px;">' + escapeHtml(MSG_SUBMITTED) + '</span>';
+          const msg = (label ? (label + ' ') : '') + badge;
+          setStatusHtml($input, msg, 'info');
+        });
+      }
+
       $('input.form-autocomplete', context)
         .not('.repAutocompleteUx-processed')
         .addClass('repAutocompleteUx-processed')
@@ -156,7 +255,12 @@
 
             const items = (ui && Array.isArray(ui.content)) ? ui.content : [];
             if (items.length === 0) {
-              setStatus($input, MSG_NO_RESULTS, 'info');
+              const eligible = isMakerOrOwnerField($input) || isSocialPersonOrOrganizationAutocomplete($input);
+              if (eligible && canCreateSocial()) {
+                setStatusHtml($input, buildQuickCreateActionsHtml($input), 'info');
+              } else {
+                setStatus($input, MSG_NO_RESULTS, 'info');
+              }
             } else {
               clearStatus($input);
             }

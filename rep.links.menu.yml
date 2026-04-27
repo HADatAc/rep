@@ -285,6 +285,51 @@ reviewer.generate_review:
     _permission: 'access content'
     _role: 'content_editor'
 
+# Social elements review
+reviewer.people:
+  title: People
+  description: Manage Person Reviews
+  menu_name: main
+  route_name: rep.review_social_select
+  route_parameters:
+    elementtype: 'person'
+    page: '1'
+    pagesize: '9'
+  parent: reviewer.elements_review
+  weight: 95
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+
+reviewer.organizations:
+  title: Organizations
+  description: Manage Organization Reviews
+  menu_name: main
+  route_name: rep.review_social_select
+  route_parameters:
+    elementtype: 'organization'
+    page: '1'
+    pagesize: '9'
+  parent: reviewer.elements_review
+  weight: 96
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+
+reviewer.organization_edit_suggestions:
+  title: Organization Edit Suggestions
+  description: Review suggested edits for Organizations
+  menu_name: main
+  route_name: rep.review_org_suggestions
+  route_parameters:
+    page: '1'
+    pagesize: '9'
+  parent: reviewer.elements_review
+  weight: 97
+  requirements:
+    _permission: 'access content'
+    _role: 'content_editor'
+
 # ONTOLOGYs RELATED
 rep.ontologies_root:
   title: 'Ontologies'
