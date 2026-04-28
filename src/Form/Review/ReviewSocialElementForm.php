@@ -4,7 +4,9 @@ namespace Drupal\rep\Form\Review;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
 use Drupal\Core\Url;
+use Drupal\rep\Utils;
 use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Vocabulary\VSTOI;
 
@@ -12,6 +14,25 @@ class ReviewSocialElementForm extends FormBase {
 
   public function getFormId() {
     return 'rep_review_social_element_form';
+  }
+
+  /**
+   * Dynamic page title based on the {elementtype} parameter.
+   */
+  public static function pageTitle($elementtype) {
+    $elementtype = (string) ($elementtype ?? '');
+
+    if ($elementtype === 'person') {
+      $type_label = t('Person');
+    }
+    elseif ($elementtype === 'organization') {
+      $type_label = t('Organization');
+    }
+    else {
+      $type_label = t('Social Element');
+    }
+
+    return t('Review @type', ['@type' => $type_label]);
   }
 
   private function isAllowedElementType($elementtype): bool {
@@ -191,19 +212,201 @@ class ReviewSocialElementForm extends FormBase {
     $label = (string) ($element->label ?? ($element->name ?? $decoded_uri));
     $status = (string) ($element->hasStatus ?? '');
 
-    $form['summary'] = [
-      '#type' => 'item',
-      '#markup' => '<h3 class="mt-4">' . $this->t('Review @type', ['@type' => $elementtype]) . '</h3>'
-        . '<div><b>' . $this->t('Label') . ':</b> ' . htmlspecialchars($label, ENT_QUOTES) . '</div>'
-        . '<div><b>' . $this->t('URI') . ':</b> ' . htmlspecialchars($decoded_uri, ENT_QUOTES) . '</div>'
-        . '<div><b>' . $this->t('Status') . ':</b> ' . htmlspecialchars($status, ENT_QUOTES) . '</div>',
+    $status_plain = Utils::plainStatus($status) ?? $status;
+
+    $display = [];
+    if ($elementtype === 'person') {
+      $display = $this->buildPersonPayload($element, $status);
+    }
+    elseif ($elementtype === 'organization') {
+      $display = $this->buildOrganizationPayload($element, $status);
+    }
+
+    $form['social_wrapper'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'style' => 'max-width: 1280px;margin-bottom:15px!important;',
+      ],
     ];
 
-    $form['review_note'] = [
+    $uri_encoded = base64_encode($decoded_uri);
+    $describe_url = Url::fromRoute('rep.describe_element', [
+      'elementuri' => $uri_encoded,
+    ], [
+      'attributes' => [
+        'target' => '_blank',
+        'rel' => 'noopener',
+      ],
+    ]);
+
+    $form['social_wrapper']['social_uri'] = [
+      '#type' => 'item',
+      '#title' => $this->t('URI: '),
+      '#markup' => Link::fromTextAndUrl($decoded_uri, $describe_url)->toString(),
+    ];
+
+    if ($elementtype === 'person') {
+      $form['social_wrapper']['person_givenName'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Given Name'),
+        '#default_value' => (string) ($display['givenName'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_familyName'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Family Name'),
+        '#default_value' => (string) ($display['familyName'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_name'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Name'),
+        '#default_value' => (string) ($display['name'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_label'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Label'),
+        '#default_value' => (string) ($display['label'] ?? $label),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_mbox'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Email'),
+        '#default_value' => (string) ($display['mbox'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_telephone'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Phone'),
+        '#default_value' => (string) ($display['telephone'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_jobTitle'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Job Title'),
+        '#default_value' => (string) ($display['jobTitle'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_affiliation'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Affiliation URI'),
+        '#default_value' => (string) ($display['hasAffiliationUri'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_webdoc'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Web Document'),
+        '#default_value' => (string) ($display['hasWebDocument'] ?? ''),
+        '#attributes' => [
+          'placeholder' => 'http://',
+        ],
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_comment'] = [
+        '#type' => 'textarea',
+        '#title' => $this->t('Description'),
+        '#default_value' => (string) ($display['comment'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['person_image'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Image'),
+        '#default_value' => (string) ($display['hasImageUri'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+    }
+    elseif ($elementtype === 'organization') {
+      $form['social_wrapper']['organization_label'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Label'),
+        '#default_value' => (string) ($display['label'] ?? $label),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['organization_name'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Name'),
+        '#default_value' => (string) ($display['name'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['organization_mbox'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Email'),
+        '#default_value' => (string) ($display['mbox'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['organization_telephone'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Phone'),
+        '#default_value' => (string) ($display['telephone'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['organization_webdoc'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Web Document'),
+        '#default_value' => (string) ($display['hasWebDocument'] ?? ''),
+        '#attributes' => [
+          'placeholder' => 'http://',
+        ],
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['organization_address'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Postal Address URI'),
+        '#default_value' => (string) ($display['hasAddressUri'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['organization_parent'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Parent Organization URI'),
+        '#default_value' => (string) ($display['parentOrganizationUri'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['organization_comment'] = [
+        '#type' => 'textarea',
+        '#title' => $this->t('Description'),
+        '#default_value' => (string) ($display['comment'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+      $form['social_wrapper']['organization_image'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Image'),
+        '#default_value' => (string) ($display['hasImageUri'] ?? ''),
+        '#disabled' => TRUE,
+      ];
+    }
+
+    $form['social_wrapper']['social_status'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Status'),
+      '#default_value' => (string) $status_plain,
+      '#disabled' => TRUE,
+    ];
+
+    $owner = (string) ($display['hasSIRManagerEmail'] ?? ($element->hasSIRManagerEmail ?? ($element->managerEmail ?? '')));
+    $form['social_wrapper']['social_owner'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Owner'),
+      '#default_value' => $owner,
+      '#attributes' => [
+        'disabled' => 'disabled',
+      ],
+    ];
+
+    $form['social_wrapper']['review_note'] = [
       '#type' => 'textarea',
-      '#title' => $this->t('Review note (optional)'),
+      '#title' => $this->t('Review Notes'),
       '#description' => $this->t('Stored only in Drupal messages; the social API may not persist review notes for this element type.'),
       '#required' => FALSE,
+    ];
+
+    $form['social_wrapper']['reviewer_email'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Reviewer Email'),
+      '#default_value' => (string) (\Drupal::currentUser()->getEmail() ?? ''),
+      '#attributes' => [
+        'disabled' => 'disabled',
+      ],
     ];
 
     $form['elementtype'] = [
@@ -224,14 +427,20 @@ class ReviewSocialElementForm extends FormBase {
       '#type' => 'submit',
       '#value' => $this->t('Approve'),
       '#name' => 'approve',
-      '#attributes' => ['class' => ['btn', 'btn-primary', 'save-button']],
+      '#attributes' => [
+        'onclick' => 'if(!confirm("Are you sure you want to Approve?")){return false;}',
+        'class' => ['btn', 'btn-success', 'aprove-button'],
+      ],
     ];
 
     $form['actions']['reject'] = [
       '#type' => 'submit',
       '#value' => $this->t('Reject'),
       '#name' => 'reject',
-      '#attributes' => ['class' => ['btn', 'btn-danger']],
+      '#attributes' => [
+        'onclick' => 'if(!confirm("Are you sure you want to Reject?")){return false;}',
+        'class' => ['btn', 'btn-primary', 'cancel-button'],
+      ],
     ];
 
     $form['actions']['back'] = [

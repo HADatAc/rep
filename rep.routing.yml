@@ -449,7 +449,7 @@ rep.review_social_element:
   path: 'rep/manage/review-social/{elementtype}/{elementuri}'
   defaults:
     _form: '\Drupal\rep\Form\Review\ReviewSocialElementForm'
-    _title: 'Review Social Element'
+    _title_callback: '\Drupal\rep\Form\Review\ReviewSocialElementForm::pageTitle'
   requirements:
     _role: 'content_editor'
   options:
