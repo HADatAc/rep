@@ -158,7 +158,7 @@ class DescribeHeaderForm extends FormBase {
       $form['element_type'] = [
         '#type' => 'inline_template',
         // IMPORTANT: href uses Describe page URL; data-node uses the *raw RDF IRI*.
-        '#template' => '<b>Type URI</b>: <a href="{{ href }}" target="_blank">{{ typeUri }}</a>
+        '#template' => '<b>Type URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard">{{ typeUri }}</a>
           <span class="graph-toggle"
                 data-node="{{ node }}"
                 data-from="{{ from }}"
@@ -168,7 +168,7 @@ class DescribeHeaderForm extends FormBase {
             <i class="fa fa-eye"></i>
           </span><br><br>',
         '#context' => [
-          'href'    => $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($this->getElement()->typeUri),
+          'href'    => Utils::describeHref((string) $this->getElement()->typeUri),
           'typeUri' => rawurldecode($this->getElement()->typeUri),
           'node'    => $this->getElement()->typeUri,         // IRI used by the graph
           'from'    => $this->getElement()->uri,             // origin of the edge (the current element)
@@ -180,7 +180,7 @@ class DescribeHeaderForm extends FormBase {
     if ($this->getElement()->hascoTypeUri) {
       $form['element_hascoType'] = [
         '#type' => 'inline_template',
-        '#template' => '<b>HascoType URI</b>: <a href="{{ href }}" target="_blank">{{ hascoTypeUri }}</a>
+        '#template' => '<b>HascoType URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard">{{ hascoTypeUri }}</a>
           <span class="graph-toggle"
                 data-node="{{ node }}"
                 data-from="{{ from }}"
@@ -190,7 +190,7 @@ class DescribeHeaderForm extends FormBase {
             <i class="fa fa-eye"></i>
           </span><br><br>',
         '#context' => [
-          'href'         => $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($this->getElement()->hascoTypeUri),
+          'href'         => Utils::describeHref((string) $this->getElement()->hascoTypeUri),
           'hascoTypeUri' => rawurldecode($this->getElement()->hascoTypeUri),
           'node'         => $this->getElement()->hascoTypeUri, // IRI used by the graph
           'from'         => $this->getElement()->uri,          // origin of the edge
@@ -202,7 +202,7 @@ class DescribeHeaderForm extends FormBase {
     if (!empty($this->getElement()->superUri ?? NULL)) {
       $form['element_super'] = [
         '#type' => 'inline_template',
-        '#template' => '<b>Super URI</b>: <a href="{{ href }}" target="_blank">{{ superUri }}</a>
+        '#template' => '<b>Super URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard">{{ superUri }}</a>
           <span class="graph-toggle"
                 data-node="{{ node }}"
                 data-from="{{ from }}"
@@ -211,7 +211,7 @@ class DescribeHeaderForm extends FormBase {
             <i class="fa fa-eye"></i>
           </span><br><br>',
         '#context' => [
-          'href'     => $root_url . REPGUI::DESCRIBE_PAGE . base64_encode($this->getElement()->superUri),
+          'href'     => Utils::describeHref((string) $this->getElement()->superUri),
           'superUri' => rawurldecode($this->getElement()->superUri),
           'node'     => $this->getElement()->superUri,
           'from'     => $this->getElement()->uri,

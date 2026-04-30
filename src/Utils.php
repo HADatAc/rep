@@ -15,6 +15,7 @@ use Drupal\rep\Constant;
 use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\Component\Render\Markup;
 use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\UrlHelper;
 use Drupal\rep\Vocabulary\OWL;
 
 class Utils {
@@ -477,17 +478,118 @@ class Utils {
   }
 
   public static function repUriLink($uri) {
-    $root_url = \Drupal::request()->getBaseUrl();
-    $uriFinal = Utils::namespaceUri($uri);
-    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'">' . $uriFinal . '</a>';
-    return $link;
+    return self::describeAnchor((string) $uri, self::namespaceUri($uri));
   }
 
   public static function link($label,$uri) {
-    $root_url = \Drupal::request()->getBaseUrl();
-    $uriFinal = Utils::namespaceUri($uri);
-    $link = '<a href="'.$root_url.repGUI::DESCRIBE_PAGE.base64_encode($uri).'" rel="noopener">' . $label . '</a>';
-    return $link;
+    return self::describeAnchor((string) $uri, (string) $label, ['rel' => 'noopener']);
+  }
+
+  /**
+   * Build the Drupal URL for the Describe page of a given full URI.
+   *
+   * This centralizes navigation behavior so all “URI → describe” links:
+   * - open in the same tab (no implicit target)
+   * - carry Drupal's `destination` so Back is deterministic
+   */
+  public static function describeUrl(string $fullUri, array $extraQuery = [], bool $includeDestination = TRUE): Url {
+    $query = $extraQuery;
+    if ($includeDestination) {
+      // Adds ?destination=<current path + query>.
+      $query += \Drupal::destination()->getAsArray();
+    }
+
+    return Url::fromRoute('rep.describe_element', [
+      'elementuri' => base64_encode($fullUri),
+    ], [
+      'query' => $query,
+    ]);
+  }
+
+  public static function describeHref(string $fullUri, array $extraQuery = [], bool $includeDestination = TRUE): string {
+    return self::describeUrl($fullUri, $extraQuery, $includeDestination)->toString();
+  }
+
+  /**
+   * Create an HTML anchor tag to the Describe page.
+   *
+   * Returns a string because much of this codebase builds markup strings.
+   */
+  public static function describeAnchor(string $fullUri, ?string $label = NULL, array $attributes = [], bool $includeDestination = TRUE): string {
+    $href = self::describeHref($fullUri, [], $includeDestination);
+
+    $safeLabel = Html::escape($label ?? self::namespaceUri($fullUri));
+
+    // Ensure consistent hooks/classes across the UI.
+    $classes = ['rep-describe-link', 'rep-nav-guard'];
+    if (isset($attributes['class'])) {
+      $existing = is_array($attributes['class']) ? $attributes['class'] : preg_split('/\s+/', (string) $attributes['class']);
+      $classes = array_values(array_unique(array_filter(array_merge($existing, $classes))));
+    }
+    $attributes['class'] = $classes;
+
+    // Build attributes string.
+    $attrParts = [];
+    foreach ($attributes as $key => $value) {
+      if ($value === NULL || $value === FALSE) {
+        continue;
+      }
+      if (is_array($value)) {
+        $value = implode(' ', $value);
+      }
+      $attrParts[] = Html::escape((string) $key) . '="' . Html::escape((string) $value) . '"';
+    }
+    $attr = $attrParts ? (' ' . implode(' ', $attrParts)) : '';
+
+    return '<a href="' . Html::escape($href) . '"' . $attr . '>' . $safeLabel . '</a>';
+  }
+
+  /**
+   * Resolve a safe “Back” URL string using destination/referrer with fallback.
+   */
+  public static function backHref(string $fallbackRouteName = 'rep.element_uri'): string {
+    // 1) Drupal destination param takes precedence.
+    $destination = (string) (\Drupal::destination()->get() ?? '');
+    if ($destination !== '') {
+      // Destination is expected to be an internal path (often starting with '/').
+      if (!str_starts_with($destination, '/')) {
+        $destination = '/' . $destination;
+      }
+      try {
+        return Url::fromUserInput($destination)->toString();
+      }
+      catch (\Exception $e) {
+        // Fall through.
+      }
+    }
+
+    // 2) HTTP Referer, but only if it points back to our host.
+    $request = \Drupal::request();
+    $referer = (string) ($request->headers->get('referer') ?? '');
+    if ($referer !== '') {
+      $host = $request->getHost();
+      $refHost = (string) (parse_url($referer, PHP_URL_HOST) ?? '');
+      if ($refHost !== '' && strcasecmp($refHost, $host) === 0) {
+        // Convert absolute URL to a relative path+query.
+        $path = (string) (parse_url($referer, PHP_URL_PATH) ?? '');
+        $query = (string) (parse_url($referer, PHP_URL_QUERY) ?? '');
+        $relative = $path !== '' ? $path : '/';
+        if ($query !== '') {
+          $relative .= '?' . $query;
+        }
+        if (!UrlHelper::isExternal($relative)) {
+          try {
+            return Url::fromUserInput($relative)->toString();
+          }
+          catch (\Exception $e) {
+            // Fall through.
+          }
+        }
+      }
+    }
+
+    // 3) Hard fallback.
+    return Url::fromRoute($fallbackRouteName)->toString();
   }
 
   public static function elementTypeModule($elementtype) {
@@ -889,18 +991,25 @@ class Utils {
                 $type = self::namespaceUri($componentObj->hascoTypeUri);
                 if (isset($componentObj->uri)) {
                   // $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->typeLabel . '</a>] ');
-                  $componentUri = t('<b>'.$type.'</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->uri).'">' . $componentObj->label . '</a> ('.Utils::plainStatus($componentObj->hasStatus).')]');
+                  $componentUri = '<b>' . Html::escape($type) . '</b>: ['
+                    . self::describeAnchor((string) $componentObj->uri, (string) ($componentObj->label ?? self::namespaceUri($componentObj->uri)))
+                    . ' (' . Html::escape(Utils::plainStatus($componentObj->hasStatus)) . ')]';
                 }
                 if (isset($componentObj->isAttributeOf)) {
                   // $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(self::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. self::namespaceUri($componentObj->isAttributeOf) . "</a>]";
                   $attributOfStatus = $api->parseObjectResponse($api->getUri($componentObj->isAttributeOf),'getUri');
-                  $content = '<b>Attribute Of</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode(Utils::uriFromAutocomplete($componentObj->isAttributeOf)).'">'. Utils::namespaceUri($componentObj->isAttributeOf) . "</a> (".(Utils::plainStatus($attributOfStatus->hasStatus)??"Current").")]";
+                  $attribute_of_uri = Utils::uriFromAutocomplete($componentObj->isAttributeOf);
+                  $content = '<b>Attribute Of</b>: ['
+                    . self::describeAnchor((string) $attribute_of_uri, (string) Utils::namespaceUri($componentObj->isAttributeOf))
+                    . ' (' . Html::escape((Utils::plainStatus($attributOfStatus->hasStatus) ?? 'Current')) . ')]';
                 } else {
                   $content = '<b>Attribute Of</b>: [EMPTY]';
                 }
                 if (isset($componentObj->codebook->label)) {
                   // $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a>]";
-                  $codebook = '<b>CB</b>: [<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($componentObj->codebook->uri).'">' . $componentObj->codebook->label . "</a> (".Utils::plainStatus($componentObj->codebook->hasStatus).")]";
+                  $codebook = '<b>CB</b>: ['
+                    . self::describeAnchor((string) $componentObj->codebook->uri, (string) $componentObj->codebook->label)
+                    . ' (' . Html::escape(Utils::plainStatus($componentObj->codebook->hasStatus)) . ')]';
                 } else {
                   $codebook = '<b>CB</b>: [EMPTY]';
                 }

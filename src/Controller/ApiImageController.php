@@ -43,7 +43,8 @@ class ApiImageController extends ControllerBase {
       // Fallback to placeholder when provided (prevents broken-image icons).
       if ($placeholderUrl !== '' && str_starts_with($placeholderUrl, '/') && !str_contains($placeholderUrl, '..')) {
         return new RedirectResponse($placeholderUrl, 302, [
-          'Cache-Control' => 'private, max-age=3600',
+          // Keep placeholder cache short so newly-uploaded images appear quickly.
+          'Cache-Control' => 'private, max-age=60',
         ]);
       }
       // As a last resort, allow a safe absolute URL.
@@ -79,6 +80,27 @@ class ApiImageController extends ControllerBase {
       $h = $resp->getHeaderLine('Content-Type');
       if (!empty($h)) {
         $mime = $h;
+      }
+    }
+
+    // If upstream didn't provide a useful image mime, infer from filename.
+    // This avoids browsers refusing to render due to X-Content-Type-Options: nosniff.
+    $lower = strtolower($imageRef);
+    if ($mime === 'application/octet-stream') {
+      if (str_ends_with($lower, '.png')) {
+        $mime = 'image/png';
+      }
+      elseif (str_ends_with($lower, '.jpg') || str_ends_with($lower, '.jpeg')) {
+        $mime = 'image/jpeg';
+      }
+      elseif (str_ends_with($lower, '.gif')) {
+        $mime = 'image/gif';
+      }
+      elseif (str_ends_with($lower, '.webp')) {
+        $mime = 'image/webp';
+      }
+      elseif (str_ends_with($lower, '.svg')) {
+        $mime = 'image/svg+xml';
       }
     }
 

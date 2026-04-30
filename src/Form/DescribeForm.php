@@ -20,6 +20,7 @@
  use Drupal\rep\Vocabulary\SCHEMA;
  use Drupal\rep\Vocabulary\VSTOI;
  use Drupal\Core\Render\Markup;
+ use Drupal\Component\Utility\Html;
 
  class DescribeForm extends FormBase {
 
@@ -49,24 +50,6 @@
    */
 
   public function buildForm(array $form, FormStateInterface $form_state, $elementuri=NULL){
-
-    $form['#attached']['html_head'][] = [
-      [
-        '#tag' => 'script',
-        '#attributes' => [],
-        '#value' => <<<EOD
-          (function () {
-            // only set once, on the very first load of this popup
-            if (!window.name.startsWith('initialUrl:')) {
-              window.name = 'initialUrl:' + window.location.href;
-            }
-          })();
-        EOD,
-      ],
-      'assoc_project_popup_init',
-    ];
-
-
     // MODAL
     $form['#attached']['library'][] = 'rep/webdoc_modal';
     $form['#attached']['library'][] = 'core/drupal.dialog';
@@ -256,30 +239,12 @@
     //     'onclick' => 'if(window.opener){ window.opener.focus(); window.close(); return false; } else { return true; }',
     //   ],
     // ];
-    $form['submit'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Back'),
-      '#name' => 'back',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'back-button'],
-        'onclick' => <<<EOD
-          if (window.opener) {
-            // Pull our initial URL out of window.name
-            var initial = window.name.replace(/^initialUrl:/, '');
-            if (window.location.href !== initial) {
-              // Not on first page yet?  Go back in history.
-              window.history.back();
-            } else {
-              // On first page: focus opener and close us.
-              window.opener.focus();
-              window.close();
-            }
-            return false;
-          }
-          // No opener?  Let the form submit (redirect).
-          return true;
-        EOD,
-      ],
+    $back_href = Utils::backHref('rep.element_uri');
+    $form['back'] = [
+      '#type' => 'markup',
+      '#markup' => Markup::create(
+        '<a href="' . Html::escape($back_href) . '" class="btn btn-primary back-button rep-nav-guard">' . $this->t('Back') . '</a>'
+      ),
     ];
 
 
@@ -315,7 +280,7 @@
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-      self::backUrl();
+      // No-op: navigation is handled by a real link in buildForm().
       return;
   }
 
@@ -330,20 +295,6 @@
     $result = ucfirst($stringWithSpaces);
 
     return $result;
-  }
-
-  function backUrl() {
-    // $uid = \Drupal::currentUser()->id();
-    // $previousUrl = Utils::trackingGetPreviousUrl($uid, 'rep.describe_element');
-    // if ($previousUrl) {
-    //   $response = new RedirectResponse($previousUrl);
-    //   $response->send();
-    //   return;
-    // }
-    $url = Url::fromRoute('rep.element_uri')->toString();
-    $response = new RedirectResponse($url);
-    $response->send();
-    return;
   }
 
  }

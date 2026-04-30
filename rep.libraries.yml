@@ -5,6 +5,7 @@ rep_js_css:
       css/rep.css: {}
   js:
     js/infinitescroll.js: {}
+    js/navigation_guard.js: {}
   dependencies:
     - core/jquery
     - core/drupal
