@@ -271,7 +271,7 @@ class Stream {
         ])->toString()),
       ])->toString();
 
-      $ops_html[] = '<a href="' . $view_url . '" target="_new" class="btn btn-sm btn-secondary me-1" alt="Expose Stream" title="Expose Stream">'
+      $ops_html[] = '<a href="' . $view_url . '" class="btn btn-sm btn-secondary me-1" alt="Expose Stream" title="Expose Stream">'
                   . '<i class="fa-solid fa-hexagon-nodes"></i>'
                   . '</a>';
 
@@ -396,7 +396,7 @@ class Stream {
         ])->toString()),
       ])->toString();
 
-      $ops_html[] = '<a href="' . $view_url . '" target="_new" class="btn btn-sm btn-secondary me-1" alt="Expose Stream" title="Expose Stream">'
+      $ops_html[] = '<a href="' . $view_url . '" class="btn btn-sm btn-secondary me-1" alt="Expose Stream" title="Expose Stream">'
                   . '<i class="fa-solid fa-hexagon-nodes"></i>'
                   . '</a>';
 
@@ -616,7 +616,7 @@ class Stream {
         'element_select' => $selectType === 'radio'
           ? ['data' => $radio, 'class' => ['text-center']]
           : ['data' => $checkbox, 'class' => ['text-center']],
-        'element_uri'        => ['data' => t('<a target="_blank" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($element->uri).'">'.UTILS::namespaceUri($element->uri).'</a>'), 'class'=> ['text-center align-middle']],
+        'element_uri'        => ['data' => Markup::create(Utils::describeAnchor((string) ($element->uri ?? ''), (string) UTILS::namespaceUri($element->uri ?? ''))), 'class'=> ['text-center align-middle']],
         'element_name'       => ['data' => $element->label, 'class'=> ['text-center align-middle text-bold']],
         'element_deployment' => $deployment,
         'element_sdd'        => $sdd,

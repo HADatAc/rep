@@ -69,13 +69,13 @@ class StudyObject {
       $root_url = \Drupal::request()->getBaseUrl();
       $encodedUri = rawurlencode(rawurlencode($element->uri));
       $output[$element->uri] = [
-        'element_uri' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($uri).'">'.$uri.'</a>'),
+        'element_uri' => Markup::create(Utils::describeAnchor((string) ($element->uri ?? ''), (string) $uri)),
         'element_soc_name' => t($socLabel),
         'element_original_id' => t($originalId),
         'element_entity' => t($typeLabel),
-        'element_domain_scope' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($domainScope).'">'.Utils::namespaceUri($domainScope).'</a>'),
-        'element_time_scope' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($timeScope).'">'.Utils::namespaceUri($timeScope).'</a>'),
-        'element_space_scope' => t('<a target="_new" href="'.$root_url.REPGUI::DESCRIBE_PAGE.base64_encode($spaceScope).'">'.Utils::namespaceUri($spaceScope).'</a>'),
+        'element_domain_scope' => Markup::create(Utils::describeAnchor((string) $domainScope, (string) Utils::namespaceUri($domainScope))),
+        'element_time_scope' => Markup::create(Utils::describeAnchor((string) $timeScope, (string) Utils::namespaceUri($timeScope))),
+        'element_space_scope' => Markup::create(Utils::describeAnchor((string) $spaceScope, (string) Utils::namespaceUri($spaceScope))),
       ];
     }
     return $output;
