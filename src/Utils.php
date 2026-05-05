@@ -548,15 +548,62 @@ class Utils {
    * Resolve a safe “Back” URL string using destination/referrer with fallback.
    */
   public static function backHref(string $fallbackRouteName = 'rep.element_uri'): string {
+    $request = \Drupal::request();
+    $basePath = rtrim((string) $request->getBasePath(), '/');
+
+    $normalizeForUserInput = static function (string $raw) use ($basePath): string {
+      $raw = trim($raw);
+      if ($raw === '') {
+        return '';
+      }
+
+      // If an absolute URL sneaks in, reduce it to path+query.
+      $path = (string) (parse_url($raw, PHP_URL_PATH) ?? $raw);
+      $query = (string) (parse_url($raw, PHP_URL_QUERY) ?? '');
+
+      if ($path === '') {
+        $path = '/';
+      }
+      if (!str_starts_with($path, '/')) {
+        $path = '/' . $path;
+      }
+
+      // Drupal's RedirectDestination often uses getRequestUri(), which includes the base path
+      // when Drupal is installed in a subdirectory (e.g. /drupal). Url::fromUserInput() will
+      // re-apply the base path, producing /drupal/drupal/... unless we strip it here.
+      if ($basePath !== '' && $basePath !== '/') {
+        if ($path === $basePath) {
+          $path = '/';
+        }
+        else if (str_starts_with($path, $basePath . '/')) {
+          $path = substr($path, strlen($basePath));
+          if ($path === '') {
+            $path = '/';
+          }
+        }
+      }
+
+      $out = $path;
+      if ($query !== '') {
+        $out .= '?' . $query;
+      }
+      return $out;
+    };
+
     // 1) Drupal destination param takes precedence.
     $destination = (string) (\Drupal::destination()->get() ?? '');
     if ($destination !== '') {
-      // Destination is expected to be an internal path (often starting with '/').
-      if (!str_starts_with($destination, '/')) {
-        $destination = '/' . $destination;
+      // Destination should be an internal path, but may include the base path.
+      if (UrlHelper::isExternal($destination)) {
+        $destination = '';
+      }
+      else {
+        $destination = $normalizeForUserInput($destination);
       }
       try {
-        return Url::fromUserInput($destination)->toString();
+        if ($destination !== '') {
+          return Url::fromUserInput($destination)->toString();
+        }
       }
       catch (\Exception $e) {
         // Fall through.
@@ -564,7 +611,6 @@ class Utils {
     }
 
     // 2) HTTP Referer, but only if it points back to our host.
-    $request = \Drupal::request();
     $referer = (string) ($request->headers->get('referer') ?? '');
     if ($referer !== '') {
       $host = $request->getHost();
@@ -579,7 +625,10 @@ class Utils {
         }
         if (!UrlHelper::isExternal($relative)) {
           try {
-            return Url::fromUserInput($relative)->toString();
+            $relative = $normalizeForUserInput($relative);
+            if ($relative !== '') {
+              return Url::fromUserInput($relative)->toString();
+            }
           }
           catch (\Exception $e) {
             // Fall through.

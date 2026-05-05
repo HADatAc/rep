@@ -1302,6 +1302,66 @@
       let dragLast = null;
       let dragStartClient = null;
       let dragMoved = false;
+
+      // Drag group (node + out-neighbors) so children move together.
+      let dragAnchorStart = null;
+      let dragGroupIds = [];
+      let dragGroupStartPos = new Map();
+      let dragHiddenNodes = [];
+      let dragHiddenEdges = [];
+
+      const getDragChildren = (id) => {
+        if (!id) return [];
+        try {
+          const out = graph.outNeighbors(id);
+          if (Array.isArray(out) && out.length) return out;
+        } catch (e) {}
+        try {
+          const nb = graph.neighbors(id);
+          if (Array.isArray(nb) && nb.length) return nb;
+        } catch (e) {}
+        return [];
+      };
+
+      const setHiddenSafe = (kind, keyOrId, hidden) => {
+        try {
+          if (kind === 'node') {
+            if (graph.hasNode(keyOrId)) graph.setNodeAttribute(keyOrId, 'hidden', !!hidden);
+          } else {
+            if (graph.hasEdge(keyOrId)) graph.setEdgeAttribute(keyOrId, 'hidden', !!hidden);
+          }
+        } catch (e) {}
+      };
+
+      const collectIncidentEdges = (nodeIds) => {
+        const edgeKeys = new Set();
+        (nodeIds || []).forEach((id) => {
+          if (!id) return;
+          try {
+            (graph.inEdges(id) || []).forEach((k) => edgeKeys.add(k));
+          } catch (e) {}
+          try {
+            (graph.outEdges(id) || []).forEach((k) => edgeKeys.add(k));
+          } catch (e) {}
+          try {
+            (graph.undirectedEdges(id) || []).forEach((k) => edgeKeys.add(k));
+          } catch (e) {}
+        });
+        return Array.from(edgeKeys);
+      };
+
+      const dragCleanup = () => {
+        // Restore visibility.
+        dragHiddenNodes.forEach((id) => setHiddenSafe('node', id, false));
+        dragHiddenEdges.forEach((k) => setHiddenSafe('edge', k, false));
+
+        dragAnchorStart = null;
+        dragGroupIds = [];
+        dragGroupStartPos = new Map();
+        dragHiddenNodes = [];
+        dragHiddenEdges = [];
+      };
+
       const dragMove = (ev) => {
         if (!draggedNode) return;
         if (!dragStartClient) dragStartClient = { x: ev.clientX, y: ev.clientY };
@@ -1322,8 +1382,28 @@
           if (!draggedNode || !dragLast) return;
           try {
             const p = renderer.viewportToGraph(dragLast);
+
+            if (!dragAnchorStart) {
+              // If something went wrong and we didn't capture a start pos, set it now.
+              dragAnchorStart = getNodePos(draggedNode) || { x: p.x, y: p.y };
+            }
+
+            const dx = p.x - dragAnchorStart.x;
+            const dy = p.y - dragAnchorStart.y;
+
             graph.setNodeAttribute(draggedNode, 'x', p.x);
             graph.setNodeAttribute(draggedNode, 'y', p.y);
+
+            // Move children by the same delta, preserving their relative layout.
+            for (let i = 0; i < dragGroupIds.length; i++) {
+              const childId = dragGroupIds[i];
+              const sp = dragGroupStartPos.get(childId);
+              if (!sp) continue;
+              try {
+                graph.setNodeAttribute(childId, 'x', sp.x + dx);
+                graph.setNodeAttribute(childId, 'y', sp.y + dy);
+              } catch (e) {}
+            }
           } catch (e) {}
         });
       };
@@ -1332,7 +1412,11 @@
 
         if (dragMoved) {
           try { pinnedNodes.add(draggedNode); } catch (e) {}
+          // Also pin the moved children so the manual layout is preserved.
+          try { dragGroupIds.forEach((id) => pinnedNodes.add(id)); } catch (e) {}
         }
+
+        dragCleanup();
 
         draggedNode = null;
         dragStartClient = null;
@@ -1347,6 +1431,26 @@
           if (original && typeof original.button === 'number' && original.button !== 0) return;
           if (e && e.preventSigmaDefault) e.preventSigmaDefault();
           draggedNode = e.node;
+
+          // Capture drag group positions at drag start.
+          dragCleanup();
+          dragAnchorStart = getNodePos(draggedNode);
+
+          dragGroupIds = getDragChildren(draggedNode).filter((id) => id && id !== draggedNode);
+          dragGroupIds.forEach((id) => {
+            const pos = getNodePos(id);
+            if (pos) dragGroupStartPos.set(id, pos);
+          });
+
+          // Optional: hide children and their edges while dragging to avoid clutter.
+          // They will reappear on mouseup.
+          if (dragGroupIds.length) {
+            dragHiddenNodes = dragGroupIds.slice();
+            dragHiddenNodes.forEach((id) => setHiddenSafe('node', id, true));
+            dragHiddenEdges = collectIncidentEdges([draggedNode].concat(dragGroupIds));
+            dragHiddenEdges.forEach((k) => setHiddenSafe('edge', k, true));
+          }
+
           dragStartClient = null;
           dragMoved = false;
           try { renderer.getCamera().disable(); } catch (err) {}
