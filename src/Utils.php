@@ -1290,8 +1290,8 @@ class Utils {
    *
    * Some legacy forms used alternate folders (e.g., webdocument or image).
    */
-  public static function resolvePrivateResourceFid(string $modUri, string $subdir, string $filename, array $fallbackSubdirs = []): ?int {
-    $modUri = trim($modUri);
+  public static function resolvePrivateResourceFid(?string $modUri, string $subdir, string $filename, array $fallbackSubdirs = []): ?int {
+    $modUri = trim((string) ($modUri ?? ''));
     $subdir = trim($subdir);
     $filename = trim($filename);
 
