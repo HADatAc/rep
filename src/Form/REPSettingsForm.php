@@ -7,6 +7,7 @@
 
 namespace Drupal\rep\Form;
 
+use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
@@ -119,6 +120,24 @@ class REPSettingsForm extends ConfigFormBase {
         '#title' => $this->t('Enable PMSR new landing page'),
         '#default_value' => $config->get('pmsr_new_landing_enabled') ?? 0,
       ];
+
+      $socialInitiativeField = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Social Initiative URI for PMSR landing page'),
+        '#default_value' => trim((string) ($config->get('social_initiative_uri') ?? '')),
+        '#description' => $this->t('Priority project shown in PMSR new landing page. Start typing to select a project. If empty, the landing page keeps the existing fallback flow.'),
+      ];
+
+      // Reuse existing Social project autocomplete when the route is available.
+      try {
+        \Drupal::service('router.route_provider')->getRouteByName('social.autocomplete_project');
+        $socialInitiativeField['#autocomplete_route_name'] = 'social.autocomplete_project';
+      }
+      catch (\Throwable $e) {
+        // Keep plain text field fallback if social autocomplete route is unavailable.
+      }
+
+      $form['social_initiative_uri'] = $socialInitiativeField;
     }
 
     // Short name of the repository.
@@ -330,6 +349,23 @@ class REPSettingsForm extends ConfigFormBase {
       $form_state->setErrorByName('ctt_url', $this->t("CTT Editor URL must start with 'http://' or 'https://'."));
     }
 
+    $socialInitiativeRaw = trim((string) ($form_state->getValue('social_initiative_uri') ?? ''));
+    if ($socialInitiativeRaw !== '') {
+      $socialInitiativeUri = $this->extractUriFromAutocompleteValue($socialInitiativeRaw);
+      if ($socialInitiativeUri === '') {
+        $form_state->setErrorByName('social_initiative_uri', $this->t('Please select a project from autocomplete or provide a valid URI.'));
+      }
+      elseif (!UrlHelper::isValid($socialInitiativeUri, TRUE)) {
+        $form_state->setErrorByName('social_initiative_uri', $this->t('Social Initiative URI must be a valid absolute URL.'));
+      }
+      else {
+        $form_state->setValue('social_initiative_uri_parsed', $socialInitiativeUri);
+      }
+    }
+    else {
+      $form_state->setValue('social_initiative_uri_parsed', '');
+    }
+
     // Graph settings validation.
     $maxLive = (int) $form_state->getValue('graph_max_live_nodes');
     if ($maxLive < 50) {
@@ -391,6 +427,14 @@ class REPSettingsForm extends ConfigFormBase {
     $pmsrFlag = $form_state->getValue('pmsr_new_landing_enabled');
     if ($pmsrFlag !== NULL) {
       $config->set('pmsr_new_landing_enabled', $pmsrFlag);
+    }
+    $socialInitiativeRaw = $form_state->getValue('social_initiative_uri');
+    if ($socialInitiativeRaw !== NULL) {
+      $socialInitiativeParsed = $form_state->getValue('social_initiative_uri_parsed');
+      if ($socialInitiativeParsed === NULL) {
+        $socialInitiativeParsed = $this->extractUriFromAutocompleteValue((string) $socialInitiativeRaw);
+      }
+      $config->set('social_initiative_uri', trim((string) $socialInitiativeParsed));
     }
     $config->set('site_label', trim($form_state->getValue('site_label')));
     $config->set('site_name', trim($form_state->getValue('site_name')));
@@ -550,6 +594,22 @@ class REPSettingsForm extends ConfigFormBase {
     // Redirect to the "repository info" route after saving.
     $url = Url::fromRoute('rep.repo_info');
     $form_state->setRedirectUrl($url);
+  }
+
+  /**
+   * Extracts URI from an autocomplete value in the format "Label [URI]".
+   */
+  private function extractUriFromAutocompleteValue(string $value): string {
+    $value = trim($value);
+    if ($value === '') {
+      return '';
+    }
+
+    if (preg_match('/\[([^\]]+)\]/', $value, $match) === 1) {
+      return trim((string) $match[1]);
+    }
+
+    return $value;
   }
 
   /**
