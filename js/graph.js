@@ -67,6 +67,7 @@
         if (!s) return '';
         const l = s.toLowerCase();
         if (l === 'super' || l === 'superuri' || l === 'hassuperuri' || l === 'superclassuri' || l === 'hassuperclassuri') return 'super';
+        if (l === 'suborganization' || l === 'hassuborganization' || l === 'hassuborganizations' || l === 'suborganizations') return 'subOrganization';
         return s;
       };
       const normalizePredKey = (v) => normalizePredForApi(v).toLowerCase();
@@ -1716,7 +1717,7 @@
           }
 
           // Ensure stable ordering: keep contains/children first if present.
-          const preferred = ['contains', 'children', 'super', 'typeUri', 'hascoTypeUri'];
+          const preferred = ['contains', 'subOrganization', 'children', 'super', 'typeUri', 'hascoTypeUri'];
           labels.sort((a, b) => {
             const ia = preferred.indexOf(a);
             const ib = preferred.indexOf(b);
@@ -2369,7 +2370,7 @@
         if (isClassNode(selectedNode) && !labels.includes('super') && isDisplayableLabel('super')) labels.unshift('super');
 
         // Keep a stable ordering.
-        const preferred = ['contains', 'children', 'super', 'typeUri', 'hascoTypeUri'];
+        const preferred = ['contains', 'subOrganization', 'children', 'super', 'typeUri', 'hascoTypeUri'];
         labels.sort((a, b) => {
           const ia = preferred.indexOf(a);
           const ib = preferred.indexOf(b);

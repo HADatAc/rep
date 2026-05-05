@@ -47,6 +47,7 @@
         if (!s) return '';
         const l = s.toLowerCase();
         if (l === 'super' || l === 'superuri' || l === 'hassuperuri' || l === 'superclassuri' || l === 'hassuperclassuri') return 'super';
+        if (l === 'suborganization' || l === 'hassuborganization' || l === 'hassuborganizations' || l === 'suborganizations') return 'subOrganization';
         return s;
       };
       const normalizePredKey = (v) => normalizePredForApi(v).toLowerCase();
@@ -1160,7 +1161,19 @@
       function labelsForNode(nodeId, info, cap = 6) {
         const labels = [];
         if (info && Array.isArray(info.predicates)) {
-          info.predicates.forEach((p) => { if (p && p.key) labels.push(p.key); });
+          info.predicates.forEach((p) => {
+            if (p && p.key) labels.push(normalizePredForApi(p.key));
+          });
+        }
+        if (info && Array.isArray(info.links)) {
+          info.links.forEach((lnk) => {
+            if (lnk && lnk.key) labels.push(normalizePredForApi(lnk.key));
+          });
+        }
+        if (info && Array.isArray(info.lists)) {
+          info.lists.forEach((lst) => {
+            if (lst && lst.key && lst.expandable !== false) labels.push(normalizePredForApi(lst.key));
+          });
         }
         if (info && info.superUri) labels.push('super');
 
@@ -1176,7 +1189,7 @@
         }
 
         // De-dupe, keep stable ordering
-        const preferred = ['contains', 'children', 'super', 'typeUri', 'hascoTypeUri'];
+        const preferred = ['contains', 'subOrganization', 'children', 'super', 'typeUri', 'hascoTypeUri'];
         let uniq = Array.from(new Set(labels.map((x) => String(x || '').trim()).filter(Boolean)));
         uniq = uniq.filter((k) => !hiddenPredicateKeys.has(normalizePredKey(k)));
         uniq.sort((a, b) => {

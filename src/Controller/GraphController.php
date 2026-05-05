@@ -39,6 +39,38 @@ class GraphController extends ControllerBase {
       return false;
     };
 
+    $subOrgKeySet = [
+      'suborganization',
+      'hassuborganization',
+      'hassuborganizations',
+      'suborganizations',
+    ];
+    $isSubOrganizationLabel = static function (?string $lbl) use ($subOrgKeySet): bool {
+      if ($lbl === null) return false;
+      return in_array(strtolower(trim($lbl)), $subOrgKeySet, true);
+    };
+
+    $parseTotalFromApi = static function ($rawResponse): ?int {
+      if (!is_string($rawResponse) || trim($rawResponse) === '') return null;
+      $decoded = json_decode($rawResponse);
+      if (!is_object($decoded) || empty($decoded->isSuccessful) || !isset($decoded->body)) return null;
+
+      $body = $decoded->body;
+      if (is_numeric($body)) return (int) $body;
+
+      if (is_string($body)) {
+        $body = json_decode($body);
+      }
+
+      if (is_object($body) && isset($body->total) && is_numeric($body->total)) {
+        return (int) $body->total;
+      }
+      if (is_array($body) && isset($body['total']) && is_numeric($body['total'])) {
+        return (int) $body['total'];
+      }
+      return null;
+    };
+
     $from = $expandCurie($from);
 
     try {
@@ -470,6 +502,46 @@ LIMIT {$limit} OFFSET {$offset}
 
       $addTypeEdges();
     }
+    elseif ($isSubOrganizationLabel($label)) {
+      // Dedicated endpoint for Organization/Project sub-organizations.
+      $meta['mode'] = 'subOrganization';
+
+      $rawSubs = $api->getSubOrganizations($from, $limit, $offset);
+      $subs = $rawSubs ? $api->parseObjectResponse($rawSubs, 'getSubOrganizations') : [];
+      if (!is_array($subs)) {
+        $subs = [];
+      }
+
+      $cnt = 0;
+      foreach ($subs as $sub) {
+        if (!is_object($sub) || empty($sub->uri)) continue;
+        $cnt++;
+        $subUri = $expandCurie((string) $sub->uri);
+        $nodes[] = Utils::buildNode($subUri, $sub->label ?? Utils::namespaceUri($subUri), $sub->typeUri ?? null);
+        $edges[] = [
+          'id' => "{$from}_{$subUri}_subOrganization",
+          'from' => $from,
+          'to' => $subUri,
+          'label' => 'subOrganization',
+          'arrows' => 'to',
+        ];
+      }
+      $meta['count'] = $cnt;
+
+      if (is_callable([$api, 'getTotalSubOrganizations'])) {
+        try {
+          $totalSub = $parseTotalFromApi($api->getTotalSubOrganizations($from));
+          if ($totalSub !== null) {
+            $meta['totalGuess'] = $totalSub;
+          }
+        }
+        catch (\Throwable $e) {
+          // Best effort only.
+        }
+      }
+
+      $addTypeEdges();
+    }
     else {
       if ($label && array_key_exists($label, $properties)) {
         $val = $properties[$label];
@@ -616,6 +688,13 @@ LIMIT {$limit} OFFSET {$offset}
       'hassuperclassuri',
     ];
 
+    $subOrgKeySet = [
+      'suborganization',
+      'hassuborganization',
+      'hassuborganizations',
+      'suborganizations',
+    ];
+
     $extractSuperUri = static function ($obj) use ($superKeySet, $expandCurie): ?string {
       if (!is_object($obj)) return null;
       $vars = (array) $obj;
@@ -673,9 +752,48 @@ LIMIT {$limit} OFFSET {$offset}
       return false;
     };
 
-    $normalizePredKey = static function (string $k) use ($superKeySet): string {
+    $isOrgLike = static function ($obj): bool {
+      if (!is_object($obj)) return false;
+      $candidates = [];
+      foreach (['typeUri', 'hascoTypeUri', 'typeLabel', 'hascoTypeLabel', 'label'] as $k) {
+        if (!empty($obj->$k) && is_string($obj->$k)) {
+          $candidates[] = strtolower((string) $obj->$k);
+        }
+      }
+      foreach ($candidates as $c) {
+        if (str_contains($c, 'organization') || str_contains($c, 'project') || str_contains($c, 'collegeoruniversity')) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    $parseTotalFromApi = static function ($rawResponse): ?int {
+      if (!is_string($rawResponse) || trim($rawResponse) === '') return null;
+      $decoded = json_decode($rawResponse);
+      if (!is_object($decoded) || empty($decoded->isSuccessful) || !isset($decoded->body)) return null;
+
+      $body = $decoded->body;
+      if (is_numeric($body)) return (int) $body;
+
+      if (is_string($body)) {
+        $body = json_decode($body);
+      }
+
+      if (is_object($body) && isset($body->total) && is_numeric($body->total)) {
+        return (int) $body->total;
+      }
+      if (is_array($body) && isset($body['total']) && is_numeric($body['total'])) {
+        return (int) $body['total'];
+      }
+      return null;
+    };
+
+    $normalizePredKey = static function (string $k) use ($superKeySet, $subOrgKeySet): string {
       $lk = strtolower(trim($k));
-      return in_array($lk, $superKeySet, true) ? 'super' : $k;
+      if (in_array($lk, $superKeySet, true)) return 'super';
+      if (in_array($lk, $subOrgKeySet, true)) return 'subOrganization';
+      return $k;
     };
 
     $predicates = [];
@@ -767,6 +885,58 @@ LIMIT {$limit} OFFSET {$offset}
           $predicates[$predKey] = ['key' => $predKey, 'kind' => 'list', 'count' => $total];
         }
         continue;
+      }
+    }
+
+    $hasSubOrgPredicate = isset($predicates['subOrganization']);
+    if (!$hasSubOrgPredicate && $isOrgLike($obj) && is_callable([$api, 'getSubOrganizations'])) {
+      $subOrgTotal = null;
+
+      if (is_callable([$api, 'getTotalSubOrganizations'])) {
+        try {
+          $subOrgTotal = $parseTotalFromApi($api->getTotalSubOrganizations($outUri));
+        }
+        catch (\Throwable $e) {
+          // Best effort only.
+        }
+      }
+
+      if ($subOrgTotal === null) {
+        try {
+          $rawSub = $api->getSubOrganizations($outUri, 1, 0);
+          $sub = $rawSub ? $api->parseObjectResponse($rawSub, 'getSubOrganizations') : [];
+          if (is_array($sub)) {
+            $subOrgTotal = count($sub);
+          }
+        }
+        catch (\Throwable $e) {
+          // Best effort only.
+        }
+      }
+
+      if ($subOrgTotal !== null && $subOrgTotal > 0) {
+        $predicates['subOrganization'] = [
+          'key' => 'subOrganization',
+          'kind' => 'list',
+          'count' => $subOrgTotal,
+        ];
+
+        $hasSubOrgList = false;
+        foreach ($lists as $lst) {
+          $lstKey = isset($lst['key']) ? strtolower($normalizePredKey((string) $lst['key'])) : '';
+          if ($lstKey === 'suborganization') {
+            $hasSubOrgList = true;
+            break;
+          }
+        }
+
+        if (!$hasSubOrgList && count($lists) < $maxLists) {
+          $lists[] = [
+            'key' => 'subOrganization',
+            'count' => $subOrgTotal,
+            'expandable' => true,
+          ];
+        }
       }
     }
 
