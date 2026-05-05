@@ -166,7 +166,7 @@ class SuggestOrganizationEditForm extends FormBase {
     $form['organization_parent_organization'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Parent Organization'),
-      '#autocomplete_route_name' => 'social.autocomplete_organization',
+      '#autocomplete_route_name' => 'social.autocomplete_parent_organization',
       '#default_value' => $parentOrganizationDefault,
     ];
 

@@ -660,7 +660,7 @@ class Utils {
     $rep = ['datafile'];
     $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
     $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'componentinstance', 'deployment', 'stream'];
-    $socialm = ['kgr','place','organization','person','postaladdress'];
+    $socialm = ['kgr','fundingscheme','project','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {
       return 'sir';
     } else if (in_array($elementtype,$sem)) {
