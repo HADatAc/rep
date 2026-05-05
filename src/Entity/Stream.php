@@ -260,16 +260,14 @@ class Stream {
       $ops_html = [];
 
       // 10a) VIEW button (always allowed).
-      $view_url = Url::fromRoute('rep.describe_element', [
-        'elementuri'   => base64_encode($element->uri),
+      $describe_href = Utils::describeHref((string) ($element->uri ?? ''), [], FALSE);
+      $view_url = Utils::describeHref((string) ($element->uri ?? ''), [
         'previousurl'  => base64_encode(Url::fromRoute('std.manage_study_elements', [
           'studyuri' => base64_encode($element->uri),
         ])->toString()),
         'currentroute' => 'rep.describe_element',
-        'currenturl'   => base64_encode(Url::fromRoute('rep.describe_element', [
-          'elementuri' => base64_encode($element->uri),
-        ])->toString()),
-      ])->toString();
+        'currenturl'   => base64_encode($describe_href),
+      ], FALSE);
 
       $ops_html[] = '<a href="' . $view_url . '" class="btn btn-sm btn-secondary me-1" alt="Expose Stream" title="Expose Stream">'
                   . '<i class="fa-solid fa-hexagon-nodes"></i>'
@@ -385,16 +383,14 @@ class Stream {
       $ops_html = [];
 
       // 10a) VIEW button (always allowed).
-      $view_url = Url::fromRoute('rep.describe_element', [
-        'elementuri'   => base64_encode($element->uri),
+      $describe_href = Utils::describeHref((string) ($element->uri ?? ''), [], FALSE);
+      $view_url = Utils::describeHref((string) ($element->uri ?? ''), [
         'previousurl'  => base64_encode(Url::fromRoute('std.manage_study_elements', [
           'studyuri' => base64_encode($element->uri),
         ])->toString()),
         'currentroute' => 'rep.describe_element',
-        'currenturl'   => base64_encode(Url::fromRoute('rep.describe_element', [
-          'elementuri' => base64_encode($element->uri),
-        ])->toString()),
-      ])->toString();
+        'currenturl'   => base64_encode($describe_href),
+      ], FALSE);
 
       $ops_html[] = '<a href="' . $view_url . '" class="btn btn-sm btn-secondary me-1" alt="Expose Stream" title="Expose Stream">'
                   . '<i class="fa-solid fa-hexagon-nodes"></i>'

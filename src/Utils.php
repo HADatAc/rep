@@ -499,6 +499,14 @@ class Utils {
       $query += \Drupal::destination()->getAsArray();
     }
 
+    $fullUri = trim($fullUri);
+    if ($fullUri === '') {
+      // Fallback to the URI form when there is no concrete URI to describe.
+      return Url::fromRoute('rep.element_uri', [], [
+        'query' => $query,
+      ]);
+    }
+
     return Url::fromRoute('rep.describe_element', [
       'elementuri' => base64_encode($fullUri),
     ], [
@@ -516,9 +524,14 @@ class Utils {
    * Returns a string because much of this codebase builds markup strings.
    */
   public static function describeAnchor(string $fullUri, ?string $label = NULL, array $attributes = [], bool $includeDestination = TRUE): string {
-    $href = self::describeHref($fullUri, [], $includeDestination);
-
     $safeLabel = Html::escape($label ?? self::namespaceUri($fullUri));
+
+    $fullUri = trim($fullUri);
+    if ($fullUri === '') {
+      return '<span class="rep-describe-link rep-describe-link-missing">' . $safeLabel . '</span>';
+    }
+
+    $href = self::describeHref($fullUri, [], $includeDestination);
 
     // Ensure consistent hooks/classes across the UI.
     $classes = ['rep-describe-link', 'rep-nav-guard'];

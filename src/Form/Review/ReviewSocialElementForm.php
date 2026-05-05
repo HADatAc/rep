@@ -229,10 +229,8 @@ class ReviewSocialElementForm extends FormBase {
       ],
     ];
 
-    $uri_encoded = base64_encode($decoded_uri);
-    $describe_url = Url::fromRoute('rep.describe_element', [
-      'elementuri' => $uri_encoded,
-    ], [
+    $describe_url = Utils::describeUrl((string) $decoded_uri, [], FALSE)
+      ->setOptions([
       'attributes' => [
         'target' => '_blank',
         'rel' => 'noopener',

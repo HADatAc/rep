@@ -119,7 +119,7 @@
           Utils::trackingStoreUrls($uid, $previousUrl, 'rep.element_uri');
 
           $newUri = Utils::plainUri($form_state->getValue('element_uri'));
-          $url = Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($newUri)]);
+          $url = Utils::describeUrl((string) $newUri, [], FALSE);
           $form_state->setRedirectUrl($url);
 
           // dpm($previousUrl);

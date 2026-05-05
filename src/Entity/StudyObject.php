@@ -126,7 +126,7 @@ class StudyObject {
 
       // Create a "View" link for the study object.
       $previousUrl = base64_encode(\Drupal::request()->getRequestUri());
-      $view_obj_str = base64_encode(Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($element->uri)])->toString());
+      $view_obj_str = base64_encode(Utils::describeHref((string) ($element->uri ?? ''), [], FALSE));
       $view_obj = Url::fromRoute('rep.back_url', [
         'previousurl' => $previousUrl,
         'currenturl' => $view_obj_str,

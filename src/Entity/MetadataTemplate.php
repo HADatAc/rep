@@ -231,7 +231,7 @@ class MetadataTemplate
           'studyuri' => base64_encode($element->isMemberOf->uri),
         ])->toString());
 
-        $view_da_str = base64_encode(Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($element->uri)])->toString());
+        $view_da_str = base64_encode(Utils::describeHref((string) ($element->uri ?? ''), [], FALSE));
         $view_da_route = 'rep.describe_element';
         $view_da = Url::fromRoute('rep.back_url', [
           'previousurl' => $previousUrl,
@@ -477,7 +477,7 @@ class MetadataTemplate
         'studyuri' => base64_encode($element->isMemberOf->uri),
       ])->toString());
 
-      $view_da_str = base64_encode(Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($element->uri)])->toString());
+      $view_da_str = base64_encode(Utils::describeHref((string) ($element->uri ?? ''), [], FALSE));
       $view_da_route = 'rep.describe_element';
       $view_da = Url::fromRoute('rep.back_url', [
         'previousurl' => $previousUrl,
@@ -760,7 +760,7 @@ class MetadataTemplate
 
       // Generate action links.
       // Link for View.
-      $view_da_str = base64_encode(Url::fromRoute('rep.describe_element', ['elementuri' => base64_encode($uri)])->toString());
+      $view_da_str = base64_encode(Utils::describeHref((string) $uri, [], FALSE));
       $view_da = Url::fromRoute('rep.back_url', [
         'previousurl' => $previousUrl,
         'currenturl' => $view_da_str,

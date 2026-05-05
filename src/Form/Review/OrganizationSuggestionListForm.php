@@ -57,9 +57,7 @@ class OrganizationSuggestionListForm extends FormBase {
       }
 
       $ns_uri = Utils::namespaceUri($uri);
-      $describe_url = Url::fromRoute('rep.describe_element', [
-        'elementuri' => base64_encode($ns_uri),
-      ]);
+      $describe_url = Utils::describeUrl($uri, [], FALSE);
 
       $review_url = Url::fromRoute('rep.review_org_suggestion', [
         'suggestion_id' => $id,
