@@ -87,9 +87,17 @@
         return !!id && !!tu && id === tu;
       }
 
+      const NON_INSTANCE_TERM_SUFFIX = /(?:#|\/)(Draft|UnderReview|Current|Deprecated|Damaged|Deployed|Active|Closed|AllStatuses|Inactive|Recording|Ingesting|Suspended|Public|Private)$/i;
+      function isNonDescribableTermUri(iri) {
+        const v = String(iri || '').trim();
+        if (!/^https?:\/\//i.test(v)) return false;
+        return NON_INSTANCE_TERM_SUFFIX.test(v);
+      }
+
       function buildLocalUriLink(iri) {
         const v = String(iri || '').trim();
         if (!v) return null;
+        if (isNonDescribableTermUri(v)) return null;
         try {
           const b64 = window.btoa(unescape(encodeURIComponent(v)))
             .replace(/\+/g, '-')

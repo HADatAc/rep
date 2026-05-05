@@ -693,9 +693,23 @@
         const b64 = window.btoa(unescape(encodeURIComponent(str)));
         return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
       }
+      const NON_INSTANCE_TERM_SUFFIX = /(?:#|\/)(Draft|UnderReview|Current|Deprecated|Damaged|Deployed|Active|Closed|AllStatuses|Inactive|Recording|Ingesting|Suspended|Public|Private)$/i;
+      function isNonDescribableTermUri(iri) {
+        const v = String(iri || '').trim();
+        if (!/^https?:\/\//i.test(v)) return false;
+        return NON_INSTANCE_TERM_SUFFIX.test(v);
+      }
+      function canOpenInDescribe(iri) {
+        const v = String(iri || '').trim();
+        if (!v) return false;
+        if (/\/rep\/uri\//.test(v)) return true;
+        if (!/^https?:\/\//i.test(v)) return true;
+        return !isNonDescribableTermUri(v);
+      }
       function buildLocalUriLink(iri) {
         if (!iri) return '';
         if (/\/rep\/uri\//.test(iri)) return iri;
+        if (!canOpenInDescribe(iri)) return '';
         const b64 = encodeBase64Url(iri);
         let base = (window.Drupal && Drupal.url) ? Drupal.url('rep/uri') : '/rep/uri';
         if (!base) base = '/rep/uri';
@@ -1414,10 +1428,12 @@
               const preferDirect = isHttp && (
                 kLower.includes('webdocument') ||
                 kLower.includes('image') ||
+                kLower.includes('status') ||
                 kLower.endsWith('url') ||
                 kLower === 'url'
               );
-              const href = preferDirect ? raw : buildLocalUriLink(raw);
+              const useLocalRepLink = !preferDirect && canOpenInDescribe(raw);
+              const href = useLocalRepLink ? buildLocalUriLink(raw) : raw;
               if (href) {
                 const a = document.createElement('a');
                 a.href = href;
@@ -1750,13 +1766,15 @@
           const actions = document.createElement('div');
           actions.style.cssText = 'display:flex; align-items:center; gap:10px; flex:0 0 auto;';
           const copyNode = makeCopyLink('Copy URI', () => nodeId);
-          const makeBase = document.createElement('span');
-          makeBase.textContent = 'Set as base';
-          makeBase.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
-          makeBase.title = 'Set this node as the graph base and open its page';
-          makeBase.addEventListener('click', (ev) => { ev.stopPropagation(); promoteToRoot(nodeId); });
           actions.appendChild(copyNode);
-          actions.appendChild(makeBase);
+          if (buildLocalUriLink(nodeId)) {
+            const makeBase = document.createElement('span');
+            makeBase.textContent = 'Set as base';
+            makeBase.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
+            makeBase.title = 'Set this node as the graph base and open its page';
+            makeBase.addEventListener('click', (ev) => { ev.stopPropagation(); promoteToRoot(nodeId); });
+            actions.appendChild(makeBase);
+          }
 
           header.appendChild(left);
           header.appendChild(actions);
@@ -2305,6 +2323,9 @@
       // ----- Promote to ROOT (Make it base) -----
       function promoteToRoot(newRootId) {
         if (!newRootId || newRootId === currentRootId) return;
+        const link = buildLocalUriLink(newRootId);
+        if (!link) return;
+
         if (currentRootId && nodes.get(currentRootId)) applyRootStyle(currentRootId, false);
         currentRootId = newRootId;
         if (nodes.get(currentRootId)) applyRootStyle(currentRootId, true);
@@ -2316,8 +2337,7 @@
         } catch (e) {}
 
         // Build link (local router), snapshot graph, and navigate for real
-        const link = buildLocalUriLink(currentRootId);
-        snapshotGraph(currentRootId);
+        snapshotGraph(newRootId);
         window.location.assign(link);
       }
 
@@ -2407,16 +2427,17 @@
 
         // "Make it base" -> promote to root and navigate, restoring the graph on next page
         const makeBold = document.createElement('span');
-        makeBold.textContent = 'Set as base';
-        makeBold.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
-        makeBold.title = 'Set this node as the graph base and open its page';
-        makeBold.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          promoteToRoot(selectedNodeId);
-        });
-
         actions.appendChild(copyNode);
-        actions.appendChild(makeBold);
+        if (buildLocalUriLink(selectedNodeId)) {
+          makeBold.textContent = 'Set as base';
+          makeBold.style.cssText = 'cursor:pointer; font-size:12px; color:#28a745; padding:2px 6px; border-radius:4px;';
+          makeBold.title = 'Set this node as the graph base and open its page';
+          makeBold.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            promoteToRoot(selectedNodeId);
+          });
+          actions.appendChild(makeBold);
+        }
 
         header.appendChild(title);
         header.appendChild(actions);

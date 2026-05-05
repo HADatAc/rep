@@ -17,6 +17,7 @@
  use Drupal\rep\Entity\Tables;
  use Drupal\rep\Entity\GenericObject;
  use Drupal\rep\Vocabulary\REPGUI;
+ use Drupal\rep\Vocabulary\HASCO;
  use Drupal\rep\Vocabulary\SCHEMA;
  use Drupal\rep\Vocabulary\VSTOI;
  use Drupal\Core\Render\Markup;
@@ -63,12 +64,29 @@
     $uri_decode=base64_decode($elementuri);
     $full_uri = Utils::plainUri($uri_decode);
     $api = \Drupal::service('rep.api_connector');
-    $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
+    $is_non_describable_uri = $this->isNonDescribableTermUri($full_uri);
+
+    if ($is_non_describable_uri) {
+      $this->setElement(NULL);
+    }
+    else {
+      $this->setElement($api->parseObjectResponse($api->getUri($full_uri),'getUri'));
+    }
 
     // dpm($this->getElement());
     // kint($this->getElement());
 
-    $objectProperties = GenericObject::inspectObject($this->getElement());
+    $objectProperties = ['literals' => [], 'objects' => []];
+    if ($this->getElement() != NULL) {
+      $objectProperties = GenericObject::inspectObject($this->getElement());
+    }
+
+    if ($is_non_describable_uri) {
+      $form['uri_notice'] = [
+        '#type' => 'item',
+        '#title' => $this->t('This URI points to a vocabulary/status term and does not have an instance page.'),
+      ];
+    }
 
     // Organization edit suggestions (P1): available to non-owners.
     $element = $this->getElement();
@@ -295,6 +313,36 @@
     $result = ucfirst($stringWithSpaces);
 
     return $result;
+  }
+
+  private function isNonDescribableTermUri($uri) {
+    $candidate = trim((string) $uri);
+    if ($candidate === '') {
+      return TRUE;
+    }
+
+    $blocked = [
+      VSTOI::DRAFT,
+      VSTOI::UNDER_REVIEW,
+      VSTOI::CURRENT,
+      VSTOI::DEPRECATED,
+      VSTOI::DAMAGED,
+      VSTOI::DEPLOYED,
+      VSTOI::PUBLIC,
+      VSTOI::PRIVATE,
+      HASCO::DRAFT,
+      HASCO::ACTIVE,
+      HASCO::CLOSED,
+      HASCO::ALL_STATUSES,
+      HASCO::INACTIVE,
+      HASCO::RECORDING,
+      HASCO::INGESTING,
+      HASCO::SUSPENDED,
+      HASCO::PUBLIC,
+      HASCO::PRIVATE,
+    ];
+
+    return in_array($candidate, $blocked, TRUE);
   }
 
  }
