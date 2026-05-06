@@ -994,6 +994,26 @@ div.toast {
   overflow-y: auto;
 }
 
+/* Keep social suggest-edit modal fully usable on shorter screens. */
+.ui-dialog.rep-social-suggest-edit-modal {
+  width: min(700px, calc(100vw - 2rem)) !important;
+  max-width: calc(100vw - 2rem) !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  top: 4vh !important;
+  max-height: 92vh !important;
+}
+
+.ui-dialog.rep-social-suggest-edit-modal .ui-dialog-content {
+  max-height: calc(92vh - 130px) !important;
+  overflow-y: auto !important;
+}
+
+.ui-dialog.rep-social-suggest-edit-modal .form-actions .btn {
+  min-width: 120px;
+}
+
 
 /* SIR */
 div.vertical-tabs__panes {

@@ -58,6 +58,9 @@ class SuggestOrganizationEditForm extends FormBase {
       ];
 
       $form['actions'] = ['#type' => 'actions'];
+      $form['actions']['#attributes'] = [
+        'class' => ['d-flex', 'gap-2', 'mt-3'],
+      ];
       $form['actions']['cancel'] = [
         '#type' => 'submit',
         '#value' => $this->t('Close'),
@@ -178,6 +181,9 @@ class SuggestOrganizationEditForm extends FormBase {
 
     $form['actions'] = [
       '#type' => 'actions',
+      '#attributes' => [
+        'class' => ['d-flex', 'gap-2', 'mt-3'],
+      ],
     ];
 
     $form['actions']['submit'] = [

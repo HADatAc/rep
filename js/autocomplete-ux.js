@@ -16,9 +16,9 @@
     }
   }
 
-  function isMakerOrOwnerField($input) {
+  function isMakerOwnerOrMaintainerField($input) {
     const hay = `${$input.attr('name') || ''} ${$input.attr('id') || ''} ${$input.attr('data-drupal-selector') || ''}`.toLowerCase();
-    return /(^|[^a-z0-9])(maker|owner)([^a-z0-9]|$)/.test(hay);
+    return /(^|[^a-z0-9])(maker|owner|maintainer)([^a-z0-9]|$)/.test(hay);
   }
 
   function isSocialPersonOrOrganizationAutocomplete($input) {
@@ -33,8 +33,10 @@
     return (
       path.includes('/social/autocomplete/person') ||
       path.includes('/social/autocomplete/organization') ||
+      path.includes('/social/autocomplete/agent') ||
       path.includes('/api/socialm/autocomplete/person') ||
-      path.includes('/api/socialm/autocomplete/organization')
+      path.includes('/api/socialm/autocomplete/organization') ||
+      path.includes('/api/socialm/autocomplete/agent')
     );
   }
 
@@ -255,7 +257,7 @@
 
             const items = (ui && Array.isArray(ui.content)) ? ui.content : [];
             if (items.length === 0) {
-              const eligible = isMakerOrOwnerField($input) || isSocialPersonOrOrganizationAutocomplete($input);
+              const eligible = isMakerOwnerOrMaintainerField($input) || isSocialPersonOrOrganizationAutocomplete($input);
               if (eligible && canCreateSocial()) {
                 setStatusHtml($input, buildQuickCreateActionsHtml($input), 'info');
               } else {
