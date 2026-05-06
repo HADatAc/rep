@@ -29,6 +29,33 @@ class SocialApiMakerController extends ControllerBase {
       return new JsonResponse($results);
     }
 
+    // Combined lookup used by DPL owner/maintainer fields.
+    if ($entityType === 'agent') {
+      $organizationResults = json_decode($this->handleAutocomplete('organization', $request)->getContent(), TRUE) ?: [];
+      $personResults = json_decode($this->handleAutocomplete('person', $request)->getContent(), TRUE) ?: [];
+
+      $seen = [];
+      $merged = [];
+      foreach (array_merge($organizationResults, $personResults) as $item) {
+        if (!is_array($item) || empty($item['value'])) {
+          continue;
+        }
+
+        $uriKey = (string) $item['value'];
+        if (preg_match('/\[([^\]]+)\]$/', (string) $item['value'], $match)) {
+          $uriKey = $match[1];
+        }
+
+        if (isset($seen[$uriKey])) {
+          continue;
+        }
+        $seen[$uriKey] = TRUE;
+        $merged[] = $item;
+      }
+
+      return new JsonResponse($merged);
+    }
+
     // 2) Legacy lookup via listByKeyword().
     /** @var \Drupal\rep\ApiConnectorInterface $api */
     $api    = \Drupal::service('rep.api_connector');
@@ -51,8 +78,8 @@ class SocialApiMakerController extends ControllerBase {
     // \Drupal::logger('rep')->debug('Legacy makers count: @c', ['@c' => count($makers)]);
     $legacyMakers = $makers;
 
-    // Enforce: autocompletes should only list CURRENT elements.
-    $makers = array_values(array_filter($makers, function ($m) {
+    // Prefer CURRENT elements, but keep non-CURRENT when there is no CURRENT match.
+    $makersFiltered = array_values(array_filter($makers, function ($m) {
       if (is_array($m)) {
         $m = (object) $m;
       }
@@ -64,23 +91,36 @@ class SocialApiMakerController extends ControllerBase {
       }
       return TRUE;
     }));
+    if (!empty($makersFiltered)) {
+      $makers = $makersFiltered;
+    }
 
-    $legacyMakers = $makers;
-
-    // 3) Se houver resultados legacy, ou social_conf OFF, devolve-os já.
+    // 3) If legacy returned results, use them immediately.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    $forceSocialForOrganizations = $socialEnabled && $entityType === 'organization';
-    if ((!$forceSocialForOrganizations && !empty($makers)) || !$socialEnabled) {
-      // \Drupal::logger('rep')->debug('Returning legacy results (or social disabled).');
+    if (!empty($makers)) {
       foreach ($makers as $m) {
-        $label = $m->label ?? '';
-        $uri   = $m->uri   ?? '';
+        if (is_array($m)) {
+          $m = (object) $m;
+        }
+        if (!is_object($m)) {
+          continue;
+        }
+        $uri = (string) ($m->uri ?? '');
+        if ($uri === '') {
+          continue;
+        }
+        $label = (string) ($m->label ?? ($m->name ?? $uri));
         $results[] = ['value' => "$label [$uri]", 'label' => $label];
       }
       return new JsonResponse($results);
     }
 
-    // 4) Agora sim: fallback ao Social API porque legacy não devolveu nada.
+    // 4) When social_conf is OFF, try keywordtype fallback before giving up.
+    if (!$socialEnabled) {
+      return new JsonResponse($this->keywordTypeFallback($api, $entityType, $input));
+    }
+
+    // 5) social_conf is ON and legacy did not return items: use Social API fallback.
     // \Drupal::logger('rep')->debug('No legacy results; using Social fallback.');
 
     // --- token/session logic (igual ao anterior) ---
@@ -106,7 +146,7 @@ class SocialApiMakerController extends ControllerBase {
       }
       catch (\Throwable $e) {
         \Drupal::logger('rep')->error('Token refresh failed: @m', ['@m' => $e->getMessage()]);
-        return new JsonResponse($results, 401);
+        return new JsonResponse($this->keywordTypeFallback($api, $entityType, $input));
       }
     }
 
@@ -184,8 +224,15 @@ class SocialApiMakerController extends ControllerBase {
       $makers = $legacyMakers;
     }
 
-    // Enforce again after Social fallback.
-    $makers = array_values(array_filter($makers, function ($m) {
+    if (empty($makers)) {
+      $fallback = $this->keywordTypeFallback($api, $entityType, $input);
+      if (!empty($fallback)) {
+        return new JsonResponse($fallback);
+      }
+    }
+
+    // Prefer CURRENT after Social fallback, but keep non-CURRENT when needed.
+    $makersFiltered = array_values(array_filter($makers, function ($m) {
       if (is_array($m)) {
         $m = (object) $m;
       }
@@ -197,16 +244,92 @@ class SocialApiMakerController extends ControllerBase {
       }
       return TRUE;
     }));
+    if (!empty($makersFiltered)) {
+      $makers = $makersFiltered;
+    }
 
     // 6) Monta retorno final
     foreach ($makers as $m) {
-      $label = $m->label ?? '';
-      $uri   = $m->uri   ?? '';
+      if (is_array($m)) {
+        $m = (object) $m;
+      }
+      if (!is_object($m)) {
+        continue;
+      }
+      $uri = (string) ($m->uri ?? '');
+      if ($uri === '') {
+        continue;
+      }
+      $label = (string) ($m->label ?? ($m->name ?? $uri));
       $results[] = ['value' => "$label [$uri]", 'label' => $label];
     }
 
     // \Drupal::logger('rep')->debug('Returning @n suggestions', ['@n' => count($results)]);
     return new JsonResponse($results);
+  }
+
+  /**
+   * Build fallback suggestions using listByKeywordType.
+   */
+  private function keywordTypeFallback($api, string $entityType, string $input): array {
+    $results = [];
+    $typedMakers = [];
+
+    try {
+      $status = in_array($entityType, ['person', 'organization'], TRUE) ? VSTOI::CURRENT : '_';
+      $typedRaw = $api->listByKeywordType($entityType, 100, 0, 'all', $input, '_', '_', $status);
+      $typedObj = is_string($typedRaw)
+        ? json_decode($typedRaw)
+        : (is_object($typedRaw) ? $typedRaw : json_decode(json_encode($typedRaw)));
+
+      if (is_object($typedObj) && !empty($typedObj->body)) {
+        $typedMakers = is_string($typedObj->body)
+          ? (json_decode($typedObj->body) ?: [])
+          : (is_array($typedObj->body) ? $typedObj->body : []);
+      }
+      elseif (is_array($typedRaw)) {
+        $typedMakers = $typedRaw;
+      }
+    }
+    catch (\Throwable $e) {
+      $typedMakers = [];
+    }
+
+    $typedMakersFiltered = array_values(array_filter($typedMakers, function ($m) {
+      if (is_array($m)) {
+        $m = (object) $m;
+      }
+      if (!is_object($m)) {
+        return FALSE;
+      }
+      if (isset($m->hasStatus) && $m->hasStatus !== NULL && $m->hasStatus !== '' && $m->hasStatus !== VSTOI::CURRENT) {
+        return FALSE;
+      }
+      return TRUE;
+    }));
+    if (!empty($typedMakersFiltered)) {
+      $typedMakers = $typedMakersFiltered;
+    }
+
+    foreach ($typedMakers as $m) {
+      if (is_array($m)) {
+        $m = (object) $m;
+      }
+      if (!is_object($m)) {
+        continue;
+      }
+      $label = $m->label ?? ($m->name ?? '');
+      $uri = $m->uri ?? '';
+      if ($uri === '') {
+        continue;
+      }
+      if ($label === '') {
+        $label = $uri;
+      }
+      $results[] = ['value' => "$label [$uri]", 'label' => (string) $label];
+    }
+
+    return $results;
   }
 
 }
