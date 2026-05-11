@@ -44,8 +44,12 @@ class ManageOwnerFilter {
   }
 
   public static function allowsOwnerOverrideForStatus(?string $statusFilter): bool {
-    if ($statusFilter === NULL || $statusFilter === '' || $statusFilter === '_') {
+    if ($statusFilter === NULL || $statusFilter === '') {
       return FALSE;
+    }
+
+    if ($statusFilter === '_') {
+      return TRUE;
     }
 
     return in_array((string) $statusFilter, [VSTOI::DRAFT, VSTOI::UNDER_REVIEW], TRUE);
