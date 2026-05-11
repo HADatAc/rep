@@ -492,11 +492,80 @@ class Utils {
    * - open in the same tab (no implicit target)
    * - carry Drupal's `destination` so Back is deterministic
    */
+  private static function safeCurrentDestination(bool $preferReferrerForAjax = TRUE): string {
+    $request = \Drupal::request();
+
+    $transientQueryKeys = [
+      'ajax_form',
+      '_wrapper_format',
+      '_drupal_ajax',
+      '_drupal_ajax_request',
+      'form_id',
+      'ajax_page_state',
+      'element_parents',
+    ];
+
+    $stripTransient = static function (array $query) use ($transientQueryKeys): array {
+      foreach ($transientQueryKeys as $key) {
+        unset($query[$key]);
+      }
+      return $query;
+    };
+
+    $path = $request->getPathInfo();
+    if ($path === '' || $path[0] !== '/') {
+      $path = '/';
+    }
+    $query = $stripTransient($request->query->all());
+
+    $isAjaxRequest = $request->isXmlHttpRequest()
+      || $request->query->get('ajax_form') !== NULL
+      || strtolower((string) $request->query->get('_wrapper_format')) === 'drupal_ajax';
+
+    if ($preferReferrerForAjax && $isAjaxRequest) {
+      $referer = (string) $request->headers->get('referer');
+      if ($referer !== '') {
+        $parts = parse_url($referer);
+        if (!is_array($parts)) {
+          $parts = [];
+        }
+        $refHost = (string) ($parts['host'] ?? '');
+        $host = (string) $request->getHost();
+        $sameHost = ($refHost === '' || strcasecmp($refHost, $host) === 0);
+        if (!$sameHost) {
+          $parts = [];
+        }
+
+        $refPath = (string) ($parts['path'] ?? '');
+        if ($refPath !== '') {
+          $basePath = rtrim((string) $request->getBasePath(), '/');
+          if ($basePath !== '' && $basePath !== '/') {
+            if ($refPath === $basePath) {
+              $refPath = '/';
+            }
+            else if (str_starts_with($refPath, $basePath . '/')) {
+              $refPath = substr($refPath, strlen($basePath));
+            }
+          }
+          if ($refPath === '' || $refPath[0] !== '/') {
+            $refPath = '/' . ltrim($refPath, '/');
+          }
+
+          $refQuery = [];
+          parse_str((string) ($parts['query'] ?? ''), $refQuery);
+          $path = $refPath;
+          $query = $stripTransient($refQuery);
+        }
+      }
+    }
+
+    return $path . (!empty($query) ? ('?' . UrlHelper::buildQuery($query)) : '');
+  }
+
   public static function describeUrl(string $fullUri, array $extraQuery = [], bool $includeDestination = TRUE): Url {
     $query = $extraQuery;
-    if ($includeDestination) {
-      // Adds ?destination=<current path + query>.
-      $query += \Drupal::destination()->getAsArray();
+    if ($includeDestination && !isset($query['destination'])) {
+      $query['destination'] = self::safeCurrentDestination(TRUE);
     }
 
     $fullUri = trim($fullUri);

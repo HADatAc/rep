@@ -10,6 +10,25 @@
     return el.isContentEditable === true;
   }
 
+  function shouldIgnoreForm(form) {
+    if (!form) return false;
+    return form.getAttribute('data-rep-nav-guard-ignore') === '1';
+  }
+
+  function isTransientField(el) {
+    if (!el || typeof el.getAttribute !== 'function') return false;
+    if (el.getAttribute('data-rep-ignore-dirty') === '1') return true;
+
+    const name = (el.getAttribute('name') || '').toLowerCase();
+    if (!name) return false;
+
+    return name.indexOf('text_filter') !== -1
+      || name.indexOf('language_filter') !== -1
+      || name.indexOf('status_filter') !== -1
+      || name.indexOf('manager_filter') !== -1
+      || name.indexOf('owner_filter') !== -1;
+  }
+
   function markFormDirty(form) {
     if (form) {
       form.setAttribute(DIRTY_ATTR, '1');
@@ -39,13 +58,13 @@
       // Track dirty forms.
       once('repNavigationGuardForm', 'form', context).forEach((form) => {
         form.addEventListener('input', (e) => {
-          if (isFormField(e.target)) {
+          if (isFormField(e.target) && !shouldIgnoreForm(form) && !isTransientField(e.target)) {
             markFormDirty(form);
           }
         }, true);
 
         form.addEventListener('change', (e) => {
-          if (isFormField(e.target)) {
+          if (isFormField(e.target) && !shouldIgnoreForm(form) && !isTransientField(e.target)) {
             markFormDirty(form);
           }
         }, true);
@@ -65,6 +84,7 @@
 
           const form = a.closest('form');
           if (!form) return;
+          if (shouldIgnoreForm(form)) return;
           if (!isDirty(form)) return;
 
           const ok = window.confirm('You have unsaved changes. Do you want to leave this page?');
