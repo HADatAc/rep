@@ -6,11 +6,14 @@ use Drupal\rep\Vocabulary\REPGUI;
 
 class ListKeywordLanguagePage {
 
-  public static function exec($elementtype, $keyword, $language, $type, $manageremail, $status, $page, $pagesize) {
-    if ($elementtype == NULL || $page == NULL || $pagesize == NULL) {
+  public static function exec($elementtype, $keyword = '_', $language = '_', $type = '_', $manageremail = '_', $status = '_', $page = 1, $pagesize = 10) {
+    if ($elementtype == NULL) {
         $resp = array();
         return $resp;
     }
+
+    $page = max(1, (int) $page);
+    $pagesize = max(1, (int) $pagesize);
 
     $offset = -1;
     if ($page <= 1) {
@@ -66,7 +69,7 @@ class ListKeywordLanguagePage {
 
   }
 
-  public static function total($elementtype, $keyword, $language, $type, $manageremail, $status) {
+  public static function total($elementtype, $keyword = '_', $language = '_', $type = '_', $manageremail = '_', $status = '_') {
     if ($elementtype == NULL) {
       return -1;
     }
@@ -104,7 +107,7 @@ class ListKeywordLanguagePage {
 
   }
 
-  public static function link($elementtype, $keyword, $language, $type, $manageremail, $status, $page, $pagesize) {
+  public static function link($elementtype, $keyword = '_', $language = '_', $type = '_', $manageremail = '_', $status = '_', $page = 1, $pagesize = 10) {
     $root_url = \Drupal::request()->getBaseUrl();
     $module = '';
     if ($elementtype != NULL && $page > 0 && $pagesize > 0) {

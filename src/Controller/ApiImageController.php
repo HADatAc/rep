@@ -23,6 +23,19 @@ class ApiImageController extends ControllerBase {
       throw new NotFoundHttpException();
     }
 
+    // Prefer local private resources first (used by most non-social forms).
+    $localPath = Utils::resolvePrivateResourcePath($elementUri, $imageRef, ['image']);
+    if (!empty($localPath)) {
+      $content = @file_get_contents($localPath);
+      if ($content !== FALSE) {
+        return new Response($content, 200, [
+          'Content-Type' => $this->inferImageMime($imageRef),
+          'Cache-Control' => 'private, max-age=86400',
+          'X-Content-Type-Options' => 'nosniff',
+        ]);
+      }
+    }
+
     /** @var \Drupal\rep\ApiConnectorInterface $api */
     $api = \Drupal::service('rep.api_connector');
 
@@ -85,24 +98,7 @@ class ApiImageController extends ControllerBase {
 
     // If upstream didn't provide a useful image mime, infer from filename.
     // This avoids browsers refusing to render due to X-Content-Type-Options: nosniff.
-    $lower = strtolower($imageRef);
-    if ($mime === 'application/octet-stream') {
-      if (str_ends_with($lower, '.png')) {
-        $mime = 'image/png';
-      }
-      elseif (str_ends_with($lower, '.jpg') || str_ends_with($lower, '.jpeg')) {
-        $mime = 'image/jpeg';
-      }
-      elseif (str_ends_with($lower, '.gif')) {
-        $mime = 'image/gif';
-      }
-      elseif (str_ends_with($lower, '.webp')) {
-        $mime = 'image/webp';
-      }
-      elseif (str_ends_with($lower, '.svg')) {
-        $mime = 'image/svg+xml';
-      }
-    }
+    $mime = $this->inferImageMime($imageRef, $mime);
 
     $out = new Response($content, 200, [
       'Content-Type' => $mime,
@@ -112,6 +108,35 @@ class ApiImageController extends ControllerBase {
     ]);
 
     return $out;
+  }
+
+  private function inferImageMime(string $imageRef, string $candidate = ''): string {
+    $candidate = trim((string) $candidate);
+    if ($candidate !== '') {
+      $candidate = strtolower(trim(explode(';', $candidate, 2)[0]));
+      if (str_starts_with($candidate, 'image/')) {
+        return $candidate;
+      }
+    }
+
+    $lower = strtolower($imageRef);
+    if (str_ends_with($lower, '.png')) {
+      return 'image/png';
+    }
+    if (str_ends_with($lower, '.jpg') || str_ends_with($lower, '.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (str_ends_with($lower, '.gif')) {
+      return 'image/gif';
+    }
+    if (str_ends_with($lower, '.webp')) {
+      return 'image/webp';
+    }
+    if (str_ends_with($lower, '.svg')) {
+      return 'image/svg+xml';
+    }
+
+    return 'application/octet-stream';
   }
 
 }

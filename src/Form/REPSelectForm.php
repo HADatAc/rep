@@ -6,6 +6,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\rep\ListManagerEmailPage;
+use Drupal\rep\ManageOwnerFilter;
 use Drupal\rep\Entity\DataFile;
 use Drupal\file\Entity\File;
 use Drupal\rep\Vocabulary\VSTOI;
@@ -66,6 +67,7 @@ class REPSelectForm extends FormBase
     $uid = \Drupal::currentUser()->id();
     $user = \Drupal\user\Entity\User::load($uid);
     $this->manager_name = $user->name->value;
+    $this->element_type = $elementtype;
 
     // Persist filter state in session
     $session = \Drupal::request()->getSession();
@@ -77,15 +79,27 @@ class REPSelectForm extends FormBase
       $session->set('rep_select_status_filter', $status_filter);
     }
 
+    $is_admin = ManageOwnerFilter::isAdmin();
+    $manager_filter_key = 'rep_select_manager_filter.' . (string) $this->element_type;
+    $manager_filter = $form_state->getValue('manager_filter');
+    if ($manager_filter === NULL) {
+      $manager_filter = $session->get($manager_filter_key, '');
+    }
+    else {
+      $manager_filter = ManageOwnerFilter::normalizeSelectedEmail($manager_filter);
+      $session->set($manager_filter_key, $manager_filter);
+    }
+
+    $effective_manager_email = ManageOwnerFilter::resolveEffectiveOwner($this->manager_email, $manager_filter, $status_filter);
+
     // GET TOTAL NUMBER OF ELEMENTS AND TOTAL NUMBER OF PAGES
-    $this->element_type = $elementtype;
     $this->setListSize(-1);
     if ($this->element_type != NULL) {
       if ($status_filter === '_' || $status_filter === NULL || $status_filter === '') {
-        $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
+        $this->setListSize(ListManagerEmailPage::total($this->element_type, $effective_manager_email));
       }
       else {
-        $this->setListSize(ListManagerEmailPage::totalByStatusManagerEmail($this->element_type, $status_filter, $this->manager_email, FALSE));
+        $this->setListSize(ListManagerEmailPage::totalByStatusManagerEmail($this->element_type, $status_filter, $effective_manager_email, FALSE));
       }
     }
 
@@ -117,10 +131,10 @@ class REPSelectForm extends FormBase
 
     // RETRIEVE ELEMENTS
     if ($status_filter === '_' || $status_filter === NULL || $status_filter === '') {
-      $this->setList(ListManagerEmailPage::exec($this->element_type, $this->manager_email, $page, $pagesize));
+      $this->setList(ListManagerEmailPage::exec($this->element_type, $effective_manager_email, $page, $pagesize));
     }
     else {
-      $this->setList(ListManagerEmailPage::execByStatusManagerEmail($this->element_type, $status_filter, $this->manager_email, FALSE, $page, $pagesize));
+      $this->setList(ListManagerEmailPage::execByStatusManagerEmail($this->element_type, $status_filter, $effective_manager_email, FALSE, $page, $pagesize));
     }
 
     $this->single_class_name = "";
@@ -149,6 +163,17 @@ class REPSelectForm extends FormBase
       '#type' => 'item',
       '#title' => $this->t('<h4>' . $this->plural_class_name . ' maintained by <font color="DarkGreen">' . $this->manager_name . ' (' . $this->manager_email . ')</font></h4>'),
     ];
+
+    $show_owner_indicator = $is_admin && $manager_filter !== '' && strcasecmp($effective_manager_email, $manager_filter) === 0;
+    if ($show_owner_indicator) {
+      $form['owner_indicator'] = [
+        '#type' => 'item',
+        '#markup' => $this->t('<div class="alert alert-info py-2 mb-3"><strong>A visualizar owner:</strong> @owner</div>', [
+          '@owner' => $effective_manager_email,
+        ]),
+      ];
+    }
+
     $form['actions_wrapper'] = [
       '#type' => 'container',
       '#attributes' => [
@@ -198,6 +223,25 @@ class REPSelectForm extends FormBase
         'class' => ['pt-3', 'me-2', 'fw-bold'],
       ],
     ];
+
+    if ($is_admin) {
+      $form['actions_wrapper']['filter_container']['manager_filter'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('User'),
+        '#title_display' => 'invisible',
+        '#default_value' => $manager_filter,
+        '#ajax' => [
+          'callback' => '::ajaxReloadTable',
+          'wrapper' => 'element-table-wrapper',
+          'event' => 'change',
+        ],
+        '#attributes' => [
+          'class' => ['form-control', 'w-auto', 'mt-2', 'me-1'],
+          'style' => 'min-width:240px;margin-bottom:0!important;float:right;',
+          'placeholder' => $this->t('User email (Draft/Under Review)'),
+        ],
+      ];
+    }
 
     $form['actions_wrapper']['filter_container']['status_filter'] = [
       '#type' => 'select',

@@ -180,21 +180,9 @@
             '#markup' => $this->t("<b>" . $prettyName . "</b>: " . Utils::plainStatus($propertyValue). "<br><br>"),
           ];
         } else if ($propertyName === 'hasWebDocument') {
-          // Retrieve the element’s URI.
-          $uri = $this->getElement()->uri;
+          $uri = (string) ($this->getElement()->uri ?? '');
+          $hasWebDocument = (string) ($this->getElement()->hasWebDocument ?? '');
 
-          // If the URI contains "#/", extract the part after it; otherwise, use the full URI.
-          if (strpos($uri, '#/') !== false) {
-            $parts = explode('#/', $uri);
-            $uriPart = $parts[1];
-          } else {
-            $uriPart = $uri;
-          }
-
-          // Get the hasWebDocument property.
-          $hasWebDocument = $this->getElement()->hasWebDocument;
-
-          // Check if hasWebDocument starts with "http".
           if (strpos($hasWebDocument, 'http') === 0 || strpos($hasWebDocument, 'https') === 0) {
             // Display only a link for the user to click.
             $form['document_link'] = [
@@ -213,28 +201,34 @@
             ];
           }
           else {
-            // Generate the documentDataURI as before.
-            $documentDataURI = Utils::getAPIDocument($uri, $hasWebDocument);
-            if (!$documentDataURI) {
-              $documentDataURI = '#';
-            }
+            $documentUrl = Utils::getAPIDocument($uri, $hasWebDocument);
+            $documentExtension = strtolower((string) pathinfo($hasWebDocument, PATHINFO_EXTENSION));
 
             $form['document_link'] = [
               '#type' => 'container',
               '#attributes' => ['class' => ['document-link-container']],
             ];
 
-            // Create a button using the html_tag element.
-            $form['document_link']['button'] = [
-              '#type' => 'html_tag',
-              '#tag' => 'button',
-              '#value' => $this->t('View associated WebDocument'),
-              '#attributes' => [
-                'class' => ['view-media-button', 'btn', 'btn-primary', 'mb-3'],
-                'data-view-url' => $documentDataURI,
-                'type' => 'button',
-              ],
-            ];
+            if ($documentUrl !== '') {
+              $form['document_link']['button'] = [
+                '#type' => 'html_tag',
+                '#tag' => 'button',
+                '#value' => $this->t('View associated WebDocument'),
+                '#attributes' => [
+                  'class' => ['view-media-button', 'btn', 'btn-primary', 'mb-3'],
+                  'data-view-url' => $documentUrl,
+                  'data-file-ext' => $documentExtension,
+                  'data-file-name' => $hasWebDocument,
+                  'type' => 'button',
+                ],
+              ];
+            }
+            else {
+              $form['document_link']['message'] = [
+                '#type' => 'markup',
+                '#markup' => $this->t('<em>Associated WebDocument is not available for preview.</em>'),
+              ];
+            }
           }
         }
       }

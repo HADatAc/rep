@@ -1314,6 +1314,78 @@ class Utils {
     return NULL;
   }
 
+  /**
+   * Extract the private resource folder token from an element URI.
+   *
+   * For most elements this resolves to values like INS123..., WKF123..., etc.
+   */
+  public static function extractResourceFolderFromUri(?string $elementUri): string {
+    $elementUri = trim((string) ($elementUri ?? ''));
+    if ($elementUri === '') {
+      return '';
+    }
+
+    // Prefer the same namespace conversion pattern used by upload forms.
+    $ns = static::namespaceUri($elementUri);
+    if (str_contains($ns, ':/')) {
+      $tail = trim((string) explode(':/', $ns, 2)[1], '/');
+      if ($tail !== '') {
+        if (str_contains($tail, '/')) {
+          $parts = array_values(array_filter(explode('/', $tail), 'strlen'));
+          $tail = !empty($parts) ? (string) end($parts) : '';
+        }
+        if ($tail !== '') {
+          return $tail;
+        }
+      }
+    }
+
+    // Fallback: keep the last non-empty token from URL-ish URIs.
+    $tokens = preg_split('/[\/#]/', $elementUri);
+    if (!is_array($tokens)) {
+      return '';
+    }
+    $tokens = array_values(array_filter($tokens, 'strlen'));
+    return !empty($tokens) ? (string) end($tokens) : '';
+  }
+
+  /**
+   * Resolve a local private resource file path for an element and filename.
+   */
+  public static function resolvePrivateResourcePath(?string $elementUri, string $filename, array $subdirs = []): ?string {
+    $modUri = static::extractResourceFolderFromUri($elementUri);
+    $filename = trim((string) $filename);
+    if ($modUri === '' || $filename === '' || str_contains($filename, '..')) {
+      return NULL;
+    }
+
+    // Avoid path traversal and normalize incoming separators.
+    $safeFilename = basename(str_replace('\\', '/', $filename));
+    if ($safeFilename === '') {
+      return NULL;
+    }
+
+    $file_system = \Drupal::service('file_system');
+    $subdirs = array_values(array_unique(array_filter($subdirs, static function ($v) {
+      return trim((string) $v) !== '';
+    })));
+
+    foreach ($subdirs as $subdir) {
+      $subdir = trim((string) $subdir, '/');
+      if ($subdir === '') {
+        continue;
+      }
+
+      $candidate_uri = 'private://resources/' . $modUri . '/' . $subdir . '/' . $safeFilename;
+      $candidate_path = $file_system->realpath($candidate_uri);
+      if (is_string($candidate_path) && $candidate_path !== '' && is_file($candidate_path)) {
+        return $candidate_path;
+      }
+    }
+
+    return NULL;
+  }
+
   // public static function getAPIImage($uri, $apiImage, $placeholder_image) {
 
   //   // Empty Value return Placeholder
@@ -1487,36 +1559,34 @@ class Utils {
       return '';
     }
 
+    $apiDocument = trim((string) $apiDocument);
+
     // If the value is already a full URL, return it directly.
     if (strpos($apiDocument, 'http') === 0) {
       return $apiDocument;
     }
 
-    $api = \Drupal::service('rep.api_connector');
-    $response = $api->downloadFile($uri, $apiDocument);
-
-    if ($response) {
-      $file_content = $response->getContent();
-      $original_content_type = $response->headers->get('Content-Type');
-
-      // Check the file extension based on the name.
-      $extension = strtolower(pathinfo($apiDocument, PATHINFO_EXTENSION));
-
-      if ($extension === 'pdf') {
-        // If it is a PDF, force the Content-Type to application/pdf.
-        $content_type = 'application/pdf';
-        $response->headers->set('Content-Type', $content_type);
-        $response->headers->set('Content-Disposition', 'inline; filename="' . $apiDocument . '"');
-      }
-      else {
-        // For other file types, use the original Content-Type.
-        $content_type = $original_content_type;
-      }
-
-      $base64_document = base64_encode($file_content);
-      return "data:" . $content_type . ";base64," . $base64_document;
+    if (stripos($apiDocument, 'data:') === 0) {
+      return $apiDocument;
     }
-    else {
+
+    try {
+      $elementEnc = static::base64urlEncode((string) $uri);
+      $documentEnc = static::base64urlEncode((string) $apiDocument);
+
+      // Guard very long URLs to avoid HTTP 414 from web server limits.
+      if (strlen($elementEnc) + strlen($documentEnc) > 3000) {
+        return '';
+      }
+
+      return Url::fromRoute('rep.api_document', [
+        'element' => $elementEnc,
+        'document' => $documentEnc,
+      ], [
+        'absolute' => TRUE,
+      ])->toString();
+    }
+    catch (\Throwable $e) {
       return '';
     }
   }

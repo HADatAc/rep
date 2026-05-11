@@ -334,7 +334,32 @@ class FusekiAPIConnector {
   }
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
-  public function listByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status, $pageSize, $offset) {
+  public function listByKeywordAndLanguage($elementType, $keyword, $language, $type = '_', $manageremail = '_', $status = '_', $pageSize = 10, $offset = 0) {
+    // Backward compatibility for legacy calls with 5 args:
+    // listByKeywordAndLanguage(elementType, keyword, language, pageSize, offset)
+    if (is_numeric($type) && is_numeric($manageremail)
+      && ($status === '_' || $status === NULL)
+      && ($pageSize === 10 || $pageSize === NULL)
+      && ($offset === 0 || $offset === NULL)) {
+      $pageSize = (int) $type;
+      $offset = (int) $manageremail;
+      $type = '_';
+      $manageremail = '_';
+      $status = '_';
+    }
+
+    if ($type === NULL || $type === '') {
+      $type = '_';
+    }
+    if ($manageremail === NULL || $manageremail === '') {
+      $manageremail = '_';
+    }
+    if ($status === NULL || $status === '') {
+      $status = '_';
+    }
+    $pageSize = max(1, (int) $pageSize);
+    $offset = max(0, (int) $offset);
+
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/".
@@ -353,7 +378,17 @@ class FusekiAPIConnector {
   }
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
-  public function listSizeByKeywordAndLanguage($elementType, $keyword, $language, $type, $manageremail, $status) {
+  public function listSizeByKeywordAndLanguage($elementType, $keyword, $language, $type = '_', $manageremail = '_', $status = '_') {
+    if ($type === NULL || $type === '') {
+      $type = '_';
+    }
+    if ($manageremail === NULL || $manageremail === '') {
+      $manageremail = '_';
+    }
+    if ($status === NULL || $status === '') {
+      $status = '_';
+    }
+
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/keywordlanguage/total/".

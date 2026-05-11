@@ -619,6 +619,16 @@ rep.api_image:
     image: '[A-Za-z0-9\-_]+'
   methods: [GET]
 
+rep.api_document:
+  path: '/rep/api-document/{element}/{document}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\ApiDocumentController::document'
+  requirements:
+    _role: 'authenticated'
+    element: '[A-Za-z0-9\-_]+'
+    document: '[A-Za-z0-9\-_]+'
+  methods: [GET]
+
 rep.contributors.cards:
   path: '/rep/contributors/cards'
   defaults:
