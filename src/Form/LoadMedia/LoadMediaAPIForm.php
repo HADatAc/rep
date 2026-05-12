@@ -147,22 +147,30 @@ class LoadMediaAPIForm extends FormBase {
     $api_service = \Drupal::service('rep.api_connector');
 
     // Retrieve the folder name from the form input.
-    $filename = $form_state->getValue('folder_name');
+    $foldername = trim((string) $form_state->getValue('folder_name'));
 
     // Retrieve the uploaded file ID from the managed file field.
     $zip_fids = $form_state->getValue('zip_upload');
     $fid = reset($zip_fids);
 
     // Call the API method, passing the Drupal file ID and the filename.
-    $result = $api_service->uploadMediaFile($fid, $filename);
+    $result = $api_service->uploadMediaFile($fid, $foldername);
 
-    // Display a success message.
-    \Drupal::messenger()->addMessage($this->t('File successfully sent.'));
+    if ($result === FALSE || $result === NULL) {
+      $msg = '';
+      if (method_exists($api_service, 'getErrorMessage')) {
+        $msg = trim((string) $api_service->getErrorMessage());
+      }
+      if ($msg === '') {
+        $msg = $this->t('Unknown error.');
+      }
+      \Drupal::messenger()->addError($this->t('Upload failed: @msg', ['@msg' => $msg]));
+      // Keep the user on the form so they can retry.
+      return;
+    }
 
-    // Redirect to the home route.
-    $url = \Drupal\Core\Url::fromRoute('rep.home');
-    $response = new \Symfony\Component\HttpFoundation\RedirectResponse($url->toString());
-    $response->send();
+    \Drupal::messenger()->addMessage($this->t('File sent to HASCOAPI. Extraction runs asynchronously; logos may take a few seconds to appear.'));
+    $form_state->setRedirect('rep.home');
   }
 
 

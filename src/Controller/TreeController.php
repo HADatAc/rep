@@ -109,7 +109,11 @@ class TreeController extends ControllerBase {
       'instrument' => EntryPoints::CLASS_EP_INSTRUMENT,
       'platform' => EntryPoints::CLASS_EP_PLATFORM,
     ];
-    if (($fieldId === 'instance_type' || $fieldId === NULL || $fieldId === '')
+    // Only force instance listing for the instance-type selector modal.
+    // In browse pages (e.g. /sir/list or /rep/hierarchy/browse/*) field_id is empty and we
+    // want the ontology class hierarchy (InstrumentEntryPoint → Instrument → ...), not a flat
+    // list of instances.
+    if ($fieldId === 'instance_type'
       && isset($instanceFieldRoots[$elementtype])
       && $nodeUri === $instanceFieldRoots[$elementtype]) {
       $items = $this->getManagerOwnedItems($elementtype);
