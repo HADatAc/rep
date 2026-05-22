@@ -82,7 +82,7 @@ class AssocProject {
         $safeUri = Html::escape($fundingUri);
         $openHref = Html::escape(Url::fromUserInput('/rep/uri/' . base64_encode($fundingUri))->toString());
 
-        $cards .= '<div class="col">'
+        $cards .= '<div class="col-12 col-md-4">'
           . '<div class="card h-100">'
           . '  <div class="card-header">' . $safeTitle . '</div>'
           . '  <div class="card-body d-flex flex-column">'
@@ -138,72 +138,121 @@ class AssocProject {
 
       $cards = '';
       static $imageCache = [];
+      static $metaCache = [];
       foreach ($initialUris as $contribUri) {
         $contrib = $contributors[$contribUri] ?? (object) ['uri' => $contribUri];
 
         $label = (!empty($contrib->label) ? (string) $contrib->label : (!empty($contrib->name) ? (string) $contrib->name : Utils::namespaceUri($contribUri)));
-        $placeholder = Utils::placeholderImage(
-          $contrib->hascoTypeUri ?? ($contrib->typeUri ?? ''),
-          $label,
-          '/'
-        );
+        $typeUri = (string) ($contrib->hascoTypeUri ?? ($contrib->typeUri ?? ''));
+        $placeholder = Utils::placeholderImage($typeUri, $label, '/');
 
         $externalUrl = '';
-        $typeLabel = '';
-        if (!isset($imageCache[$contribUri])) {
+        $candidate = (string) ($contrib->hasWebDocument ?? ($contrib->hasURL ?? ($contrib->url ?? '')));
+        if ($candidate !== '' && UrlHelper::isValid($candidate, TRUE)) {
+          $externalUrl = UrlHelper::filterBadProtocol($candidate);
+        }
+
+        $typeLabel = (string) ($contrib->hascoTypeLabel ?? ($contrib->typeLabel ?? ''));
+        if ($typeLabel === '' && $typeUri !== '') {
+          $frag = parse_url($typeUri, PHP_URL_FRAGMENT);
+          if (!empty($frag)) {
+            $typeLabel = (string) $frag;
+          }
+          else {
+            $path = parse_url($typeUri, PHP_URL_PATH);
+            $base = $path ? basename((string) $path) : '';
+            if ($base !== '') {
+              $typeLabel = (string) $base;
+            }
+          }
+        }
+
+        // Cache both image and metadata so cards remain consistent across
+        // initial render and infinite-scroll appended cards.
+        if (!isset($imageCache[$contribUri]) || !isset($metaCache[$contribUri])) {
           $img = $placeholder;
+
+          // Prefer image reference present on the contributor object.
           if (!empty($contrib->hasImageUri)) {
             $img = Utils::getAPIImage($contribUri, (string) $contrib->hasImageUri, $placeholder);
           }
-          else {
-            $raw = $api->getUri(Utils::plainUri($contribUri));
-            if ($raw) {
-              $full = $api->parseObjectResponse($raw, 'getUri');
-              if (is_object($full)) {
-                if (empty($contrib->label) && !empty($full->label)) {
-                  $label = (string) $full->label;
-                }
-                if (!empty($full->hasImageUri)) {
-                  $img = Utils::getAPIImage($contribUri, (string) $full->hasImageUri, $placeholder);
-                }
 
-                $candidate = (string) ($full->hasWebDocument ?? ($full->hasURL ?? ($full->url ?? '')));
-                if ($candidate !== '' && UrlHelper::isValid($candidate, TRUE)) {
-                  $externalUrl = UrlHelper::filterBadProtocol($candidate);
-                }
+          // Always fetch full object so we can resolve typeLabel/webdoc even
+          // when hasImageUri exists (the AJAX endpoint does this).
+          $raw = $api->getUri(Utils::plainUri($contribUri));
+          if ($raw) {
+            $full = $api->parseObjectResponse($raw, 'getUri');
+            if (is_object($full)) {
+              if (!empty($full->label)) {
+                $label = (string) $full->label;
+              }
+              elseif (!empty($full->name)) {
+                $label = (string) $full->name;
+              }
 
-                $typeLabel = (string) ($full->hascoTypeLabel ?? ($full->typeLabel ?? ''));
+              $typeUri = (string) ($full->hascoTypeUri ?? ($full->typeUri ?? $typeUri));
+              $typeLabel = (string) ($full->hascoTypeLabel ?? ($full->typeLabel ?? $typeLabel));
+              if ($typeLabel === '' && $typeUri !== '') {
+                $frag = parse_url($typeUri, PHP_URL_FRAGMENT);
+                if (!empty($frag)) {
+                  $typeLabel = (string) $frag;
+                }
+                else {
+                  $path = parse_url($typeUri, PHP_URL_PATH);
+                  $base = $path ? basename((string) $path) : '';
+                  if ($base !== '') {
+                    $typeLabel = (string) $base;
+                  }
+                }
+              }
+
+              $candidate = (string) ($full->hasWebDocument ?? ($full->hasURL ?? ($full->url ?? '')));
+              if ($candidate !== '' && UrlHelper::isValid($candidate, TRUE)) {
+                $externalUrl = UrlHelper::filterBadProtocol($candidate);
+              }
+
+              // Refresh placeholder based on the fully-resolved type+label.
+              $placeholder = Utils::placeholderImage($typeUri, $label, '/');
+
+              if (!empty($full->hasImageUri)) {
+                $img = Utils::getAPIImage($contribUri, (string) $full->hasImageUri, $placeholder);
+              }
+              elseif (!empty($contrib->hasImageUri)) {
+                $img = Utils::getAPIImage($contribUri, (string) $contrib->hasImageUri, $placeholder);
+              }
+              else {
+                $img = $placeholder;
               }
             }
           }
+
           $imageCache[$contribUri] = $img;
+          $metaCache[$contribUri] = [
+            'label' => $label,
+            'externalUrl' => $externalUrl,
+            'typeLabel' => $typeLabel,
+          ];
         }
         else {
-          $candidate = (string) ($contrib->hasWebDocument ?? ($contrib->hasURL ?? ($contrib->url ?? '')));
-          if ($candidate !== '' && UrlHelper::isValid($candidate, TRUE)) {
-            $externalUrl = UrlHelper::filterBadProtocol($candidate);
-          }
-          $typeLabel = (string) ($contrib->hascoTypeLabel ?? ($contrib->typeLabel ?? ''));
+          $label = (string) ($metaCache[$contribUri]['label'] ?? $label);
+          $externalUrl = (string) ($metaCache[$contribUri]['externalUrl'] ?? $externalUrl);
+          $typeLabel = (string) ($metaCache[$contribUri]['typeLabel'] ?? $typeLabel);
         }
 
         $safeImg = Html::escape($imageCache[$contribUri]);
         $safeTitle = Html::escape($label);
         $safeUri = Html::escape($contribUri);
-        $safeType = Html::escape($typeLabel);
         $openHref = Html::escape(Url::fromUserInput('/rep/uri/' . base64_encode($contribUri))->toString());
-        $safeExternal = Html::escape($externalUrl);
 
-        $cards .= '<div class="col">'
+        $cards .= '<div class="col-12 col-md-4">'
           . '<div class="card h-100">'
           . '  <div class="card-header">' . $safeTitle . '</div>'
           . '  <div class="card-body d-flex flex-column">'
           . '    <div class="mb-3 rep-card-logo-box">'
           . '      <img class="rep-card-logo-img" src="' . $safeImg . '" alt="' . $safeTitle . '" />'
           . '    </div>'
-          . ($safeType !== '' ? '    <div class="small text-muted mb-2">Type: ' . $safeType . '</div>' : '')
           . '    <div class="d-flex gap-2 mt-auto">'
           . '      <a class="btn btn-primary flex-grow-1" href="' . $openHref . '" target="_blank" rel="noopener noreferrer">Open</a>'
-          . ($externalUrl !== '' ? '      <a class="btn btn-outline-primary flex-grow-1" href="' . $safeExternal . '" target="_blank" rel="noopener noreferrer">CienciaPT</a>' : '')
           . '    </div>'
           . '  </div>'
           . '  <div class="card-footer small text-muted rep-card-uri-footer">' . $safeUri . '</div>'

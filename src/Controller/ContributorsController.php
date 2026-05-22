@@ -57,6 +57,22 @@ class ContributorsController {
 
           $typeUri = (string) ($obj->hascoTypeUri ?? ($obj->typeUri ?? ''));
           $typeLabel = (string) ($obj->hascoTypeLabel ?? ($obj->typeLabel ?? ''));
+
+          // Keep layout consistent even when the API does not provide a
+          // human-readable type label.
+          if ($typeLabel === '' && $typeUri !== '') {
+            $frag = parse_url($typeUri, PHP_URL_FRAGMENT);
+            if (!empty($frag)) {
+              $typeLabel = (string) $frag;
+            }
+            else {
+              $path = parse_url($typeUri, PHP_URL_PATH);
+              $base = $path ? basename((string) $path) : '';
+              if ($base !== '') {
+                $typeLabel = (string) $base;
+              }
+            }
+          }
           $placeholder = Utils::placeholderImage($typeUri, $label, '/');
 
           if (!empty($obj->hasImageUri)) {
@@ -76,21 +92,17 @@ class ContributorsController {
       $safeImg = Html::escape($img);
       $safeTitle = Html::escape($label);
       $safeUri = Html::escape($uri);
-      $safeType = Html::escape($typeLabel);
       $openHref = Html::escape(Url::fromUserInput('/rep/uri/' . base64_encode($uri))->toString());
-      $safeExternal = Html::escape($externalUrl);
 
-      $html .= '<div class="col">'
+      $html .= '<div class="col-12 col-md-4">'
         . '<div class="card h-100">'
         . '  <div class="card-header">' . $safeTitle . '</div>'
         . '  <div class="card-body d-flex flex-column">'
         . '    <div class="mb-3 rep-card-logo-box">'
         . '      <img class="rep-card-logo-img" src="' . $safeImg . '" alt="' . $safeTitle . '" />'
         . '    </div>'
-        . ($safeType !== '' ? '    <div class="small text-muted mb-2">Type: ' . $safeType . '</div>' : '')
         . '    <div class="d-flex gap-2 mt-auto">'
         . '      <a class="btn btn-primary flex-grow-1" href="' . $openHref . '" target="_blank" rel="noopener noreferrer">Open</a>'
-        . ($externalUrl !== '' ? '      <a class="btn btn-outline-primary flex-grow-1" href="' . $safeExternal . '" target="_blank" rel="noopener noreferrer">CienciaPT</a>' : '')
         . '    </div>'
         . '  </div>'
         . '  <div class="card-footer small text-muted rep-card-uri-footer">' . $safeUri . '</div>'

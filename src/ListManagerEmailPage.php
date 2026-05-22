@@ -32,6 +32,46 @@ class ListManagerEmailPage {
     return strtolower($raw);
   }
 
+  private static function statusMatchesFilter(string $itemStatus, string $targetStatus, bool $withCurrent): bool {
+    if ($targetStatus === '' || $targetStatus === '_') {
+      return TRUE;
+    }
+
+    if ($itemStatus === $targetStatus) {
+      return TRUE;
+    }
+
+    return $withCurrent && $itemStatus === 'current';
+  }
+
+  private static function responseRespectsStatusFilter($items, $status, bool $withCurrent): bool {
+    $targetStatus = self::normalizeStatusValue($status);
+    if ($targetStatus === '' || $targetStatus === '_') {
+      return TRUE;
+    }
+
+    if ($items === NULL) {
+      return FALSE;
+    }
+
+    if (!is_array($items)) {
+      $items = [$items];
+    }
+
+    foreach ($items as $item) {
+      if (!is_object($item) && !is_array($item)) {
+        return FALSE;
+      }
+
+      $itemStatus = self::normalizeStatusValue(self::extractField($item, 'hasStatus'));
+      if (!self::statusMatchesFilter($itemStatus, $targetStatus, $withCurrent)) {
+        return FALSE;
+      }
+    }
+
+    return TRUE;
+  }
+
   private static function fallbackListByKeyword(
     $api,
     $elementtype,
@@ -154,7 +194,7 @@ class ListManagerEmailPage {
       $raw = $api->listByStatusManagerEmail($elementtype, $status, $manageremail, (bool) $withCurrent, $pagesize, $offset);
       if ($raw !== NULL) {
         $elements = $api->parseObjectResponse($raw, 'listByStatusManagerEmail');
-        if ($elements !== NULL) {
+        if ($elements !== NULL && self::responseRespectsStatusFilter($elements, $status, (bool) $withCurrent)) {
           return $elements;
         }
       }
@@ -218,6 +258,16 @@ class ListManagerEmailPage {
         }
         elseif (is_object($body) && isset($body->total)) {
           $listSize = (int) $body->total;
+        }
+      }
+    }
+
+    if ($listSize > 0 && !self::shouldBypassManagerEndpoint($elementtype)) {
+      $sampleRaw = $api->listByStatusManagerEmail($elementtype, $status, $manageremail, (bool) $withCurrent, 1, 0);
+      if ($sampleRaw !== NULL) {
+        $sample = $api->parseObjectResponse($sampleRaw, 'listByStatusManagerEmail');
+        if (!self::responseRespectsStatusFilter($sample, $status, (bool) $withCurrent)) {
+          $listSize = -1;
         }
       }
     }

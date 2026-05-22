@@ -307,6 +307,15 @@ class MTListForm extends FormBase {
     } elseif ($view_type == 'card') {
       $this->buildCardView($form, $form_state, $header, $output);
 
+      $form['records_count'] = [
+        '#type' => 'item',
+        '#markup' => $this->t('<div id="count-cards" style="font-weight:bold; margin-top:10px; padding-right:2rem;">Currently viewing @count of @total @class</div>', [
+          '@count' => count($this->getList()),
+          '@total' => (int) $this->getListSize(),
+          '@class' => $this->plural_class_name,
+        ]),
+      ];
+
       $total_items = $this->getListSize();
       $current_page_size = $form_state->get('page_size') ?? 9;
 

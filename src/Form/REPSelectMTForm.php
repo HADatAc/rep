@@ -479,12 +479,79 @@ class REPSelectMTForm extends FormBase {
       ];
 
     } elseif ($view_type == 'card') {
+      $status_options = [
+        '_' => $this->t('All Status'),
+        VSTOI::DRAFT => $this->t('Draft'),
+        VSTOI::UNDER_REVIEW => $this->t('Under Review'),
+        VSTOI::CURRENT => $this->t('Current'),
+        VSTOI::DEPRECATED => $this->t('Deprecated'),
+      ];
+
+      $form['actions_wrapper']['filter_container'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['d-flex', 'ms-auto', 'mb-0'],
+          'style' => 'margin-bottom:0!important;'
+        ],
+      ];
+
+      $form['actions_wrapper']['filter_container']['filter_label'] = [
+        '#type' => 'label',
+        '#title' => $this->t('Filter(s): '),
+        '#attributes' => [
+          'class' => ['pt-3', 'me-2', 'fw-bold'],
+        ],
+      ];
+
+      if ($is_admin) {
+        $form['actions_wrapper']['filter_container']['manager_filter'] = [
+          '#type' => 'textfield',
+          '#title' => $this->t('User'),
+          '#title_display' => 'invisible',
+          '#default_value' => $manager_filter,
+          '#ajax' => [
+            'callback' => '::ajaxReloadCards',
+            'wrapper' => 'cards-lazy-wrapper',
+            'event' => 'change',
+          ],
+          '#attributes' => [
+            'class' => ['form-control', 'w-auto', 'mt-2', 'me-1'],
+            'style' => 'min-width:240px;margin-bottom:0!important;float:right;',
+            'placeholder' => $this->t('User email (Draft/Under Review)'),
+          ],
+        ];
+      }
+
+      $form['actions_wrapper']['filter_container']['status_filter'] = [
+        '#type' => 'select',
+        '#options' => $status_options,
+        '#default_value' => $status_filter,
+        '#ajax' => [
+          'callback' => '::ajaxReloadCards',
+          'wrapper' => 'cards-lazy-wrapper',
+          'event' => 'change',
+        ],
+        '#attributes' => [
+          'class' => ['form-select', 'w-auto', 'mt-2'],
+          'style' => 'margin-bottom:0!important;float:right;'
+        ],
+      ];
+
       $form['cards_lazy_wrapper'] = [
         '#type' => 'container',
         '#attributes' => ['id' => 'cards-lazy-wrapper'],
       ];
 
       $this->buildCardView($form['cards_lazy_wrapper'], $form_state, $header, $output);
+
+      $form['cards_lazy_wrapper']['records_count'] = [
+        '#type' => 'item',
+        '#markup' => $this->t('<div id="count-cards" style="font-weight:bold; margin-top:10px; padding-right:2rem;">Currently viewing @count of @total @class</div>', [
+          '@count' => count($this->getList()),
+          '@total' => (int) $this->getListSize(),
+          '@class' => $this->plural_class_name,
+        ]),
+      ];
 
       $total_items = $this->getListSize();
       $current_page_size = $form_state->get('page_size') ?? 9;
@@ -705,6 +772,19 @@ class REPSelectMTForm extends FormBase {
       '#type' => 'container',
       '#attributes' => ['id' => 'element-cards-wrapper', 'class' => ['row', 'mt-3']],
     ];
+
+    if (empty($output)) {
+      $form['element_cards_wrapper']['no_results'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['col-12']],
+        'message' => [
+          '#markup' => '<div class="alert alert-info mb-0">'
+            . $this->t('No @items found for the current filters.', ['@items' => $this->plural_class_name])
+            . '</div>',
+        ],
+      ];
+      return;
+    }
 
     foreach ($output as $key => $item) {
       $sanitized_key = md5($key);

@@ -21,6 +21,12 @@ services:
     tags:
         - { name: event_subscriber }
 
+  rep.pagination_guard_subscriber:
+    class: Drupal\rep\EventSubscriber\PaginationGuardSubscriber
+    arguments: ['@config.factory']
+    tags:
+      - { name: event_subscriber }
+
   rep.block_config_update_subscriber:
     class: Drupal\rep\EventSubscriber\BlockConfigUpdateSubscriber
     tags:

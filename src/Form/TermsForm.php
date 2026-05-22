@@ -11,31 +11,73 @@ use Drupal\Core\Render\Markup;
  */
 class TermsForm extends FormBase {
 
+  private const TERMS_SERVICE_BASE_URL = 'http://192.168.1.169/sgcontract';
+  private const TERMS_HTTP_CONNECT_TIMEOUT = 2.0;
+  private const TERMS_HTTP_TIMEOUT = 4.0;
+
   public function getFormId() {
     return 'rep_terms_acceptance_form';
+  }
+
+  /**
+   * Build HTTP options with fail-fast defaults for external integrations.
+   */
+  private function buildTermsHttpOptions(array $options = []): array {
+    $defaults = [
+      'connect_timeout' => self::TERMS_HTTP_CONNECT_TIMEOUT,
+      'timeout' => self::TERMS_HTTP_TIMEOUT,
+      'http_errors' => FALSE,
+    ];
+
+    return $options + $defaults;
+  }
+
+  /**
+   * Resolve terms service base URL from config with a safe fallback.
+   */
+  private function getTermsServiceBaseUrl(): string {
+    $configured = trim((string) \Drupal::config('rep.settings')->get('terms_service_base_url'));
+    $base = $configured !== '' ? $configured : self::TERMS_SERVICE_BASE_URL;
+    return rtrim($base, '/');
   }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
     $form['#attached']['library'][] = 'rep/terms_modal';
 
+    $download_url = '';
+    $version = '';
+    $terms_hash = '';
+    $termsServiceBaseUrl = $this->getTermsServiceBaseUrl();
+
     try {
       $client = \Drupal::httpClient();
       $project_id = 'hascorepo';
 
-      $response = $client->get('http://192.168.1.169/sgcontract/terms/latest', [
+      $response = $client->get($termsServiceBaseUrl . '/terms/latest', $this->buildTermsHttpOptions([
         'query' => ['project_id' => $project_id],
-      ]);
+      ]));
 
-      $data = json_decode($response->getBody(), TRUE);
-      $version = $data['version'];
-      $download_url = $data['download_url'];
-      $terms_hash = hash('sha256', file_get_contents($download_url));
+      if ($response->getStatusCode() !== 200) {
+        throw new \RuntimeException('Terms service returned HTTP ' . $response->getStatusCode());
+      }
+
+      $data = json_decode((string) $response->getBody(), TRUE);
+      if (!is_array($data)) {
+        throw new \RuntimeException('Invalid JSON response from terms service.');
+      }
+
+      $version = isset($data['version']) ? (string) $data['version'] : '';
+      $download_url = isset($data['download_url']) ? (string) $data['download_url'] : '';
+
+      if ($download_url !== '') {
+        $termsResponse = $client->get($download_url, $this->buildTermsHttpOptions());
+        if ($termsResponse->getStatusCode() === 200) {
+          $terms_hash = hash('sha256', (string) $termsResponse->getBody());
+        }
+      }
     }
-    catch (\Exception $e) {
+    catch (\Throwable $e) {
       $this->messenger()->addError($this->t('Erro ao carregar os termos: @msg', ['@msg' => $e->getMessage()]));
-      $download_url = '';
-      $version = '';
-      $terms_hash = '';
     }
 
 
@@ -85,13 +127,13 @@ class TermsForm extends FormBase {
 
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $current_user = \Drupal::currentUser();
-    $username = $current_user->getAccountName();
     $repo_instance = \Drupal::request()->getHost();
     $project_id = 'hascorepo';
+    $termsServiceBaseUrl = $this->getTermsServiceBaseUrl();
 
     try {
       $client = \Drupal::httpClient();
-      $response = $client->post('http://192.168.1.169/sgcontract/account/accept-terms', [
+      $response = $client->post($termsServiceBaseUrl . '/account/accept-terms', $this->buildTermsHttpOptions([
         'json' => [
           'acc_id' => $current_user->id(),
           'acc_repo_instance' => $repo_instance,
@@ -103,8 +145,16 @@ class TermsForm extends FormBase {
           'session_id' => \Drupal::service('session')->getId(),
           'terms_hash' => $form_state->get('terms_hash'),
         ],
-      ]);
-      $data = json_decode($response->getBody(), TRUE);
+      ]));
+
+      if ($response->getStatusCode() !== 200) {
+        throw new \RuntimeException('Terms acceptance service returned HTTP ' . $response->getStatusCode());
+      }
+
+      $data = json_decode((string) $response->getBody(), TRUE);
+      if (!is_array($data)) {
+        throw new \RuntimeException('Invalid JSON response from terms acceptance service.');
+      }
       
       if (!empty($data['status']) && $data['status'] === 'success') {
         \Drupal::service('session')->remove('terms_pending');
@@ -120,7 +170,7 @@ class TermsForm extends FormBase {
         $this->messenger()->addError($this->t('Erro ao registar aceitação.'));
       }      
     }
-    catch (\Exception $e) {
+    catch (\Throwable $e) {
       $this->messenger()->addError($this->t('Erro ao aceitar os termos: @msg', ['@msg' => $e->getMessage()]));
     }
   }

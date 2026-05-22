@@ -12,3 +12,6 @@ graph_max_live_nodes: 600
 graph_auto_show_on_fetch: 0
 graph_predicates_hidden: ""
 graph_predicates_auto_expand: ""
+
+pagination_default_pagesize: 9
+pagination_max_pagesize: 50

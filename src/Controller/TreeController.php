@@ -219,6 +219,13 @@ class TreeController extends ControllerBase {
     $api = \Drupal::service('rep.api_connector');
 
     $nodeUri = $request->query->get('nodeUri');
+    if ($nodeUri === NULL || trim((string) $nodeUri) === '') {
+      $nodeUri = $request->query->get('uri');
+    }
+    if ($nodeUri === NULL || trim((string) $nodeUri) === '') {
+      return new JsonResponse(['error' => 'Missing required query parameter: nodeUri'], 400);
+    }
+
     $data = $api->parseObjectResponse($api->getUri($nodeUri),'getUri');
 
     // Return a JSON response
@@ -311,6 +318,13 @@ class TreeController extends ControllerBase {
   public function getTopClass(Request $request) {
     $api     = \Drupal::service('rep.api_connector');
     $nodeUri = $request->query->get('nodeUri');
+    if ($nodeUri === NULL || trim((string) $nodeUri) === '') {
+      $nodeUri = $request->query->get('uri');
+    }
+    if ($nodeUri === NULL || trim((string) $nodeUri) === '') {
+      return new JsonResponse(['error' => 'Missing required query parameter: nodeUri'], 400);
+    }
+
     $topNode = $api->parseObjectResponse($api->getUri($nodeUri), 'getUri');
     // kint($topNode, 'Top Node');
     // $abbrev = strstr($topNode->uriNamespace, ':', true);
