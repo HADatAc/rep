@@ -163,6 +163,17 @@ describe_associates:
   dependencies:
     - core/jquery
 
+workflow_preview:
+  version: 1.x
+  css:
+    theme:
+      css/workflow-preview.css: {}
+  js:
+    js/workflow-preview.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+
 vis_graph_panel:
   version: 1.x
   js:

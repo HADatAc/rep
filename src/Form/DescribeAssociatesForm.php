@@ -71,6 +71,97 @@ class DescribeAssociatesForm extends FormBase {
     // Determine element type early so we can customize rendering.
     $typeUri = $element->hascoTypeUri ?? ($element->typeUri ?? '');
     $isProject = ($typeUri === SCHEMA::PROJECT);
+    $isWorkflow = in_array($typeUri, [VSTOI::PROCESS, VSTOI::WORKFLOW], true);
+    $baseUri = $element->uri;
+
+    if ($isWorkflow && \Drupal::moduleHandler()->moduleExists('ctt') && \Drupal::currentUser()->hasPermission('access ctt editor')) {
+      $basePath = rtrim(\Drupal::request()->getBasePath() ?: '/', '/');
+      $drupalBaseUrl = ($basePath === '' ? '/' : $basePath . '/');
+      $currentUser = \Drupal::currentUser();
+
+      $form['#attached']['library'][] = 'ctt/ctt-editor-init';
+      $form['#attached']['library'][] = 'rep/workflow_preview';
+
+      $existingCttSettings = $form['#attached']['drupalSettings']['ctt'] ?? [];
+      $form['#attached']['drupalSettings']['ctt'] = array_replace_recursive($existingCttSettings, [
+        'drupalBaseUrl' => $drupalBaseUrl,
+        'apiBaseUrl' => $drupalBaseUrl . 'workflow/api',
+        'hascoApiUrl' => $drupalBaseUrl . 'workflow',
+        'csrfToken' => \Drupal::csrfToken()->get('rest'),
+        'processUri' => $baseUri,
+        'currentUser' => [
+          'id' => (string) $currentUser->id(),
+          'name' => $currentUser->getDisplayName(),
+          'email' => (string) $currentUser->getEmail(),
+        ],
+        'execution' => [
+          'mode' => 'execution',
+          'daUri' => NULL,
+          'dataFileUri' => NULL,
+          'studyUri' => NULL,
+          'processUri' => $baseUri,
+          'readOnlyPreview' => true,
+        ],
+        'readOnlyPreview' => true,
+      ]);
+
+      $form['workflow_canvas_block'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['workflow-canvas-block'],
+          'data-workflow-preview-block' => '1',
+        ],
+      ];
+
+      $form['workflow_canvas_block']['workflow_canvas_header'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['workflow-canvas-header'],
+        ],
+      ];
+
+      $form['workflow_canvas_block']['workflow_canvas_header']['title'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'h2',
+        '#value' => $this->t('Workflow Canvas'),
+        '#attributes' => [
+          'class' => ['workflow-canvas-title'],
+        ],
+      ];
+
+      $form['workflow_canvas_block']['workflow_canvas_header']['fullscreen'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'button',
+        '#value' => $this->t('Fullscreen'),
+        '#attributes' => [
+          'type' => 'button',
+          'class' => ['workflow-preview-fullscreen-btn'],
+          'data-workflow-preview-fullscreen' => '1',
+          'aria-pressed' => 'false',
+        ],
+      ];
+
+      $form['workflow_canvas_block']['workflow_canvas_body'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['workflow-canvas-body'],
+        ],
+      ];
+
+      $form['workflow_canvas_block']['workflow_canvas_body']['workflow_canvas'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'id' => 'ctt-workflow-app',
+          'class' => ['ctt-workflow-preview-app'],
+          'data-ctt-min-height' => '520',
+        ],
+      ];
+
+      $form['workflow_canvas_block']['workflow_canvas_body']['workflow_canvas']['loading'] = [
+        '#type' => 'markup',
+        '#markup' => '<div class="ctt-loading-indicator"><div class="ctt-loading-content"><div class="ajax-progress ajax-progress-throbber"><div class="throbber">&nbsp;</div></div><p class="ctt-loading-text">' . $this->t('Loading workflow canvas...') . '</p></div></div>',
+      ];
+    }
 
      // ✅ Insert the graph as a panel using VisGraphBaseForm
     $graphForm = new VisGraphBaseForm();
@@ -79,7 +170,6 @@ class DescribeAssociatesForm extends FormBase {
 
     $this->setElement($element);
     $objectProperties = GenericObject::inspectObject($element);
-    $baseUri = $element->uri;
 
     // For Projects, render Associated Elements (cards) right after the graph/title.
     $projectAssociationsRendered = false;
