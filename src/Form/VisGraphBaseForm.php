@@ -357,11 +357,25 @@ if (!empty($element->typeUri)) {
 
     // Ensure drupalSettings and expose the lazy endpoint + limits to JS.
     $canvas['#attached']['library'][] = 'core/drupalSettings';
-    $canvas['#attached']['drupalSettings']['rep']['socObjectsEndpoint'] =
-      Url::fromRoute('rep.graph.expand')->toString();
+    $socObjectsEndpoint = '/rep/graph/expand';
+    $nodeInfoEndpoint = '/rep/graph/node';
 
-    $canvas['#attached']['drupalSettings']['rep']['nodeInfoEndpoint'] =
-      Url::fromRoute('rep.graph.node')->toString();
+    try {
+      $socObjectsEndpoint = Url::fromRoute('rep.graph.expand')->toString();
+    }
+    catch (\Symfony\Component\Routing\Exception\RouteNotFoundException $e) {
+      \Drupal::logger('rep')->warning('Missing route rep.graph.expand; using fallback endpoint path.');
+    }
+
+    try {
+      $nodeInfoEndpoint = Url::fromRoute('rep.graph.node')->toString();
+    }
+    catch (\Symfony\Component\Routing\Exception\RouteNotFoundException $e) {
+      \Drupal::logger('rep')->warning('Missing route rep.graph.node; using fallback endpoint path.');
+    }
+
+    $canvas['#attached']['drupalSettings']['rep']['socObjectsEndpoint'] = $socObjectsEndpoint;
+    $canvas['#attached']['drupalSettings']['rep']['nodeInfoEndpoint'] = $nodeInfoEndpoint;
 
     $canvas['#attached']['drupalSettings']['rep']['graphPredicateConfig'] = [
       'hidden' => $hiddenPredicates,
