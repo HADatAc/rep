@@ -15,6 +15,9 @@ use Drupal\rep\Vocabulary\VSTOI;
 
 class TreeController extends ControllerBase {
 
+  private const VSTOI_PHYSICAL_INSTRUMENT = 'http://hadatac.org/ont/vstoi#PhysicalInstrument';
+  private const PMSR_PHYSICAL_INSTRUMENT = 'http://pmsr.net/ont/pmsr#PhysicalInstrument';
+
   /**
    * Formats API list payloads to jsTree-compatible selectable leaves.
    */
@@ -69,6 +72,100 @@ class TreeController extends ControllerBase {
     }
 
     return $this->formatTreeItems($elements, \Drupal::currentUser()->getEmail());
+  }
+
+  /**
+   * Resolves a canonical VSTOI Physical Instrument node for class trees.
+   */
+  private function resolveVstoiPhysicalInstrumentNode($api) {
+    $node = NULL;
+
+    $candidates = $api->parseObjectResponse(
+      $api->getSubclassesKeyword(VSTOI::INSTRUMENT, 'instrument'),
+      'getSubclassesKeyword'
+    );
+
+    if (is_array($candidates)) {
+      foreach ($candidates as $candidate) {
+        if (!is_object($candidate) || empty($candidate->uri)) {
+          continue;
+        }
+        if ($candidate->uri !== self::VSTOI_PHYSICAL_INSTRUMENT) {
+          continue;
+        }
+        if (!empty($candidate->superUri) && $candidate->superUri !== VSTOI::INSTRUMENT) {
+          continue;
+        }
+        $node = $candidate;
+        break;
+      }
+    }
+
+    if (!$node) {
+      $node = (object) [
+        'uri' => self::VSTOI_PHYSICAL_INSTRUMENT,
+        'label' => 'Physical Instrument',
+        'superUri' => VSTOI::INSTRUMENT,
+        'typeNamespace' => self::VSTOI_PHYSICAL_INSTRUMENT,
+      ];
+    }
+
+    $sub = $api->parseObjectResponse($api->getChildren(self::VSTOI_PHYSICAL_INSTRUMENT), 'getChildren');
+    $node->children = is_array($sub) && !empty($sub);
+    return $node;
+  }
+
+  /**
+   * Keeps the Instrument branch aligned with canonical VSTOI classes.
+   */
+  private function normalizeInstrumentClassChildren($api, array $children): array {
+    $pool = [];
+    foreach ($children as $item) {
+      if (!is_object($item) || empty($item->uri)) {
+        continue;
+      }
+
+      // Avoid ambiguous duplicate "Physical Instrument" nodes at this level.
+      if ($item->uri === self::PMSR_PHYSICAL_INSTRUMENT) {
+        continue;
+      }
+
+      $pool[$item->uri] = $item;
+    }
+
+    if (!isset($pool[self::VSTOI_PHYSICAL_INSTRUMENT])) {
+      $pool[self::VSTOI_PHYSICAL_INSTRUMENT] = $this->resolveVstoiPhysicalInstrumentNode($api);
+    }
+
+    return array_values($pool);
+  }
+
+  /**
+   * Enriches canonical vstoi:PhysicalInstrument branch with PMSR-specific children.
+   */
+  private function normalizePhysicalInstrumentClassChildren($api, array $children): array {
+    $pool = [];
+    foreach ($children as $item) {
+      if (!is_object($item) || empty($item->uri)) {
+        continue;
+      }
+      $pool[$item->uri] = $item;
+    }
+
+    $legacyChildren = $api->parseObjectResponse(
+      $api->getChildren(self::PMSR_PHYSICAL_INSTRUMENT),
+      'getChildren'
+    );
+    if (is_array($legacyChildren)) {
+      foreach ($legacyChildren as $item) {
+        if (!is_object($item) || empty($item->uri)) {
+          continue;
+        }
+        $pool[$item->uri] = $item;
+      }
+    }
+
+    return array_values($pool);
   }
 
   // public function getChildren(Request $request) {
@@ -178,6 +275,49 @@ class TreeController extends ControllerBase {
     $children = $api->parseObjectResponse($api->getChildren($nodeUri), 'getChildren');
     if (!is_array($children)) {
       $children = [];
+    }
+
+    if ($nodeUri === VSTOI::INSTRUMENT && $fieldId !== 'instance_type') {
+      $children = $this->normalizeInstrumentClassChildren($api, $children);
+    }
+
+    if ($nodeUri === self::VSTOI_PHYSICAL_INSTRUMENT && $fieldId !== 'instance_type') {
+      $children = $this->normalizePhysicalInstrumentClassChildren($api, $children);
+    }
+
+    // Some ontology entry points can be present as roots but have no direct
+    // children in /api/children. In these cases, resolve the corresponding
+    // VSTOI class as an intermediate node to preserve production-like shape:
+    // EntryPoint -> Class -> subclasses.
+    if (empty($children)) {
+      $entryPointFallbacks = [
+        EntryPoints::CLASS_EP_INSTRUMENT => VSTOI::INSTRUMENT,
+        EntryPoints::CLASS_EP_COMPONENT => VSTOI::COMPONENT,
+        EntryPoints::CLASS_EP_COMPONENT_STEM => VSTOI::COMPONENT_STEM,
+      ];
+      $entryPointFallbackLabels = [
+        EntryPoints::CLASS_EP_INSTRUMENT => 'Instrument',
+        EntryPoints::CLASS_EP_COMPONENT => 'Component',
+        EntryPoints::CLASS_EP_COMPONENT_STEM => 'Component Stem',
+      ];
+      if (isset($entryPointFallbacks[$nodeUri])) {
+        $fallbackRootUri = $entryPointFallbacks[$nodeUri];
+        $sub = $api->parseObjectResponse($api->getChildren($fallbackRootUri), 'getChildren');
+        $hasSub = is_array($sub) && !empty($sub);
+
+        // Some local graphs expose class hierarchies but do not resolve the
+        // class itself via /api/uri (which would surface a user-facing error).
+        // Build a synthetic intermediate node unconditionally here.
+        $fallbackRoot = (object) [
+          'uri' => $fallbackRootUri,
+          'label' => $entryPointFallbackLabels[$nodeUri] ?? $fallbackRootUri,
+          'superUri' => $nodeUri,
+          'typeNamespace' => $fallbackRootUri,
+        ];
+
+        $fallbackRoot->children = $hasSub;
+        $children = [$fallbackRoot];
+      }
     }
 
     if (empty($children) && $nodeUri === EntryPoints::CLASS_EP_COMPONENT_ATTRIBUTE) {

@@ -3580,37 +3580,58 @@ class FusekiAPIConnector {
     $mime_type = $guesser->guessMimeType($path) ?: 'text/turtle; charset=UTF-8';
     $url = rtrim($this->getApiUrl(), '/') . '/hascoapi/api/repo/namespace/app';
 
+    // Ensure JWT bearer is initialized before building auth headers.
+    $this->getHeader();
     $authHeader = $this->bearer ?? '';
     if ($authHeader !== '' && stripos($authHeader, 'Bearer ') !== 0) {
       $authHeader = 'Bearer ' . $authHeader;
     }
 
+    $headers = [
+      'Content-Type' => $mime_type,
+      'Content-Disposition' => 'attachment; filename="' . $ns . '.ttl"',
+      'Accept' => 'application/json, text/plain;q=0.5, */*;q=0.1',
+    ];
+    if ($authHeader !== '') {
+      $headers['Authorization'] = $authHeader;
+    }
+
     $client = new Client([
-      'timeout' => 20,
+      // Ontology ingestion can take longer on local cold starts.
+      'timeout' => 120,
       'connect_timeout' => 10,
       'http_errors' => false, // keep 4xx/5xx as responses, not exceptions
     ]);
 
-    try {
-      $response = $client->post($url, [
-        'headers' => [
-          'Content-Type'  => $mime_type,
-          'Content-Disposition' => 'attachment; filename="'.$ns . '.ttl"',
-          'Accept'        => 'application/json, text/plain;q=0.5, */*;q=0.1',
-          'Authorization' => $authHeader,
-        ],
-        'body' => $file_content,
-      ]);
-
-      return $response; // <-- devolve o ResponseInterface “cru”
-    } catch (RequestException $e) {
-      $logger->error('Upload exception: {msg}', ['msg' => $e->getMessage()]);
-      // If the server returned a response, you can still return it:
-      if ($e->hasResponse()) {
-        return $e->getResponse();
-      }
-      return null;
+    $candidate_urls = [$url];
+    $parsed = parse_url($url);
+    if (!empty($parsed['host']) && strtolower((string) $parsed['host']) === 'localhost') {
+      $candidate_urls[] = str_replace('://localhost', '://127.0.0.1', $url);
     }
+    $candidate_urls = array_values(array_unique($candidate_urls));
+
+    foreach ($candidate_urls as $candidate_url) {
+      try {
+        return $client->post($candidate_url, [
+          'headers' => $headers,
+          'body' => $file_content,
+        ]);
+      }
+      catch (RequestException $e) {
+        $logger->warning('Upload exception for {url}: {msg}', [
+          'url' => $candidate_url,
+          'msg' => $e->getMessage(),
+        ]);
+        if ($e->hasResponse()) {
+          return $e->getResponse();
+        }
+      }
+    }
+
+    $logger->error('Upload failed for all candidate URLs: {urls}', [
+      'urls' => implode(', ', $candidate_urls),
+    ]);
+    return null;
   }
 
 

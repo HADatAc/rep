@@ -1013,8 +1013,32 @@ class Utils {
     }
     $raw = $api->getUri($uri);
 
-    // 2) Normalize to an object (or array) and extract the “body”
-    $body = $api->parseObjectResponse($raw, 'getUri');
+    // 2) Decode getUri envelope silently here.
+    // parseObjectResponse() emits user-facing messenger errors for API misses,
+    // but in this helper we only need a best-effort ancestry check.
+    $envelope = NULL;
+    if (is_string($raw)) {
+      $envelope = json_decode($raw);
+    }
+    elseif (is_object($raw)) {
+      $envelope = $raw;
+    }
+    elseif (is_array($raw)) {
+      $envelope = json_decode(json_encode($raw));
+    }
+
+    if (!is_object($envelope) || empty($envelope->isSuccessful)) {
+      return FALSE;
+    }
+
+    $body = $envelope->body ?? NULL;
+    if (is_string($body)) {
+      $decodedBody = json_decode($body);
+      if (is_object($decodedBody)) {
+        $body = $decodedBody;
+      }
+    }
+
     if (empty($body) || !is_object($body)) {
       return FALSE;
     }
