@@ -316,19 +316,18 @@ class REPSelectMTForm extends FormBase {
       '#limit_validation_errors' => [],
     ];
 
-    // Actions row (Add + filters)
+    // Actions row (buttons + collapsible filters)
     $form['actions_wrapper'] = [
       '#type' => 'container',
       '#attributes' => [
-        'class' => ['d-flex', 'align-items-center', 'justify-content-between', 'mb-0'],
-        'style' => 'margin-bottom:0!important;'
+        'class' => ['d-flex', 'flex-column', 'align-items-stretch', 'mb-0', 'rep-manage-toolbar'],
       ],
     ];
 
     $form['actions_wrapper']['buttons_container'] = [
       '#type' => 'container',
       '#attributes' => [
-        'class' => ['d-flex', 'gap-2', 'flex-nowrap'],
+        'class' => ['d-flex', 'gap-2', 'flex-nowrap', 'justify-content-start', 'mb-2', 'rep-manage-buttons'],
         'style' => 'flex-wrap:nowrap;overflow-x:auto;'
       ],
     ];
@@ -394,65 +393,87 @@ class REPSelectMTForm extends FormBase {
           ],
         ];
       }
+    }
 
-      $status_options = [
-        '_' => $this->t('All Status'),
-        VSTOI::DRAFT => $this->t('Draft'),
-        VSTOI::UNDER_REVIEW => $this->t('Under Review'),
-        VSTOI::CURRENT => $this->t('Current'),
-        VSTOI::DEPRECATED => $this->t('Deprecated'),
-      ];
+    $status_options = [
+      '_' => $this->t('All Status'),
+      VSTOI::DRAFT => $this->t('Draft'),
+      VSTOI::UNDER_REVIEW => $this->t('Under Review'),
+      VSTOI::CURRENT => $this->t('Current'),
+      VSTOI::DEPRECATED => $this->t('Deprecated'),
+    ];
 
-      $form['actions_wrapper']['filter_container'] = [
-        '#type' => 'container',
-        '#attributes' => [
-          'class' => ['d-flex', 'ms-auto', 'mb-0'],
-          'style' => 'margin-bottom:0!important;'
-        ],
-      ];
+    $has_active_filters = ($status_filter !== '_' && $status_filter !== NULL && $status_filter !== '')
+      || ($is_admin && trim((string) $manager_filter) !== '');
 
-      $form['actions_wrapper']['filter_container']['filter_label'] = [
-        '#type' => 'label',
-        '#title' => $this->t('Filter(s): '),
-        '#attributes' => [
-          'class' => ['pt-3', 'me-2', 'fw-bold'],
-        ],
-      ];
+    $ajax_wrapper = ($view_type === 'card') ? 'cards-lazy-wrapper' : 'element-table-wrapper';
+    $ajax_callback = ($view_type === 'card') ? '::ajaxReloadCards' : '::ajaxReloadTable';
 
-      if ($is_admin) {
-        $form['actions_wrapper']['filter_container']['manager_filter'] = [
-          '#type' => 'textfield',
-          '#title' => $this->t('User'),
-          '#title_display' => 'invisible',
-          '#default_value' => $manager_filter,
-          '#ajax' => [
-            'callback' => '::ajaxReloadTable',
-            'wrapper' => 'element-table-wrapper',
-            'event' => 'change',
-          ],
-          '#attributes' => [
-            'class' => ['form-control', 'w-auto', 'mt-2', 'me-1'],
-            'style' => 'min-width:240px;margin-bottom:0!important;float:right;',
-            'placeholder' => $this->t('User email (Draft/Under Review)'),
-          ],
-        ];
-      }
+    $form['actions_wrapper']['filters_panel'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Filter(s)'),
+      '#open' => $has_active_filters,
+      '#attributes' => [
+        'class' => ['rep-manage-filters-panel', 'w-100'],
+      ],
+    ];
 
-      $form['actions_wrapper']['filter_container']['status_filter'] = [
-        '#type' => 'select',
-        '#options' => $status_options,
-        '#default_value' => $status_filter,
+    $form['actions_wrapper']['filters_panel']['filter_container'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['row', 'g-2', 'align-items-end', 'rep-manage-filters'],
+      ],
+    ];
+
+    if ($is_admin) {
+      $form['actions_wrapper']['filters_panel']['filter_container']['manager_filter'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('User'),
+        '#title_display' => 'invisible',
+        '#default_value' => $manager_filter,
+        '#prefix' => '<div class="col-12 col-lg-7">',
+        '#suffix' => '</div>',
         '#ajax' => [
-          'callback' => '::ajaxReloadTable',
-          'wrapper' => 'element-table-wrapper',
+          'callback' => $ajax_callback,
+          'wrapper' => $ajax_wrapper,
           'event' => 'change',
         ],
         '#attributes' => [
-          'class' => ['form-select', 'w-auto', 'mt-2'],
-          'style' => 'margin-bottom:0!important;float:right;'
+          'class' => ['form-control'],
+          'placeholder' => $this->t('User email (Draft/Under Review)'),
         ],
       ];
     }
+
+    $form['actions_wrapper']['filters_panel']['filter_container']['status_filter'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Status'),
+      '#title_display' => 'invisible',
+      '#options' => $status_options,
+      '#default_value' => $status_filter,
+      '#prefix' => '<div class="col-12 col-md-6 col-lg-3">',
+      '#suffix' => '</div>',
+      '#ajax' => [
+        'callback' => $ajax_callback,
+        'wrapper' => $ajax_wrapper,
+        'event' => 'change',
+      ],
+      '#attributes' => [
+        'class' => ['form-select'],
+      ],
+    ];
+
+    $form['actions_wrapper']['filters_panel']['filter_container']['clear_filters'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Clear Filters'),
+      '#name' => 'clear_filters',
+      '#limit_validation_errors' => [],
+      '#prefix' => '<div class="col-12 col-md-6 col-lg-2 d-grid">',
+      '#suffix' => '</div>',
+      '#attributes' => [
+        'class' => ['btn', 'btn-outline-secondary'],
+      ],
+    ];
 
     // RENDER BASED ON VIEW TYPE
     if ($view_type == 'table') {
@@ -479,64 +500,6 @@ class REPSelectMTForm extends FormBase {
       ];
 
     } elseif ($view_type == 'card') {
-      $status_options = [
-        '_' => $this->t('All Status'),
-        VSTOI::DRAFT => $this->t('Draft'),
-        VSTOI::UNDER_REVIEW => $this->t('Under Review'),
-        VSTOI::CURRENT => $this->t('Current'),
-        VSTOI::DEPRECATED => $this->t('Deprecated'),
-      ];
-
-      $form['actions_wrapper']['filter_container'] = [
-        '#type' => 'container',
-        '#attributes' => [
-          'class' => ['d-flex', 'ms-auto', 'mb-0'],
-          'style' => 'margin-bottom:0!important;'
-        ],
-      ];
-
-      $form['actions_wrapper']['filter_container']['filter_label'] = [
-        '#type' => 'label',
-        '#title' => $this->t('Filter(s): '),
-        '#attributes' => [
-          'class' => ['pt-3', 'me-2', 'fw-bold'],
-        ],
-      ];
-
-      if ($is_admin) {
-        $form['actions_wrapper']['filter_container']['manager_filter'] = [
-          '#type' => 'textfield',
-          '#title' => $this->t('User'),
-          '#title_display' => 'invisible',
-          '#default_value' => $manager_filter,
-          '#ajax' => [
-            'callback' => '::ajaxReloadCards',
-            'wrapper' => 'cards-lazy-wrapper',
-            'event' => 'change',
-          ],
-          '#attributes' => [
-            'class' => ['form-control', 'w-auto', 'mt-2', 'me-1'],
-            'style' => 'min-width:240px;margin-bottom:0!important;float:right;',
-            'placeholder' => $this->t('User email (Draft/Under Review)'),
-          ],
-        ];
-      }
-
-      $form['actions_wrapper']['filter_container']['status_filter'] = [
-        '#type' => 'select',
-        '#options' => $status_options,
-        '#default_value' => $status_filter,
-        '#ajax' => [
-          'callback' => '::ajaxReloadCards',
-          'wrapper' => 'cards-lazy-wrapper',
-          'event' => 'change',
-        ],
-        '#attributes' => [
-          'class' => ['form-select', 'w-auto', 'mt-2'],
-          'style' => 'margin-bottom:0!important;float:right;'
-        ],
-      ];
-
       $form['cards_lazy_wrapper'] = [
         '#type' => 'container',
         '#attributes' => ['id' => 'cards-lazy-wrapper'],
@@ -659,6 +622,11 @@ class REPSelectMTForm extends FormBase {
       return;
     }
 
+    if ($button_name === 'clear_filters') {
+      $this->clearSavedFilters($form_state);
+      return;
+    }
+
     // RETRIEVE SELECTED ROWS, IF ANY
     $selected_rows = $form_state->getValue('element_table');
     $rows = [];
@@ -724,6 +692,25 @@ class REPSelectMTForm extends FormBase {
       $url = Url::fromRoute('std.search');
       $form_state->setRedirectUrl($url);
     }
+  }
+
+  /**
+   * Clear persisted filters for MT list/select pages.
+   */
+  protected function clearSavedFilters(FormStateInterface $form_state): void {
+    $session = \Drupal::request()->getSession();
+    $suffix = (string) $this->element_type;
+
+    $session->remove('rep_select_mt_status_filter.' . $suffix);
+    $session->remove('rep_select_mt_manager_filter.' . $suffix);
+
+    $input = $form_state->getUserInput();
+    unset($input['status_filter'], $input['manager_filter']);
+    $form_state->setUserInput($input);
+
+    $form_state->setValue('status_filter', '_');
+    $form_state->setValue('manager_filter', '');
+    $form_state->setRebuild(TRUE);
   }
 
   /**

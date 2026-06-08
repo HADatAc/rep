@@ -1297,6 +1297,57 @@ form.rep-form-namespace legend {
   font-weight: 600; /* or any style you prefer */
 }
 
+.rep-manage-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rep-manage-buttons .btn {
+  white-space: normal;
+  min-height: 58px;
+  line-height: 1.2;
+}
+
+.rep-manage-filters .form-control,
+.rep-manage-filters .form-select {
+  width: 100%;
+  max-width: none;
+}
+
+.rep-manage-filters-panel {
+  margin-top: 0.25rem;
+  border: 1px solid #d7dce2;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.rep-manage-filters-panel > summary {
+  cursor: pointer;
+  padding: 0.65rem 0.9rem;
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
+.rep-manage-filters-panel > summary:hover {
+  color: #0b5ed7;
+}
+
+.rep-manage-filters-panel[open] > summary {
+  border-bottom: 1px solid #e6eaef;
+  margin-bottom: 0.5rem;
+}
+
+.rep-manage-filters-panel .rep-manage-filters {
+  padding: 0 0.85rem 0.85rem;
+}
+
+@media (max-width: 991.98px) {
+  .rep-manage-buttons .btn {
+    min-height: 50px;
+  }
+}
+
 
 /* FACETED VALUE SEARCH */
 /* Wrapper to mimic an accordion look */

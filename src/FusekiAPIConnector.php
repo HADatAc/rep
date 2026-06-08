@@ -67,6 +67,50 @@ class FusekiAPIConnector {
 
     return $this->normalizeHascoApiElementType($elementType);
   }
+
+  /**
+   * Infer named graph from a URI using the repository convention.
+   */
+  private function inferNamedGraphFromUri(string $uri): string {
+    $hashPos = strrpos($uri, '#');
+    if ($hashPos !== FALSE) {
+      return substr($uri, 0, $hashPos + 1);
+    }
+
+    $slashPos = strrpos($uri, '/');
+    if ($slashPos !== FALSE) {
+      return substr($uri, 0, $slashPos + 1);
+    }
+
+    return $uri;
+  }
+
+  /**
+   * Ensure create payloads always include namedGraph when uri is present.
+   */
+  private function ensureNamedGraphInPayload($jsonPayload) {
+    if (!is_string($jsonPayload) || trim($jsonPayload) === '') {
+      return $jsonPayload;
+    }
+
+    $decoded = json_decode($jsonPayload, TRUE);
+    if (!is_array($decoded)) {
+      return $jsonPayload;
+    }
+
+    $uri = isset($decoded['uri']) ? trim((string) $decoded['uri']) : '';
+    if ($uri === '') {
+      return $jsonPayload;
+    }
+
+    $namedGraph = isset($decoded['namedGraph']) ? trim((string) $decoded['namedGraph']) : '';
+    if ($namedGraph === '') {
+      $decoded['namedGraph'] = $this->inferNamedGraphFromUri($uri);
+    }
+
+    $reencoded = json_encode($decoded, JSON_UNESCAPED_SLASHES);
+    return ($reencoded === FALSE) ? $jsonPayload : $reencoded;
+  }
   private $client;
   private $query;
   private $error;
@@ -918,6 +962,7 @@ class FusekiAPIConnector {
 
   public function elementAdd($elementType, $elementJson) {
     $elementType = $this->normalizeHascoApiElementType($elementType);
+    $elementJson = $this->ensureNamedGraphInPayload($elementJson);
     $endpoint = "/hascoapi/api/" .
       $elementType .
       "/create/".
@@ -1026,6 +1071,7 @@ class FusekiAPIConnector {
    */
 
    public function codebookAdd($codebookJson) {
+    $codebookJson = $this->ensureNamedGraphInPayload($codebookJson);
     $endpoint = "/hascoapi/api/codebook/create/".rawurlencode($codebookJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
@@ -1407,6 +1453,7 @@ class FusekiAPIConnector {
    */
 
   public function componentAdd($componentJson) {
+    $componentJson = $this->ensureNamedGraphInPayload($componentJson);
     $endpoint = "/hascoapi/api/component/create/".rawurlencode($componentJson);
     $method = 'POST';
     $api_url = $this->getApiUrl();
@@ -1496,6 +1543,7 @@ class FusekiAPIConnector {
   }
 
   public function instrumentAdd($instrumentJson) {
+    $instrumentJson = $this->ensureNamedGraphInPayload($instrumentJson);
     $endpoint = "/hascoapi/api/instrument/create/".rawurlencode($instrumentJson);
     $method = "POST";
     $api_url = $this->getApiUrl();
@@ -1727,6 +1775,7 @@ class FusekiAPIConnector {
    */
 
   public function responseOptionAdd($responseoptionJSON) {
+    $responseoptionJSON = $this->ensureNamedGraphInPayload($responseoptionJSON);
     $endpoint = "/hascoapi/api/responseoption/create/".rawurlencode($responseoptionJSON);
     $method = "POST";
     $api_url = $this->getApiUrl();
@@ -1764,6 +1813,7 @@ class FusekiAPIConnector {
    */
 
    public function semanticVariableAdd($semanticVariableJson) {
+    $semanticVariableJson = $this->ensureNamedGraphInPayload($semanticVariableJson);
     $endpoint = "/hascoapi/api/semanticvariable/create/".rawurlencode($semanticVariableJson);
     $method = "POST";
     $api_url = $this->getApiUrl();

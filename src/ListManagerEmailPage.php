@@ -7,7 +7,8 @@ use Drupal\rep\Vocabulary\REPGUI;
 class ListManagerEmailPage {
 
   private static function shouldBypassManagerEndpoint($elementtype): bool {
-    return strtolower(trim((string) $elementtype)) === 'instrumentinstance';
+    $type = strtolower(trim((string) $elementtype));
+    return in_array($type, ['instrument', 'instrumentinstance'], TRUE);
   }
 
   private static function extractField($item, string $field) {

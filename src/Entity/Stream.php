@@ -215,26 +215,42 @@ class Stream {
       $previousUrl = \Drupal::request()->getRequestUri();
       Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
 
+      $deployment = '-';
+      $sdd = '-';
+
       // $deployment = $element->deployment->label ?? '';
       if ($element->method === 'files') {
-        $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
-          'deploymenturi' => base64_encode($element->deployment->uri)
-        ])->toString();
+        $deployment_uri = (string) ($element->deployment->uri ?? '');
+        $deployment_label = (string) ($element->deployment->label ?? '');
+        if ($deployment_uri !== '') {
+          $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
+            'deploymenturi' => base64_encode($deployment_uri)
+          ])->toString();
 
-        $deployment = '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
-            t('Deployment: @label', ['@label' => $element->deployment->label]) .
-          '</a>';
+          $deployment = '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
+              t('Deployment: @label', ['@label' => $deployment_label]) .
+            '</a>';
+        }
+        else {
+          $deployment = '<span class="text-muted">' . t('Deployment: N/A') . '</span>';
+        }
 
-        // 7) Build the SDD link as plain HTML.
+        // 7) Build the SDD link only when URI exists.
+        $sdd_uri = (string) ($element->semanticDataDictionary->uri ?? '');
+        $sdd_label = (string) ($element->semanticDataDictionary->label ?? '');
+        if ($sdd_uri !== '') {
+          $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
+            'state' => 'basic',
+            'uri' => base64_encode($sdd_uri)
+          ])->toString();
 
-        $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
-          'state' => 'basic',
-          'uri' => base64_encode($element->semanticDataDictionary->uri)
-        ])->toString();
-
-        $sdd = '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
-            t('SDD: @label', ['@label' => $element->semanticDataDictionary->label]) .
-          '</a>';
+          $sdd = '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
+              t('SDD: @label', ['@label' => ($sdd_label !== '' ? $sdd_label : Utils::namespaceUri($sdd_uri))]) .
+            '</a>';
+        }
+        else {
+          $sdd = '<span class="text-muted">' . t('SDD: N/A') . '</span>';
+        }
       }
 
       // 8) Dataset pattern or fallback.
@@ -338,26 +354,42 @@ class Stream {
       $previousUrl = \Drupal::request()->getRequestUri();
       Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
 
+      $deployment = '-';
+      $sdd = '-';
+
       // $deployment = $element->deployment->label ?? '';
       if ($element->method === 'files') {
-        $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
-          'deploymenturi' => base64_encode($element->deployment->uri)
-        ])->toString();
+        $deployment_uri = (string) ($element->deployment->uri ?? '');
+        $deployment_label = (string) ($element->deployment->label ?? '');
+        if ($deployment_uri !== '') {
+          $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
+            'deploymenturi' => base64_encode($deployment_uri)
+          ])->toString();
 
-        $deployment = '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
-            t('Deployment: @label', ['@label' => $element->deployment->label]) .
-          '</a>';
+          $deployment = '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
+              t('Deployment: @label', ['@label' => $deployment_label]) .
+            '</a>';
+        }
+        else {
+          $deployment = '<span class="text-muted">' . t('Deployment: N/A') . '</span>';
+        }
 
-        // 7) Build the SDD link as plain HTML.
+        // 7) Build the SDD link only when URI exists.
+        $sdd_uri = (string) ($element->semanticDataDictionary->uri ?? '');
+        $sdd_label = (string) ($element->semanticDataDictionary->label ?? '');
+        if ($sdd_uri !== '') {
+          $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
+            'state' => 'basic',
+            'uri' => base64_encode($sdd_uri)
+          ])->toString();
 
-        $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
-          'state' => 'basic',
-          'uri' => base64_encode($element->semanticDataDictionary->uri)
-        ])->toString();
-
-        $sdd = '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
-            t('SDD: @label', ['@label' => $element->semanticDataDictionary->label]) .
-          '</a>';
+          $sdd = '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
+              t('SDD: @label', ['@label' => ($sdd_label !== '' ? $sdd_label : Utils::namespaceUri($sdd_uri))]) .
+            '</a>';
+        }
+        else {
+          $sdd = '<span class="text-muted">' . t('SDD: N/A') . '</span>';
+        }
       }
 
       // 8) Dataset pattern or fallback.
@@ -462,10 +494,14 @@ class Stream {
       $previousUrl = \Drupal::request()->getRequestUri();
       Utils::trackingStoreUrls($uid, $previousUrl, 'std.manage_study_elements');
 
-      if (isset($element->deploymentUri)) {
-        $api = \Drupal::service('rep.api_connector');
+      $deployment = Markup::create('-');
+      $sdd = Markup::create('-');
+      $api = \Drupal::service('rep.api_connector');
+
+      if (!empty($element->deploymentUri)) {
         $responseDPL = json_decode($api->getUri($element->deploymentUri));
-        $dpl = $responseDPL->body;
+        $dpl = $responseDPL->body ?? NULL;
+        $deployment_label = $dpl->label ?? Utils::namespaceUri($element->deploymentUri);
 
         // $deployment = $element->deployment->label ?? '';
         $deploymenturl = Url::fromRoute('dpl.view_deployment_form', [
@@ -474,16 +510,17 @@ class Stream {
 
         $deployment = Markup::create(
           '<a href="' . $deploymenturl . '" class="btn btn-sm btn-secondary">' .
-            t('Deployment: @label', ['@label' => $dpl->label]) .
+            t('Deployment: @label', ['@label' => $deployment_label]) .
           '</a>'
         );
 
       }
 
-      if (isset($element->semanticDataDictionaryUri)) {
+      if (!empty($element->semanticDataDictionaryUri)) {
         // 7) Build the SDD link as plain HTML.
         $responseSDD = json_decode($api->getUri($element->semanticDataDictionaryUri));
-        $sdd = $responseSDD->body;
+        $sdd_body = $responseSDD->body ?? NULL;
+        $sdd_label = $sdd_body->label ?? Utils::namespaceUri($element->semanticDataDictionaryUri);
 
         $sddurl = Url::fromRoute('sem.view_semantic_data_dictionary', [
           'state' => 'basic',
@@ -492,7 +529,7 @@ class Stream {
 
         $sdd = Markup::create(
           '<a href="' . $sddurl . '" class="btn btn-sm btn-secondary">' .
-            t('SDD: @label', ['@label' => $sdd->label]) .
+            t('SDD: @label', ['@label' => $sdd_label]) .
           '</a>'
         );
       }
