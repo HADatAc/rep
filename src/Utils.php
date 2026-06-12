@@ -457,6 +457,11 @@ class Utils {
       'projects' => 'projects',
       'fundingscheme' => 'fundingschemes',
       'fundingschemes' => 'fundingschemes',
+      'workflow' => 'process',
+      'wkf' => 'process',
+      'workflowstem' => 'processstem',
+      'process' => 'process',
+      'processstem' => 'processstem',
       'person' => 'persons',
       'persons' => 'persons',
       'place' => 'places',
@@ -724,10 +729,10 @@ class Utils {
   }
 
   public static function elementTypeModule($elementtype) {
-    $sir = ['instrument', 'containerslot', 'componentstem', 'component', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'processstem', 'process', 'workflowstem', 'workflow'];
+    $sir = ['instrument', 'containerslot', 'componentstem', 'component', 'codebook', 'containerslot', 'responseoption', 'annotationstem', 'annotation', 'processstem', 'process'];
     $sem = ['semanticvariable','entity','attribute','unit','sdd'];
     $rep = ['datafile'];
-    $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn'];
+    $std = ['std','study','studyrole', 'studyobjectcollection','studyobject', 'virtualcolumn', 'workflowstem', 'workflow'];
     $dpl = ['dp2', 'str', 'platform', 'platforminstance', 'instrumentinstance', 'componentinstance', 'deployment', 'stream'];
     $socialm = ['kgr','fundingscheme','project','place','organization','person','postaladdress'];
     if (in_array($elementtype,$sir)) {

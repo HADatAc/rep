@@ -370,6 +370,8 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listByKeywordAndLanguage($elementType, $keyword, $language, $type = '_', $manageremail = '_', $status = '_', $pageSize = 10, $offset = 0) {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
+
     // Backward compatibility for legacy calls with 5 args:
     // listByKeywordAndLanguage(elementType, keyword, language, pageSize, offset)
     if (is_numeric($type) && is_numeric($manageremail)
@@ -414,6 +416,8 @@ class FusekiAPIConnector {
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listSizeByKeywordAndLanguage($elementType, $keyword, $language, $type = '_', $manageremail = '_', $status = '_') {
+    $elementType = $this->normalizeHascoApiElementType($elementType);
+
     if ($type === NULL || $type === '') {
       $type = '_';
     }

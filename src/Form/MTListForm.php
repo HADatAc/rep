@@ -449,7 +449,10 @@ class MTListForm extends FormBase {
     }
 
     // IMAGE PLACEHOLDER
-    $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/semVar_placeholder.png';
+    $placeholder_image = Utils::placeholderImage('', $this->element_type, '#');
+    if (empty($placeholder_image)) {
+      $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/semVar_placeholder.png';
+    }
 
     $form['element_cards_wrapper'] = [
       '#type' => 'container',
@@ -480,7 +483,11 @@ class MTListForm extends FormBase {
       }
 
       // Define image URL with placeholder fallback.
-      $image_uri = !empty($item['image']) ? $item['image'] : $placeholder_image;
+      $raw_image = isset($item['image']) ? trim((string) $item['image']) : '';
+      if (in_array(strtolower($raw_image), ['null', 'undefined', 'n/a', 'na'], TRUE)) {
+        $raw_image = '';
+      }
+      $image_uri = Utils::getAPIImage($key, $raw_image, $placeholder_image);
 
       if (strlen($header_text) > 0) {
         $form['element_cards_wrapper'][$sanitized_key]['card']['header'] = [
@@ -513,6 +520,7 @@ class MTListForm extends FormBase {
           '#attributes' => [
               'src' => $image_uri,
               'alt' => $header_text,
+              'onerror' => "this.onerror=null;this.src='" . addslashes($placeholder_image) . "';",
               'style' => 'max-width: 70%; height: auto;',
           ]
         ],
