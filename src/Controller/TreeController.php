@@ -24,6 +24,12 @@ class TreeController extends ControllerBase {
   private function formatTreeItems(array $elements, $defaultManagerEmail = '') {
     $items = [];
     foreach ($elements as $el) {
+      if (is_array($el)) {
+        $el = (object) $el;
+      }
+      if (!is_object($el)) {
+        continue;
+      }
       if (empty($el->uri)) {
         continue;
       }
@@ -36,6 +42,9 @@ class TreeController extends ControllerBase {
         'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $defaultManagerEmail,
         'hasWebDocument' => $el->hasWebDocument ?? '',
         'hasImageUri' => $el->hasImageUri ?? '',
+        'superUri' => $el->superUri ?? '',
+        'superClassLabel' => $el->superClassLabel ?? '',
+        'isCategory' => false,
         // Leaf nodes in the tree.
         'children' => false,
       ];
@@ -49,29 +58,183 @@ class TreeController extends ControllerBase {
   }
 
   /**
-   * Builds a flat, selectable list of manager-owned elements for tree modals.
+   * Returns manager-owned list payloads without tree formatting.
    */
-  private function getManagerOwnedItems($elementtype) {
+  private function getManagerOwnedRawItems($elementtype): array {
     $managerEmail = \Drupal::currentUser()->getEmail();
     $elements = ListManagerEmailPage::exec($elementtype, $managerEmail, 1, 9999);
     if (!is_array($elements)) {
       $elements = [];
     }
+    return $elements;
+  }
 
-    return $this->formatTreeItems($elements, $managerEmail);
+  /**
+   * Builds a flat, selectable list of manager-owned elements for tree modals.
+   */
+  private function getManagerOwnedItems($elementtype) {
+    return $this->formatTreeItems($this->getManagerOwnedRawItems($elementtype), \Drupal::currentUser()->getEmail());
+  }
+
+  /**
+   * Returns project-wide list payloads without tree formatting.
+   */
+  private function getKeywordRawItems($elementtype): array {
+    $api = \Drupal::service('rep.api_connector');
+    $elements = $api->parseObjectResponse($api->listByKeyword($elementtype, '_', 9999, 0), 'listByKeyword');
+    if (!is_array($elements)) {
+      $elements = [];
+    }
+    return $elements;
   }
 
   /**
    * Builds a flat list using keyword API (project-wide) as fallback.
    */
   private function getKeywordItems($elementtype) {
-    $api = \Drupal::service('rep.api_connector');
-    $elements = $api->parseObjectResponse($api->listByKeyword($elementtype, '_', 9999, 0), 'listByKeyword');
-    if (!is_array($elements)) {
-      $elements = [];
+    return $this->formatTreeItems($this->getKeywordRawItems($elementtype), \Drupal::currentUser()->getEmail());
+  }
+
+  /**
+   * Creates a readable label from a URI fragment/path.
+   */
+  private function labelFromUri(string $uri): string {
+    $fragment = parse_url($uri, PHP_URL_FRAGMENT);
+    if (is_string($fragment) && $fragment !== '') {
+      return rawurldecode($fragment);
     }
 
-    return $this->formatTreeItems($elements, \Drupal::currentUser()->getEmail());
+    $path = parse_url($uri, PHP_URL_PATH);
+    if (is_string($path) && $path !== '') {
+      $parts = explode('/', trim($path, '/'));
+      $last = end($parts);
+      if (is_string($last) && $last !== '') {
+        return rawurldecode($last);
+      }
+    }
+
+    return $uri;
+  }
+
+  /**
+   * Builds a category-first hierarchy for instance_type instrument selector.
+   *
+   * Returns NULL when there is no list payload available so callers can
+   * continue with the ontology-class fallback behavior.
+   */
+  private function getInstrumentInstanceHierarchyItems($nodeUri): ?array {
+    $managerEmail = \Drupal::currentUser()->getEmail();
+
+    $elements = $this->getManagerOwnedRawItems('instrument');
+    if (empty($elements)) {
+      $elements = $this->getKeywordRawItems('instrument');
+    }
+    if (empty($elements)) {
+      return NULL;
+    }
+
+    $itemsByUri = [];
+    foreach ($elements as $el) {
+      if (is_array($el)) {
+        $el = (object) $el;
+      }
+      if (!is_object($el) || empty($el->uri)) {
+        continue;
+      }
+
+      $uri = (string) $el->uri;
+      $itemsByUri[$uri] = (object) [
+        'uri' => $uri,
+        'label' => $el->label ?? $el->hasContent ?? $uri,
+        'comment' => $el->comment ?? '',
+        'typeNamespace' => $el->typeNamespace ?? '',
+        'hasStatus' => $el->hasStatus ?? NULL,
+        'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $managerEmail,
+        'hasWebDocument' => $el->hasWebDocument ?? '',
+        'hasImageUri' => $el->hasImageUri ?? '',
+        'superUri' => $el->superUri ?? '',
+        'superClassLabel' => $el->superClassLabel ?? '',
+        'isCategory' => false,
+        'children' => false,
+      ];
+    }
+
+    if (empty($itemsByUri)) {
+      return NULL;
+    }
+
+    $childrenCount = [];
+    foreach ($itemsByUri as $item) {
+      $superUri = trim((string) ($item->superUri ?? ''));
+      if ($superUri === '') {
+        continue;
+      }
+      $childrenCount[$superUri] = ($childrenCount[$superUri] ?? 0) + 1;
+    }
+
+    if ($nodeUri === EntryPoints::CLASS_EP_INSTRUMENT) {
+      $root = [];
+
+      foreach ($itemsByUri as $item) {
+        $superUri = trim((string) ($item->superUri ?? ''));
+
+        if ($superUri === '') {
+          $item->children = !empty($childrenCount[$item->uri]);
+          $root[$item->uri] = $item;
+          continue;
+        }
+
+        if (!isset($itemsByUri[$superUri])) {
+          if (!isset($root[$superUri])) {
+            $hintLabel = trim((string) ($item->superClassLabel ?? ''));
+            $root[$superUri] = (object) [
+              'uri' => $superUri,
+              'label' => $hintLabel !== '' ? $hintLabel : $this->labelFromUri($superUri),
+              'comment' => '',
+              'typeNamespace' => '',
+              'hasStatus' => NULL,
+              'hasSIRManagerEmail' => '',
+              'hasWebDocument' => '',
+              'hasImageUri' => '',
+              'superUri' => '',
+              'superClassLabel' => '',
+              'isCategory' => true,
+              'children' => true,
+            ];
+          }
+        }
+      }
+
+      $items = array_values($root);
+      usort($items, function($a, $b) {
+        return strcasecmp((string) ($a->label ?? ''), (string) ($b->label ?? ''));
+      });
+      return $items;
+    }
+
+    // If this URI is not a known parent in the instance list hierarchy,
+    // allow caller fallback to ontology-class exploration.
+    if (!isset($childrenCount[$nodeUri])) {
+      return NULL;
+    }
+
+    $children = [];
+    foreach ($itemsByUri as $item) {
+      $superUri = trim((string) ($item->superUri ?? ''));
+      if ($superUri !== $nodeUri) {
+        continue;
+      }
+
+      $item->children = !empty($childrenCount[$item->uri]);
+      $children[$item->uri] = $item;
+    }
+
+    $items = array_values($children);
+    usort($items, function($a, $b) {
+      return strcasecmp((string) ($a->label ?? ''), (string) ($b->label ?? ''));
+    });
+
+    return $items;
   }
 
   /**
@@ -206,6 +369,15 @@ class TreeController extends ControllerBase {
       'instrument' => EntryPoints::CLASS_EP_INSTRUMENT,
       'platform' => EntryPoints::CLASS_EP_PLATFORM,
     ];
+
+    // Organize instrument models by category/stem chain in instance selector.
+    if ($fieldId === 'instance_type' && $elementtype === 'instrument') {
+      $items = $this->getInstrumentInstanceHierarchyItems($nodeUri);
+      if ($items !== NULL) {
+        return new JsonResponse($items);
+      }
+    }
+
     // Only force instance listing for the instance-type selector modal.
     // In browse pages (e.g. /sir/list or /rep/hierarchy/browse/*) field_id is empty and we
     // want the ontology class hierarchy (InstrumentEntryPoint → Instrument → ...), not a flat

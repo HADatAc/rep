@@ -353,6 +353,7 @@
             var selectedTypeNamespace = selectedNode.typeNamespace || data.node.typeNamespace || nodeData.typeNamespace || '';
             var selectedStatus = selectedNode.hasStatus || data.node.hasStatus || nodeData.hasStatus || '';
             var selectedManagerEmail = selectedNode.hasSIRManagerEmail || data.node.hasSIRManagerEmail || nodeData.hasSIRManagerEmail || '';
+            var isCategoryNode = !!(selectedNode.isCategory || data.node.isCategory || nodeData.isCategory);
             var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';
             var DEPRECATED_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
             var UNDERREVIEW_URI = 'http://hadatac.org/ont/vstoi#UnderReview';
@@ -368,7 +369,11 @@
                              .removeData('selected-value');
 
             // Rule 1: Node is restricted (Draft/Deprecated/UnderReview) and not owned by current user → keep disabled
-            if (
+            if (isCategoryNode) {
+              // Category folders are navigational only and cannot be selected.
+            }
+            // Rule 1: Node is restricted (Draft/Deprecated/UnderReview) and not owned by current user → keep disabled
+            else if (
               (selectedStatus === DRAFT_URI      && selectedManagerEmail && selectedManagerEmail !== drupalSettings.rep_tree.managerEmail) ||
               (selectedStatus === DEPRECATED_URI && selectedManagerEmail && selectedManagerEmail !== drupalSettings.rep_tree.managerEmail) ||
               (selectedStatus === UNDERREVIEW_URI && selectedManagerEmail && selectedManagerEmail !== drupalSettings.rep_tree.managerEmail)
@@ -825,6 +830,7 @@
           var prefixed = namespacePrefixUri(item.uri);
           var parentIdSafe = sanitizeForId(parentNode.id);
           var childIdSafe  = sanitizeForId(item.uri);
+          var isCategory = !!item.isCategory;
 
           var nodeObj = {
             id: 'node_' + parentIdSafe + '_' + childIdSafe,
@@ -833,6 +839,7 @@
             uri: item.uri,
             typeNamespace: item.typeNamespace || '',
             comment: item.comment || '',
+            isCategory: isCategory,
             data: {
               originalLabel: "xxxx" + item.label + setTitleSuffix(item),
               originalPrefixLabel: namespacePrefixUri(item.uri) + item.label + setTitleSuffix(item),
@@ -841,11 +848,12 @@
               prefix: prefixed,
               comment: item.comment || '',
               typeNamespace: item.typeNamespace || '',
+              isCategory: isCategory,
               hasWebDocument: item.hasWebDocument,
               hasImageUri: item.hasImageUri,
               realUri: item.uri
             },
-            icon: 'fas fa-file-alt',
+            icon: isCategory ? 'fas fa-folder' : 'fas fa-file-alt',
             hasStatus: item.hasStatus,
             hasSIRManagerEmail: item.hasSIRManagerEmail,
             hasWebDocument: item.hasWebDocument,
@@ -854,7 +862,9 @@
             skip: false
           };
 
-          nodeObj.text += " (" + namespaceUri(item.uri) + ")"
+          if (!isCategory && item.uri) {
+            nodeObj.text += " (" + namespaceUri(item.uri) + ")";
+          }
 
           // --- status decoration (unchanged from your code) ---
           var DRAFT_URI = 'http://hadatac.org/ont/vstoi#Draft';

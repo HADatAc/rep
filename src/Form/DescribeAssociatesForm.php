@@ -14,6 +14,7 @@ use Drupal\rep\Form\Associates\AssocStream;
 use Drupal\rep\Form\Associates\AssocStudy;
 use Drupal\rep\Form\Associates\AssocStudyObjectCollection;
 use Drupal\rep\Form\Associates\AssocProject;
+use Drupal\rep\Form\Associates\AssocTypedInstance;
 use Drupal\rep\Entity\GenericObject;
 use Drupal\rep\Vocabulary\FOAF;
 use Drupal\rep\Vocabulary\HASCO;
@@ -22,6 +23,8 @@ use Drupal\rep\Vocabulary\OWL;
 use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\rep\Form\VisGraphBaseForm;
+use Drupal\Core\Url;
+use Drupal\Component\Utility\Html;
 
 class DescribeAssociatesForm extends FormBase {
 
@@ -70,6 +73,8 @@ class DescribeAssociatesForm extends FormBase {
 
     // Determine element type early so we can customize rendering.
     $typeUri = $element->hascoTypeUri ?? ($element->typeUri ?? '');
+    $preferredInstrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'Instrument';
+    $preferredComponent = \Drupal::config('rep.settings')->get('preferred_component') ?? 'Component';
     $isProject = ($typeUri === SCHEMA::PROJECT);
     $isWorkflow = in_array($typeUri, [VSTOI::PROCESS, VSTOI::WORKFLOW], true);
     $baseUri = $element->uri;
@@ -78,40 +83,46 @@ class DescribeAssociatesForm extends FormBase {
       $basePath = rtrim(\Drupal::request()->getBasePath() ?: '/', '/');
       $drupalBaseUrl = ($basePath === '' ? '/' : $basePath . '/');
       $currentUser = \Drupal::currentUser();
-
-      $form['#attached']['library'][] = 'ctt/ctt-editor-init';
-      $form['#attached']['library'][] = 'rep/workflow_preview';
-
-      $existingCttSettings = $form['#attached']['drupalSettings']['ctt'] ?? [];
-      $form['#attached']['drupalSettings']['ctt'] = array_replace_recursive($existingCttSettings, [
-        'drupalBaseUrl' => $drupalBaseUrl,
-        'apiBaseUrl' => $drupalBaseUrl . 'workflow/api',
-        'hascoApiUrl' => $drupalBaseUrl . 'workflow',
-        'csrfToken' => \Drupal::csrfToken()->get('rest'),
-        'processUri' => $baseUri,
-        'currentUser' => [
-          'id' => (string) $currentUser->id(),
-          'name' => $currentUser->getDisplayName(),
-          'email' => (string) $currentUser->getEmail(),
-        ],
-        'execution' => [
-          'mode' => 'execution',
-          'daUri' => NULL,
-          'dataFileUri' => NULL,
-          'studyUri' => NULL,
+      $editorPreviewUrl = Url::fromUserInput('/ctt/editor', [
+        'query' => [
           'processUri' => $baseUri,
-          'readOnlyPreview' => true,
+          'execution' => '1',
         ],
-        'readOnlyPreview' => true,
-      ]);
+      ])->toString();
+      $createModeUrl = Url::fromUserInput('/ctt/editor', [
+        'query' => [
+          'create' => '1',
+        ],
+      ])->toString();
+
+      $workflowExists = true;
+      $workflowProbeError = '';
+      if (\Drupal::hasService('ctt.hasco_client')) {
+        try {
+          $probe = \Drupal::service('ctt.hasco_client')->getByUri((string) $baseUri);
+          if (!is_array($probe) || !empty($probe['error'])) {
+            $workflowExists = false;
+            $workflowProbeError = is_array($probe) ? (string) ($probe['error'] ?? '') : '';
+          }
+        }
+        catch (\Throwable $e) {
+          $workflowExists = false;
+          $workflowProbeError = $e->getMessage();
+        }
+      }
+
+      $form['#attached']['library'][] = 'rep/workflow_preview';
 
       $form['workflow_canvas_block'] = [
         '#type' => 'container',
         '#attributes' => [
           'class' => ['workflow-canvas-block'],
-          'data-workflow-preview-block' => '1',
         ],
       ];
+
+      if ($workflowExists) {
+        $form['workflow_canvas_block']['#attributes']['data-workflow-preview-block'] = '1';
+      }
 
       $form['workflow_canvas_block']['workflow_canvas_header'] = [
         '#type' => 'container',
@@ -129,38 +140,102 @@ class DescribeAssociatesForm extends FormBase {
         ],
       ];
 
-      $form['workflow_canvas_block']['workflow_canvas_header']['fullscreen'] = [
-        '#type' => 'html_tag',
-        '#tag' => 'button',
-        '#value' => $this->t('Fullscreen'),
+      if ($workflowExists) {
+        $form['workflow_canvas_block']['workflow_canvas_header']['fullscreen'] = [
+          '#type' => 'html_tag',
+          '#tag' => 'button',
+          '#value' => $this->t('Fullscreen'),
+          '#attributes' => [
+            'type' => 'button',
+            'class' => ['workflow-preview-fullscreen-btn'],
+            'data-workflow-preview-fullscreen' => '1',
+            'aria-pressed' => 'false',
+          ],
+        ];
+      }
+
+      $form['workflow_canvas_block']['workflow_canvas_header']['open_stable_editor'] = [
+        '#type' => 'link',
+        '#title' => $this->t('Open stable editor'),
+        '#url' => Url::fromUserInput('/ctt/editor', [
+          'query' => [
+            'processUri' => $baseUri,
+            'execution' => '1',
+          ],
+        ]),
         '#attributes' => [
-          'type' => 'button',
-          'class' => ['workflow-preview-fullscreen-btn'],
-          'data-workflow-preview-fullscreen' => '1',
-          'aria-pressed' => 'false',
+          'class' => ['workflow-preview-open-editor-btn'],
+          'title' => $this->t('Use this route if embedded canvas remains on API connection.'),
         ],
       ];
 
-      $form['workflow_canvas_block']['workflow_canvas_body'] = [
-        '#type' => 'container',
-        '#attributes' => [
-          'class' => ['workflow-canvas-body'],
-        ],
-      ];
+      if (!$workflowExists) {
+        $warningMessage = (string) $this->t('This workflow URI is not available in HASCOAPI right now, so embedded canvas cannot be rendered.');
+        if ($workflowProbeError !== '') {
+          $warningMessage .= ' ' . (string) $this->t('Backend detail: @detail', ['@detail' => $workflowProbeError]);
+        }
 
-      $form['workflow_canvas_block']['workflow_canvas_body']['workflow_canvas'] = [
-        '#type' => 'container',
-        '#attributes' => [
-          'id' => 'ctt-workflow-app',
-          'class' => ['ctt-workflow-preview-app'],
-          'data-ctt-min-height' => '520',
-        ],
-      ];
+        $form['workflow_canvas_block']['workflow_canvas_unavailable'] = [
+          '#type' => 'markup',
+          '#markup' => '<div class="alert alert-warning workflow-preview-unavailable" role="alert">'
+            . '<h4 class="alert-heading" style="margin-top:0;">' . $this->t('Workflow canvas unavailable') . '</h4>'
+            . '<p>' . $warningMessage . '</p>'
+            . '<p><small>URI: ' . Html::escape((string) $baseUri) . '</small></p>'
+            . '<div class="workflow-preview-unavailable-actions">'
+            . '<a class="workflow-preview-open-editor-btn" href="' . Html::escape($editorPreviewUrl) . '">' . $this->t('Open stable editor') . '</a> '
+            . '<a class="workflow-preview-open-editor-btn workflow-preview-open-editor-btn-secondary" href="' . Html::escape($createModeUrl) . '">' . $this->t('Open editor in create mode') . '</a>'
+            . '</div>'
+            . '</div>',
+        ];
+      }
+      else {
+        $form['#attached']['library'][] = 'ctt/ctt-editor-init';
 
-      $form['workflow_canvas_block']['workflow_canvas_body']['workflow_canvas']['loading'] = [
-        '#type' => 'markup',
-        '#markup' => '<div class="ctt-loading-indicator"><div class="ctt-loading-content"><div class="ajax-progress ajax-progress-throbber"><div class="throbber">&nbsp;</div></div><p class="ctt-loading-text">' . $this->t('Loading workflow canvas...') . '</p></div></div>',
-      ];
+        $existingCttSettings = $form['#attached']['drupalSettings']['ctt'] ?? [];
+        $form['#attached']['drupalSettings']['ctt'] = array_replace_recursive($existingCttSettings, [
+          'drupalBaseUrl' => $drupalBaseUrl,
+          'apiBaseUrl' => $drupalBaseUrl . 'workflow/api',
+          'hascoApiUrl' => $drupalBaseUrl . 'workflow',
+          'csrfToken' => \Drupal::csrfToken()->get('rest'),
+          'processUri' => $baseUri,
+          'currentUser' => [
+            'id' => (string) $currentUser->id(),
+            'name' => $currentUser->getDisplayName(),
+            'email' => (string) $currentUser->getEmail(),
+          ],
+          'execution' => [
+            'mode' => 'execution',
+            'daUri' => NULL,
+            'dataFileUri' => NULL,
+            'studyUri' => NULL,
+            'processUri' => $baseUri,
+            'readOnlyPreview' => true,
+          ],
+          'readOnlyPreview' => true,
+        ]);
+
+        $form['workflow_canvas_block']['workflow_canvas_body'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'class' => ['workflow-canvas-body'],
+          ],
+        ];
+
+        $form['workflow_canvas_block']['workflow_canvas_body']['workflow_canvas'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'id' => 'ctt-workflow-app',
+            'class' => ['ctt-workflow-preview-app'],
+            'data-ctt-min-height' => '520',
+            'data-workflow-preview-editor-url' => $editorPreviewUrl,
+          ],
+        ];
+
+        $form['workflow_canvas_block']['workflow_canvas_body']['workflow_canvas']['loading'] = [
+          '#type' => 'markup',
+          '#markup' => '<div class="ctt-loading-indicator"><div class="ctt-loading-content"><div class="ajax-progress ajax-progress-throbber"><div class="throbber">&nbsp;</div></div><p class="ctt-loading-text">' . $this->t('Loading workflow canvas...') . '</p></div></div>',
+        ];
+      }
     }
 
      // ✅ Insert the graph as a panel using VisGraphBaseForm
@@ -245,6 +320,26 @@ class DescribeAssociatesForm extends FormBase {
         break;
       case VSTOI::PLATFORM:
         AssocPlatform::process($element, $form, $form_state);
+        break;
+      case VSTOI::INSTRUMENT:
+        AssocTypedInstance::process(
+          $element,
+          $form,
+          $form_state,
+          'instrumentinstance',
+          'typed_instrument_instances',
+          'Has ' . $preferredInstrument . ' instances'
+        );
+        break;
+      case VSTOI::COMPONENT:
+        AssocTypedInstance::process(
+          $element,
+          $form,
+          $form_state,
+          'componentinstance',
+          'typed_component_instances',
+          'Has ' . $preferredComponent . ' instances'
+        );
         break;
       case VSTOI::PLATFORM_INSTANCE:
         AssocPlatformInstance::process($element, $form, $form_state);
