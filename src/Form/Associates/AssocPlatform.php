@@ -16,6 +16,7 @@ class AssocPlatform {
   public static function process($element, array &$form, FormStateInterface $form_state) {
     $api = \Drupal::service('rep.api_connector');
     $t = \Drupal::service('string_translation');
+    $preferredPlatform = \Drupal::config('rep.settings')->get('preferred_platform') ?? 'Platform';
 
     /*
      *    PLATFORM's PLATFORM INSTANCES
@@ -30,7 +31,10 @@ class AssocPlatform {
         //dpm($totalobjs);
         $form['pltinst']['begin_pltinst'] = [
           '#type' => 'markup',
-          '#markup' => $t->translate("<b>Has platform instances (total of " . $totalobjs . "):</b><ul>"),
+          '#markup' => $t->translate('<b>@label (total of @total):</b><ul>', [
+            '@label' => 'Has ' . $preferredPlatform . ' instances',
+            '@total' => (string) $totalobjs,
+          ]),
         ];
         $header = VSTOIInstance::generateHeader('platforminstance');
         $output = VSTOIInstance::generateOutput('platforminstance', $objs);

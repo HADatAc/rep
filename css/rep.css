@@ -1276,7 +1276,58 @@ body.path-sem div.details-wrapper {
 }
 
 .describe-header-wb {
-  word-break: break-all;
+  max-width: 100%;
+}
+
+/* Keep DESCRIBE URI rows contained in the sidebar with visual trim/ellipsis. */
+form#describe-header-form,
+form[id^="describe-header-form"] {
+  max-width: 100%;
+  min-width: 0;
+}
+
+form#describe-header-form .describe-uri-row,
+form[id^="describe-header-form"] .describe-uri-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+form#describe-header-form .describe-uri-row b,
+form#describe-header-form .describe-uri-row .graph-toggle,
+form[id^="describe-header-form"] .describe-uri-row b,
+form[id^="describe-header-form"] .describe-uri-row .graph-toggle {
+  flex: 0 0 auto;
+}
+
+form#describe-header-form .describe-uri-row .describe-trimmed-uri,
+form[id^="describe-header-form"] .describe-uri-row .describe-trimmed-uri {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-block;
+  max-width: min(100%, 250px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+form#describe-header-form .graph-toggle,
+form[id^="describe-header-form"] .graph-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+/* Prevent long unbroken type names from spilling out of sidebar cards. */
+aside.section form[id^="describe-header-form"] h1,
+aside.section form[id^="describe-header-form"] h2,
+aside.section form[id^="describe-header-form"] h3,
+aside.section form[id^="describe-header-form"] h4,
+aside.section form[id^="describe-header-form"] h5 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* NAMESPACE FORM */

@@ -141,9 +141,14 @@ class DescribeHeaderForm extends FormBase {
     }
 
     // --- Element's own URI (display once) ---
+    $elementUriRaw = rawurldecode((string) $this->getElement()->uri);
     $form['element_uri'] = [
-      '#type' => 'markup',
-      '#markup' => $this->t('<div class="describe-header-wb"><b>URI</b>: ' . $this->getElement()->uri . "</div><br />"),
+      '#type' => 'inline_template',
+      '#template' => '<div class="describe-header-wb describe-uri-row"><b>URI</b>: <span class="describe-trimmed-uri" title="{{ fullUri }}">{{ displayUri }}</span></div><br />',
+      '#context' => [
+        'fullUri' => $elementUriRaw,
+        'displayUri' => $this->trimUriForDisplay($elementUriRaw),
+      ],
     ];
 
     // --- Type (nice title) ---
@@ -155,10 +160,11 @@ class DescribeHeaderForm extends FormBase {
     // --- Type URI (with external eye that targets ONLY typeUri edge) ---
     $typeUri = $this->getElement()->typeUri;
     if ($typeUri) {
+      $typeUriRaw = rawurldecode((string) $this->getElement()->typeUri);
       $form['element_type'] = [
         '#type' => 'inline_template',
         // IMPORTANT: href uses Describe page URL; data-node uses the *raw RDF IRI*.
-        '#template' => '<b>Type URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard">{{ typeUri }}</a>
+        '#template' => '<div class="describe-uri-row"><b>Type URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard describe-trimmed-uri" title="{{ typeUriFull }}">{{ typeUriDisplay }}</a>
           <span class="graph-toggle"
                 data-node="{{ node }}"
                 data-from="{{ from }}"
@@ -166,10 +172,11 @@ class DescribeHeaderForm extends FormBase {
                 style="cursor:pointer;"
                 title="Show/Hide this type edge">
             <i class="fa fa-eye"></i>
-          </span><br><br>',
+          </span></div><br><br>',
         '#context' => [
           'href'    => Utils::describeHref((string) $this->getElement()->typeUri),
-          'typeUri' => rawurldecode($this->getElement()->typeUri),
+          'typeUriDisplay' => $this->trimUriForDisplay($typeUriRaw),
+          'typeUriFull' => $typeUriRaw,
           'node'    => $this->getElement()->typeUri,         // IRI used by the graph
           'from'    => $this->getElement()->uri,             // origin of the edge (the current element)
         ],
@@ -178,9 +185,10 @@ class DescribeHeaderForm extends FormBase {
 
     // --- HascoType URI (independent from Type URI, with its own eye) ---
     if ($this->getElement()->hascoTypeUri) {
+      $hascoTypeUriRaw = rawurldecode((string) $this->getElement()->hascoTypeUri);
       $form['element_hascoType'] = [
         '#type' => 'inline_template',
-        '#template' => '<b>HascoType URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard">{{ hascoTypeUri }}</a>
+        '#template' => '<div class="describe-uri-row"><b>HascoType URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard describe-trimmed-uri" title="{{ hascoTypeUriFull }}">{{ hascoTypeUriDisplay }}</a>
           <span class="graph-toggle"
                 data-node="{{ node }}"
                 data-from="{{ from }}"
@@ -188,10 +196,11 @@ class DescribeHeaderForm extends FormBase {
                 style="cursor:pointer;"
                 title="Show/Hide this hascoType edge">
             <i class="fa fa-eye"></i>
-          </span><br><br>',
+          </span></div><br><br>',
         '#context' => [
           'href'         => Utils::describeHref((string) $this->getElement()->hascoTypeUri),
-          'hascoTypeUri' => rawurldecode($this->getElement()->hascoTypeUri),
+          'hascoTypeUriDisplay' => $this->trimUriForDisplay($hascoTypeUriRaw),
+          'hascoTypeUriFull' => $hascoTypeUriRaw,
           'node'         => $this->getElement()->hascoTypeUri, // IRI used by the graph
           'from'         => $this->getElement()->uri,          // origin of the edge
         ],
@@ -200,19 +209,21 @@ class DescribeHeaderForm extends FormBase {
 
     // --- Super URI ---
     if (!empty($this->getElement()->superUri ?? NULL)) {
+      $superUriRaw = rawurldecode((string) $this->getElement()->superUri);
       $form['element_super'] = [
         '#type' => 'inline_template',
-        '#template' => '<b>Super URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard">{{ superUri }}</a>
+        '#template' => '<div class="describe-uri-row"><b>Super URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard describe-trimmed-uri" title="{{ superUriFull }}">{{ superUriDisplay }}</a>
           <span class="graph-toggle"
                 data-node="{{ node }}"
                 data-from="{{ from }}"
                 style="cursor:pointer;"
                 title="Show/Hide node">
             <i class="fa fa-eye"></i>
-          </span><br><br>',
+          </span></div><br><br>',
         '#context' => [
           'href'     => Utils::describeHref((string) $this->getElement()->superUri),
-          'superUri' => rawurldecode($this->getElement()->superUri),
+          'superUriDisplay' => $this->trimUriForDisplay($superUriRaw),
+          'superUriFull' => $superUriRaw,
           'node'     => $this->getElement()->superUri,
           'from'     => $this->getElement()->uri,
         ],
@@ -271,6 +282,26 @@ class DescribeHeaderForm extends FormBase {
       }
 
     return $form;
+  }
+
+  /**
+   * Trim long URIs for sidebar display while preserving start and end segments.
+   */
+  private function trimUriForDisplay(string $uri, int $maxLength = 46): string {
+    $uri = trim($uri);
+    if ($uri === '') {
+      return '';
+    }
+
+    $maxLength = max(20, $maxLength);
+    if (strlen($uri) <= $maxLength) {
+      return $uri;
+    }
+
+    $prefixLength = (int) floor(($maxLength - 3) * 0.62);
+    $suffixLength = ($maxLength - 3) - $prefixLength;
+
+    return substr($uri, 0, $prefixLength) . '...' . substr($uri, -$suffixLength);
   }
 
   public function validateForm(array &$form, FormStateInterface $form_state) {}

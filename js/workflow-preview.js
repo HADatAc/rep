@@ -177,15 +177,25 @@
     return Promise.resolve();
   }
 
+  function setIconButtonContent(button, iconClass, label) {
+    if (!button) {
+      return;
+    }
+
+    button.innerHTML = '<i class="fa ' + escapeHtml(iconClass) + '" aria-hidden="true"></i>'
+      + '<span class="workflow-preview-sr">' + escapeHtml(label) + '</span>';
+    button.setAttribute('aria-label', label);
+    button.setAttribute('title', label);
+  }
+
   Drupal.behaviors.repWorkflowPreview = {
     attach: function (context) {
       once('rep-workflow-preview', '[data-workflow-preview-block]', context).forEach(function (block) {
         installConnectionFallback(block);
 
-        var button = block.querySelector('[data-workflow-preview-fullscreen]');
-        if (!button) {
-          return;
-        }
+        var fullscreenButton = block.querySelector('[data-workflow-preview-fullscreen]');
+        var collapseButton = block.querySelector('[data-workflow-preview-collapse]');
+        var canvasBody = block.querySelector('.workflow-canvas-body');
 
         function triggerEditorResize() {
           try {
@@ -195,18 +205,60 @@
           }
         }
 
+        function setCollapsed(collapsed) {
+          if (!collapseButton || !canvasBody) {
+            return;
+          }
+
+          block.classList.toggle('is-collapsed', collapsed);
+          canvasBody.hidden = collapsed;
+          collapseButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+
+          if (collapsed) {
+            setIconButtonContent(collapseButton, 'fa-chevron-down', Drupal.t('Expand workflow canvas'));
+            return;
+          }
+
+          setIconButtonContent(collapseButton, 'fa-chevron-up', Drupal.t('Collapse workflow canvas'));
+          triggerEditorResize();
+          setTimeout(triggerEditorResize, 80);
+        }
+
+        if (collapseButton && canvasBody) {
+          collapseButton.addEventListener('click', function (event) {
+            event.preventDefault();
+            setCollapsed(!block.classList.contains('is-collapsed'));
+          });
+
+          setCollapsed(false);
+        }
+
+        if (!fullscreenButton) {
+          return;
+        }
+
         function updateFullscreenState() {
           var isFullscreen = document.fullscreenElement === block;
-          button.setAttribute('aria-pressed', isFullscreen ? 'true' : 'false');
-          button.textContent = isFullscreen ? Drupal.t('Exit fullscreen') : Drupal.t('Fullscreen');
-          button.setAttribute('title', button.textContent);
+          fullscreenButton.setAttribute('aria-pressed', isFullscreen ? 'true' : 'false');
+
+          if (isFullscreen) {
+            setIconButtonContent(fullscreenButton, 'fa-compress', Drupal.t('Exit fullscreen'));
+          } else {
+            setIconButtonContent(fullscreenButton, 'fa-expand', Drupal.t('Enter fullscreen'));
+          }
+
           block.classList.toggle('is-fullscreen', isFullscreen);
           triggerEditorResize();
           setTimeout(triggerEditorResize, 80);
         }
 
-        button.addEventListener('click', function (event) {
+        fullscreenButton.addEventListener('click', function (event) {
           event.preventDefault();
+
+          if (block.classList.contains('is-collapsed') && collapseButton && canvasBody) {
+            setCollapsed(false);
+          }
+
           var isFullscreen = document.fullscreenElement === block;
           if (isFullscreen) {
             exitFullscreen().finally(updateFullscreenState);

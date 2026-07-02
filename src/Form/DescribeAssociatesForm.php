@@ -25,6 +25,7 @@ use Drupal\rep\Vocabulary\VSTOI;
 use Drupal\rep\Form\VisGraphBaseForm;
 use Drupal\Core\Url;
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Render\Markup;
 
 class DescribeAssociatesForm extends FormBase {
 
@@ -140,23 +141,50 @@ class DescribeAssociatesForm extends FormBase {
         ],
       ];
 
+      $form['workflow_canvas_block']['workflow_canvas_header']['actions'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['workflow-canvas-actions'],
+        ],
+      ];
+
       if ($workflowExists) {
-        $form['workflow_canvas_block']['workflow_canvas_header']['fullscreen'] = [
+        $collapseTitle = (string) $this->t('Collapse workflow canvas');
+        $fullscreenTitle = (string) $this->t('Enter fullscreen');
+
+        $form['workflow_canvas_block']['workflow_canvas_header']['actions']['collapse'] = [
           '#type' => 'html_tag',
           '#tag' => 'button',
-          '#value' => $this->t('Fullscreen'),
+          '#value' => Markup::create('<i class="fa fa-chevron-up" aria-hidden="true"></i><span class="workflow-preview-sr">' . $this->t('Collapse workflow canvas') . '</span>'),
           '#attributes' => [
             'type' => 'button',
-            'class' => ['workflow-preview-fullscreen-btn'],
+            'class' => ['workflow-preview-collapse-btn', 'workflow-preview-icon-btn'],
+            'data-workflow-preview-collapse' => '1',
+            'aria-expanded' => 'true',
+            'aria-label' => $collapseTitle,
+            'title' => $collapseTitle,
+          ],
+        ];
+
+        $form['workflow_canvas_block']['workflow_canvas_header']['actions']['fullscreen'] = [
+          '#type' => 'html_tag',
+          '#tag' => 'button',
+          '#value' => Markup::create('<i class="fa fa-expand" aria-hidden="true"></i><span class="workflow-preview-sr">' . $this->t('Enter fullscreen') . '</span>'),
+          '#attributes' => [
+            'type' => 'button',
+            'class' => ['workflow-preview-fullscreen-btn', 'workflow-preview-icon-btn'],
             'data-workflow-preview-fullscreen' => '1',
             'aria-pressed' => 'false',
+            'aria-label' => $fullscreenTitle,
+            'title' => $fullscreenTitle,
           ],
         ];
       }
 
-      $form['workflow_canvas_block']['workflow_canvas_header']['open_stable_editor'] = [
+      $openStableLabel = (string) $this->t('Open stable editor');
+      $form['workflow_canvas_block']['workflow_canvas_header']['actions']['open_stable_editor'] = [
         '#type' => 'link',
-        '#title' => $this->t('Open stable editor'),
+        '#title' => Markup::create('<i class="fa fa-external-link" aria-hidden="true"></i><span class="workflow-preview-sr">' . $this->t('Open stable editor') . '</span>'),
         '#url' => Url::fromUserInput('/ctt/editor', [
           'query' => [
             'processUri' => $baseUri,
@@ -164,8 +192,9 @@ class DescribeAssociatesForm extends FormBase {
           ],
         ]),
         '#attributes' => [
-          'class' => ['workflow-preview-open-editor-btn'],
-          'title' => $this->t('Use this route if embedded canvas remains on API connection.'),
+          'class' => ['workflow-preview-open-editor-btn', 'workflow-preview-icon-btn'],
+          'aria-label' => $openStableLabel,
+          'title' => $openStableLabel,
         ],
       ];
 
@@ -358,6 +387,15 @@ class DescribeAssociatesForm extends FormBase {
         break;
     }
 
+    // Fallback for subclasses (for example, Laboratory) whose type URI is not the
+    // canonical VSTOI::PLATFORM but resolves to Platform via hascoType.
+    if ($typeUri !== OWL::CLAZZ && !isset($form['pltinst'])) {
+      $resolvedHascoType = $this->resolveHascoTypeUri($api, $element);
+      if ($resolvedHascoType === VSTOI::PLATFORM) {
+        AssocPlatform::process($element, $form, $form_state);
+      }
+    }
+
     return $form;
   }
 
@@ -384,16 +422,46 @@ class DescribeAssociatesForm extends FormBase {
     $api = \Drupal::service('rep.api_connector');
     $element = $this->getElement();
     if ($element && $element->uri) {
+      $hascoType = $this->resolveHascoTypeUri($api, $element);
+      if ($hascoType === VSTOI::PLATFORM) {
+        AssocPlatform::process($element, $form, $form_state);
+      }
+    }
+  }
+
+  private function resolveHascoTypeUri($api, $element) {
+    if (!is_object($element) || empty($element->uri)) {
+      return NULL;
+    }
+
+    try {
       $hascoTypeRaw = $api->getHascoType($element->uri);
-      if ($hascoTypeRaw) {
-        $hascoTypeJSON = $api->parseObjectResponse($hascoTypeRaw, 'hascoTypeRaw');
-        $response = json_decode($hascoTypeJSON, true);
-        $hascoType = $response['hascoType'] ?? null;
-        if ($hascoType === VSTOI::PLATFORM) {
-          AssocPlatform::process($element, $form, $form_state);
+      if (!$hascoTypeRaw) {
+        return NULL;
+      }
+
+      $parsed = $api->parseObjectResponse($hascoTypeRaw, 'getHascoType');
+
+      if (is_object($parsed) && isset($parsed->hascoType)) {
+        return (string) $parsed->hascoType;
+      }
+
+      if (is_array($parsed) && isset($parsed['hascoType'])) {
+        return (string) $parsed['hascoType'];
+      }
+
+      if (is_string($parsed) && $parsed !== '') {
+        $decoded = json_decode($parsed, TRUE);
+        if (is_array($decoded) && isset($decoded['hascoType'])) {
+          return (string) $decoded['hascoType'];
         }
       }
     }
+    catch (\Throwable $e) {
+      return NULL;
+    }
+
+    return NULL;
   }
 
   public function validateForm(array &$form, FormStateInterface $form_state) {}

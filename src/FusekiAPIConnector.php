@@ -135,11 +135,38 @@ class FusekiAPIConnector {
   private $last_request_url;
 
   /**
+   * In-request cache for successful getUri responses.
+   *
+   * @var array<string, string>
+   */
+  private $uri_response_cache = [];
+
+  /**
    * Settings Variable.
    */
   Const CONFIGNAME = "rep.settings";
 
   public function __construct(ClientFactory $client){
+  }
+
+  /**
+   * Store a successful getUri payload in cache and return it.
+   */
+  private function rememberUriResponse(string $uri, $payload) {
+    if (is_string($payload) && trim($payload) !== '') {
+      $this->uri_response_cache[$uri] = $payload;
+      return $payload;
+    }
+
+    if (is_object($payload) || is_array($payload)) {
+      $json = json_encode($payload);
+      if (is_string($json) && trim($json) !== '') {
+        $this->uri_response_cache[$uri] = $json;
+        return $json;
+      }
+    }
+
+    return $payload;
   }
 
   /**
@@ -172,6 +199,17 @@ class FusekiAPIConnector {
    *   A JSON‐encoded string from either the legacy or Social API, or NULL on failure.
    */
   public function getUri(string $uri) {
+    $uri = trim($uri);
+    if ($uri !== '' && isset($this->uri_response_cache[$uri])) {
+      $cached = $this->uri_response_cache[$uri];
+      $this->error = NULL;
+      $this->error_message = '';
+      $this->last_status_code = 200;
+      $this->last_response_body = $cached;
+      $this->last_request_url = '/hascoapi/api/uri/' . rawurlencode($uri) . ' (cache)';
+      return $cached;
+    }
+
     // 1) LEGACY GET
     $endpoint = "/hascoapi/api/uri/".rawurlencode($uri);
     $method = "GET";
@@ -198,9 +236,10 @@ class FusekiAPIConnector {
     // 3) If legacy succeeded, return JSON string
     if (isset($decodedLegacy->isSuccessful) && $decodedLegacy->isSuccessful === TRUE) {
       // \Drupal::logger('rep')->debug('Legacy successful, returning its JSON.');
-      return is_string($rawLegacy)
+      $legacyPayload = is_string($rawLegacy)
         ? $rawLegacy
         : json_encode($decodedLegacy);
+      return $this->rememberUriResponse($uri, $legacyPayload);
     }
     // \Drupal::logger('rep')->debug('Legacy not successful, falling back to Social POST.');
 
@@ -314,7 +353,7 @@ class FusekiAPIConnector {
 
     // 11) Keep return type compatible with legacy getUri().
     // parseObjectResponse expects a JSON string envelope.
-    return $body;
+    return $this->rememberUriResponse($uri, $body);
   }
 
   public function getUsage($uri) {
@@ -2816,35 +2855,63 @@ class FusekiAPIConnector {
       $options['http_errors'] = FALSE;
     }
 
-    try {
-      $res = $client->request($method, $url, $options);
-    }
-    catch (ConnectException $e) {
-      $this->error = "CON";
-      $this->error_message = "Connection error the following message: " . $e->getMessage();
+    $methodUpper = strtoupper((string) $method);
+    $maxAttempts = ($methodUpper === 'GET') ? 2 : 1;
+    $attempt = 0;
+
+    while (TRUE) {
+      $attempt++;
       try {
-        \Drupal::logger('rep.api')->error('API connection error for {method} {url}: {message}', [
-          'method' => $method,
-          'url' => $url,
-          'message' => $e->getMessage(),
-        ]);
+        $res = $client->request($method, $url, $options);
+        break;
       }
-      catch (\Throwable $t) {
-        // Ignore logging failures.
+      catch (ConnectException $e) {
+        $retryable = ($attempt < $maxAttempts);
+        if ($retryable) {
+          continue;
+        }
+
+        $this->error = "CON";
+        $this->error_message = "Connection error the following message: " . $e->getMessage();
+        try {
+          \Drupal::logger('rep.api')->error('API connection error for {method} {url}: {message}', [
+            'method' => $method,
+            'url' => $url,
+            'message' => $e->getMessage(),
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
+        return NULL;
       }
-      return NULL;
-    }
-    catch (RequestException $e) {
-      // For completeness; should be rare when http_errors=FALSE.
-      $res = $e->getResponse();
-      if ($res === NULL) {
+      catch (RequestException $e) {
+        // For completeness; should be rare when http_errors=FALSE.
+        $res = $e->getResponse();
+        if ($res !== NULL) {
+          break;
+        }
+
+        $message = (string) $e->getMessage();
+        $retryable = ($attempt < $maxAttempts)
+          && (
+            stripos($message, 'cURL error 56') !== FALSE
+            || stripos($message, 'Recv failure') !== FALSE
+            || stripos($message, 'Connection was reset') !== FALSE
+            || stripos($message, 'Connection reset by peer') !== FALSE
+          );
+
+        if ($retryable) {
+          continue;
+        }
+
         $this->error = "REQ";
-        $this->error_message = "Request error the following message: " . $e->getMessage();
+        $this->error_message = "Request error the following message: " . $message;
         try {
           \Drupal::logger('rep.api')->error('API request error for {method} {url}: {message}', [
             'method' => $method,
             'url' => $url,
-            'message' => $e->getMessage(),
+            'message' => $message,
           ]);
         }
         catch (\Throwable $t) {
@@ -2943,6 +3010,22 @@ class FusekiAPIConnector {
   public function parseObjectResponse($response, $methodCalled) {
     // 1) Any prior connection or HTTP error?
     if ($this->error !== NULL) {
+      if ($this->error === 'REQ'
+        && $methodCalled === 'getUri'
+        && is_string($this->error_message)
+        && (stripos($this->error_message, 'cURL error 56') !== FALSE || stripos($this->error_message, 'Connection was reset') !== FALSE)
+      ) {
+        try {
+          \Drupal::logger('rep.api')->warning('Transient getUri request error suppressed from UI: {message}', [
+            'message' => $this->error_message,
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
+        return NULL;
+      }
+
       if ($this->error === 'CON') {
         \Drupal::messenger()->addError(t('Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect.'));
       }

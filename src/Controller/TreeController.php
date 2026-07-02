@@ -17,6 +17,9 @@ class TreeController extends ControllerBase {
 
   private const VSTOI_PHYSICAL_INSTRUMENT = 'http://hadatac.org/ont/vstoi#PhysicalInstrument';
   private const PMSR_PHYSICAL_INSTRUMENT = 'http://pmsr.net/ont/pmsr#PhysicalInstrument';
+  private const MAX_INSTANCE_LABEL_URI_LOOKUPS = 40;
+  private array $instanceLabelCache = [];
+  private int $instanceLabelLookupCount = 0;
 
   /**
    * Formats API list payloads to jsTree-compatible selectable leaves.
@@ -117,23 +120,172 @@ class TreeController extends ControllerBase {
   }
 
   /**
-   * Builds a category-first hierarchy for instance_type instrument selector.
+   * Resolves the grouping parent URI for instance selector organization.
+   */
+  private function getInstanceGroupingParentUri($element, string $elementtype): string {
+    if ($elementtype === 'component') {
+      return trim((string) ($element->hasComponentStem ?? $element->typeUri ?? ''));
+    }
+
+    return trim((string) ($element->superUri ?? ''));
+  }
+
+  /**
+   * Resolves the grouping parent label hint for instance selector organization.
+   */
+  private function resolveLabelFromUriSilently($api, string $uri): string {
+    $uri = trim($uri);
+    if ($uri === '') {
+      return '';
+    }
+
+    if (array_key_exists($uri, $this->instanceLabelCache)) {
+      return $this->instanceLabelCache[$uri];
+    }
+
+    if ($this->instanceLabelLookupCount >= self::MAX_INSTANCE_LABEL_URI_LOOKUPS) {
+      $this->instanceLabelCache[$uri] = '';
+      return '';
+    }
+
+    $this->instanceLabelLookupCount++;
+
+    $label = '';
+
+    try {
+      $raw = $api->getUri($uri);
+      $decoded = NULL;
+
+      if (is_string($raw)) {
+        $decoded = json_decode($raw);
+      }
+      elseif (is_object($raw) || is_array($raw)) {
+        $decoded = $raw;
+      }
+
+      if (is_object($decoded) && !empty($decoded->isSuccessful) && isset($decoded->body)) {
+        $body = $decoded->body;
+        if (is_array($body) && !empty($body)) {
+          $body = reset($body);
+        }
+
+        if (is_object($body)) {
+          $label = trim((string) ($body->label ?? $body->hasContent ?? $body->localName ?? ''));
+        }
+        elseif (is_array($body)) {
+          $label = trim((string) ($body['label'] ?? $body['hasContent'] ?? $body['localName'] ?? ''));
+        }
+      }
+      elseif (is_object($decoded)) {
+        $label = trim((string) ($decoded->label ?? $decoded->hasContent ?? $decoded->localName ?? ''));
+      }
+      elseif (is_array($decoded)) {
+        $label = trim((string) ($decoded['label'] ?? $decoded['hasContent'] ?? $decoded['localName'] ?? ''));
+      }
+    }
+    catch (\Throwable $t) {
+      $label = '';
+    }
+
+    $this->instanceLabelCache[$uri] = $label;
+    return $label;
+  }
+
+  private function normalizeComponentCategoryLabel(string $label): string {
+    $label = trim($label);
+    if ($label === '') {
+      return '';
+    }
+
+    $label = preg_replace('/\s*--\s*CB:.*$/i', '', $label);
+    return trim((string) $label);
+  }
+
+  private function stripLanguageTagSuffix(string $label): string {
+    $label = trim($label);
+    if ($label === '') {
+      return '';
+    }
+
+    $label = preg_replace('/@([a-z]{2}(?:-[a-z0-9]+)?)$/i', '', $label);
+    return trim((string) $label);
+  }
+
+  private function isTechnicalCategoryLabel(string $label): bool {
+    $normalized = strtoupper(trim($label));
+    if ($normalized === '') {
+      return true;
+    }
+
+    return (bool) preg_match('/^(CSM|COM|INS|PLT)\d+$/', $normalized);
+  }
+
+  private function normalizePlatformCategoryLabel(string $label): string {
+    $label = $this->stripLanguageTagSuffix($label);
+
+    if (strcasecmp($label, 'site') === 0) {
+      return 'Site';
+    }
+
+    return $label;
+  }
+
+  private function normalizeCategoryLabelByType(string $label, string $elementtype): string {
+    $label = $this->stripLanguageTagSuffix($label);
+    if ($elementtype === 'platform') {
+      return $this->normalizePlatformCategoryLabel($label);
+    }
+    if ($elementtype === 'component') {
+      return $this->normalizeComponentCategoryLabel($label);
+    }
+
+    return $label;
+  }
+
+  private function getInstanceGroupingParentLabel($element, string $elementtype): string {
+    if ($elementtype === 'component') {
+      if (isset($element->componentStem)) {
+        $stem = $element->componentStem;
+        if (is_object($stem) && !empty($stem->label)) {
+          return $this->normalizeCategoryLabelByType((string) $stem->label, $elementtype);
+        }
+        if (is_array($stem) && !empty($stem['label'])) {
+          return $this->normalizeCategoryLabelByType((string) $stem['label'], $elementtype);
+        }
+      }
+      if (!empty($element->typeLabel)) {
+        return $this->normalizeCategoryLabelByType((string) $element->typeLabel, $elementtype);
+      }
+
+      return '';
+    }
+
+    $label = trim((string) ($element->superClassLabel ?? ''));
+    return $this->normalizeCategoryLabelByType($label, $elementtype);
+  }
+
+  /**
+   * Builds a category-first hierarchy for instance_type selectors.
    *
    * Returns NULL when there is no list payload available so callers can
    * continue with the ontology-class fallback behavior.
    */
-  private function getInstrumentInstanceHierarchyItems($nodeUri): ?array {
+  private function getInstanceHierarchyItems($nodeUri, string $elementtype, string $entryPointUri): ?array {
     $managerEmail = \Drupal::currentUser()->getEmail();
+    $api = \Drupal::service('rep.api_connector');
 
-    $elements = $this->getManagerOwnedRawItems('instrument');
+    $elements = $this->getManagerOwnedRawItems($elementtype);
     if (empty($elements)) {
-      $elements = $this->getKeywordRawItems('instrument');
+      $elements = $this->getKeywordRawItems($elementtype);
     }
     if (empty($elements)) {
       return NULL;
     }
 
     $itemsByUri = [];
+    $parentUriByItem = [];
+    $parentLabelByItem = [];
+    $fallbackCategoryLabelByParentUri = [];
     foreach ($elements as $el) {
       if (is_array($el)) {
         $el = (object) $el;
@@ -143,6 +295,19 @@ class TreeController extends ControllerBase {
       }
 
       $uri = (string) $el->uri;
+      $parentUri = $this->getInstanceGroupingParentUri($el, $elementtype);
+      $parentLabel = $this->getInstanceGroupingParentLabel($el, $elementtype);
+
+      $parentUriByItem[$uri] = $parentUri;
+      $parentLabelByItem[$uri] = $parentLabel;
+
+      if ($elementtype === 'component' && $parentUri !== '') {
+        $candidate = $this->normalizeComponentCategoryLabel((string) ($el->label ?? ''));
+        if ($candidate !== '' && !isset($fallbackCategoryLabelByParentUri[$parentUri])) {
+          $fallbackCategoryLabelByParentUri[$parentUri] = $candidate;
+        }
+      }
+
       $itemsByUri[$uri] = (object) [
         'uri' => $uri,
         'label' => $el->label ?? $el->hasContent ?? $uri,
@@ -152,8 +317,8 @@ class TreeController extends ControllerBase {
         'hasSIRManagerEmail' => $el->hasSIRManagerEmail ?? $managerEmail,
         'hasWebDocument' => $el->hasWebDocument ?? '',
         'hasImageUri' => $el->hasImageUri ?? '',
-        'superUri' => $el->superUri ?? '',
-        'superClassLabel' => $el->superClassLabel ?? '',
+        'superUri' => $parentUri,
+        'superClassLabel' => $parentLabel,
         'isCategory' => false,
         'children' => false,
       ];
@@ -165,18 +330,18 @@ class TreeController extends ControllerBase {
 
     $childrenCount = [];
     foreach ($itemsByUri as $item) {
-      $superUri = trim((string) ($item->superUri ?? ''));
+      $superUri = trim((string) ($parentUriByItem[$item->uri] ?? ''));
       if ($superUri === '') {
         continue;
       }
       $childrenCount[$superUri] = ($childrenCount[$superUri] ?? 0) + 1;
     }
 
-    if ($nodeUri === EntryPoints::CLASS_EP_INSTRUMENT) {
+    if ($nodeUri === $entryPointUri) {
       $root = [];
 
       foreach ($itemsByUri as $item) {
-        $superUri = trim((string) ($item->superUri ?? ''));
+        $superUri = trim((string) ($parentUriByItem[$item->uri] ?? ''));
 
         if ($superUri === '') {
           $item->children = !empty($childrenCount[$item->uri]);
@@ -186,7 +351,23 @@ class TreeController extends ControllerBase {
 
         if (!isset($itemsByUri[$superUri])) {
           if (!isset($root[$superUri])) {
-            $hintLabel = trim((string) ($item->superClassLabel ?? ''));
+            $hintLabel = trim((string) ($parentLabelByItem[$item->uri] ?? ''));
+            if ($elementtype === 'component') {
+              if ($hintLabel === '' && isset($fallbackCategoryLabelByParentUri[$superUri])) {
+                $hintLabel = $fallbackCategoryLabelByParentUri[$superUri];
+              }
+              elseif ($this->isTechnicalCategoryLabel($hintLabel) && isset($fallbackCategoryLabelByParentUri[$superUri])) {
+                $hintLabel = $fallbackCategoryLabelByParentUri[$superUri];
+              }
+            }
+
+            if (($hintLabel === '' || $this->isTechnicalCategoryLabel($hintLabel)) && $superUri !== '') {
+              $resolvedHint = $this->resolveLabelFromUriSilently($api, $superUri);
+              if ($resolvedHint !== '') {
+                $hintLabel = $this->normalizeCategoryLabelByType($resolvedHint, $elementtype);
+              }
+            }
+
             $root[$superUri] = (object) [
               'uri' => $superUri,
               'label' => $hintLabel !== '' ? $hintLabel : $this->labelFromUri($superUri),
@@ -220,7 +401,7 @@ class TreeController extends ControllerBase {
 
     $children = [];
     foreach ($itemsByUri as $item) {
-      $superUri = trim((string) ($item->superUri ?? ''));
+      $superUri = trim((string) ($parentUriByItem[$item->uri] ?? ''));
       if ($superUri !== $nodeUri) {
         continue;
       }
@@ -370,9 +551,14 @@ class TreeController extends ControllerBase {
       'platform' => EntryPoints::CLASS_EP_PLATFORM,
     ];
 
-    // Organize instrument models by category/stem chain in instance selector.
-    if ($fieldId === 'instance_type' && $elementtype === 'instrument') {
-      $items = $this->getInstrumentInstanceHierarchyItems($nodeUri);
+    // Organize model selectors by category/stem chain in instance selector.
+    $instanceHierarchyRoots = [
+      'component' => EntryPoints::CLASS_EP_COMPONENT,
+      'instrument' => EntryPoints::CLASS_EP_INSTRUMENT,
+      'platform' => EntryPoints::CLASS_EP_PLATFORM,
+    ];
+    if ($fieldId === 'instance_type' && isset($instanceHierarchyRoots[$elementtype])) {
+      $items = $this->getInstanceHierarchyItems($nodeUri, $elementtype, $instanceHierarchyRoots[$elementtype]);
       if ($items !== NULL) {
         return new JsonResponse($items);
       }
