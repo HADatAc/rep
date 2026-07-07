@@ -69,6 +69,71 @@ class FusekiAPIConnector {
   }
 
   /**
+   * Detect API responses that explicitly report an invalid element type.
+   */
+  private function responseHasInvalidElementType($response): bool {
+    if (!is_string($response)) {
+      return FALSE;
+    }
+
+    $normalizedResponse = trim($response);
+    if ($normalizedResponse === '') {
+      return FALSE;
+    }
+
+    if (stripos($normalizedResponse, 'No valid element type') !== FALSE
+      || stripos($normalizedResponse, 'invalid element type') !== FALSE
+    ) {
+      return TRUE;
+    }
+
+    $decoded = json_decode($normalizedResponse);
+    if (!is_object($decoded)) {
+      return FALSE;
+    }
+
+    $message = $decoded->body ?? '';
+    if (!is_string($message)) {
+      return FALSE;
+    }
+
+    return stripos($message, 'No valid element type') !== FALSE
+      || stripos($message, 'invalid element type') !== FALSE;
+  }
+
+  /**
+   * Execute manageremailbystudy list request for a specific element type.
+   */
+  private function listByManagerEmailByStudyForType(string $studyuri, string $elementType, string $manageremail, $pageSize, $offset) {
+    $endpoint = "/hascoapi/api/".
+      $elementType.
+      "/manageremailbystudy/".
+      rawurlencode($studyuri)."/".
+      rawurlencode($manageremail)."/".
+      $pageSize."/".
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
+   * Execute manageremailbystudy total request for a specific element type.
+   */
+  private function listSizeByManagerEmailByStudyForType(string $studyuri, string $elementType, string $manageremail) {
+    $endpoint = "/hascoapi/api/".
+      $elementType .
+      "/manageremailbystudy/total/" .
+      rawurlencode($studyuri)."/".
+      rawurlencode($manageremail);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
    * Infer named graph from a URI using the repository convention.
    */
   private function inferNamedGraphFromUri(string $uri): string {
@@ -595,32 +660,82 @@ class FusekiAPIConnector {
   }
 
   public function listByManagerEmailByStudy($studyuri, $elementType, $manageremail, $pageSize, $offset) {
-    $elementType = $this->normalizeHascoApiElementType($elementType);
-    $endpoint = "/hascoapi/api/".
-      $elementType.
-      "/manageremailbystudy/".
-      rawurlencode($studyuri)."/".
-      rawurlencode($manageremail)."/".
-      $pageSize."/".
-      $offset;
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+    $requestedElementType = trim((string) $elementType);
+    $normalizedElementType = trim((string) $this->normalizeHascoApiElementType($elementType));
+
+    $response = $this->listByManagerEmailByStudyForType(
+      (string) $studyuri,
+      $normalizedElementType,
+      (string) $manageremail,
+      $pageSize,
+      $offset
+    );
+
+    if ($this->responseHasInvalidElementType($response)
+      && strtolower($normalizedElementType) !== strtolower($requestedElementType)
+    ) {
+      $fallbackResponse = $this->listByManagerEmailByStudyForType(
+        (string) $studyuri,
+        $requestedElementType,
+        (string) $manageremail,
+        $pageSize,
+        $offset
+      );
+
+      if ($fallbackResponse !== NULL && !$this->responseHasInvalidElementType($fallbackResponse)) {
+        return $fallbackResponse;
+      }
+    }
+
+    if ($this->responseHasInvalidElementType($response)) {
+      // Some API versions do not support manageremailbystudy for workflow/
+      // process types. Fall back to manager-wide listing to keep the UI usable.
+      return $this->listByManagerEmail(
+        $requestedElementType,
+        (string) $manageremail,
+        $pageSize,
+        $offset
+      );
+    }
+
+    return $response;
   }
 
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listSizeByManagerEmailByStudy($studyuri, $elementType, $manageremail, ) {
-    $elementType = $this->normalizeHascoApiElementType($elementType);
-    $endpoint = "/hascoapi/api/".
-      $elementType .
-      "/manageremailbystudy/total/" .
-      rawurlencode($studyuri)."/".
-      rawurlencode($manageremail);
-    $method = 'GET';
-    $api_url = $this->getApiUrl();
-    $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+    $requestedElementType = trim((string) $elementType);
+    $normalizedElementType = trim((string) $this->normalizeHascoApiElementType($elementType));
+
+    $response = $this->listSizeByManagerEmailByStudyForType(
+      (string) $studyuri,
+      $normalizedElementType,
+      (string) $manageremail
+    );
+
+    if ($this->responseHasInvalidElementType($response)
+      && strtolower($normalizedElementType) !== strtolower($requestedElementType)
+    ) {
+      $fallbackResponse = $this->listSizeByManagerEmailByStudyForType(
+        (string) $studyuri,
+        $requestedElementType,
+        (string) $manageremail
+      );
+
+      if ($fallbackResponse !== NULL && !$this->responseHasInvalidElementType($fallbackResponse)) {
+        return $fallbackResponse;
+      }
+    }
+
+    if ($this->responseHasInvalidElementType($response)) {
+      // Keep compatibility with API variants that only provide manager-wide
+      // totals for this element type.
+      return $this->listSizeByManagerEmail(
+        $requestedElementType,
+        (string) $manageremail
+      );
+    }
+
+    return $response;
   }
 
   public function listByManagerEmailBySOC($socuri, $elementType, $manageremail, $pageSize, $offset) {
