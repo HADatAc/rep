@@ -3,12 +3,13 @@
 namespace Drupal\rep\Form\Associates;
 
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\rep\Vocabulary\FOAF;
 use Drupal\rep\Vocabulary\SCHEMA;
 use Drupal\rep\ListPropertyPage;
 use Drupal\rep\Constant;
 use Drupal\rep\Utils;
 use Drupal\rep\Entity\VSTOIInstance;
+use Drupal\Component\Utility\Html;
+use Drupal\Core\Render\Markup;
 
 class AssocOrganization {
 
@@ -237,6 +238,231 @@ class AssocOrganization {
     return array_slice($items, 0, $limit);
   }
 
+  private static function listAffiliatedPeople($api, string $organizationUri): array {
+    $organizationUri = trim($organizationUri);
+    if ($organizationUri === '') {
+      return [];
+    }
+
+    $total = self::parseTotalValue($api->getTotalAffiliations($organizationUri));
+    if ($total <= 0) {
+      return [];
+    }
+
+    $target = min($total, self::INSTANCE_FETCH_LIMIT);
+    $pageSize = self::INSTANCE_FETCH_PAGE_SIZE;
+    $offset = 0;
+    $indexed = [];
+
+    while ($offset < $target) {
+      $chunk = self::parseListBody($api->getAffiliations($organizationUri, $pageSize, $offset));
+      if (empty($chunk)) {
+        break;
+      }
+
+      foreach ($chunk as $person) {
+        if (!is_object($person) || empty($person->uri)) {
+          continue;
+        }
+        $indexed[(string) $person->uri] = $person;
+      }
+
+      if (count($chunk) < $pageSize) {
+        break;
+      }
+
+      $offset += $pageSize;
+    }
+
+    $items = array_values($indexed);
+    usort($items, function ($a, $b) {
+      return strcasecmp(self::extractPersonLabel($a), self::extractPersonLabel($b));
+    });
+
+    return array_slice($items, 0, $target);
+  }
+
+  private static function extractPersonLabel($person): string {
+    if (!is_object($person)) {
+      return '';
+    }
+
+    $label = trim((string) ($person->label ?? ''));
+    if ($label !== '') {
+      return $label;
+    }
+
+    $name = self::extractPersonName($person);
+    if ($name !== '') {
+      return $name;
+    }
+
+    $uri = trim((string) ($person->uri ?? ''));
+    return ($uri !== '') ? Utils::namespaceUri($uri) : '';
+  }
+
+  private static function extractPersonName($person): string {
+    if (!is_object($person)) {
+      return '';
+    }
+
+    $name = trim((string) ($person->name ?? ''));
+    if ($name !== '') {
+      return $name;
+    }
+
+    $givenName = trim((string) ($person->givenName ?? ''));
+    $familyName = trim((string) ($person->familyName ?? ''));
+    return trim($givenName . ' ' . $familyName);
+  }
+
+  private static function extractPersonEmail($person): string {
+    if (!is_object($person)) {
+      return '';
+    }
+
+    foreach (['mbox', 'hasEmail', 'email'] as $field) {
+      if (!isset($person->{$field})) {
+        continue;
+      }
+
+      $value = $person->{$field};
+      if (is_string($value)) {
+        $email = self::normalizeEmail($value);
+        if ($email !== '') {
+          return $email;
+        }
+      }
+      elseif (is_array($value)) {
+        foreach ($value as $entry) {
+          if (!is_string($entry)) {
+            continue;
+          }
+          $email = self::normalizeEmail($entry);
+          if ($email !== '') {
+            return $email;
+          }
+        }
+      }
+    }
+
+    return '';
+  }
+
+  private static function buildPeopleRows(array $items): array {
+    $rows = [];
+    $index = 0;
+
+    foreach ($items as $person) {
+      if (!is_object($person)) {
+        continue;
+      }
+
+      $uri = trim((string) ($person->uri ?? ''));
+      if ($uri === '') {
+        continue;
+      }
+
+      $label = self::extractPersonLabel($person);
+      if ($label === '') {
+        $label = Utils::namespaceUri($uri);
+      }
+
+      $name = self::extractPersonName($person);
+      $email = self::extractPersonEmail($person);
+      $rowKey = $uri !== '' ? $uri : ('person_' . $index);
+      $index++;
+
+      $rows[$rowKey] = [
+        'person_uri' => Markup::create(Utils::describeAnchor($uri, Utils::namespaceUri($uri))),
+        'person_label' => Markup::create(Utils::describeAnchor($uri, $label)),
+        'person_name' => Html::escape($name),
+        'person_email' => Html::escape($email),
+      ];
+    }
+
+    return $rows;
+  }
+
+  private static function appendPeopleSection(array &$form, string $sectionKey, string $title, array $items): void {
+    if (empty($items)) {
+      return;
+    }
+
+    $t = \Drupal::service('string_translation');
+    $searchInputId = $sectionKey . '-search-input';
+    $searchWrapId = $sectionKey . '-search-wrap';
+    $rows = self::buildPeopleRows($items);
+
+    if (empty($rows)) {
+      return;
+    }
+
+    $form[$sectionKey] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['rep-describe-instance-section'],
+        'data-rep-instance-section' => '1',
+      ],
+    ];
+
+    $form[$sectionKey]['begin'] = [
+      '#type' => 'markup',
+      '#markup' => $t->translate(
+        '<div class="rep-instance-title-row"><b>@title (total of @total):</b><button type="button" class="btn btn-default btn-xs rep-instance-search-toggle" data-rep-instance-search-toggle="1" aria-expanded="false" aria-controls="@controls" title="@searchTitle"><i class="fa fa-search" aria-hidden="true"></i><span class="sr-only">@searchTitle</span></button></div>',
+        [
+          '@title' => $title,
+          '@total' => (string) count($rows),
+          '@controls' => $searchWrapId,
+          '@searchTitle' => (string) $t->translate('Search by label'),
+        ]
+      ),
+    ];
+
+    $form[$sectionKey]['search'] = [
+      '#type' => 'markup',
+      '#markup' => $t->translate(
+        '<div id="@id" class="rep-instance-search-wrap" data-rep-instance-search-wrap="1"><label class="sr-only" for="@inputId">@label</label><input id="@inputId" data-rep-instance-search-input="1" type="text" class="form-control input-sm" placeholder="@placeholder" autocomplete="off"></div>',
+        [
+          '@id' => $searchWrapId,
+          '@inputId' => $searchInputId,
+          '@label' => (string) $t->translate('Search by label'),
+          '@placeholder' => (string) $t->translate('Search by label'),
+        ]
+      ),
+    ];
+
+    $form[$sectionKey]['table'] = [
+      '#type' => 'table',
+      '#header' => [
+        'person_uri' => t('URI'),
+        'person_label' => t('Label'),
+        'person_name' => t('Name'),
+        'person_email' => t('Email'),
+      ],
+      '#rows' => $rows,
+      '#attributes' => [
+        'class' => ['rep-instance-table'],
+        'data-rep-instance-table' => '1',
+        'data-rep-page-size' => (string) self::INSTANCE_PAGE_SIZE,
+      ],
+      '#empty' => t('No people found'),
+    ];
+
+    $form[$sectionKey]['pagination'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['rep-instance-pagination'],
+        'data-rep-instance-pagination' => '1',
+      ],
+    ];
+
+    $form[$sectionKey]['end'] = [
+      '#type' => 'markup',
+      '#markup' => $t->translate('<br>'),
+    ];
+  }
+
   private static function appendInstanceSection(array &$form, string $sectionKey, string $instanceType, string $title, array $items) {
     if (empty($items)) {
       return;
@@ -356,35 +582,15 @@ class AssocOrganization {
     /*
       *    ORGANIZATION's PEOPLE
       */
-    $rawAffiliations = $api->getAffiliations($element->uri,Constant::TOT_PER_PAGE,0);
-    if ($rawAffiliations != NULL) {
-      $affiliations = $api->parseObjectResponse($rawAffiliations,'getAffiliations');
-      if ($affiliations != NULL) {
-        $totalAffiliations = $api->parseTotalResponse($api->getTotalAffiliations($element->uri),'getTotalAffiliations');
-        $form['beginAffiliations'] = [
-          '#type' => 'markup',
-          '#markup' => $t->translate("<b>Affiliated People (total of " . $totalAffiliations . "):</b><ul>"),
-        ];
-        foreach ($affiliations as $propertyNameAffiliations => $propertyValueAffiliations) {
-          $form[$propertyNameAffiliations] = [
-            '#type' => 'markup',
-            '#markup' => $t->translate("<li>" . Utils::link($propertyValueAffiliations->label,$propertyValueAffiliations->uri) . " - " . $propertyValueAffiliations->name . "</li>"),
-          ];
-        }
-        if ($totalAffiliations > Constant::TOT_PER_PAGE) {
-          $link = ListPropertyPage::link($element,FOAF::MEMBER,NULL,1,20);
-          $form['moreElements'] = [
-            '#type' => 'markup',
-            '#markup' => '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm more-button" '.
-                        'data-dialog-type="modal" '.
-                        'data-dialog-options=\'{"width": 700}\' role="button">(More)</a>',
-          ];
-        }
-        $form['endAffiliations'] = [
-          '#type' => 'markup',
-          '#markup' => $t->translate("</ul><br>"),
-        ];
-      }
+    $affiliations = self::listAffiliatedPeople($api, (string) $element->uri);
+    if (!empty($affiliations)) {
+      $form['#attached']['library'][] = 'rep/describe_instance_tables';
+      self::appendPeopleSection(
+        $form,
+        'org_affiliated_people',
+        'Affiliated People',
+        $affiliations
+      );
     }
     /*
      *    ORGANIZATION's POSTAL ADDRESSES

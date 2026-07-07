@@ -1057,9 +1057,19 @@ class REPSelectMTForm extends FormBase {
     $deleted = 0;
     $failed = 0;
 
-    foreach ($uris as $uri) {
+    foreach ($uris as $raw_uri) {
+      $uri = Utils::plainUri($raw_uri) ?: $raw_uri;
+
       // Resolve template (best-effort) so we can also clean up its cached DataFile.
       $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
+      if (!is_object($mt) && $raw_uri !== $uri) {
+        $mt = $api->parseObjectResponse($api->getUri($raw_uri), 'getUri');
+      }
+
+      $effective_uri = $uri;
+      if (is_object($mt) && isset($mt->uri) && is_string($mt->uri) && $mt->uri !== '') {
+        $effective_uri = $mt->uri;
+      }
 
       $datafileUri = NULL;
       $cachedFileId = NULL;
@@ -1087,43 +1097,57 @@ class REPSelectMTForm extends FormBase {
         }
       }
 
-      // 1) Delete the Metadata Template / WKF itself (this is what removes it from the list).
-      $deleteResult = $api->parseObjectResponse($api->elementDel($this->element_type, $uri), 'elementDel');
-      if ($deleteResult !== NULL) {
+      // 1) Delete the Metadata Template / WKF itself (expected path for all MTs).
+      $deleteConfirmed = FALSE;
+      $deleteResult = $api->parseObjectResponse($api->elementDel($this->element_type, $effective_uri), 'elementDel');
+      if ($this->deleteResponseIndicatesSuccess($deleteResult) && $this->confirmUriDeleted($effective_uri)) {
+        $deleteConfirmed = TRUE;
+      }
+
+      // Some deployments keep WKF visible after elementDel("wkf", ...).
+      // Fallback to process deletion and re-verify.
+      if (!$deleteConfirmed && $this->element_type === 'wkf') {
+        $processDeleteResult = $api->parseObjectResponse($api->processDel($effective_uri), 'processDel');
+        if ($this->deleteResponseIndicatesSuccess($processDeleteResult) && $this->confirmUriDeleted($effective_uri)) {
+          $deleteConfirmed = TRUE;
+        }
+      }
+
+      if ($deleteConfirmed) {
         $deleted++;
+
+        // 2) Best-effort cleanup: delete associated DataFile (if known).
+        if (!empty($datafileUri)) {
+          $api->parseObjectResponse($api->datafileDel($datafileUri), 'datafileDel');
+        }
+
+        // 3) Best-effort cleanup: delete cached Drupal File entity + binary.
+        if (!empty($cachedFileId)) {
+          $file = File::load($cachedFileId);
+          if ($file) {
+            $file_uri = $file->getFileUri();
+            if (!empty($file_uri)) {
+              $real_path = $file_system->realpath($file_uri);
+              if ($real_path && file_exists($real_path)) {
+                try {
+                  $file_system->delete($file_uri);
+                }
+                catch (\Throwable $e) {
+                  // ignore
+                }
+              }
+            }
+            try {
+              $file->delete();
+            }
+            catch (\Throwable $e) {
+              // ignore
+            }
+          }
+        }
       }
       else {
         $failed++;
-      }
-
-      // 2) Best-effort cleanup: delete associated DataFile (if known).
-      if (!empty($datafileUri)) {
-        $api->parseObjectResponse($api->datafileDel($datafileUri), 'datafileDel');
-      }
-
-      // 3) Best-effort cleanup: delete cached Drupal File entity + binary.
-      if (!empty($cachedFileId)) {
-        $file = File::load($cachedFileId);
-        if ($file) {
-          $file_uri = $file->getFileUri();
-          if (!empty($file_uri)) {
-            $real_path = $file_system->realpath($file_uri);
-            if ($real_path && file_exists($real_path)) {
-              try {
-                $file_system->delete($file_uri);
-              }
-              catch (\Throwable $e) {
-                // ignore
-              }
-            }
-          }
-          try {
-            $file->delete();
-          }
-          catch (\Throwable $e) {
-            // ignore
-          }
-        }
       }
     }
 
@@ -1139,6 +1163,62 @@ class REPSelectMTForm extends FormBase {
 
     \Drupal::service('cache.default')->invalidateAll();
     $form_state->setRebuild();
+  }
+
+  /**
+   * True only when delete response represents a real positive result.
+   */
+  protected function deleteResponseIndicatesSuccess($deleteResult): bool {
+    if ($deleteResult === NULL) {
+      return FALSE;
+    }
+
+    if (is_array($deleteResult)) {
+      return !empty($deleteResult);
+    }
+
+    if (is_string($deleteResult)) {
+      $normalized = trim($deleteResult);
+      if ($normalized === '') {
+        return FALSE;
+      }
+      if (preg_match('/^No\\b.*\\b(has|have)\\sbeen\\sfound\\.?$/i', $normalized)) {
+        return FALSE;
+      }
+      return TRUE;
+    }
+
+    return TRUE;
+  }
+
+  /**
+   * Confirms deletion against a fresh connector instance to avoid getUri cache.
+   */
+  protected function confirmUriDeleted(string $uri): bool {
+    $uri = Utils::plainUri($uri) ?: $uri;
+    $freshApi = new \Drupal\rep\FusekiAPIConnector(\Drupal::service('http_client_factory'));
+    $raw = $freshApi->getUri($uri);
+
+    if (!is_string($raw) || trim($raw) === '') {
+      return FALSE;
+    }
+
+    $obj = json_decode($raw);
+    if (!is_object($obj)) {
+      return FALSE;
+    }
+
+    if (!empty($obj->isSuccessful)) {
+      // URI still resolvable, so delete was not effective.
+      return FALSE;
+    }
+
+    $message = isset($obj->body) && is_string($obj->body) ? trim($obj->body) : '';
+    if ($message !== '' && preg_match('/^No\\b.*\\b(has|have)\\sbeen\\sfound\\.?$/i', $message)) {
+      return TRUE;
+    }
+
+    return FALSE;
   }
 
   /**
