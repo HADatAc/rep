@@ -1213,12 +1213,38 @@ class REPSelectMTForm extends FormBase {
       return FALSE;
     }
 
+    // A backend failure (e.g. triplestore_unavailable) carries an `error` object and no string
+    // body, so $message stays empty and we correctly refuse to conclude anything.
     $message = isset($obj->body) && is_string($obj->body) ? trim($obj->body) : '';
-    if ($message !== '' && preg_match('/^No\\b.*\\b(has|have)\\sbeen\\sfound\\.?$/i', $message)) {
+    return self::messageIndicatesUriAbsent($message);
+  }
+
+  /**
+   * Whether a hascoapi failure message means "this URI no longer exists".
+   *
+   * hascoapi signals not-found with prose, and phrases it differently per endpoint:
+   *   SIRElementAPI::deleteElement -> "No element with URI [x] has been found"
+   *   URIPage::getUri              -> "Uri [x] returned no object from the knowledge graph"
+   * confirmUriDeleted() asks getUri(), so it must accept the second phrasing too. Everything
+   * else (invalid URI, untyped instance, JSON error) means the URI is still there, or that we
+   * cannot tell -- both must fail closed.
+   *
+   * ponytail: prose matching, because hascoapi returns HTTP 200 for every failure and has no
+   * machine-readable error code on this path. Replace with a status/code check once it does
+   * (see HASCOAPI_WKF_TASK_RESOLUTION_BUG_REPORT_2026-07-10.md, F2).
+   *
+   * Known ceiling: URIPage emits the "returned no object" message both for a genuinely absent
+   * URI and for one whose hasco:hascoType it cannot dispatch (report F1). Metadata templates
+   * dispatch fine, so this is safe for the delete flow; do not reuse it for Tasks until F1 lands.
+   */
+  public static function messageIndicatesUriAbsent(string $message): bool {
+    if ($message === '') {
+      return FALSE;
+    }
+    if (preg_match('/^No\\b.*\\b(has|have)\\sbeen\\sfound\\.?$/i', $message)) {
       return TRUE;
     }
-
-    return FALSE;
+    return stripos($message, 'returned no object from the knowledge graph') !== FALSE;
   }
 
   /**
