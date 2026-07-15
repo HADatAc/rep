@@ -362,8 +362,13 @@ class Utils {
       return '';
     }
 
-    $tables     = new Tables();
-    $namespaces = $tables->getNamespaces();
+    // Memoize the namespace map for the request. getNamespaces() is an API/store
+    // round-trip; this method is called many times per page (e.g. once per row
+    // of the Sub-Tasks table), so reloading it every call was a real bottleneck.
+    static $namespaces = NULL;
+    if ($namespaces === NULL) {
+      $namespaces = (new Tables())->getNamespaces();
+    }
 
     foreach ($namespaces as $abbrev => $ns) {
       // Skip any empty entries.
