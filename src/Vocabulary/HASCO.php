@@ -32,6 +32,7 @@ use PHPUnit\Event\Application\Started;
     const STREAM                        = HASCO::HASCO . "Stream";
     const STREAMTOPIC                   = HASCO::HASCO . 'StreamTopic';
     const STUDY                         = HASCO::HASCO . "Study";
+    const PROCESS_BASED_STUDY           = HASCO::HASCO . "ProcessBasedStudy";
     const STUDY_OBJECT                  = HASCO::HASCO . "StudyObject";
     const STUDY_OBJECT_COLLECTION       = HASCO::HASCO . "StudyObjectCollection";
     const STUDY_ROLE                    = HASCO::HASCO . "StudyRole";
