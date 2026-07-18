@@ -105,11 +105,14 @@ class FusekiAPIConnector {
    * Execute manageremailbystudy list request for a specific element type.
    */
   private function listByManagerEmailByStudyForType(string $studyuri, string $elementType, string $manageremail, $pageSize, $offset) {
+    // Use '_' placeholder if manageremail is empty (matches API convention for "any")
+    $managerParam = (trim($manageremail) === '' || $manageremail === NULL) ? '_' : $manageremail;
+    
     $endpoint = "/hascoapi/api/".
       $elementType.
       "/manageremailbystudy/".
       rawurlencode($studyuri)."/".
-      rawurlencode($manageremail)."/".
+      rawurlencode($managerParam)."/".
       $pageSize."/".
       $offset;
     $method = 'GET';
@@ -122,11 +125,14 @@ class FusekiAPIConnector {
    * Execute manageremailbystudy total request for a specific element type.
    */
   private function listSizeByManagerEmailByStudyForType(string $studyuri, string $elementType, string $manageremail) {
+    // Use '_' placeholder if manageremail is empty (matches API convention for "any")
+    $managerParam = (trim($manageremail) === '' || $manageremail === NULL) ? '_' : $manageremail;
+    
     $endpoint = "/hascoapi/api/".
       $elementType .
       "/manageremailbystudy/total/" .
       rawurlencode($studyuri)."/".
-      rawurlencode($manageremail);
+      rawurlencode($managerParam);
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

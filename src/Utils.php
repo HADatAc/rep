@@ -861,6 +861,22 @@ class Utils {
   }
 
   /**
+   * Retrieves the previous URL without deleting the tracking record.
+   * Use this when you need to check the previous URL but will call trackingGetPreviousUrl later.
+   */
+  public static function trackingPeekPreviousUrl($uid, $current_url) {
+    $connection = Database::getConnection();
+    $query = $connection->select('user_tracking', 'ut')
+      ->fields('ut', ['previous_url'])
+      ->condition('uid', $uid)
+      ->condition('current_url', $current_url)
+      ->orderBy('created', 'DESC')
+      ->range(0, 1);
+
+    return $query->execute()->fetchField();
+  }
+
+  /**
    * TRIM AUTOCOMPLETE LABELS
    * LABELS ARE LIMITED TO 128 chars
    */
