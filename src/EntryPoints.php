@@ -28,6 +28,9 @@
     const CLASS_EP_TASK                      = HASCO::TASK_CLASS_ENTRY_POINT;
     const CLASS_EP_TASK_TEMPORAL_DEPENDENCY  = HASCO::TASK_TEMPORAL_DEPENDENCY_CLASS_ENTRY_POINT;
 
+    // ONTOLOGY ENTRY POINTS  
+    const CLASS_EP_NCIT                      = 'http://purl.obolibrary.org/obo/NCIT_C97325'; // NCIT Manufactured Object (root in PMSR subset)
+    const CLASS_EP_UBERON                    = 'http://purl.obolibrary.org/obo/UBERON_0001062'; // UBERON Anatomical Entity
 
     // INSTANCES
     const INSTANCE_EP_INSTRUMENT             = HASCO::INSTRUMENT_INSTANCE_ENTRY_POINT;

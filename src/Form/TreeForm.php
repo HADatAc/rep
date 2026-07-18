@@ -126,6 +126,8 @@ class TreeForm extends FormBase {
       'person' => ["Person", EntryPoints::CLASS_EP_PERSON],
       'place' => ["Place", EntryPoints::CLASS_EP_PLACE],
       'organization' => ["Organization", EntryPoints::CLASS_EP_ORGANIZATION],
+      'ncit' => ["Procedure Type (NCIT)", EntryPoints::CLASS_EP_NCIT],
+      'uberon' => ["Anatomical Category (UBERON)", EntryPoints::CLASS_EP_UBERON],
     ];
 
     $branches_param = [
@@ -243,6 +245,18 @@ class TreeForm extends FormBase {
         'uri' => EntryPoints::INSTANCE_EP_UNIT,
         'label' => 'Unit',
         'uriNamespace' => EntryPoints::INSTANCE_EP_UNIT,
+      ],
+      [
+        'id' => 'ncit',
+        'uri' => EntryPoints::CLASS_EP_NCIT,
+        'label' => 'Procedure Type (NCIT)',
+        'uriNamespace' => EntryPoints::CLASS_EP_NCIT,
+      ],
+      [
+        'id' => 'uberon',
+        'uri' => EntryPoints::CLASS_EP_UBERON,
+        'label' => 'Anatomical Category (UBERON)',
+        'uriNamespace' => EntryPoints::CLASS_EP_UBERON,
       ],
     ];
 
