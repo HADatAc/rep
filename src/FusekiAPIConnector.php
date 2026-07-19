@@ -2649,7 +2649,7 @@ class FusekiAPIConnector {
     }
   }
 
-  private function fusekiPutGraph(string $graphUri, string $content, string $contentType): array {
+  public function fusekiPutGraph(string $graphUri, string $content, string $contentType): array {
     $client = new Client();
     $last = ['url' => null, 'status' => null, 'body' => null];
 
