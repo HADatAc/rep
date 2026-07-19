@@ -2708,6 +2708,66 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  /**
+   * Ingest ontology for a specific namespace via hascoapi.
+   * 
+   * @param string $namespaceUri The namespace URI (e.g., http://pmsr.net/ont/pmsr)
+   * @param string $ttlContent The TTL file content
+   * @param string $mimeType The MIME type (default: text/turtle)
+   * @return string JSON response from API
+   */
+  public function repoIngestNamespaceOntology($namespaceUri, $ttlContent, $mimeType = 'text/turtle') {
+    $client = new Client([
+      'timeout' => 300, // 5 minutes for large ontologies
+      'connect_timeout' => 10,
+    ]);
+
+    $endpoint = "/hascoapi/api/repo/namespace/ingest/" . rawurlencode($namespaceUri);
+    $api_url = $this->getApiUrl();
+    $url = rtrim($api_url, '/') . $endpoint;
+
+    // Get authentication header
+    $this->getHeader();
+    $authHeader = $this->bearer ?? '';
+    if ($authHeader !== '' && stripos($authHeader, 'Bearer ') !== 0) {
+      $authHeader = 'Bearer ' . $authHeader;
+    }
+
+    $headers = [
+      'Content-Type' => $mimeType,
+      'Accept' => 'application/json',
+    ];
+    if ($authHeader !== '') {
+      $headers['Authorization'] = $authHeader;
+    }
+
+    try {
+      // Create temporary file for the ontology content
+      $tempFile = tempnam(sys_get_temp_dir(), 'ont_');
+      file_put_contents($tempFile, $ttlContent);
+
+      $response = $client->request('POST', $url, [
+        'headers' => $headers,
+        'body' => fopen($tempFile, 'r'),
+      ]);
+
+      $body = (string) $response->getBody();
+      
+      // Clean up temp file
+      @unlink($tempFile);
+
+      return $body;
+
+    } catch (\Throwable $e) {
+      @unlink($tempFile ?? '');
+      
+      return json_encode([
+        'isSuccessful' => false,
+        'body' => 'Failed to ingest ontology: ' . $e->getMessage(),
+      ]);
+    }
+  }
+
   public function repoDeleteNamespaceTriples() {
     $endpoint = "/hascoapi/api/repo/ont/delete";
     $method = "GET";
@@ -3900,6 +3960,38 @@ class FusekiAPIConnector {
   public function listInstancesByKeyword($keyword) {
     $endpoint = "/hascoapi/api/instances/keyword/http%3A%2F%2Fqudt.org%2Fschema%2Fqudt%2FUnit/".
       rawurlencode($keyword);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+  public function statisticsInstrumentCount() {
+    $endpoint = "/hascoapi/api/statistics/instruments/count";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+  public function statisticsProceduresCount() {
+    $endpoint = "/hascoapi/api/statistics/procedures/count";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+  public function statisticsAnatomyCount() {
+    $endpoint = "/hascoapi/api/statistics/anatomy/count";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+  public function statisticsMedicalDevicesCount() {
+    $endpoint = "/hascoapi/api/statistics/medical-devices/count";
     $method = 'GET';
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();

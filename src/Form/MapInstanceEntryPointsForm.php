@@ -156,7 +156,7 @@ class MapInstanceEntryPointsForm extends FormBase {
 
     // Attach JS library and pass endpoints/settings to JS.
     $base = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://' : 'http://')
-      . \Drupal::request()->getHost()
+      . \Drupal::request()->getHttpHost()
       . \Drupal::request()->getBaseUrl();
 
     $form['#attached']['library'][] = 'rep/map_entry_points';

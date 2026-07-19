@@ -114,7 +114,7 @@ class TreeForm extends FormBase {
       'place' => ["Place", EntryPoints::CLASS_EP_PLACE],
       'platform' => [ucfirst($preferred_platform), EntryPoints::CLASS_EP_PLATFORM],
       'processstem' => [ucfirst($preferred_process)." Stem", VSTOI::PROCESS_STEM],
-      'workflowstem' => [ucfirst($preferred_process)." Stem", VSTOI::PROCESS_STEM],
+      'workflowstem' => [ucfirst($preferred_process)." Stem", EntryPoints::CLASS_EP_PMSR],
       // 'questionnaire' => ["Questionnaire", EntryPoints::EP_QUESTIONNAIRE],
       'responseoption' => ["Response Option", EntryPoints::CLASS_EP_RESPONSE_OPTION],
       'study' => [ucfirst($preferred_study), EntryPoints::CLASS_EP_STUDY],
@@ -128,6 +128,9 @@ class TreeForm extends FormBase {
       'organization' => ["Organization", EntryPoints::CLASS_EP_ORGANIZATION],
       'ncit' => ["Procedure Type (NCIT)", EntryPoints::CLASS_EP_NCIT],
       'uberon' => ["Anatomical Category (UBERON)", EntryPoints::CLASS_EP_UBERON],
+      'anatomicalpart' => ["Anatomical Part", EntryPoints::CLASS_EP_ANATOMICAL_PART],
+      'process' => ["Process", EntryPoints::CLASS_EP_PROCESS],
+      'medicaldevice' => ["Medical Device", EntryPoints::CLASS_EP_MEDICAL_DEVICE],
     ];
 
     $branches_param = [
@@ -206,9 +209,9 @@ class TreeForm extends FormBase {
       ],
       [
         'id' => 'workflowstem',
-        'uri' => VSTOI::PROCESS_STEM,
+        'uri' => EntryPoints::CLASS_EP_PMSR,
         'label' => ucfirst($preferred_process).' Stem',
-        'uriNamespace' => VSTOI::PROCESS_STEM,
+        'uriNamespace' => EntryPoints::CLASS_EP_PMSR,
       ],
       // [
       //   'id' => 'questionnaire',
@@ -257,6 +260,24 @@ class TreeForm extends FormBase {
         'uri' => EntryPoints::CLASS_EP_UBERON,
         'label' => 'Anatomical Category (UBERON)',
         'uriNamespace' => EntryPoints::CLASS_EP_UBERON,
+      ],
+      [
+        'id' => 'anatomicalpart',
+        'uri' => EntryPoints::CLASS_EP_ANATOMICAL_PART,
+        'label' => 'Anatomical Part',
+        'uriNamespace' => EntryPoints::CLASS_EP_ANATOMICAL_PART,
+      ],
+      [
+        'id' => 'process',
+        'uri' => EntryPoints::CLASS_EP_PROCESS,
+        'label' => 'Process',
+        'uriNamespace' => EntryPoints::CLASS_EP_PROCESS,
+      ],
+      [
+        'id' => 'medicaldevice',
+        'uri' => EntryPoints::CLASS_EP_MEDICAL_DEVICE,
+        'label' => 'Medical Device',
+        'uriNamespace' => EntryPoints::CLASS_EP_MEDICAL_DEVICE,
       ],
     ];
 
@@ -324,7 +345,15 @@ class TreeForm extends FormBase {
     // dpm($api->getUri($nodeUri), 'Debug $nodeUri'); // See the URI being used
     // dpm($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'), 'Debug $api->parseObjectResponse'); // See the response from the API
     $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
-    if ($this->getRootNode() == NULL && in_array($firstType, ['processstem', 'workflowstem'], true)) {
+    if ($this->getRootNode() == NULL && $firstType === 'workflowstem') {
+      $nodeUri = EntryPoints::CLASS_EP_PMSR;
+      $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
+      if (!empty($branches_param)) {
+        $branches_param[0]['uri'] = EntryPoints::CLASS_EP_PMSR;
+        $branches_param[0]['uriNamespace'] = EntryPoints::CLASS_EP_PMSR;
+      }
+    }
+    if ($this->getRootNode() == NULL && $firstType === 'processstem') {
       $nodeUri = VSTOI::PROCESS_STEM;
       $this->setRootNode($api->parseObjectResponse($api->getUri($nodeUri), 'getUri'));
       if (!empty($branches_param)) {
@@ -348,7 +377,7 @@ class TreeForm extends FormBase {
 
     $tables = new Tables;
 
-    $base_url = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://':'http://'). \Drupal::request()->getHost() . \Drupal::request()->getBaseUrl();
+    $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'baseUrl' => $base_url,
       'username' => \Drupal::currentUser()->getAccountName(),

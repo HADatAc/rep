@@ -208,10 +208,17 @@ class OntController extends ControllerBase {
       $messenger->addStatus($this->t('Application Ontology Successfully Submitted'));
     }
 
+    // Handle different return pathways
     if ($returnPathway == 'rep.ont_edit') {
       return $this->redirect($returnPathway, ['filename' => $rep_ns.'.ttl']);
     } elseif ($returnPathway == 'rep.map_entry_points') {
       return $this->redirect($returnPathway);
+    } elseif ($returnPathway == 'pmsr.ingest_ontologies') {
+      // Return a simple response for programmatic calls (no redirect)
+      return new Response('Ontology ingested', $res && $res->getStatusCode() < 400 ? 200 : 500);
+    } else {
+      // Default: redirect to the specified route or return simple response
+      return new Response('Ontology ingested', $res && $res->getStatusCode() < 400 ? 200 : 500);
     }
   }
 }

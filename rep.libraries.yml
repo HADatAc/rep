@@ -91,6 +91,7 @@ map_entry_points:
   css:
     theme:
       https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css: {}
+      css/map_entry_points.css: {}
   js:
     https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js: {}
     js/rep_map.js: {}

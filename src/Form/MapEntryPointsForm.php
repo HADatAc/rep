@@ -158,7 +158,7 @@ class MapEntryPointsForm extends FormBase {
 
     // Attach JS library and pass endpoints/settings to JS.
     $base = (\Drupal::request()->headers->get('x-forwarded-proto') === 'https' ? 'https://' : 'http://')
-      . \Drupal::request()->getHost()
+      . \Drupal::request()->getHttpHost()
       . \Drupal::request()->getBaseUrl();
 
     $form['#attached']['library'][] = 'rep/map_entry_points';
@@ -293,6 +293,28 @@ class MapEntryPointsForm extends FormBase {
     if (empty($safe_node_uris)) {
       $this->messenger()->addError($this->t('No valid nodes were selected.'));
       return;
+    }
+
+    // VERIFICATION: Check ontology triple counts and entry point mappings
+    $verification_result = $this->verifyOntologiesAndEntryPoints();
+    if (!$verification_result['success']) {
+      $this->messenger()->addError($this->t('Ontology verification failed:'));
+      foreach ($verification_result['errors'] as $error) {
+        $this->messenger()->addError($error);
+      }
+      if (!empty($verification_result['warnings'])) {
+        foreach ($verification_result['warnings'] as $warning) {
+          $this->messenger()->addWarning($warning);
+        }
+      }
+      return;
+    }
+    
+    // Display verification success messages
+    if (!empty($verification_result['messages'])) {
+      foreach ($verification_result['messages'] as $message) {
+        $this->messenger()->addStatus($message);
+      }
     }
 
     $fs = \Drupal::service('file_system');
@@ -498,6 +520,166 @@ class MapEntryPointsForm extends FormBase {
     );
 
     return $version_dir_uri;
+  }
+
+  /**
+   * Verify ontology triple counts and entry point mappings.
+   * 
+   * Checks:
+   * 1. PMSR, UBERON, and NCIT ontologies have the expected triple counts
+   * 2. Entry point mappings exist for all three ontologies
+   * 
+   * @return array
+   *   Array with keys: 'success' (bool), 'errors' (array), 'warnings' (array), 'messages' (array)
+   */
+  private function verifyOntologiesAndEntryPoints(): array {
+    $result = [
+      'success' => true,
+      'errors' => [],
+      'warnings' => [],
+      'messages' => [],
+    ];
+
+    // Expected triple counts for each ontology
+    $expected_counts = [
+      'pmsr' => ['min' => 1800, 'max' => 1900, 'label' => 'PMSR'],
+      'uberon' => ['min' => 180000, 'max' => 181000, 'label' => 'UBERON'],
+      'ncit' => ['min' => 21000, 'max' => 22000, 'label' => 'NCIT'],
+    ];
+
+    // Expected entry point mappings
+    $expected_mappings = [
+      'pmsr' => [
+        'uri' => 'http://pmsr.net/ont/pmsr#SimulationProcessStem',
+        'entry_point' => 'http://hadatac.org/ont/hasco/ProcessEntryPoint',
+        'label' => 'PMSR Simulation Process Stem',
+      ],
+      'uberon' => [
+        'uri' => 'http://purl.obolibrary.org/obo/UBERON_0001062',
+        'entry_point' => 'http://hadatac.org/ont/hasco/AnatomicalPartEntryPoint',
+        'label' => 'UBERON Anatomical Entity',
+      ],
+      'ncit' => [
+        'uri' => 'http://purl.obolibrary.org/obo/NCIT_C97325',
+        'entry_point' => 'http://hadatac.org/ont/hasco/MedicalDeviceEntryPoint',
+        'label' => 'NCIT Manufactured Object',
+      ],
+    ];
+
+    // Step 1: Verify triple counts using namespace API
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $namespace_response = $api->repoNamespacesByLabel();
+      $namespace_data = json_decode($namespace_response);
+
+      if (!$namespace_data || !$namespace_data->isSuccessful || !is_array($namespace_data->body)) {
+        $result['success'] = false;
+        $result['errors'][] = $this->t('Failed to retrieve namespace data from API.');
+        return $result;
+      }
+
+      // Build a map of namespace label -> triple count
+      $namespace_counts = [];
+      foreach ($namespace_data->body as $ns) {
+        if (isset($ns->label) && isset($ns->numberOfLoadedTriples)) {
+          $namespace_counts[strtolower($ns->label)] = $ns->numberOfLoadedTriples;
+        }
+      }
+
+      // Verify each ontology's triple count
+      foreach ($expected_counts as $key => $expected) {
+        if (!isset($namespace_counts[$key])) {
+          $result['success'] = false;
+          $result['errors'][] = $this->t('@label ontology not found in namespace registry.', [
+            '@label' => $expected['label'],
+          ]);
+          continue;
+        }
+
+        $actual_count = $namespace_counts[$key];
+        
+        if ($actual_count == 0) {
+          $result['success'] = false;
+          $result['errors'][] = $this->t('@label ontology has 0 triples. Please ingest the ontology first.', [
+            '@label' => $expected['label'],
+          ]);
+        } elseif ($actual_count < $expected['min'] || $actual_count > $expected['max']) {
+          $result['warnings'][] = $this->t('@label ontology has @count triples (expected @min-@max). This may indicate an incomplete ingestion.', [
+            '@label' => $expected['label'],
+            '@count' => number_format($actual_count),
+            '@min' => number_format($expected['min']),
+            '@max' => number_format($expected['max']),
+          ]);
+        } else {
+          $result['messages'][] = $this->t('✓ @label ontology verified: @count triples', [
+            '@label' => $expected['label'],
+            '@count' => number_format($actual_count),
+          ]);
+        }
+      }
+
+    } catch (\Exception $e) {
+      $result['success'] = false;
+      $result['errors'][] = $this->t('Error verifying triple counts: @msg', ['@msg' => $e->getMessage()]);
+      return $result;
+    }
+
+    // Step 2: Verify entry point mappings exist in hasco.ttl
+    try {
+      $fs = \Drupal::service('file_system');
+      $ttl_uri = self::ONT_ROOT_DIR . '/' . self::ONT_TTL_FILENAME;
+      $ttl_path = $fs->realpath($ttl_uri);
+
+      if ($ttl_path === FALSE || !file_exists($ttl_path)) {
+        $result['success'] = false;
+        $result['errors'][] = $this->t('Application ontology file (hasco.ttl) not found. Please ingest the PMSR ontologies first.');
+        return $result;
+      }
+
+      $ttl_content = file_get_contents($ttl_path);
+      $mappings_found = 0;
+
+      foreach ($expected_mappings as $key => $mapping) {
+        // Look for the mapping in various formats:
+        // Full URI format: <uri> rdfs:subClassOf <entrypoint>
+        // Compact format: prefix:ClassName rdfs:subClassOf hasco:EntryPoint
+        $uri_escaped = preg_quote($mapping['uri'], '/');
+        $ep_escaped = preg_quote($mapping['entry_point'], '/');
+        
+        // Check for full URI format or compact format
+        $pattern = '/<' . $uri_escaped . '>.*rdfs:subClassOf.*<' . $ep_escaped . '>/s';
+        
+        if (preg_match($pattern, $ttl_content)) {
+          $mappings_found++;
+          $result['messages'][] = $this->t('✓ Entry point mapping found: @label', [
+            '@label' => $mapping['label'],
+          ]);
+        } else {
+          $result['warnings'][] = $this->t('Entry point mapping not found for @label (@uri → @ep)', [
+            '@label' => $mapping['label'],
+            '@uri' => $mapping['uri'],
+            '@ep' => $mapping['entry_point'],
+          ]);
+        }
+      }
+
+      if ($mappings_found === 0) {
+        $result['success'] = false;
+        $result['errors'][] = $this->t('No entry point mappings found. Please use "Ingest PMSR Ontologies" to create them.');
+      } elseif ($mappings_found < count($expected_mappings)) {
+        $result['warnings'][] = $this->t('Only @found of @total expected entry point mappings were found.', [
+          '@found' => $mappings_found,
+          '@total' => count($expected_mappings),
+        ]);
+      }
+
+    } catch (\Exception $e) {
+      $result['success'] = false;
+      $result['errors'][] = $this->t('Error verifying entry point mappings: @msg', ['@msg' => $e->getMessage()]);
+      return $result;
+    }
+
+    return $result;
   }
 
 }

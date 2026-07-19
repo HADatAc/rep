@@ -20,6 +20,7 @@
   // Module-scoped state so Ajax commands can interact with it safely.
   let selectionMap = new Map(); // uri -> label
   let suppressTreeSync = false;
+  let boundEntryPoints = new Set(); // Set of entry point URIs that have bindings
 
   const DEPRECATED_STATUS_URI = 'http://hadatac.org/ont/vstoi#Deprecated';
   const HIDE_DEPRECATED_STORAGE_KEY = `${STORAGE_PREFIX}.hideDeprecated`;
@@ -491,14 +492,83 @@
     $ctx.text(Drupal.t('Search context: @label', { '@label': label }));
   }
 
+  /**
+   * Fetch bound entry points from the API and store in boundEntryPoints Set.
+   */
+  function fetchBoundEntryPoints(callback) {
+    const base = (window.location.protocol === 'https:' ? 'https://' : 'http://')
+      + window.location.host
+      + (drupalSettings.path?.baseUrl || '');
+    
+    const url = base + '/rep/bound-entry-points?_format=json';
+    
+    $.getJSON(url)
+      .done((data) => {
+        boundEntryPoints.clear();
+        if (data && Array.isArray(data.bound)) {
+          data.bound.forEach((uri) => {
+            boundEntryPoints.add(String(uri));
+          });
+        }
+        if (callback) callback(true);
+      })
+      .fail(() => {
+        if (callback) callback(false);
+      });
+  }
+
+  /**
+   * Apply color-coding to left tree nodes based on binding status.
+   * - GREEN: entry point has bindings (bound)
+   * - RED: entry point has no bindings (unbound)
+   * Only applies to entry points (URIs ending with "EntryPoint"),
+   * not to bound terms or their descendants.
+   */
+  function updateLeftTreeColors() {
+    if (!$leftTree || !$leftTree.length) return;
+    
+    const inst = safeJsTree($leftTree);
+    if (!inst) return;
+
+    // Get all nodes in the tree
+    const allNodes = inst.get_json('#', { flat: true });
+    
+    allNodes.forEach((node) => {
+      if (node.data?.isRoot) return; // Skip root node
+      
+      const uri = node.data?.realUri;
+      if (!uri) return;
+      
+      const $nodeElement = $('#' + node.id + ' > a.jstree-anchor');
+      if (!$nodeElement.length) return;
+      
+      // Remove existing classes
+      $nodeElement.removeClass('entry-point-bound entry-point-unbound');
+      
+      // Only apply colors to entry points (URIs ending with "EntryPoint")
+      if (uri.endsWith('EntryPoint')) {
+        // This is an entry point - apply color based on binding status
+        if (boundEntryPoints.has(uri)) {
+          $nodeElement.addClass('entry-point-bound');
+        } else {
+          $nodeElement.addClass('entry-point-unbound');
+        }
+      }
+      // For all other nodes (bound terms and their descendants), no color is applied
+    });
+  }
+
   // jQuery plugin invoked by the server-side Ajax callback.
   if (!$.fn.repMapAfterSave) {
     $.fn.repMapAfterSave = function () {
-      // Refresh LEFT tree so newly ingested mappings show up.
-      const leftInst = safeJsTree($leftTree);
-      if (leftInst && typeof leftInst.refresh === 'function') {
-        leftInst.refresh();
-      }
+      // Refresh bound entry points and update colors
+      fetchBoundEntryPoints(() => {
+        // Refresh LEFT tree so newly ingested mappings show up
+        const leftInst = safeJsTree($leftTree);
+        if (leftInst && typeof leftInst.refresh === 'function') {
+          leftInst.refresh();
+        }
+      });
 
       // Clear RIGHT selection and our internal list.
       clearSelection({ uncheckTree: true });
@@ -654,39 +724,59 @@
       if ($leftTree.length && !$leftTree.data('initialized')) {
         $leftTree.data('initialized', true);
         const initialRoot = $leftTree.data('root-uri') || cfg.currentRootUri || '';
+        
+        // Attach event handlers BEFORE initializing tree
+        $leftTree
+          .off('.repMap')
+          .on('select_node.jstree.repMap', (e, data) => {
+            if (data.node?.data?.isRoot) {
+              data.instance.deselect_node(data.node, true);
+              e.stopImmediatePropagation();
+              return false;
+            }
+
+            const uri = data.node?.data?.realUri || '';
+            if (uri) {
+              $('#edit-selected-entry-point').val(uri);
+            }
+          })
+          .on('changed.jstree.repMap', (_e, data) => {
+            const inst = safeJsTree($leftTree);
+            if (!inst) return;
+
+            (data.selected || []).forEach((id) => {
+              const n = inst.get_node(id);
+              if (n?.data?.isRoot) inst.deselect_node(n, true);
+            });
+          })
+          .on('activate_node.jstree.repMap', (e, data) => {
+            if (data.node?.data?.isRoot) {
+              e.stopImmediatePropagation();
+              return false;
+            }
+          })
+          .on('ready.jstree.repMap', () => {
+            // Fetch bound status and apply colors when tree is ready
+            fetchBoundEntryPoints(() => {
+              updateLeftTreeColors();
+            });
+          })
+          .on('refresh.jstree.repMap', () => {
+            // Fetch bound status and apply colors when tree is refreshed
+            fetchBoundEntryPoints(() => {
+              updateLeftTreeColors();
+            });
+          })
+          .on('open_node.jstree.repMap', () => {
+            // Apply colors when nodes are expanded (in case new nodes are loaded)
+            setTimeout(() => updateLeftTreeColors(), 100);
+          });
+        
+        // Now initialize tree (ready event will fire and apply colors)
         initTree($leftTree, initialRoot, null, 'left');
       }
 
-      // 2) LEFT tree selection → set entry point.
-      $leftTree
-        .off('.repMap')
-        .on('select_node.jstree.repMap', (e, data) => {
-          if (data.node?.data?.isRoot) {
-            data.instance.deselect_node(data.node, true);
-            e.stopImmediatePropagation();
-            return false;
-          }
-
-          const uri = data.node?.data?.realUri || '';
-          if (uri) {
-            $('#edit-selected-entry-point').val(uri);
-          }
-        })
-        .on('changed.jstree.repMap', (_e, data) => {
-          const inst = safeJsTree($leftTree);
-          if (!inst) return;
-
-          (data.selected || []).forEach((id) => {
-            const n = inst.get_node(id);
-            if (n?.data?.isRoot) inst.deselect_node(n, true);
-          });
-        })
-        .on('activate_node.jstree.repMap', (e, data) => {
-          if (data.node?.data?.isRoot) {
-            e.stopImmediatePropagation();
-            return false;
-          }
-        });
+      // 2) LEFT tree selection handlers are already attached above.
 
       // 3) Load RIGHT tree based on selected namespace.
       function loadRightTree() {

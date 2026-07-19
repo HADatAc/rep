@@ -813,6 +813,66 @@ class TreeController extends ControllerBase {
     return new JsonResponse($mapping);
   }
 
+  /**
+   * Get list of entry point URIs that have bindings.
+   * 
+   * Returns an array of entry point URIs that have at least one mapping,
+   * either in the database (from interactive mapping) or in the triplestore
+   * (from automatic ingestion or RDF data).
+   */
+  public function getBoundEntryPoints() {
+    $bound_entry_points = [];
+    
+    // 1. Get mappings from database (interactive mappings via MapEntryPointsForm)
+    $tables = new Tables(\Drupal::database());
+    $all_mappings = $tables->getAllMappings();
+    $bound_entry_points = array_keys($all_mappings);
+    
+    // 2. Query triplestore for entry points that have subclasses
+    // These are entry points that have been bound via RDF ingestion
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      
+      // Get all entry points from HASCO ontology
+      // Entry points are children of hasco:ClassEntryPoint
+      $entry_point_root = 'http://hadatac.org/ont/hasco/ClassEntryPoint';
+      $response = $api->getChildren($entry_point_root);
+      $entry_points = $api->parseObjectResponse($response, 'getChildren');
+      
+      if (is_array($entry_points)) {
+        // For each entry point, check if it has children (subclasses)
+        foreach ($entry_points as $entry_point) {
+          if (!isset($entry_point->uri)) {
+            continue;
+          }
+          
+          $entry_point_uri = $entry_point->uri;
+          
+          // Query the API to get children of this entry point
+          $children_response = $api->getChildren($entry_point_uri);
+          $children = $api->parseObjectResponse($children_response, 'getChildren');
+          
+          // If it has at least one child, it's bound
+          if (is_array($children) && count($children) > 0) {
+            if (!in_array($entry_point_uri, $bound_entry_points)) {
+              $bound_entry_points[] = $entry_point_uri;
+            }
+          }
+        }
+      }
+    } catch (\Exception $e) {
+      // Log error but continue with database mappings only
+      \Drupal::logger('rep')->error('Error querying triplestore for bound entry points: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+    }
+    
+    return new JsonResponse([
+      'bound' => array_values(array_unique($bound_entry_points)),
+      'count' => count(array_unique($bound_entry_points)),
+    ]);
+  }
+
   public function getTopClass(Request $request) {
     $api     = \Drupal::service('rep.api_connector');
     $nodeUri = $request->query->get('nodeUri');
@@ -822,11 +882,9 @@ class TreeController extends ControllerBase {
     if ($nodeUri === NULL || trim((string) $nodeUri) === '') {
       return new JsonResponse(['error' => 'Missing required query parameter: nodeUri'], 400);
     }
-
-    $topNode = $api->parseObjectResponse($api->getUri($nodeUri), 'getUri');
-    // kint($topNode, 'Top Node');
-    // $abbrev = strstr($topNode->uriNamespace, ':', true);
-    $children = $api->parseObjectResponse($api->repoTopClassNamespaces($nodeUri), 'repoTopClassNamespaces');
+    
+    // Get children from triplestore (works for both namespaces and classes)
+    $children = $api->parseObjectResponse($api->getChildren($nodeUri), 'getChildren');
     if (!is_array($children)) {
       $children = [];
     }

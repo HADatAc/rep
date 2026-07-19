@@ -93,6 +93,9 @@ use PHPUnit\Event\Application\Started;
     const STUDY_CLASS_ENTRY_POINT                     = HASCO::HASCO . "StudyEntryPoint";
     const TASK_CLASS_ENTRY_POINT                      = HASCO::HASCO . "TaskEntryPoint";
     const TASK_TEMPORAL_DEPENDENCY_CLASS_ENTRY_POINT  = HASCO::HASCO . "TaskTemporalDependencyEntryPoint";
+    const ANATOMICAL_PART_CLASS_ENTRY_POINT           = HASCO::HASCO . "AnatomicalPartEntryPoint";
+    const PROCESS_CLASS_ENTRY_POINT                   = HASCO::HASCO . "ProcessEntryPoint";
+    const MEDICAL_DEVICE_CLASS_ENTRY_POINT            = HASCO::HASCO . "MedicalDeviceEntryPoint";
 
     // INSTANCES
     const INSTRUMENT_INSTANCE_ENTRY_POINT         = HASCO::HASCO . "InstrumentInstanceEntryPoint";

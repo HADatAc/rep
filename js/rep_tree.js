@@ -1330,13 +1330,48 @@
             $treeRoot.on('open_node.jstree', resetActivityTimeout);
             resetActivityTimeout();
 
-            if (initialSearchValue.length > 0 && prefixIsActive) {
-              // console.log("[tree] prefixIsActive = true → calling populateTree(", initialSearchValue, ")");
-              populateTree(initialSearchValue);
+            var branches = getFilteredBranches();
+            var entryPointUri = branches.length > 0 ? branches[0].uri : null;
+
+            // Case 1: No search value provided
+            if (initialSearchValue.length === 0) {
+              // If there's exactly one branch (entry point), auto-expand it to show children
+              if (branches.length === 1 && entryPointUri) {
+                console.log("[tree] Auto-expanding single entry point:", entryPointUri);
+                var tree = $treeRoot.jstree(true);
+                var rootNodes = tree.get_node('#').children;
+                if (rootNodes && rootNodes.length === 1) {
+                  setTimeout(function() {
+                    tree.open_node(rootNodes[0], function() {
+                      console.log("[tree] Entry point expanded successfully");
+                      $('#wait-message').hide();
+                      $treeRoot.show();
+                      $('#search_input').prop('disabled', false);
+                    });
+                  }, 100);
+                }
+              }
             }
+            // Case 2: Search value provided and equals entry point
+            else if (initialSearchValue === entryPointUri) {
+              console.log("[tree] Search value equals entry point, auto-expanding");
+              var tree = $treeRoot.jstree(true);
+              var rootNodes = tree.get_node('#').children;
+              if (rootNodes && rootNodes.length === 1) {
+                setTimeout(function() {
+                  tree.open_node(rootNodes[0]);
+                }, 100);
+              }
+            }
+            // Case 3: Search value provided and NOT the entry point
             else if (initialSearchValue.length > 0) {
-              // console.log("[tree] prefixIsActive = false → performing normal search for", initialSearchValue);
-              $treeRoot.jstree(true).search(initialSearchValue);
+              if (prefixIsActive) {
+                // console.log("[tree] prefixIsActive = true → calling populateTree(", initialSearchValue, ")");
+                populateTree(initialSearchValue);
+              } else {
+                // console.log("[tree] prefixIsActive = false → performing normal search for", initialSearchValue);
+                $treeRoot.jstree(true).search(initialSearchValue);
+              }
             }
           });
 

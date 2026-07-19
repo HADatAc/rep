@@ -1,0 +1,38 @@
+/**
+ * Map Entry Points - Color-coding for bound/unbound entry points
+ * 
+ * Entry points in the HASCO CLASSES tree are color-coded:
+ * - GREEN: Entry point has at least one binding (mapped to external ontology term)
+ * - RED: Entry point has no bindings (unbound)
+ */
+
+/* Bound entry points - GREEN */
+.jstree-anchor.entry-point-bound {
+  color: #28a745 !important;
+  font-weight: 500;
+}
+
+.jstree-anchor.entry-point-bound:hover {
+  color: #218838 !important;
+}
+
+/* Unbound entry points - RED */
+.jstree-anchor.entry-point-unbound {
+  color: #dc3545 !important;
+  font-weight: 500;
+}
+
+.jstree-anchor.entry-point-unbound:hover {
+  color: #c82333 !important;
+}
+
+/* Make sure selected nodes still show proper highlighting */
+.jstree-clicked.entry-point-bound {
+  background-color: #d4edda !important;
+  color: #155724 !important;
+}
+
+.jstree-clicked.entry-point-unbound {
+  background-color: #f8d7da !important;
+  color: #721c24 !important;
+}

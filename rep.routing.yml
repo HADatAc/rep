@@ -534,6 +534,13 @@ rep.tree.entry_point_mappings:
   requirements:
     _permission: 'administer semantic ontologies'
 
+rep.tree.bound_entry_points:
+  path: '/rep/bound-entry-points'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::getBoundEntryPoints'
+  requirements:
+    _permission: 'access content'
+
 # ONT
 rep.ont_view:
   path: '/ont'
