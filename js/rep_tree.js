@@ -1344,6 +1344,49 @@
                   setTimeout(function() {
                     tree.open_node(rootNodes[0], function() {
                       console.log("[tree] Entry point expanded successfully");
+                      
+                      // Auto-expand configured default nodes from Drupal configuration
+                      var defaultExpandedNodes = drupalSettings.rep_tree.defaultExpandedNodes || [];
+                      
+                      if (defaultExpandedNodes.length > 0) {
+                        console.log("[tree] Auto-expanding default nodes from configuration:", defaultExpandedNodes);
+                        
+                        function expandNodeByUri(uriToFind, callback) {
+                          var allNodes = tree.get_json('#', { flat: true });
+                          var found = allNodes.find(function(n) {
+                            return n.original && n.original.uri === uriToFind;
+                          });
+                          if (found) {
+                            tree.open_node(found.id, callback);
+                            return true;
+                          }
+                          return false;
+                        }
+                        
+                        // Expand nodes sequentially with delays to allow loading
+                        function expandNext(index) {
+                          if (index >= defaultExpandedNodes.length) {
+                            return;
+                          }
+                          var uri = defaultExpandedNodes[index];
+                          setTimeout(function() {
+                            var expanded = expandNodeByUri(uri, function() {
+                              console.log("[tree] Expanded node:", uri);
+                              expandNext(index + 1);
+                            });
+                            if (!expanded) {
+                              // Node not found yet, it might load after parent expansion
+                              expandNext(index + 1);
+                            }
+                          }, 200);
+                        }
+                        
+                        // Start expanding after a brief delay
+                        setTimeout(function() {
+                          expandNext(0);
+                        }, 300);
+                      }
+                      
                       $('#wait-message').hide();
                       $treeRoot.show();
                       $('#search_input').prop('disabled', false);

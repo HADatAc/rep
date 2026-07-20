@@ -144,10 +144,9 @@ class DescribeHeaderForm extends FormBase {
     $elementUriRaw = rawurldecode((string) $this->getElement()->uri);
     $form['element_uri'] = [
       '#type' => 'inline_template',
-      '#template' => '<div class="describe-header-wb describe-uri-row"><b>URI</b>: <span class="describe-trimmed-uri" title="{{ fullUri }}">{{ displayUri }}</span></div><br />',
+      '#template' => '<div class="describe-header-wb describe-uri-row"><b>URI</b>: <span class="describe-full-uri" style="word-break: break-all;">{{ displayUri }}</span></div><br />',
       '#context' => [
-        'fullUri' => $elementUriRaw,
-        'displayUri' => $this->trimUriForDisplay($elementUriRaw),
+        'displayUri' => $elementUriRaw,
       ],
     ];
 
@@ -164,7 +163,7 @@ class DescribeHeaderForm extends FormBase {
       $form['element_type'] = [
         '#type' => 'inline_template',
         // IMPORTANT: href uses Describe page URL; data-node uses the *raw RDF IRI*.
-        '#template' => '<div class="describe-uri-row"><b>Type URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard describe-trimmed-uri" title="{{ typeUriFull }}">{{ typeUriDisplay }}</a>
+        '#template' => '<div class="describe-uri-row"><b>Type URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard describe-full-uri" style="word-break: break-all;">{{ typeUriDisplay }}</a>
           <span class="graph-toggle"
                 data-node="{{ node }}"
                 data-from="{{ from }}"
@@ -175,8 +174,7 @@ class DescribeHeaderForm extends FormBase {
           </span></div><br><br>',
         '#context' => [
           'href'    => Utils::describeHref((string) $this->getElement()->typeUri),
-          'typeUriDisplay' => $this->trimUriForDisplay($typeUriRaw),
-          'typeUriFull' => $typeUriRaw,
+          'typeUriDisplay' => $typeUriRaw,
           'node'    => $this->getElement()->typeUri,         // IRI used by the graph
           'from'    => $this->getElement()->uri,             // origin of the edge (the current element)
         ],
@@ -188,7 +186,7 @@ class DescribeHeaderForm extends FormBase {
       $hascoTypeUriRaw = rawurldecode((string) $this->getElement()->hascoTypeUri);
       $form['element_hascoType'] = [
         '#type' => 'inline_template',
-        '#template' => '<div class="describe-uri-row"><b>HascoType URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard describe-trimmed-uri" title="{{ hascoTypeUriFull }}">{{ hascoTypeUriDisplay }}</a>
+        '#template' => '<div class="describe-uri-row"><b>HascoType URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard describe-full-uri" style="word-break: break-all;">{{ hascoTypeUriDisplay }}</a>
           <span class="graph-toggle"
                 data-node="{{ node }}"
                 data-from="{{ from }}"
@@ -199,8 +197,7 @@ class DescribeHeaderForm extends FormBase {
           </span></div><br><br>',
         '#context' => [
           'href'         => Utils::describeHref((string) $this->getElement()->hascoTypeUri),
-          'hascoTypeUriDisplay' => $this->trimUriForDisplay($hascoTypeUriRaw),
-          'hascoTypeUriFull' => $hascoTypeUriRaw,
+          'hascoTypeUriDisplay' => $hascoTypeUriRaw,
           'node'         => $this->getElement()->hascoTypeUri, // IRI used by the graph
           'from'         => $this->getElement()->uri,          // origin of the edge
         ],
@@ -212,7 +209,7 @@ class DescribeHeaderForm extends FormBase {
       $superUriRaw = rawurldecode((string) $this->getElement()->superUri);
       $form['element_super'] = [
         '#type' => 'inline_template',
-        '#template' => '<div class="describe-uri-row"><b>Super URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard describe-trimmed-uri" title="{{ superUriFull }}">{{ superUriDisplay }}</a>
+        '#template' => '<div class="describe-uri-row"><b>Super URI</b>: <a href="{{ href }}" class="rep-describe-link rep-nav-guard describe-full-uri" style="word-break: break-all;">{{ superUriDisplay }}</a>
           <span class="graph-toggle"
                 data-node="{{ node }}"
                 data-from="{{ from }}"
@@ -222,8 +219,7 @@ class DescribeHeaderForm extends FormBase {
           </span></div><br><br>',
         '#context' => [
           'href'     => Utils::describeHref((string) $this->getElement()->superUri),
-          'superUriDisplay' => $this->trimUriForDisplay($superUriRaw),
-          'superUriFull' => $superUriRaw,
+          'superUriDisplay' => $superUriRaw,
           'node'     => $this->getElement()->superUri,
           'from'     => $this->getElement()->uri,
         ],

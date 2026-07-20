@@ -1312,6 +1312,16 @@ form[id^="describe-header-form"] .describe-uri-row .describe-trimmed-uri {
   text-overflow: ellipsis;
 }
 
+/* Full URI display without truncation */
+form#describe-header-form .describe-uri-row .describe-full-uri,
+form[id^="describe-header-form"] .describe-uri-row .describe-full-uri {
+  flex: 1 1 auto;
+  display: inline-block;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 form#describe-header-form .graph-toggle,
 form[id^="describe-header-form"] .graph-toggle {
   display: inline-flex;

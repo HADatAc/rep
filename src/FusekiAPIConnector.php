@@ -811,9 +811,11 @@ class FusekiAPIConnector {
       $manageremail = '_',
       $status       = '_'
   ) {
-    // 1. If social integration is disabled, call the fallback API and return immediately.
+    // 1. If social integration is disabled OR OAuth is not configured, call the fallback API and return immediately.
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    if (! $socialEnabled) {
+    $oauthUrl = \Drupal::config('social.oauth.settings')->get('oauth_url');
+    
+    if (! $socialEnabled || empty($oauthUrl)) {
         $endpoint = "/hascoapi/api/{$elementType}/keywordtype/"
             . rawurlencode($project)      . '/'
             . rawurlencode($keyword)      . '/'
@@ -974,9 +976,11 @@ class FusekiAPIConnector {
     $manageremail = '_',
     $status       = '_'
   ) {
-    // 1. Fallback to legacy API if social is disabled
+    // 1. Fallback to legacy API if social is disabled OR OAuth is not configured
     $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    if (! $socialEnabled) {
+    $oauthUrl = \Drupal::config('social.oauth.settings')->get('oauth_url');
+    
+    if (! $socialEnabled || empty($oauthUrl)) {
         $endpoint = "/hascoapi/api/{$elementType}/keywordtype/total/"
             . rawurlencode($project)      . '/'
             . rawurlencode($keyword)      . '/'
@@ -3732,6 +3736,144 @@ class FusekiAPIConnector {
       return NULL;
     }
     return($res->getBody());
+  }
+
+  /**
+   * Upload media file content directly to HAScO API.
+   * 
+   * @param string $foldername
+   *   The destination folder name in the media directory.
+   * @param string $filename
+   *   The filename to save as.
+   * @param string $fileContent
+   *   The raw file content (bytes).
+   * 
+   * @return string|null
+   *   The API response body, or NULL on failure.
+   */
+  public function uploadMedia($foldername, $filename, $fileContent) {
+    if (empty($fileContent)) {
+      \Drupal::messenger()->addError(t('Empty file content provided for upload'));
+      return NULL;
+    }
+
+    $endpoint = "/hascoapi/api/uploadMedia/" . rawurlencode($foldername) . '/' . rawurlencode($filename);
+
+    $api_url = $this->getApiUrl();
+    $client = new Client();
+    
+    // Determine MIME type based on file extension
+    $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    $mimeTypes = [
+      'zip' => 'application/zip',
+      'jpg' => 'image/jpeg',
+      'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'gif' => 'image/gif',
+      'pdf' => 'application/pdf',
+    ];
+    $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+
+    try {
+      $res = $client->post($api_url . $endpoint, [
+        'headers' => [
+          'Content-Type' => $mimeType,
+          'Authorization' => $this->bearer
+        ],
+        'body' => $fileContent,
+        'http_errors' => FALSE,
+      ]);
+      
+      if ($res->getStatusCode() !== 200) {
+        $this->last_status_code = (int) $res->getStatusCode();
+        $this->last_request_url = $api_url . $endpoint;
+        $this->last_response_body = (string) $res->getBody();
+        $snippet = substr(preg_replace('/\s+/', ' ', (string) $this->last_response_body), 0, 500);
+        $this->error = (string) $this->last_status_code;
+        $this->error_message = 'API request returned HTTP ' . $this->last_status_code . ($snippet ? '; response: ' . $snippet : '');
+        return NULL;
+      }
+      
+      return (string) $res->getBody();
+      
+    } catch (ConnectException $e) {
+      $this->error = "CON";
+      $this->error_message = "Connection error: " . $e->getMessage();
+      return NULL;
+    } catch (ClientException $e) {
+      $res = $e->getResponse();
+      $this->error = $res->getStatusCode();
+      $this->error_message = "API request returned status: " . $res->getStatusCode();
+      return NULL;
+    } catch (\GuzzleHttp\Exception\ServerException $e) {
+      $res = $e->getResponse();
+      $status = $res ? $res->getStatusCode() : 500;
+      $body = $res ? (string) $res->getBody() : $e->getMessage();
+      $snippet = substr(preg_replace('/\s+/', ' ', (string) $body), 0, 500);
+      $this->error = (string) $status;
+      $this->error_message = $snippet;
+      return NULL;
+    }
+  }
+
+  /**
+   * Delete a media folder and all its contents from HAScO API.
+   * 
+   * @param string $foldername
+   *   The folder name under the media directory to delete.
+   * 
+   * @return string|null
+   *   The API response body, or NULL on failure.
+   */
+  public function deleteMediaFolder($foldername) {
+    if (empty($foldername)) {
+      \Drupal::messenger()->addError(t('Empty foldername provided for deletion'));
+      return NULL;
+    }
+
+    $endpoint = "/hascoapi/api/deleteMedia/" . rawurlencode($foldername);
+
+    $api_url = $this->getApiUrl();
+    $client = new Client();
+
+    try {
+      $res = $client->delete($api_url . $endpoint, [
+        'headers' => [
+          'Authorization' => $this->bearer
+        ],
+        'http_errors' => FALSE,
+      ]);
+      
+      if ($res->getStatusCode() !== 200) {
+        $this->last_status_code = (int) $res->getStatusCode();
+        $this->last_request_url = $api_url . $endpoint;
+        $this->last_response_body = (string) $res->getBody();
+        $snippet = substr(preg_replace('/\s+/', ' ', (string) $this->last_response_body), 0, 500);
+        $this->error = (string) $this->last_status_code;
+        $this->error_message = 'API request returned HTTP ' . $this->last_status_code . ($snippet ? '; response: ' . $snippet : '');
+        return NULL;
+      }
+      
+      return (string) $res->getBody();
+      
+    } catch (ConnectException $e) {
+      $this->error = "CON";
+      $this->error_message = "Connection error: " . $e->getMessage();
+      return NULL;
+    } catch (ClientException $e) {
+      $res = $e->getResponse();
+      $this->error = $res->getStatusCode();
+      $this->error_message = "API request returned status: " . $res->getStatusCode();
+      return NULL;
+    } catch (\GuzzleHttp\Exception\ServerException $e) {
+      $res = $e->getResponse();
+      $status = $res ? $res->getStatusCode() : 500;
+      $body = $res ? (string) $res->getBody() : $e->getMessage();
+      $snippet = substr(preg_replace('/\s+/', ' ', (string) $body), 0, 500);
+      $this->error = (string) $status;
+      $this->error_message = $snippet;
+      return NULL;
+    }
   }
 
   /**

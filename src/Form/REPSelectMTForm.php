@@ -4,6 +4,7 @@ namespace Drupal\rep\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
 use Drupal\file\Entity\File;
 use Drupal\rep\ListManagerEmailPage;
@@ -273,6 +274,238 @@ class REPSelectMTForm extends FormBase {
         '@manager_email' => $this->manager_email,
       ]),
     ];
+
+    // WKF GENERATION SECTION (only for WKF element type)
+    if ($this->element_type === 'wkf') {
+      $form['#attached']['library'][] = 'rep/wkf_instructions_modal';
+      
+      $form['wkf_generation_section'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['wkf-generation-section', 'mb-4', 'p-3', 'border', 'rounded', 'bg-light']],
+      ];
+
+      $form['wkf_generation_section']['section_title'] = [
+        '#type' => 'item',
+        '#markup' => '<h5 class="mb-3">WKF Generation</h5>',
+      ];
+
+      // Instructions button and language selector row
+      $form['wkf_generation_section']['instructions_row'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['d-flex', 'align-items-center', 'mb-2', 'gap-2']],
+      ];
+
+      $form['wkf_generation_section']['instructions_row']['instructions_button'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('<button type="button" class="btn btn-info" id="openWkfInstructionsWindow">' . $this->t('WKF Generation Instructions') . '</button>'),
+      ];
+
+      $form['wkf_generation_section']['instructions_row']['language_selector'] = [
+        '#type' => 'select',
+        '#options' => [
+          'pt' => $this->t('Português'),
+          'en' => $this->t('English'),
+        ],
+        '#default_value' => 'pt',
+        '#attributes' => [
+          'class' => ['form-select', 'w-auto'],
+          'id' => 'wkf-language-selector',
+        ],
+      ];
+
+      // Other buttons row
+      $form['wkf_generation_section']['buttons_row'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['d-grid', 'gap-3', 'mt-3'], 'style' => 'grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));'],
+      ];
+
+      $form['wkf_generation_section']['buttons_row']['generation_prompt'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('<button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#wkfGenerationPromptModal">' . $this->t('Generation Prompt') . '</button>'),
+      ];
+
+      $form['wkf_generation_section']['buttons_row']['validation_prompt'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('<button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#wkfValidationPromptModal">' . $this->t('Validation Prompt') . '</button>'),
+      ];
+
+      $form['wkf_generation_section']['buttons_row']['download_ontologies'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Download Ontologies'),
+        '#name' => 'wkf_download_ontologies',
+        '#attributes' => ['class' => ['btn', 'btn-success', 'btn-lg', 'w-100']],
+        '#submit' => ['::wkfDownloadOntologiesSubmit'],
+        '#limit_validation_errors' => [],
+      ];
+
+      // Instructions Modal
+      $instructions_en = '
+        <h5>WKF Generation with ChatGPT - Instructions</h5>
+        <ol>
+          <li><strong>Generate WKF:</strong>
+            <ul>
+              <li>Click the "Generation Prompt" button to copy the generation prompt to your clipboard</li>
+              <li>Open ChatGPT (GPT-4 or later recommended)</li>
+              <li>Paste the generation prompt and provide your workflow details</li>
+              <li>ChatGPT will generate a WKF Excel file structure for you</li>
+              <li>Download the generated Excel file</li>
+            </ul>
+          </li>
+          <li><strong>Validate WKF:</strong>
+            <ul>
+              <li>Click the "Validation Prompt" button to copy the validation prompt</li>
+              <li>In ChatGPT, paste the validation prompt</li>
+              <li>Upload or paste your generated WKF content</li>
+              <li>ChatGPT will check for errors and suggest corrections</li>
+              <li>Make any necessary corrections to your Excel file</li>
+            </ul>
+          </li>
+          <li><strong>Download Ontologies:</strong>
+            <ul>
+              <li>Click "Download Ontologies" to get the required ontology files</li>
+              <li>These ontologies provide the valid terms and structure for your WKF</li>
+            </ul>
+          </li>
+          <li><strong>Upload and Ingest WKF:</strong>
+            <ul>
+              <li>Click "Add New WKF" button below</li>
+              <li>Fill in the WKF name and details</li>
+              <li>Upload your validated Excel file</li>
+              <li>Save the WKF</li>
+              <li>Select your WKF from the table</li>
+              <li>Click "Ingest WKF Selected as Draft" to test, or "Ingest WKF selected as Current" for production</li>
+              <li>Check the "Log" column for any ingestion errors</li>
+            </ul>
+          </li>
+        </ol>
+      ';
+
+      $instructions_pt = '
+        <h5>Geração de WKF com ChatGPT - Instruções</h5>
+        <ol>
+          <li><strong>Gerar WKF:</strong>
+            <ul>
+              <li>Clique no botão "Generation Prompt" para copiar o prompt de geração</li>
+              <li>Abra o ChatGPT (GPT-4 ou posterior recomendado)</li>
+              <li>Cole o prompt de geração e forneça os detalhes do seu workflow</li>
+              <li>O ChatGPT irá gerar uma estrutura de arquivo Excel WKF para você</li>
+              <li>Descarregue o arquivo Excel gerado</li>
+            </ul>
+          </li>
+          <li><strong>Validar WKF:</strong>
+            <ul>
+              <li>Clique no botão "Validation Prompt" para copiar o prompt de validação</li>
+              <li>No ChatGPT, cole o prompt de validação</li>
+              <li>Carregue ou cole o conteúdo do seu WKF gerado</li>
+              <li>O ChatGPT verificará erros e sugerirá correções</li>
+              <li>Faça as correções necessárias no seu arquivo Excel</li>
+            </ul>
+          </li>
+          <li><strong>Descarregar Ontologias:</strong>
+            <ul>
+              <li>Clique em "Download Ontologies" para obter os arquivos de ontologia necessários</li>
+              <li>Estas ontologias fornecem os termos e estrutura válidos para o seu WKF</li>
+            </ul>
+          </li>
+          <li><strong>Carregar e Ingerir WKF:</strong>
+            <ul>
+              <li>Clique no botão "Add New WKF" abaixo</li>
+              <li>Preencha o nome e detalhes do WKF</li>
+              <li>Carregue o seu arquivo Excel validado</li>
+              <li>Guarde o WKF</li>
+              <li>Selecione o seu WKF da tabela</li>
+              <li>Clique em "Ingest WKF Selected as Draft" para testar, ou "Ingest WKF selected as Current" para produção</li>
+              <li>Verifique a coluna "Log" para quaisquer erros de ingestão</li>
+            </ul>
+          </li>
+        </ol>
+      ';
+
+      $form['wkf_generation_section']['instructions_modal'] = [
+        '#type' => 'markup',
+        '#markup' => '
+          <div class="modal fade" id="wkfInstructionsModal" tabindex="-1" aria-labelledby="wkfInstructionsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="wkfInstructionsModalLabel">WKF Generation Instructions</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div id="instructions-en" class="instructions-content" style="display:none;">' . $instructions_en . '</div>
+                  <div id="instructions-pt" class="instructions-content">' . $instructions_pt . '</div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ',
+      ];
+
+      // Generation Prompt Modal (English only - for ChatGPT)
+      $generation_prompt = "You are an expert in standardizing clinical simulation scenarios for nursing education. Your objective is to convert free-form documents into WKF (Workflow Knowledge File) in Excel XLSX format with 6 mandatory sheets.\n\nFinal Goal:\n1. Extract clinical and pedagogical content from attached document(s) (PDF, Word, Excel, image, etc.)\n2. Transform into complete and consistent WKF\n3. Generate XLSX file with exactly 6 mandatory sheets\n4. Ensure WKF passes structural and semantic validation\n\nRequired workbook structure (exact sheet order):\n1. InfoSheet\n2. Namespaces\n3. ProcessStems\n4. Processes\n5. Tasks\n6. RequiredInstruments\n\nURI patterns (mandatory):\n- Base: http://pmsr.net/ont/pmsr#/WKF_<ID>\n- ProcessStem: http://pmsr.net/ont/pmsr#/WKF_<ID>/PST/<ID>\n- Process: http://pmsr.net/ont/pmsr#/WKF_<ID>/PROC/<ID>\n- Task: http://pmsr.net/ont/pmsr#/WKF_<ID>/TSK/<ID>\n- RequiredInstrument: http://pmsr.net/ont/pmsr#/WKF_<ID>/RIN/<ID>\n\nValidation checklist:\n1. 6 sheets present in correct order\n2. Correct RDF types per sheet\n3. Unique URIs with correct pattern\n4. Process points to existing ProcessStem\n5. Process has valid top task\n6. Top task has no supertask\n7. Valid supertask/subtask references\n8. Temporal dependencies without cycles\n9. RequiredInstruments linked to existing tasks\n\nGenerate complete WKF file ready for ingestion.";
+
+      $form['wkf_generation_section']['generation_prompt_modal'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('
+          <div class="modal fade" id="wkfGenerationPromptModal" tabindex="-1" aria-labelledby="wkfGenerationPromptModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="wkfGenerationPromptModalLabel">WKF Generation Prompt</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Copy this prompt and paste it into ChatGPT to generate your WKF template.
+                  </div>
+                  <pre id="generationPromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $generation_prompt . '</pre>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-primary" id="copyGenerationPrompt">
+                    <i class="fas fa-copy"></i> Copy to Clipboard
+                  </button>
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        '),
+      ];
+
+      // Validation Prompt Modal (English only - for ChatGPT)
+      $validation_prompt = "You are a strict WKF validator. Validate the workbook against WKF-SPEC-V1 rules.\n\nRequired sheets (exact order):\n1. InfoSheet\n2. Namespaces\n3. ProcessStems\n4. Processes\n5. Tasks\n6. RequiredInstruments\n\nValidation workflow:\n1. Validate sheet structure\n2. Validate InfoSheet (7 rows, hasDependencies=#Namespaces, version format)\n3. Validate Namespaces (prefix|namespace, http URIs)\n4. Validate ProcessStems (URI pattern /PST/, rdf:type=vstoi:ProcessStem)\n5. Validate Processes (URI pattern /PROC/, rdf:type=vstoi:Process, has prov:wasDerivedFrom)\n6. Validate Tasks (URI pattern /TSK/, rdf:type=vstoi:Task, valid operators: after/before/parallel/choice/independent/disables/interrupts)\n7. Validate RequiredInstruments (URI pattern /RIN/, rdf:type=vstoi:RequiredInstrument, instrument URI /INS/)\n8. Validate reference integrity (ProcessStem refs, task hierarchy, top task)\n9. Validate temporal DAG (no cycles in after/before edges)\n10. Validate task hierarchy (no cycles, top task has no supertask)\n11. Quality checks (duplicate labels, empty comments, version consistency)\n\nOutput format:\nVALIDATION_STATUS: PASS or FAIL\nERRORS: (count and [CODE] message)\nWARNINGS: (count and details)\nSUMMARY\n\nReturn PASS only if zero errors. List all issues with sheet/row references.";
+
+      $form['wkf_generation_section']['validation_prompt_modal'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('
+          <div class="modal fade" id="wkfValidationPromptModal" tabindex="-1" aria-labelledby="wkfValidationPromptModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="wkfValidationPromptModalLabel">WKF Validation Prompt</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Copy this prompt and paste it into ChatGPT along with your WKF content to validate it.
+                  </div>
+                  <pre id="validationPromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $validation_prompt . '</pre>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-primary" id="copyValidationPrompt">
+                    <i class="fas fa-copy"></i> Copy to Clipboard
+                  </button>
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        '),
+      ];
+    }
 
     $show_owner_indicator = $is_admin && $manager_filter !== '' && strcasecmp($effective_manager_email, $manager_filter) === 0;
     if ($show_owner_indicator) {
@@ -1444,5 +1677,15 @@ class REPSelectMTForm extends FormBase {
       $url->setRouteParameter('studyuri', $studyuri);
     }
     return $url;
+  }
+
+  /**
+   * HANDLER FOR DOWNLOAD ONTOLOGIES BUTTON
+   */
+  public function wkfDownloadOntologiesSubmit(array &$form, FormStateInterface $form_state)
+  {
+    \Drupal::messenger()->addMessage($this->t('Download Ontologies'));
+    // TODO: Implement ontologies download logic
+    $form_state->setRebuild();
   }
 }

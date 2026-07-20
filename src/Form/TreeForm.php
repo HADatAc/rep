@@ -377,6 +377,16 @@ class TreeForm extends FormBase {
 
     $tables = new Tables;
 
+    // Load default expanded nodes configuration
+    $config = \Drupal::config('rep.settings');
+    $default_expanded_nodes = [];
+    
+    // Get element-specific expanded nodes configuration
+    if ($elementtype) {
+      $config_key = 'tree_default_expanded_' . strtolower($elementtype);
+      $default_expanded_nodes = $config->get($config_key) ?? [];
+    }
+
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'baseUrl' => $base_url,
@@ -397,6 +407,7 @@ class TreeForm extends FormBase {
       'nameSpacesList' => $tables->getNamespaces(),
       'searchValue' => $search_value,
       'prefix' => $prefix,
+      'defaultExpandedNodes' => $default_expanded_nodes,
     ];
 
     if ($mode == 'browse')

@@ -48,12 +48,15 @@ rep_autocomplete_ux:
   version: 1.x
   js:
     js/autocomplete-ux.js: {}
+
+wkf_instructions_modal:
+  version: 1.x
+  js:
+    js/wkf_instructions_modal.js: {}
   dependencies:
     - core/jquery
     - core/drupal
-    - core/drupalSettings
-    - core/drupal.dialog.ajax
-    - core/drupal.autocomplete
+    - core/once
 
 webdoc_modal:
   version: 1.x

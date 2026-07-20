@@ -37,9 +37,25 @@ class ListKeywordTypePage {
     }
     // dpm("E=".$elementtype.", PR=".$project.", K=".$keyword.", T=".$type.", M=".$manageremail.", S=".$status.", P=".$page.", O=".$pagesize);
 
+    // Check cache for project-filtered organization queries (e.g., Digi4Health members map)
+    $cache = NULL;
+    $cache_key = NULL;
+    if ($elementtype === 'organization' && is_string($project) && $project !== '_' && $project !== 'all') {
+      $cache = \Drupal::cache();
+      $cache_key = 'rep:list:' . $elementtype . ':' . md5($project . $keyword . $type . $manageremail . $status . $page . $pagesize);
+      $cached = $cache->get($cache_key);
+      if ($cached) {
+        return $cached->data;
+      }
+    }
 
     $api = \Drupal::service('rep.api_connector');
     $elements = $api->parseObjectResponse($api->listByKeywordType($elementtype,$pagesize,$offset,$project,$keyword,$type,$manageremail,$status),'listByKeywordType');
+
+    // Cache project-filtered organization results with KGR geography tag
+    if ($cache_key !== NULL && $cache !== NULL) {
+      $cache->set($cache_key, $elements, \Drupal\Core\Cache\Cache::PERMANENT, ['kgr_geography']);
+    }
 
     return $elements;
 
