@@ -261,7 +261,7 @@ reviewer.searchMT:
   weight: 10
   requirements:
     _permission: 'access content'
-    _role: 'content_editor'
+    _role: 'authenticated'
 
 reviewer.uploadingest_review:
   title: Manage MTs
@@ -283,7 +283,7 @@ reviewer.generate_review:
   weight: 30
   requirements:
     _permission: 'access content'
-    _role: 'content_editor'
+    _role: 'authenticated'
 
 # Social elements review
 reviewer.people:
