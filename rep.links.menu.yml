@@ -250,7 +250,7 @@ reviewer.top_level:
   menu_name: main
   weight: 100
   requirements:
-    _role: 'content_editor'
+    _role: 'authenticated'
 
 reviewer.searchMT:
   title: Search MT
@@ -272,7 +272,7 @@ reviewer.uploadingest_review:
   weight: 20
   requirements:
     _permission: 'access content'
-    _role: 'content_editor'
+    _role: 'authenticated'
 
 reviewer.generate_review:
   title: Generate MTs
