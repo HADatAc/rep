@@ -338,88 +338,18 @@ class REPSelectMTForm extends FormBase {
         '#limit_validation_errors' => [],
       ];
 
-      // Instructions Modal
-      $instructions_en = '
-        <h5>WKF Generation with ChatGPT - Instructions</h5>
-        <ol>
-          <li><strong>Generate WKF:</strong>
-            <ul>
-              <li>Click the "Generation Prompt" button to copy the generation prompt to your clipboard</li>
-              <li>Open ChatGPT (GPT-4 or later recommended)</li>
-              <li>Paste the generation prompt and provide your workflow details</li>
-              <li>ChatGPT will generate a WKF Excel file structure for you</li>
-              <li>Download the generated Excel file</li>
-            </ul>
-          </li>
-          <li><strong>Validate WKF:</strong>
-            <ul>
-              <li>Click the "Validation Prompt" button to copy the validation prompt</li>
-              <li>In ChatGPT, paste the validation prompt</li>
-              <li>Upload or paste your generated WKF content</li>
-              <li>ChatGPT will check for errors and suggest corrections</li>
-              <li>Make any necessary corrections to your Excel file</li>
-            </ul>
-          </li>
-          <li><strong>Download Ontologies:</strong>
-            <ul>
-              <li>Click "Download Ontologies" to get the required ontology files</li>
-              <li>These ontologies provide the valid terms and structure for your WKF</li>
-            </ul>
-          </li>
-          <li><strong>Upload and Ingest WKF:</strong>
-            <ul>
-              <li>Click "Add New WKF" button below</li>
-              <li>Fill in the WKF name and details</li>
-              <li>Upload your validated Excel file</li>
-              <li>Save the WKF</li>
-              <li>Select your WKF from the table</li>
-              <li>Click "Ingest WKF Selected as Draft" to test, or "Ingest WKF selected as Current" for production</li>
-              <li>Check the "Log" column for any ingestion errors</li>
-            </ul>
-          </li>
-        </ol>
-      ';
-
-      $instructions_pt = '
-        <h5>Geração de WKF com ChatGPT - Instruções</h5>
-        <ol>
-          <li><strong>Gerar WKF:</strong>
-            <ul>
-              <li>Clique no botão "Generation Prompt" para copiar o prompt de geração</li>
-              <li>Abra o ChatGPT (GPT-4 ou posterior recomendado)</li>
-              <li>Cole o prompt de geração e forneça os detalhes do seu workflow</li>
-              <li>O ChatGPT irá gerar uma estrutura de arquivo Excel WKF para você</li>
-              <li>Descarregue o arquivo Excel gerado</li>
-            </ul>
-          </li>
-          <li><strong>Validar WKF:</strong>
-            <ul>
-              <li>Clique no botão "Validation Prompt" para copiar o prompt de validação</li>
-              <li>No ChatGPT, cole o prompt de validação</li>
-              <li>Carregue ou cole o conteúdo do seu WKF gerado</li>
-              <li>O ChatGPT verificará erros e sugerirá correções</li>
-              <li>Faça as correções necessárias no seu arquivo Excel</li>
-            </ul>
-          </li>
-          <li><strong>Descarregar Ontologias:</strong>
-            <ul>
-              <li>Clique em "Download Ontologies" para obter os arquivos de ontologia necessários</li>
-              <li>Estas ontologias fornecem os termos e estrutura válidos para o seu WKF</li>
-            </ul>
-          </li>
-          <li><strong>Carregar e Ingerir WKF:</strong>
-            <ul>
-              <li>Clique no botão "Add New WKF" abaixo</li>
-              <li>Preencha o nome e detalhes do WKF</li>
-              <li>Carregue o seu arquivo Excel validado</li>
-              <li>Guarde o WKF</li>
-              <li>Selecione o seu WKF da tabela</li>
-              <li>Clique em "Ingest WKF Selected as Draft" para testar, ou "Ingest WKF selected as Current" para produção</li>
-              <li>Verifique a coluna "Log" para quaisquer erros de ingestão</li>
-            </ul>
-          </li>
-        </ol>
-      ';
+      // Instructions Modal - Load from markdown files
+      $pmsr_module_path = \Drupal::service('extension.list.module')->getPath('pmsr');
+      $instructions_en_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/instructions/instructions_EN.md';
+      $instructions_pt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/instructions/instructions_PT.md';
+      
+      // Load markdown content
+      $instructions_en_md = file_exists($instructions_en_path) ? file_get_contents($instructions_en_path) : '';
+      $instructions_pt_md = file_exists($instructions_pt_path) ? file_get_contents($instructions_pt_path) : '';
+      
+      // Convert markdown to HTML (simple conversion for the structured format)
+      $instructions_en = $this->convertMarkdownToHtml($instructions_en_md);
+      $instructions_pt = $this->convertMarkdownToHtml($instructions_pt_md);
 
       $form['wkf_generation_section']['instructions_modal'] = [
         '#type' => 'markup',
@@ -444,8 +374,9 @@ class REPSelectMTForm extends FormBase {
         ',
       ];
 
-      // Generation Prompt Modal (English only - for ChatGPT)
-      $generation_prompt = "You are an expert in standardizing clinical simulation scenarios for nursing education. Your objective is to convert free-form documents into WKF (Workflow Knowledge File) in Excel XLSX format with 6 mandatory sheets.\n\nFinal Goal:\n1. Extract clinical and pedagogical content from attached document(s) (PDF, Word, Excel, image, etc.)\n2. Transform into complete and consistent WKF\n3. Generate XLSX file with exactly 6 mandatory sheets\n4. Ensure WKF passes structural and semantic validation\n\nRequired workbook structure (exact sheet order):\n1. InfoSheet\n2. Namespaces\n3. ProcessStems\n4. Processes\n5. Tasks\n6. RequiredInstruments\n\nURI patterns (mandatory):\n- Base: http://pmsr.net/ont/pmsr#/WKF_<ID>\n- ProcessStem: http://pmsr.net/ont/pmsr#/WKF_<ID>/PST/<ID>\n- Process: http://pmsr.net/ont/pmsr#/WKF_<ID>/PROC/<ID>\n- Task: http://pmsr.net/ont/pmsr#/WKF_<ID>/TSK/<ID>\n- RequiredInstrument: http://pmsr.net/ont/pmsr#/WKF_<ID>/RIN/<ID>\n\nValidation checklist:\n1. 6 sheets present in correct order\n2. Correct RDF types per sheet\n3. Unique URIs with correct pattern\n4. Process points to existing ProcessStem\n5. Process has valid top task\n6. Top task has no supertask\n7. Valid supertask/subtask references\n8. Temporal dependencies without cycles\n9. RequiredInstruments linked to existing tasks\n\nGenerate complete WKF file ready for ingestion.";
+      // Generation Prompt Modal - Load from pmsrgui/prompts/
+      $generation_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-MESTRE-WKF.md';
+      $generation_prompt = file_exists($generation_prompt_path) ? file_get_contents($generation_prompt_path) : 'Generation prompt file not found.';
 
       $form['wkf_generation_section']['generation_prompt_modal'] = [
         '#type' => 'markup',
@@ -455,7 +386,12 @@ class REPSelectMTForm extends FormBase {
               <div class="modal-content">
                 <div class="modal-header">
                   <h5 class="modal-title" id="wkfGenerationPromptModalLabel">WKF Generation Prompt</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  <div class="ms-auto d-flex gap-2">
+                    <button type="button" class="btn btn-primary" id="copyGenerationPrompt">
+                      <i class="fas fa-copy"></i> Copy to Clipboard
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  </div>
                 </div>
                 <div class="modal-body">
                   <div class="alert alert-info">
@@ -463,20 +399,15 @@ class REPSelectMTForm extends FormBase {
                   </div>
                   <pre id="generationPromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $generation_prompt . '</pre>
                 </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-primary" id="copyGenerationPrompt">
-                    <i class="fas fa-copy"></i> Copy to Clipboard
-                  </button>
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
               </div>
             </div>
           </div>
         '),
       ];
 
-      // Validation Prompt Modal (English only - for ChatGPT)
-      $validation_prompt = "You are a strict WKF validator. Validate the workbook against WKF-SPEC-V1 rules.\n\nRequired sheets (exact order):\n1. InfoSheet\n2. Namespaces\n3. ProcessStems\n4. Processes\n5. Tasks\n6. RequiredInstruments\n\nValidation workflow:\n1. Validate sheet structure\n2. Validate InfoSheet (7 rows, hasDependencies=#Namespaces, version format)\n3. Validate Namespaces (prefix|namespace, http URIs)\n4. Validate ProcessStems (URI pattern /PST/, rdf:type=vstoi:ProcessStem)\n5. Validate Processes (URI pattern /PROC/, rdf:type=vstoi:Process, has prov:wasDerivedFrom)\n6. Validate Tasks (URI pattern /TSK/, rdf:type=vstoi:Task, valid operators: after/before/parallel/choice/independent/disables/interrupts)\n7. Validate RequiredInstruments (URI pattern /RIN/, rdf:type=vstoi:RequiredInstrument, instrument URI /INS/)\n8. Validate reference integrity (ProcessStem refs, task hierarchy, top task)\n9. Validate temporal DAG (no cycles in after/before edges)\n10. Validate task hierarchy (no cycles, top task has no supertask)\n11. Quality checks (duplicate labels, empty comments, version consistency)\n\nOutput format:\nVALIDATION_STATUS: PASS or FAIL\nERRORS: (count and [CODE] message)\nWARNINGS: (count and details)\nSUMMARY\n\nReturn PASS only if zero errors. List all issues with sheet/row references.";
+      // Validation Prompt Modal - Load from pmsrgui/prompts/
+      $validation_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-VALIDADOR-WKF.md';
+      $validation_prompt = file_exists($validation_prompt_path) ? file_get_contents($validation_prompt_path) : 'Validation prompt file not found.';
 
       $form['wkf_generation_section']['validation_prompt_modal'] = [
         '#type' => 'markup',
@@ -486,19 +417,18 @@ class REPSelectMTForm extends FormBase {
               <div class="modal-content">
                 <div class="modal-header">
                   <h5 class="modal-title" id="wkfValidationPromptModalLabel">WKF Validation Prompt</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  <div class="ms-auto d-flex gap-2">
+                    <button type="button" class="btn btn-primary" id="copyValidationPrompt">
+                      <i class="fas fa-copy"></i> Copy to Clipboard
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  </div>
                 </div>
                 <div class="modal-body">
                   <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i> Copy this prompt and paste it into ChatGPT along with your WKF content to validate it.
                   </div>
                   <pre id="validationPromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $validation_prompt . '</pre>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-primary" id="copyValidationPrompt">
-                    <i class="fas fa-copy"></i> Copy to Clipboard
-                  </button>
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
               </div>
             </div>
@@ -1687,5 +1617,74 @@ class REPSelectMTForm extends FormBase {
     \Drupal::messenger()->addMessage($this->t('Download Ontologies'));
     // TODO: Implement ontologies download logic
     $form_state->setRebuild();
+  }
+
+  /**
+   * Convert markdown to HTML for WKF instructions
+   */
+  private function convertMarkdownToHtml($markdown) {
+    if (empty($markdown)) {
+      return '';
+    }
+
+    $lines = explode("\n", $markdown);
+    $html = '';
+    $in_ordered_list = false;
+    $in_unordered_list = false;
+
+    foreach ($lines as $line) {
+      $trimmed = trim($line);
+      
+      // Headers
+      if (preg_match('/^##### (.+)$/', $trimmed, $matches)) {
+        if ($in_ordered_list) {
+          $html .= '</ol>';
+          $in_ordered_list = false;
+        }
+        if ($in_unordered_list) {
+          $html .= '</ul>';
+          $in_unordered_list = false;
+        }
+        $html .= '<h5>' . htmlspecialchars($matches[1]) . '</h5>';
+      }
+      // Numbered list items (main points)
+      elseif (preg_match('/^(\d+)\.\s+\*\*(.+?)\*\*:?\s*$/', $trimmed, $matches)) {
+        if (!$in_ordered_list) {
+          if ($in_unordered_list) {
+            $html .= '</ul>';
+            $in_unordered_list = false;
+          }
+          $html .= '<ol>';
+          $in_ordered_list = true;
+        }
+        $html .= '<li><strong>' . htmlspecialchars($matches[2]) . ':</strong><ul>';
+        $in_unordered_list = true;
+      }
+      // Unordered list items (sub-points with dashes)
+      elseif (preg_match('/^\s+-\s+(.+)$/', $line, $matches)) {
+        if (!$in_unordered_list) {
+          $html .= '<ul>';
+          $in_unordered_list = true;
+        }
+        $html .= '<li>' . htmlspecialchars($matches[1]) . '</li>';
+      }
+      // Empty line - close unordered list if needed
+      elseif (empty($trimmed)) {
+        if ($in_unordered_list) {
+          $html .= '</ul>';
+          $in_unordered_list = false;
+        }
+      }
+    }
+
+    // Close any open lists
+    if ($in_unordered_list) {
+      $html .= '</ul>';
+    }
+    if ($in_ordered_list) {
+      $html .= '</ol>';
+    }
+
+    return $html;
   }
 }
