@@ -4140,6 +4140,38 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method, $api_url.$endpoint, $data);
   }
 
+  public function statisticsOntologiesCount() {
+    $endpoint = "/hascoapi/api/statistics/ontologies/count";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+  public function statisticsClassesCount() {
+    $endpoint = "/hascoapi/api/statistics/classes/count";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+  public function statisticsInstancesCount() {
+    $endpoint = "/hascoapi/api/statistics/instances/count";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
+  public function getOntologies() {
+    $endpoint = "/hascoapi/api/repo/ontologies";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
 
 
 }
