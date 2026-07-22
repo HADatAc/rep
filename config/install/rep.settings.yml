@@ -14,13 +14,13 @@ graph_predicates_hidden: ""
 graph_predicates_auto_expand: ""
 
 # Default expanded nodes for tree hierarchies
+# These nodes will be automatically expanded when the hierarchy is first displayed
+# Simulator entry point (hasco:InstrumentEntryPoint) + key instrument types will be auto-expanded
 tree_default_expanded_instrument:
+  - "http://hadatac.org/ont/hasco/InstrumentEntryPoint"
   - "http://hadatac.org/ont/vstoi#Instrument"
   - "http://hadatac.org/ont/vstoi#Model"
-  - "http://purl.org/twc/GMSR#VirtualMedicalSimulator"
-  - "http://purl.org/twc/GMSR/NIST394483404313068"
   - "http://hadatac.org/ont/vstoi#PhysicalInstrument"
-  - "http://purl.org/twc/GMSR#PhysicalMedicalSimulator"
 
 pagination_default_pagesize: 9
 pagination_max_pagesize: 50

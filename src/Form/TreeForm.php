@@ -385,6 +385,16 @@ class TreeForm extends FormBase {
     if ($elementtype) {
       $config_key = 'tree_default_expanded_' . strtolower($elementtype);
       $default_expanded_nodes = $config->get($config_key) ?? [];
+      
+      // Hardcoded fallback for instrument hierarchy if config is empty
+      if (empty($default_expanded_nodes) && strtolower($elementtype) === 'instrument') {
+        $default_expanded_nodes = [
+          'http://hadatac.org/ont/hasco/InstrumentEntryPoint',
+          'http://hadatac.org/ont/vstoi#Instrument',
+          'http://hadatac.org/ont/vstoi#Model',
+          'http://hadatac.org/ont/vstoi#PhysicalInstrument',
+        ];
+      }
     }
 
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();

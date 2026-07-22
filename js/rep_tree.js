@@ -1214,7 +1214,6 @@
                       children: true
                     };
                   });
-                  // console.log("[tree] jsTree root data length =", arr.length);
                   cb(arr);
                 } else {
                   // console.log("[tree] jsTree fetching children for", node.original.uri);
@@ -1337,56 +1336,75 @@
             if (initialSearchValue.length === 0) {
               // If there's exactly one branch (entry point), auto-expand it to show children
               if (branches.length === 1 && entryPointUri) {
-                console.log("[tree] Auto-expanding single entry point:", entryPointUri);
                 var tree = $treeRoot.jstree(true);
                 var rootNodes = tree.get_node('#').children;
                 if (rootNodes && rootNodes.length === 1) {
-                  setTimeout(function() {
-                    tree.open_node(rootNodes[0], function() {
-                      console.log("[tree] Entry point expanded successfully");
+                  // Auto-expand configured default nodes from Drupal configuration
+                  var defaultExpandedNodes = drupalSettings.rep_tree.defaultExpandedNodes || [];
+                  
+                  if (defaultExpandedNodes.length > 0) {
+                    // Mark search as done to prevent resetActivityTimeout from collapsing the tree
+                    initialSearchDone = true;
+                    
+                    // Wait for children to actually be added to the tree
+                    function waitForChildrenAndExpand() {
+                      var entryPointNode = tree.get_node(rootNodes[0]);
                       
-                      // Auto-expand configured default nodes from Drupal configuration
-                      var defaultExpandedNodes = drupalSettings.rep_tree.defaultExpandedNodes || [];
-                      
-                      if (defaultExpandedNodes.length > 0) {
-                        console.log("[tree] Auto-expanding default nodes from configuration:", defaultExpandedNodes);
+                      if (entryPointNode.children.length > 0) {
                         
                         function expandNodeByUri(uriToFind, callback) {
                           var allNodes = tree.get_json('#', { flat: true });
                           var found = allNodes.find(function(n) {
-                            return n.original && n.original.uri === uriToFind;
+                            // Check multiple possible URI locations in the node data
+                            var nodeUri = (n.data && n.data.originalUri) || 
+                                         (n.data && n.data.realUri) ||
+                                         (n.original && n.original.uri);
+                            return nodeUri === uriToFind;
                           });
                           if (found) {
-                            tree.open_node(found.id, callback);
+                            tree.open_node(found.id, function() {
+                              if (callback) callback();
+                            });
                             return true;
                           }
                           return false;
                         }
                         
-                        // Expand nodes sequentially with delays to allow loading
+                        // Expand nodes sequentially with proper waiting
                         function expandNext(index) {
                           if (index >= defaultExpandedNodes.length) {
                             return;
                           }
+                          
                           var uri = defaultExpandedNodes[index];
-                          setTimeout(function() {
-                            var expanded = expandNodeByUri(uri, function() {
-                              console.log("[tree] Expanded node:", uri);
+                          
+                          var expanded = expandNodeByUri(uri, function() {
+                            // Node opened successfully, wait a bit for children to load
+                            setTimeout(function() {
                               expandNext(index + 1);
-                            });
-                            if (!expanded) {
-                              // Node not found yet, it might load after parent expansion
-                              expandNext(index + 1);
-                            }
-                          }, 200);
+                            }, 500);
+                          });
+                          
+                          if (!expanded) {
+                            // Node not found, skip to next immediately
+                            expandNext(index + 1);
+                          }
                         }
                         
-                        // Start expanding after a brief delay
-                        setTimeout(function() {
-                          expandNext(0);
-                        }, 300);
+                        expandNext(0);
+                      } else {
+                        // Children not loaded yet, wait and try again
+                        setTimeout(waitForChildrenAndExpand, 200);
                       }
-                      
+                    }
+                    
+                    // Start checking after entry point begins opening
+                    setTimeout(waitForChildrenAndExpand, 500);
+                  }
+                  
+                  // Open the entry point, which will trigger load_node event
+                  setTimeout(function() {
+                    tree.open_node(rootNodes[0], function() {
                       $('#wait-message').hide();
                       $treeRoot.show();
                       $('#search_input').prop('disabled', false);
@@ -1397,7 +1415,6 @@
             }
             // Case 2: Search value provided and equals entry point
             else if (initialSearchValue === entryPointUri) {
-              console.log("[tree] Search value equals entry point, auto-expanding");
               var tree = $treeRoot.jstree(true);
               var rootNodes = tree.get_node('#').children;
               if (rootNodes && rootNodes.length === 1) {
