@@ -578,6 +578,18 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  /**
+   * Get aggregated instrument model counts for an organization owner URI.
+   */
+  public function listOrganizationInstrumentModelCounts($organizationUri) {
+    $endpoint = "/hascoapi/api/organization/instrumentmodels/".
+      rawurlencode((string) $organizationUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url.$endpoint, $data);
+  }
+
   // valid values for elementType: "instrument", "component", "codebook", "workflow", "responseoption"
   public function listByManagerEmail($elementType, $manageremail, $pageSize, $offset) {
     $elementType = $this->normalizeHascoApiElementType($elementType);
@@ -2558,6 +2570,41 @@ class FusekiAPIConnector {
     return $out;
   }
 
+  private function getFusekiQueryUrlCandidates(): array {
+    $config = \Drupal::config(static::CONFIGNAME);
+    $explicit = $config->get('fuseki_query_url');
+    $candidates = [];
+
+    if (is_string($explicit) && trim($explicit) !== '') {
+      $candidates[] = trim($explicit);
+    }
+
+    $apiUrl = (string) ($this->getApiUrl() ?? '');
+    $parts = $apiUrl ? @parse_url($apiUrl) : false;
+    $scheme = (is_array($parts) && !empty($parts['scheme'])) ? $parts['scheme'] : 'http';
+    $host = (is_array($parts) && !empty($parts['host'])) ? $parts['host'] : 'localhost';
+
+    foreach ([3030, 6060] as $port) {
+      $candidates[] = $scheme . '://' . $host . ':' . $port . '/store/query';
+      $candidates[] = $scheme . '://' . $host . ':' . $port . '/store/sparql';
+    }
+
+    // Common Docker service name.
+    $candidates[] = 'http://fuseki:3030/store/query';
+    $candidates[] = 'http://fuseki:3030/store/sparql';
+    $candidates[] = 'http://localhost:3030/store/query';
+    $candidates[] = 'http://localhost:3030/store/sparql';
+
+    // De-dup while preserving order.
+    $out = [];
+    foreach ($candidates as $c) {
+      if (!in_array($c, $out, true)) {
+        $out[] = $c;
+      }
+    }
+    return $out;
+  }
+
   private function getFusekiGraphStoreUrlCandidates(): array {
     $config = \Drupal::config(static::CONFIGNAME);
     $explicit = $config->get('fuseki_gsp_url');
@@ -2629,6 +2676,49 @@ class FusekiAPIConnector {
     }
 
     return ['ok' => false, 'message' => $msg];
+  }
+
+  public function sparqlQuery(string $sparql): string {
+    $client = new Client();
+    $last = ['url' => null, 'status' => null, 'body' => null];
+
+    foreach ($this->getFusekiQueryUrlCandidates() as $url) {
+      try {
+        $res = $client->request('POST', $url, [
+          'http_errors' => false,
+          'headers' => [
+            'Content-Type' => 'application/sparql-query',
+            'Accept' => 'application/sparql-results+json',
+          ],
+          'body' => $sparql,
+        ]);
+
+        $status = (int) $res->getStatusCode();
+        $body = (string) $res->getBody();
+        $last = ['url' => $url, 'status' => $status, 'body' => $body];
+
+        if ($status === 200) {
+          return $body;
+        }
+      }
+      catch (\Throwable $e) {
+        $last = ['url' => $url, 'status' => null, 'body' => $e->getMessage()];
+        continue;
+      }
+    }
+
+    $msg = 'Failed to execute SPARQL Query in Fuseki.';
+    if (!empty($last['url'])) {
+      $msg .= ' Last tried: ' . $last['url'];
+    }
+    if (!empty($last['status'])) {
+      $msg .= ' (HTTP ' . $last['status'] . ')';
+    }
+    if (!empty($last['body'])) {
+      $msg .= ' Response: ' . substr(preg_replace('/\s+/', ' ', (string) $last['body']), 0, 500);
+    }
+
+    throw new \Exception($msg);
   }
 
   private function fetchRemoteContent(string $url, string $preferredMime = 'text/turtle'): array {
@@ -2715,18 +2805,19 @@ class FusekiAPIConnector {
   /**
    * Ingest ontology for a specific namespace via hascoapi.
    * 
+   * @param string $abbreviation The namespace abbreviation (e.g., pmsr, uberon, ncit)
    * @param string $namespaceUri The namespace URI (e.g., http://pmsr.net/ont/pmsr)
    * @param string $ttlContent The TTL file content
    * @param string $mimeType The MIME type (default: text/turtle)
    * @return string JSON response from API
    */
-  public function repoIngestNamespaceOntology($namespaceUri, $ttlContent, $mimeType = 'text/turtle') {
+  public function repoIngestNamespaceOntology($abbreviation, $namespaceUri, $ttlContent, $mimeType = 'text/turtle') {
     $client = new Client([
       'timeout' => 300, // 5 minutes for large ontologies
       'connect_timeout' => 10,
     ]);
 
-    $endpoint = "/hascoapi/api/repo/namespace/ingest/" . rawurlencode($namespaceUri);
+    $endpoint = "/hascoapi/api/repo/namespace/ingest/" . rawurlencode($abbreviation) . "/" . rawurlencode($namespaceUri);
     $api_url = $this->getApiUrl();
     $url = rtrim($api_url, '/') . $endpoint;
 
@@ -2774,6 +2865,14 @@ class FusekiAPIConnector {
 
   public function repoDeleteNamespaceTriples() {
     $endpoint = "/hascoapi/api/repo/ont/delete";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function repoLoadOntologies() {
+    $endpoint = "/hascoapi/api/repo/ont/load";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -3022,7 +3121,10 @@ class FusekiAPIConnector {
   }
 
   public function perform_http_request($method, $url, $data = false) {
-    $client = new Client();
+    $client = new Client([
+      'timeout' => 10,  // 10 seconds max per request
+      'connect_timeout' => 3,  // 3 seconds to establish connection
+    ]);
     $res = NULL;
     $this->error = NULL;
     $this->error_message = "";
@@ -3033,6 +3135,16 @@ class FusekiAPIConnector {
     $options = [];
     if (is_array($data)) {
       $options = $data;
+      // Allow override of timeouts if specified in $data
+      if (!isset($options['timeout'])) {
+        $options['timeout'] = 10;
+      }
+      if (!isset($options['connect_timeout'])) {
+        $options['connect_timeout'] = 3;
+      }
+    } else {
+      $options['timeout'] = 10;
+      $options['connect_timeout'] = 3;
     }
 
     // Always capture the status/body instead of throwing exceptions.

@@ -86,15 +86,17 @@ class IPForm extends ConfigFormBase {
                 $repoObj = $obj->body;
                 $label = $repoObj->label;
                 $name = $repoObj->title;
-                $domainUrl = $repoObj->hasDefaultNamespaceURL;
-                $domainNamespace = $repoObj->hasDefaultNamespaceAbbreviation;
+                $domainUrl = $repoObj->hasDomainURL;
+                $namespacePrefix = $repoObj->hasDefaultNamespacePrefix;
+                $namespaceUrl = $repoObj->hasDefaultNamespaceURL;
                 $description = $repoObj->comment;
 
                 //save confs
                 $config->set("site_label", $label);
                 $config->set("site_name", $name);
                 $config->set("repository_domain_url", $domainUrl);
-                $config->set("repository_domain_namespace", $domainNamespace);
+                $config->set("repository_namespace_prefix", $namespacePrefix);
+                $config->set("repository_namespace_url", $namespaceUrl);
                 $config->set("repository_description", $description);
                 $config->set("api_url", $form_state->getValue('api_url'));
                 $config->save();
