@@ -32,8 +32,13 @@ class ManageOwnerFilter {
     $authenticated = trim($authenticatedEmail);
     $selected = self::normalizeSelectedEmail($selectedEmail);
 
-    if (!self::isAdmin() || $selected === '') {
+    if (!self::isAdmin()) {
       return $authenticated;
+    }
+
+    // Admin with no explicit owner selected: use all owners when status allows it.
+    if ($selected === '') {
+      return self::allowsOwnerOverrideForStatus($statusFilter) ? '_' : $authenticated;
     }
 
     if (!self::allowsOwnerOverrideForStatus($statusFilter)) {

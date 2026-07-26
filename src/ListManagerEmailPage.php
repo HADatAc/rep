@@ -6,6 +6,11 @@ use Drupal\rep\Vocabulary\REPGUI;
 
 class ListManagerEmailPage {
 
+  private static function isAllOwnersToken($manageremail): bool {
+    $value = strtolower(trim((string) $manageremail));
+    return $value === '' || $value === '_' || $value === 'all';
+  }
+
   private static function shouldBypassManagerEndpoint($elementtype): bool {
     $type = strtolower(trim((string) $elementtype));
     return in_array($type, ['instrument', 'instrumentinstance'], TRUE);
@@ -144,7 +149,8 @@ class ListManagerEmailPage {
     }
 
     $api = \Drupal::service('rep.api_connector');
-    if (!self::shouldBypassManagerEndpoint($elementtype)) {
+    $isAllOwners = self::isAllOwnersToken($manageremail);
+    if (!$isAllOwners && !self::shouldBypassManagerEndpoint($elementtype)) {
       $raw = $api->listByManagerEmail($elementtype, $manageremail, $pagesize, $offset);
       if ($raw !== NULL) {
         $elements = $api->parseObjectResponse($raw, 'listByManagerEmail');
@@ -154,7 +160,7 @@ class ListManagerEmailPage {
       }
     }
 
-    $elements = self::fallbackListByKeyword($api, $elementtype, $manageremail, '_', FALSE, (int) $pagesize, (int) $offset);
+    $elements = self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail, '_', FALSE, (int) $pagesize, (int) $offset);
 
     //dpm($elements);
     return $elements;
@@ -191,7 +197,8 @@ class ListManagerEmailPage {
     $offset = ($page <= 1) ? 0 : (($page - 1) * $pagesize);
 
     $api = \Drupal::service('rep.api_connector');
-    if (!self::shouldBypassManagerEndpoint($elementtype)) {
+    $isAllOwners = self::isAllOwnersToken($manageremail);
+    if (!$isAllOwners && !self::shouldBypassManagerEndpoint($elementtype)) {
       $raw = $api->listByStatusManagerEmail($elementtype, $status, $manageremail, (bool) $withCurrent, $pagesize, $offset);
       if ($raw !== NULL) {
         $elements = $api->parseObjectResponse($raw, 'listByStatusManagerEmail');
@@ -201,7 +208,7 @@ class ListManagerEmailPage {
       }
     }
 
-    $elements = self::fallbackListByKeyword($api, $elementtype, $manageremail, $status, (bool) $withCurrent, (int) $pagesize, (int) $offset);
+    $elements = self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail, $status, (bool) $withCurrent, (int) $pagesize, (int) $offset);
     return $elements;
   }
 
@@ -210,7 +217,8 @@ class ListManagerEmailPage {
       return -1;
     }
     $api = \Drupal::service('rep.api_connector');
-    $response = self::shouldBypassManagerEndpoint($elementtype)
+    $isAllOwners = self::isAllOwnersToken($manageremail);
+    $response = (self::shouldBypassManagerEndpoint($elementtype) || $isAllOwners)
       ? NULL
       : $api->listSizeByManagerEmail($elementtype,$manageremail);
     $listSize = -1;
@@ -231,7 +239,7 @@ class ListManagerEmailPage {
     }
 
     if ($listSize < 0) {
-      $listSize = count(self::fallbackListByKeyword($api, $elementtype, $manageremail));
+      $listSize = count(self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail));
     }
 
     return $listSize;
@@ -243,7 +251,8 @@ class ListManagerEmailPage {
       return -1;
     }
     $api = \Drupal::service('rep.api_connector');
-    $response = self::shouldBypassManagerEndpoint($elementtype)
+    $isAllOwners = self::isAllOwnersToken($manageremail);
+    $response = (self::shouldBypassManagerEndpoint($elementtype) || $isAllOwners)
       ? NULL
       : $api->listSizeByStatusManagerEmail($elementtype, $status, $manageremail, (bool) $withCurrent);
     $listSize = -1;
@@ -274,7 +283,7 @@ class ListManagerEmailPage {
     }
 
     if ($listSize < 0) {
-      $listSize = count(self::fallbackListByKeyword($api, $elementtype, $manageremail, $status, (bool) $withCurrent));
+      $listSize = count(self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail, $status, (bool) $withCurrent));
     }
 
     return $listSize;

@@ -266,12 +266,14 @@ class REPSelectMTForm extends FormBase {
       '#type' => 'item',
       '#markup' => '<h3 class="mt-5">Manage ' . $this->plural_class_name . '</h3>',
     ];
+    $subtitleManagerLabel = ($effective_manager_email === '_')
+      ? $this->t('all owners')
+      : $this->manager_name . ' (' . $this->manager_email . ')';
     $form['page_subtitle'] = [
       '#type' => 'item',
-      '#markup' => $this->t('<h4>@plural_class_name maintained by <font color="DarkGreen">@manager_name (@manager_email)</font></h4>', [
+      '#markup' => $this->t('<h4>@plural_class_name maintained by <font color="DarkGreen">@manager_label</font></h4>', [
         '@plural_class_name' => $this->plural_class_name,
-        '@manager_name' => $this->manager_name,
-        '@manager_email' => $this->manager_email,
+        '@manager_label' => $subtitleManagerLabel,
       ]),
     ];
 
@@ -507,39 +509,51 @@ class REPSelectMTForm extends FormBase {
     if ($view_type == 'table') {
       $form['actions_wrapper']['buttons_container']['edit_selected_element'] = [
         '#type' => 'submit',
-        '#value' => $this->t('Edit ' . $this->single_class_name . ' Selected'),
+        '#value' => $this->t(
+          $this->single_class_name === 'WKF'
+            ? 'Edit Selected WKF'
+            : 'Edit ' . $this->single_class_name . ' Selected'
+        ),
         '#name' => 'edit_element',
         '#attributes' => [
           'class' => ['btn', 'btn-primary', 'edit-element-button'],
         ],
       ];
 
-      $form['actions_wrapper']['buttons_container']['delete_selected_element'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Delete ' . $this->plural_class_name . ' Selected'),
-        '#name' => 'delete_element',
-        '#attributes' => [
-          'onclick' => 'if(!confirm("Really Delete?")){return false;}',
-          'class' => ['btn', 'btn-primary', 'delete-element-button'],
-        ],
-      ];
+      if ($this->single_class_name !== 'WKF') {
+        $form['actions_wrapper']['buttons_container']['delete_selected_element'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Delete ' . $this->plural_class_name . ' Selected'),
+          '#name' => 'delete_element',
+          '#attributes' => [
+            'onclick' => 'if(!confirm("Really Delete?")){return false;}',
+            'class' => ['btn', 'btn-primary', 'delete-element-button'],
+          ],
+        ];
+      }
 
       $uid = \Drupal::currentUser()->id();
       $user = \Drupal\user\Entity\User::load($uid);
       if ($user && $user->hasRole('content_editor')) {
-        $form['actions_wrapper']['buttons_container']['ingest_mt'] = [
-          '#type' => 'submit',
-          '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected as Draft'),
-          '#name' => 'ingest_mt_draft',
-          '#attributes' => [
-            'onclick' => 'if(!confirm("Really Ingest file has DRAFT?")){return false;}',
-            'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
-          ],
-        ];
+        if ($this->single_class_name !== 'WKF') {
+          $form['actions_wrapper']['buttons_container']['ingest_mt'] = [
+            '#type' => 'submit',
+            '#value' => $this->t('Ingest ' . $this->single_class_name . ' Selected as Draft'),
+            '#name' => 'ingest_mt_draft',
+            '#attributes' => [
+              'onclick' => 'if(!confirm("Really Ingest file has DRAFT?")){return false;}',
+              'class' => ['btn', 'btn-primary', 'ingest_mt-button'],
+            ],
+          ];
+        }
 
         $form['actions_wrapper']['buttons_container']['ingest_mt_current'] = [
           '#type' => 'submit',
-          '#value' => $this->t('Ingest ' . $this->single_class_name . ' selected as Current'),
+          '#value' => $this->t(
+            $this->single_class_name === 'WKF'
+              ? 'Ingest Selected WKF'
+              : 'Ingest ' . $this->single_class_name . ' selected as Current'
+          ),
           '#name' => 'ingest_mt_current',
           '#attributes' => [
             'onclick' => 'if(!confirm("Really Ingest file has CURRENT?")){return false;}',
@@ -549,10 +563,26 @@ class REPSelectMTForm extends FormBase {
 
         $form['actions_wrapper']['buttons_container']['uningest_mt'] = [
           '#type' => 'submit',
-          '#value' => $this->t('Uningest ' . $this->plural_class_name . ' Selected'),
+          '#value' => $this->t(
+            $this->single_class_name === 'WKF'
+              ? 'Uningest Selected WKF'
+              : 'Uningest ' . $this->plural_class_name . ' Selected'
+          ),
           '#name' => 'uningest_mt',
           '#attributes' => [
             'class' => ['btn', 'btn-primary', 'uningest_mt-element-button'],
+          ],
+        ];
+      }
+
+      if ($this->single_class_name === 'WKF') {
+        $form['actions_wrapper']['buttons_container']['delete_selected_element'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Delete Selected WKF'),
+          '#name' => 'delete_element',
+          '#attributes' => [
+            'onclick' => 'if(!confirm("Really Delete?")){return false;}',
+            'class' => ['btn', 'btn-primary', 'delete-element-button'],
           ],
         ];
       }
