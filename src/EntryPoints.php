@@ -34,7 +34,7 @@
     // ONTOLOGY ENTRY POINTS  
     const CLASS_EP_NCIT                      = 'http://purl.obolibrary.org/obo/NCIT_C97325'; // NCIT Manufactured Object (root in PMSR subset)
     const CLASS_EP_UBERON                    = 'http://purl.obolibrary.org/obo/UBERON_0001062'; // UBERON Anatomical Entity
-    const CLASS_EP_PMSR                      = 'http://pmsr.net/ont/pmsr#MedicalSimulationProcessStem'; // PMSR Medical Simulation Process Stem
+    const CLASS_EP_PMSR                      = 'http://hadatac.org/ont/hasco/WorkflowStemEntryPoint'; // HASCO Workflow Stem Entry Point
 
     // INSTANCES
     const INSTANCE_EP_INSTRUMENT             = HASCO::INSTRUMENT_INSTANCE_ENTRY_POINT;

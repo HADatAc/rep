@@ -843,6 +843,20 @@
           loadRightTree();
         });
 
+      $('#edit-refresh-left-tree')
+        .off('click.repMap')
+        .on('click.repMap', (e) => {
+          e.preventDefault();
+
+          // Re-fetch binding status first, then force left-tree reload from KG.
+          fetchBoundEntryPoints(() => {
+            const leftInst = safeJsTree($leftTree);
+            if (leftInst && typeof leftInst.refresh === 'function') {
+              leftInst.refresh();
+            }
+          });
+        });
+
       // 4) RIGHT tree events: search context + multi-selection via checkboxes.
       $rightTree
         .off('.repMap')

@@ -401,16 +401,24 @@ function rep_menu_links_discovered_alter(&$links) {
   $study_map = [
     // std.links.menu.yml
     'std.top_level' => [
-      'title' => '@label Elements',
-      'description' => 'Manage @label elements',
+      'title' => '@label Management via Forms',
+      'description' => 'Manage @label via forms',
     ],
     'std.search_option' => [
       'title' => 'Search @label elements',
       'description' => 'Search @label elements',
     ],
+    'std.search_studies_variables' => [
+      'title' => '@label Search',
+      'description' => 'Search @label by variables and components',
+    ],
     'std.manage_studies' => [
       'title' => 'Manage @label',
       'description' => 'Manage @label items',
+    ],
+    'std.manage_wkf_template' => [
+      'title' => '@label Management via WKF',
+      'description' => 'Manage @label via WKF',
     ],
   ];
 

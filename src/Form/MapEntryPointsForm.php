@@ -102,6 +102,21 @@ class MapEntryPointsForm extends FormBase {
         'id'    => 'left-col-wrapper',
       ],
     ];
+    $form['row']['left_col']['left_col_actions'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['d-flex', 'justify-content-end', 'mb-2', 'rep-map-refresh-actions'],
+      ],
+    ];
+    $form['row']['left_col']['left_col_actions']['refresh_left_tree'] = [
+      '#type' => 'button',
+      '#value' => $this->t('Refresh'),
+      '#attributes' => [
+        'type' => 'button',
+        'id' => 'edit-refresh-left-tree',
+        'class' => ['btn', 'button', 'button--secondary', 'rep-map-refresh-button'],
+      ],
+    ];
     $form['row']['left_col']['current_tree'] = [
       '#type'   => 'markup',
       '#markup' => '<div id="current-tree"'

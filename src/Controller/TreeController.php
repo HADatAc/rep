@@ -15,9 +15,64 @@ use Drupal\rep\Vocabulary\VSTOI;
 
 class TreeController extends ControllerBase {
 
+  private const CLASS_ENTRY_POINT_ROOT = 'http://hadatac.org/ont/hasco/ClassEntryPoint';
   private const VSTOI_PHYSICAL_INSTRUMENT = 'http://hadatac.org/ont/vstoi#PhysicalInstrument';
   private const PMSR_PHYSICAL_INSTRUMENT = 'http://pmsr.net/ont/pmsr#PhysicalInstrument';
   private const MAX_INSTANCE_LABEL_URI_LOOKUPS = 40;
+  private const REQUIRED_CLASS_ENTRY_POINT_LOCAL_NAMES = [
+    'AnnotationStemEntryPoint',
+    'AnatomicalPartEntryPoint',
+    'AttributeEntryPoint',
+    'CodeBookEntryPoint',
+    'ComponentEntryPoint',
+    'ComponentAttributeEntryPoint',
+    'ComponentStemEntryPoint',
+    'EntityEntryPoint',
+    'GroupEntryPoint',
+    'InstrumentEntryPoint',
+    'MedicalDeviceEntryPoint',
+    'OrganizationEntryPoint',
+    'PersonEntryPoint',
+    'PlaceEntryPoint',
+    'PlatformEntryPoint',
+    'QuestionnaireEntryPoint',
+    'ResponseOptionEntryPoint',
+    'StudyEntryPoint',
+    'TaskEntryPoint',
+    'TaskTemporalDependencyEntryPoint',
+    'UnitEntryPoint',
+    'WorkflowEntryPoint',
+    'WorkflowStemEntryPoint',
+  ];
+  private const CLASS_ENTRY_POINT_URI_ALIASES = [
+    'http://hadatac.org/ont/hasco/AnnotationEntryPoint' => 'http://hadatac.org/ont/hasco/AnnotationStemEntryPoint',
+    'http://hadatac.org/ont/hasco/CodebookEntryPoint' => 'http://hadatac.org/ont/hasco/CodeBookEntryPoint',
+  ];
+  private const CLASS_ENTRY_POINT_LABELS = [
+    'AnnotationStemEntryPoint' => 'Annotation Stem Entry Point',
+    'AnatomicalPartEntryPoint' => 'Anatomical Part Entry Point',
+    'AttributeEntryPoint' => 'Attribute Entry Point',
+    'CodeBookEntryPoint' => 'Code Book Entry Point',
+    'ComponentEntryPoint' => 'Component Entry Point',
+    'ComponentAttributeEntryPoint' => 'Component Attribute Entry Point',
+    'ComponentStemEntryPoint' => 'Component Stem Entry Point',
+    'EntityEntryPoint' => 'Entity Entry Point',
+    'GroupEntryPoint' => 'Group Entry Point',
+    'InstrumentEntryPoint' => 'Instrument Entry Point',
+    'MedicalDeviceEntryPoint' => 'Medical Device Entry Point',
+    'OrganizationEntryPoint' => 'Organization Entry Point',
+    'PersonEntryPoint' => 'Person Entry Point',
+    'PlaceEntryPoint' => 'Place Entry Point',
+    'PlatformEntryPoint' => 'Platform Entry Point',
+    'QuestionnaireEntryPoint' => 'Questionnaire Entry Point',
+    'ResponseOptionEntryPoint' => 'Response Option Entry Point',
+    'StudyEntryPoint' => 'Study Entry Point',
+    'TaskEntryPoint' => 'Task Entry Point',
+    'TaskTemporalDependencyEntryPoint' => 'Task Temporal Dependency Entry Point',
+    'UnitEntryPoint' => 'Unit Entry Point',
+    'WorkflowEntryPoint' => 'Workflow Entry Point',
+    'WorkflowStemEntryPoint' => 'Workflow Stem Entry Point',
+  ];
   private array $instanceLabelCache = [];
   private int $instanceLabelLookupCount = 0;
 
@@ -419,6 +474,180 @@ class TreeController extends ControllerBase {
   }
 
   /**
+   * Build the same top-class node pool used by getTopClass().
+   */
+  private function buildTopClassPool(string $nodeUri): array {
+    $api = \Drupal::service('rep.api_connector');
+
+    // Same child retrieval path used by getTopClass.
+    $children = $api->parseObjectResponse($api->getChildren($nodeUri), 'getChildren');
+    if (!is_array($children)) {
+      $children = [];
+    }
+
+    // Same mapping merge used by getTopClass.
+    $tables = new Tables(\Drupal::database());
+    $all_mappings = $tables->getAllMappings();
+    $mapped_nodes = [];
+    if (isset($all_mappings[$nodeUri])) {
+      $mappedUri = $all_mappings[$nodeUri];
+      if ($obj = $api->parseObjectResponse($api->getUri($mappedUri), 'getUri')) {
+        $mapped_nodes[] = $obj;
+      }
+    }
+
+    $pool = [];
+    foreach (array_merge($children, $mapped_nodes) as $item) {
+      if (is_object($item) && isset($item->uri)) {
+        $pool[$item->uri] = $item;
+      }
+    }
+
+    // Keep class entry points deterministic: normalize aliases and synthesize
+    // missing required roots so mappings are stable across reload variations.
+    if ($nodeUri === self::CLASS_ENTRY_POINT_ROOT) {
+      $pool = $this->stabilizeClassEntryPointPool($pool);
+    }
+
+    foreach ($pool as $uri => $item) {
+      $item->isMapped = (isset($all_mappings[$nodeUri]) && $all_mappings[$nodeUri] === $uri);
+    }
+
+    $items = array_values($pool);
+    usort($items, function($a, $b) {
+      return strcasecmp($a->label, $b->label);
+    });
+
+    return $items;
+  }
+
+  /**
+   * Normalize and complete the class entry point root set.
+   */
+  private function stabilizeClassEntryPointPool(array $pool): array {
+    $normalized = [];
+
+    // 1) Normalize legacy/alternate URIs to canonical ones.
+    foreach ($pool as $uri => $item) {
+      if (!is_object($item) || empty($uri)) {
+        continue;
+      }
+
+      $canonicalUri = self::CLASS_ENTRY_POINT_URI_ALIASES[$uri] ?? $uri;
+      $localName = $this->localNameFromUri($canonicalUri);
+      $canonicalLabel = self::CLASS_ENTRY_POINT_LABELS[$localName] ?? (string) ($item->label ?? $localName);
+
+      $item->uri = $canonicalUri;
+      if (empty($item->label) || isset(self::CLASS_ENTRY_POINT_LABELS[$localName])) {
+        $item->label = $canonicalLabel;
+      }
+      if (empty($item->superUri)) {
+        $item->superUri = self::CLASS_ENTRY_POINT_ROOT;
+      }
+
+      $normalized[$canonicalUri] = $item;
+    }
+
+    // 2) Ensure all required class entry points exist.
+    foreach (self::REQUIRED_CLASS_ENTRY_POINT_LOCAL_NAMES as $localName) {
+      $uri = 'http://hadatac.org/ont/hasco/' . $localName;
+      if (isset($normalized[$uri])) {
+        continue;
+      }
+
+      $normalized[$uri] = (object) [
+        'uri' => $uri,
+        'label' => self::CLASS_ENTRY_POINT_LABELS[$localName] ?? $localName,
+        'superUri' => self::CLASS_ENTRY_POINT_ROOT,
+        'typeNamespace' => $uri,
+      ];
+    }
+
+    return $normalized;
+  }
+
+  /**
+   * Extracts the local name from a URI (fragment or last path segment).
+   */
+  private function localNameFromUri(string $uri): string {
+    $fragment = parse_url($uri, PHP_URL_FRAGMENT);
+    if (is_string($fragment) && $fragment !== '') {
+      return $fragment;
+    }
+
+    $path = parse_url($uri, PHP_URL_PATH);
+    if (!is_string($path) || $path === '') {
+      return $uri;
+    }
+
+    $parts = explode('/', trim($path, '/'));
+    $last = end($parts);
+    return is_string($last) && $last !== '' ? $last : $uri;
+  }
+
+  /**
+   * Load a node's children through the same runtime path used by tree expansion.
+   */
+  private function loadTreeChildren(string $nodeUri): array {
+    $childRequest = Request::create('/rep/getchildren', 'GET', ['nodeUri' => $nodeUri]);
+    $childResponse = $this->getChildren($childRequest);
+    $decoded = json_decode($childResponse->getContent());
+
+    return is_array($decoded) ? $decoded : [];
+  }
+
+  /**
+   * Checks whether a root URI has at least one descendant.
+   *
+   * Uses bounded traversal with cycle protection and short-circuits as soon
+   * as the first reachable child is found.
+   */
+  private function hasTreeDescendant(string $rootUri, int $maxDepth = 6, int $maxVisited = 300): bool {
+    $visited = [$rootUri => TRUE];
+    $queue = [[$rootUri, 0]];
+    $visitedCount = 1;
+
+    while (!empty($queue) && $visitedCount <= $maxVisited) {
+      [$currentUri, $depth] = array_shift($queue);
+      if ($depth >= $maxDepth) {
+        continue;
+      }
+
+      $children = $this->loadTreeChildren($currentUri);
+      foreach ($children as $child) {
+        if (!is_object($child) || empty($child->uri)) {
+          continue;
+        }
+
+        $childUri = (string) $child->uri;
+        if (isset($visited[$childUri])) {
+          continue;
+        }
+
+        // First reachable child proves this entry point is bound.
+        return TRUE;
+      }
+
+      foreach ($children as $child) {
+        if (!is_object($child) || empty($child->uri)) {
+          continue;
+        }
+
+        $childUri = (string) $child->uri;
+        if (isset($visited[$childUri])) {
+          continue;
+        }
+
+        $visited[$childUri] = TRUE;
+        $visitedCount++;
+        $queue[] = [$childUri, $depth + 1];
+      }
+    }
+
+    return FALSE;
+  }
+
+  /**
    * Resolves a canonical VSTOI Physical Instrument node for class trees.
    */
   private function resolveVstoiPhysicalInstrumentNode($api) {
@@ -679,12 +908,18 @@ class TreeController extends ControllerBase {
     }
 
     if (empty($children) && $nodeUri === EntryPoints::CLASS_EP_COMPONENT_ATTRIBUTE) {
-      $fallback = $api->parseObjectResponse($api->getUri(VSTOI::COMPONENT_ATTRIBUTE), 'getUri');
-      if (is_object($fallback) && !empty($fallback->uri)) {
-        $sub = $api->parseObjectResponse($api->getChildren($fallback->uri), 'getChildren');
-        $fallback->children = is_array($sub) && !empty($sub);
-        $children = [$fallback];
-      }
+      // Build a synthetic fallback node instead of calling /api/uri, because
+      // some local graphs expose children for this class but do not resolve the
+      // class itself, which would surface a user-facing KG error.
+      $sub = $api->parseObjectResponse($api->getChildren(VSTOI::COMPONENT_ATTRIBUTE), 'getChildren');
+      $fallback = (object) [
+        'uri' => VSTOI::COMPONENT_ATTRIBUTE,
+        'label' => 'Component Attribute',
+        'superUri' => EntryPoints::CLASS_EP_COMPONENT_ATTRIBUTE,
+        'typeNamespace' => VSTOI::COMPONENT_ATTRIBUTE,
+        'children' => is_array($sub) && !empty($sub),
+      ];
+      $children = [$fallback];
     }
 
     $tables       = new Tables(\Drupal::database());
@@ -699,6 +934,9 @@ class TreeController extends ControllerBase {
 
     $pool = [];
     foreach (array_merge($children, $mapped_nodes) as $item) {
+      if (!is_object($item) || empty($item->uri)) {
+        continue;
+      }
       $pool[$item->uri] = $item;
     }
 
@@ -828,35 +1066,37 @@ class TreeController extends ControllerBase {
     $all_mappings = $tables->getAllMappings();
     $bound_entry_points = array_keys($all_mappings);
     
-    // 2. Query triplestore for entry points that have subclasses
-    // These are entry points that have been bound via RDF ingestion
+    // 2. Discover bound entry points using the same tree-loading flow as the UI:
+    // root via getTopClass(), then children via getChildren().
+    // This preserves all getChildren() fallback logic (entry-point normalization, etc.).
     try {
-      $api = \Drupal::service('rep.api_connector');
-      
-      // Get all entry points from HASCO ontology
-      // Entry points are children of hasco:ClassEntryPoint
+      // Entry points are children of hasco:ClassEntryPoint.
       $entry_point_root = 'http://hadatac.org/ont/hasco/ClassEntryPoint';
-      $response = $api->getChildren($entry_point_root);
-      $entry_points = $api->parseObjectResponse($response, 'getChildren');
+      $entry_points = $this->buildTopClassPool($entry_point_root);
       
-      if (is_array($entry_points)) {
-        // For each entry point, check if it has children (subclasses)
+        if (is_array($entry_points)) {
+          // For each entry point, walk descendants through the same tree path.
         foreach ($entry_points as $entry_point) {
           if (!isset($entry_point->uri)) {
             continue;
           }
           
           $entry_point_uri = $entry_point->uri;
-          
-          // Query the API to get children of this entry point
-          $children_response = $api->getChildren($entry_point_uri);
-          $children = $api->parseObjectResponse($children_response, 'getChildren');
-          
-          // If it has at least one child, it's bound
-          if (is_array($children) && count($children) > 0) {
-            if (!in_array($entry_point_uri, $bound_entry_points)) {
+
+          // Isolate each entry-point lookup: a single bad branch must not zero all results.
+          try {
+              $hasDescendant = $this->hasTreeDescendant($entry_point_uri);
+
+              // If this entry point has at least one descendant (child or deeper), it's bound.
+              if ($hasDescendant && !in_array($entry_point_uri, $bound_entry_points, TRUE)) {
               $bound_entry_points[] = $entry_point_uri;
             }
+          }
+          catch (\Throwable $inner) {
+            \Drupal::logger('rep')->warning('Skipping entry-point during bound detection: @uri (@error)', [
+              '@uri' => $entry_point_uri,
+              '@error' => $inner->getMessage(),
+            ]);
           }
         }
       }
@@ -874,7 +1114,6 @@ class TreeController extends ControllerBase {
   }
 
   public function getTopClass(Request $request) {
-    $api     = \Drupal::service('rep.api_connector');
     $nodeUri = $request->query->get('nodeUri');
     if ($nodeUri === NULL || trim((string) $nodeUri) === '') {
       $nodeUri = $request->query->get('uri');
@@ -882,37 +1121,8 @@ class TreeController extends ControllerBase {
     if ($nodeUri === NULL || trim((string) $nodeUri) === '') {
       return new JsonResponse(['error' => 'Missing required query parameter: nodeUri'], 400);
     }
-    
-    // Get children from triplestore (works for both namespaces and classes)
-    $children = $api->parseObjectResponse($api->getChildren($nodeUri), 'getChildren');
-    if (!is_array($children)) {
-      $children = [];
-    }
 
-    $tables       = new Tables(\Drupal::database());
-    $all_mappings = $tables->getAllMappings();
-    $mapped_nodes = [];
-    if (isset($all_mappings[$nodeUri])) {
-      $mappedUri = $all_mappings[$nodeUri];
-      if ($obj = $api->parseObjectResponse($api->getUri($mappedUri), 'getUri')) {
-        $mapped_nodes[] = $obj;
-      }
-    }
-
-    $pool = [];
-    foreach (array_merge($children, $mapped_nodes) as $item) {
-      $pool[$item->uri] = $item;
-    }
-
-    foreach ($pool as $uri => $item) {
-      $item->isMapped = (isset($all_mappings[$nodeUri]) && $all_mappings[$nodeUri] === $uri);
-    }
-
-    $items = array_values($pool);
-    usort($items, function($a, $b) {
-      return strcasecmp($a->label, $b->label);
-    });
-    return new JsonResponse(array_values($pool));
+    return new JsonResponse($this->buildTopClassPool($nodeUri));
   }
 
 }
