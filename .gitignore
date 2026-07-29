@@ -1,3 +1,10 @@
 /out/
 /.idea/
 **/.DS_Store
+
+# Playwright local artifacts (do not commit generated binaries/caches/results)
+tests/playwright/.pw-browsers/
+tests/playwright/.npm-cache/
+tests/playwright/node_modules/
+tests/playwright/test-results/
+tests/playwright/playwright-report/
