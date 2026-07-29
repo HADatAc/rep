@@ -169,6 +169,9 @@ class MetadataTemplate
           $element->hasDataFile->fileStatus != NULL &&
           $element->hasDataFile->fileStatus != ''
         ) {
+          $is_wkf = ($elementType === 'wkf');
+          $datafile_uri = isset($element->hasDataFile->uri) ? (string) $element->hasDataFile->uri : '';
+
           if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED && (!isset($element->streamUri) || $element->streamUri == NULL)) {
             $filestatus = '<b><font style="color:#000000;">' . Constant::FILE_STATUS_UNPROCESSED . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_UNPROCESSED) {
@@ -176,13 +179,42 @@ class MetadataTemplate
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED) {
             $filestatus = '<b><font style="color:#008000;">' . Constant::FILE_STATUS_PROCESSED . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING) {
-            $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING . '</font></b>';
+            if ($is_wkf) {
+              $filestatus = self::wkfStatusMarkup(
+                Constant::FILE_STATUS_WORKING,
+                '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING . '</font></b>',
+                $datafile_uri,
+                TRUE
+              );
+            } else {
+              $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING . '</font></b>';
+            }
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_PROCESSED_STD) {
             $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_PROCESSED_STD . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING_STD) {
-            $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING_STD . '</font></b>';
+            if ($is_wkf) {
+              $filestatus = self::wkfStatusMarkup(
+                Constant::FILE_STATUS_WORKING_STD,
+                '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING_STD . '</font></b>',
+                $datafile_uri,
+                TRUE
+              );
+            } else {
+              $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING_STD . '</font></b>';
+            }
           } else {
             $filestatus = ' ';
+          }
+
+          // Add status metadata wrapper for WKF terminal states too, so polling JS
+          // can determine when to stop reloading the page.
+          if ($is_wkf && $filestatus !== ' ' && strpos($filestatus, 'data-rep-wkf-ingestion') === FALSE) {
+            $filestatus = self::wkfStatusMarkup(
+              (string) $element->hasDataFile->fileStatus,
+              $filestatus,
+              $datafile_uri,
+              FALSE
+            );
           }
         }
         if (isset($element->hasDataFile->log) && $element->hasDataFile->log != NULL) {
@@ -662,6 +694,20 @@ class MetadataTemplate
       }
     } catch (\Exception $e) {
     }
+  }
+
+  private static function wkfStatusMarkup(string $status, string $innerHtml, string $datafileUri, bool $withSpinner): string {
+    $state = $withSpinner ? 'working' : 'done';
+    $uriAttr = htmlspecialchars($datafileUri, ENT_QUOTES, 'UTF-8');
+    $statusAttr = htmlspecialchars($status, ENT_QUOTES, 'UTF-8');
+
+    $spinner = '';
+    if ($withSpinner) {
+      $spinner = '<span class="spinner-border spinner-border-sm text-warning me-1" role="status" aria-hidden="true"></span>';
+    }
+
+    return '<span class="rep-wkf-ingestion-status" data-rep-wkf-ingestion="' . $state . '" data-rep-status="' . $statusAttr . '" data-rep-datafile-uri="' . $uriAttr . '">'
+      . $spinner . $innerHtml . '</span>';
   }
 
   public static function generateOutputAsCards($elementType, $list) {

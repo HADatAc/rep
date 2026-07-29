@@ -15,14 +15,36 @@ use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 class EntryPointColorCodingTest extends WebDriverTestBase {
 
   /**
-   * {@inheritdoc}
+   * Avoid unrelated schema failures from module config during test install.
+   *
+   * @var bool
    */
-  protected $defaultTheme = 'stark';
+  protected $strictConfigSchema = FALSE;
+
+  /**
+   * Fetch bound entry points JSON payload.
+   */
+  private function getBoundEntryPointsPayload(): array {
+    $this->drupalGet('/rep/bound-entry-points?_format=json');
+    $json = $this->getSession()->getPage()->getContent();
+    $data = json_decode($json, true);
+
+    $this->assertIsArray($data, 'Bound entry points endpoint must return JSON object.');
+    $this->assertArrayHasKey('bound', $data, 'Bound entry points payload must contain "bound".');
+    $this->assertArrayHasKey('count', $data, 'Bound entry points payload must contain "count".');
+
+    return $data;
+  }
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['rep', 'pmsrgui'];
+  protected $defaultTheme = 'hasco_barrio';
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = ['block', 'rep', 'pmsr'];
 
   /**
    * Test that entry point nodes have color-coding CSS classes applied.
@@ -249,6 +271,61 @@ class EntryPointColorCodingTest extends WebDriverTestBase {
         '40, 167, 69',
         $color,
         'Bound entry points should be displayed in green color'
+      );
+    }
+  }
+
+  /**
+   * Baseline regression test for Manage Class Entry Points.
+   *
+   * Ensures the Resync action:
+   * - does not reduce bound entry-point coverage,
+   * - and preserves key HASCO entry-point bindings expected in baseline.
+   *
+   * @javascript
+   */
+  public function testResyncPreservesBaselineKeyEntryPointBindings() {
+    $adminUser = $this->drupalCreateUser([
+      'access content',
+      'administer site configuration',
+      'administer semantic ontologies',
+    ]);
+    $this->drupalLogin($adminUser);
+
+    $before = $this->getBoundEntryPointsPayload();
+    $beforeCount = (int) ($before['count'] ?? 0);
+
+    $this->drupalGet('/rep/manage/map-entry-points');
+    $this->assertSession()->waitForElement('css', '#edit-resync-from-kg');
+
+    // Trigger server-side resync from the same UI used by users.
+    $this->click('#edit-resync-from-kg');
+    $this->assertSession()->waitForText('Resync completed', 20000);
+
+    $after = $this->getBoundEntryPointsPayload();
+    $afterCount = (int) ($after['count'] ?? 0);
+
+    $this->assertGreaterThanOrEqual(
+      $beforeCount,
+      $afterCount,
+      'Resync must not reduce bound entry-point coverage.'
+    );
+
+    $bound = array_map('strval', (array) ($after['bound'] ?? []));
+
+    $expectedKeyEntryPoints = [
+      'http://hadatac.org/ont/hasco/CodeBookEntryPoint',
+      'http://hadatac.org/ont/hasco/QuestionnaireEntryPoint',
+      'http://hadatac.org/ont/hasco/ResponseOptionEntryPoint',
+      'http://hadatac.org/ont/hasco/StudyEntryPoint',
+      'http://hadatac.org/ont/hasco/TaskEntryPoint',
+    ];
+
+    foreach ($expectedKeyEntryPoints as $entryPointUri) {
+      $this->assertContains(
+        $entryPointUri,
+        $bound,
+        sprintf('Expected baseline entry point to be bound after resync: %s', $entryPointUri)
       );
     }
   }

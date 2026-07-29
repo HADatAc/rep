@@ -58,6 +58,14 @@ wkf_instructions_modal:
     - core/drupal
     - core/once
 
+wkf_ingestion_status_poll:
+  version: 1.x
+  js:
+    js/wkf_ingestion_status_poll.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+
 webdoc_modal:
   version: 1.x
   css:

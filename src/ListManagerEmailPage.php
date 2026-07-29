@@ -13,7 +13,11 @@ class ListManagerEmailPage {
 
   private static function shouldBypassManagerEndpoint($elementtype): bool {
     $type = strtolower(trim((string) $elementtype));
-    return in_array($type, ['instrument', 'instrumentinstance'], TRUE);
+    return in_array($type, ['instrument', 'instrumentinstance', 'processbasedstudy'], TRUE);
+  }
+
+  private static function isProcessBasedStudyType($elementtype): bool {
+    return strtolower(trim((string) $elementtype)) === 'processbasedstudy';
   }
 
   private static function extractField($item, string $field) {
@@ -87,6 +91,55 @@ class ListManagerEmailPage {
     ?int $pageSize = NULL,
     int $offset = 0
   ): array {
+    if (self::isProcessBasedStudyType($elementtype)) {
+      $raw = $api->listProcessBasedStudies(5000, 0);
+      if ($raw === NULL) {
+        return [];
+      }
+
+      $all = $api->parseObjectResponse($raw, 'listProcessBasedStudies');
+      if (!is_array($all)) {
+        return [];
+      }
+
+      $targetManager = strtolower(trim((string) $manageremail));
+      $filterManager = ($targetManager !== '' && $targetManager !== '_');
+      $targetStatus = self::normalizeStatusValue($status);
+      $filterStatus = ($targetStatus !== '' && $targetStatus !== '_');
+
+      $filtered = array_values(array_filter($all, function ($item) use ($filterManager, $targetManager, $filterStatus, $targetStatus, $withCurrent) {
+        if (!is_object($item) && !is_array($item)) {
+          return FALSE;
+        }
+
+        if ($filterManager) {
+          $owner = strtolower(trim((string) self::extractField($item, 'hasSIRManagerEmail')));
+          if ($owner === '' || $owner !== $targetManager) {
+            return FALSE;
+          }
+        }
+
+        if ($filterStatus) {
+          $itemStatus = self::normalizeStatusValue(self::extractField($item, 'hasStatus'));
+          if ($itemStatus === $targetStatus) {
+            return TRUE;
+          }
+          if ($withCurrent && $itemStatus === 'current') {
+            return TRUE;
+          }
+          return FALSE;
+        }
+
+        return TRUE;
+      }));
+
+      if ($pageSize === NULL) {
+        return $filtered;
+      }
+
+      return array_slice($filtered, max(0, $offset), max(0, $pageSize));
+    }
+
     $raw = $api->listByKeyword($elementtype, '_', 5000, 0);
     if ($raw === NULL) {
       return [];
@@ -239,7 +292,28 @@ class ListManagerEmailPage {
     }
 
     if ($listSize < 0) {
-      $listSize = count(self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail));
+      if (self::isProcessBasedStudyType($elementtype)) {
+        $response = $api->listProcessBasedStudiesTotal();
+        if ($response != NULL) {
+          $obj = json_decode($response);
+          if ($obj != NULL && !empty($obj->isSuccessful)) {
+            $body = $obj->body;
+            if (is_string($body)) {
+              $obj2 = json_decode($body);
+              if (is_object($obj2) && isset($obj2->total)) {
+                $listSize = (int) $obj2->total;
+              }
+            }
+            elseif (is_object($body) && isset($body->total)) {
+              $listSize = (int) $body->total;
+            }
+          }
+        }
+      }
+
+      if ($listSize < 0) {
+        $listSize = count(self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail));
+      }
     }
 
     return $listSize;

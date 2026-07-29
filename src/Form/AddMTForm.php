@@ -251,6 +251,8 @@ class AddMTForm extends FormBase {
     $form['mt_version'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Version'),
+      '#default_value' => $this->getElementType() === 'wkf' ? '1' : '',
+      '#disabled' => $this->getElementType() === 'wkf',
     ];
     //if ($this->getElementType() == 'da') {
     //}
@@ -380,6 +382,11 @@ class AddMTForm extends FormBase {
         $sddUri = Utils::uriFromAutocomplete($form_state->getValue('mt_sdd'));
       }
 
+      $versionValue = (string) $form_state->getValue('mt_version');
+      if ($this->getElementType() === 'wkf') {
+        $versionValue = '1';
+      }
+
       // Build DATAFILE JSON
       $newDataFileUri = Utils::uriGen('datafile');
       $datafileJSON = json_encode([
@@ -401,7 +408,7 @@ class AddMTForm extends FormBase {
         "hascoTypeUri" => $this->getElementTypeUri(),
         "label" => $form_state->getValue('mt_name'),
         "hasDataFileUri" => $newDataFileUri,
-        "hasVersion" => $form_state->getValue('mt_version'),
+        "hasVersion" => $versionValue,
         "comment" => $form_state->getValue('mt_comment'),
         "hasSIRManagerEmail" => $useremail,
       ];

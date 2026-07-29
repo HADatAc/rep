@@ -72,6 +72,18 @@ class EditMTForm extends FormBase {
     return $this->study = $study;
   }
 
+  private function nextVersionValue(): string {
+    $current = (string) ($this->getMT()->hasVersion ?? '');
+    $trimmed = trim($current);
+    if ($trimmed === '') {
+      return '1';
+    }
+    if (is_numeric($trimmed)) {
+      return (string) (((int) $trimmed) + 1);
+    }
+    return '1';
+  }
+
   /**
    * {@inheritdoc}
    */
@@ -228,7 +240,7 @@ class EditMTForm extends FormBase {
     $form['mt_version'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Version'),
-      '#default_value' => $this->getMT()->hasVersion,
+      '#default_value' => $this->getElementType() === 'wkf' ? $this->nextVersionValue() : $this->getMT()->hasVersion,
       '#disabled' => true
     ];
     $form['mt_comment'] = [
@@ -310,9 +322,15 @@ class EditMTForm extends FormBase {
     if ($sddUri != NULL) {
       $mtJSON .= '"hasSDDUri":"'.$sddUri.'",';
     }
+
+    $versionValue = (string) $form_state->getValue('mt_version');
+    if ($this->getElementType() === 'wkf') {
+      $versionValue = $this->nextVersionValue();
+    }
+
     $mtJSON .= '"label":"'.$form_state->getValue('mt_name').'",'.
       '"hasDataFileUri":"'.$this->getMT()->hasDataFile->uri.'",'.
-      '"hasVersion":"'.$form_state->getValue('mt_version').'",'.
+      '"hasVersion":"'.$versionValue.'",'.
       '"comment":"'.$form_state->getValue('mt_comment').'",'.
       '"hasSIRManagerEmail":"'.$useremail.'"}';
 

@@ -566,6 +566,30 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method, $api_url.$endpoint, $data);
   }
 
+  /**
+   * Dedicated ProcessBasedStudy listing endpoint.
+   */
+  public function listProcessBasedStudies($pageSize, $offset) {
+    $endpoint = "/hascoapi/api/processbasedstudy/elements/" .
+      $pageSize . "/" .
+      $offset;
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url . $endpoint, $data);
+  }
+
+  /**
+   * Dedicated ProcessBasedStudy total endpoint.
+   */
+  public function listProcessBasedStudiesTotal() {
+    $endpoint = "/hascoapi/api/processbasedstudy/elements/total";
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url . $endpoint, $data);
+  }
+
   public function listSizeByKeyword($elementType, $keyword) {
     $elementType = $this->normalizeHascoApiElementType($elementType);
     $endpoint = "/hascoapi/api/".

@@ -577,6 +577,19 @@
     };
   }
 
+  if (!$.fn.repMapAfterResync) {
+    $.fn.repMapAfterResync = function () {
+      fetchBoundEntryPoints(() => {
+        const leftInst = safeJsTree($leftTree);
+        if (leftInst && typeof leftInst.refresh === 'function') {
+          leftInst.refresh();
+        }
+      });
+
+      return this;
+    };
+  }
+
   Drupal.behaviors.mapEntryPoints = {
     attach(context) {
       if (context !== document) return; // run once on full page

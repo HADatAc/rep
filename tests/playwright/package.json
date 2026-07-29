@@ -1,0 +1,13 @@
+{
+  "name": "rep-entrypoints-playwright-regression",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright regression checks for REP Manage Class Entry Points",
+  "scripts": {
+    "test": "playwright test",
+    "test:entrypoints": "playwright test tests/entrypoints-regression.spec.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}

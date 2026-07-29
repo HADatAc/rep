@@ -21,6 +21,27 @@ use Drupal\rep\Vocabulary\OWL;
 class Utils {
 
   /**
+   * Canonical PMSR ontology base URL.
+   */
+  private const PMSR_CANONICAL_BASE = 'https://pmsr.net/ont/';
+
+  /**
+   * Keep tracked URLs within DB column limits.
+   */
+  private static function normalizeTrackingUrl($url, int $maxLength = 255): string {
+    $value = trim((string) ($url ?? ''));
+    if ($value === '') {
+      return '/';
+    }
+
+    if (strlen($value) <= $maxLength) {
+      return $value;
+    }
+
+    return substr($value, 0, $maxLength);
+  }
+
+  /**
    * Settings Variable.
    */
   Const CONFIGNAME = "rep.settings";
@@ -63,9 +84,57 @@ class Utils {
     $obj = json_decode($repo);
     if ($obj->isSuccessful) {
       $repoObj = $obj->body;
-      return $repoObj->hasDefaultNamespaceURL;
+      return static::normalizeRepositoryNamespace((string) ($repoObj->hasDefaultNamespaceURL ?? ''));
     }
     return NULL;
+  }
+
+  /**
+   * Normalize repository namespace URLs to canonical PMSR format when needed.
+   */
+  public static function normalizeRepositoryNamespace(?string $namespaceUrl): string {
+    $value = trim((string) ($namespaceUrl ?? ''));
+    if ($value === '') {
+      return '';
+    }
+
+    $normalized = preg_replace('#^https?://pmsr\.net/ont/pmsr#/?#i', self::PMSR_CANONICAL_BASE, $value);
+    if (!is_string($normalized)) {
+      $normalized = $value;
+    }
+
+    if (!str_ends_with($normalized, '/')) {
+      $normalized .= '/';
+    }
+
+    return $normalized;
+  }
+
+  /**
+   * Canonicalize known PMSR URI variants and identifier separators.
+   */
+  public static function canonicalizePmsrUri(?string $uri): string {
+    $value = trim((string) ($uri ?? ''));
+    if ($value === '') {
+      return '';
+    }
+
+    $value = preg_replace('#^https?://pmsr\.net/ont/pmsr#/?#i', self::PMSR_CANONICAL_BASE, $value);
+    if (!is_string($value)) {
+      return trim((string) ($uri ?? ''));
+    }
+
+    // Fix known identifier prefix drift in PMSR resources.
+    $value = preg_replace('#/(WFK)[-_]#i', '/WKF-', $value);
+    if (!is_string($value)) {
+      return trim((string) ($uri ?? ''));
+    }
+    $value = preg_replace('#/(WKF|STD)_#i', '/$1-', $value);
+    if (!is_string($value)) {
+      return trim((string) ($uri ?? ''));
+    }
+
+    return $value;
   }
 
   public static function elementPrefix($elementType) {
@@ -231,9 +300,7 @@ class Utils {
     if ($repoUri == NULL) {
       return NULL;
     }
-    if (!str_ends_with($repoUri,'/')) {
-      $repoUri .= '/';
-    }
+    $repoUri = static::normalizeRepositoryNamespace($repoUri);
     $uid = \Drupal::currentUser()->id();
     $iid = time().rand(10000,99999).$uid;
     // dpm($elementType);
@@ -253,7 +320,13 @@ class Utils {
       return $uri;
     }
     preg_match('/\[([^\]]*)\]/', $field, $match);
-    $uri = $match[1];
+    if (isset($match[1]) && is_string($match[1])) {
+      $uri = $match[1];
+    }
+    else {
+      $uri = trim((string) $field);
+    }
+    $uri = static::canonicalizePmsrUri($uri);
     return $uri;
   }
 
@@ -821,13 +894,16 @@ class Utils {
    */
   public static function trackingStoreUrls($uid, $previous_url, $current_url) {
     //dpm("Tracking Store URLs: currentIrl=[" . $current_url . "] previousUrl=[" . $previous_url . "]");
+    $normalizedCurrentUrl = self::normalizeTrackingUrl($current_url);
+    $normalizedPreviousUrl = self::normalizeTrackingUrl($previous_url);
+
     $connection = Database::getConnection();
     $connection->merge('user_tracking')
-      ->key(['uid' => $uid, 'current_url' => $current_url])
+      ->key(['uid' => $uid, 'current_url' => $normalizedCurrentUrl])
       ->fields([
         'uid' => $uid,
-        'previous_url' => $previous_url,
-        'current_url' => $current_url,
+        'previous_url' => $normalizedPreviousUrl,
+        'current_url' => $normalizedCurrentUrl,
         'created' => time(),
       ])
       ->execute();
@@ -838,11 +914,13 @@ class Utils {
    */
   public static function trackingGetPreviousUrl($uid, $current_url) {
     //dpm("Tracking Previuous URLs: currentIrl=[" . $current_url . "] previousUrl=[" . $previous_url . "]");
+    $normalizedCurrentUrl = self::normalizeTrackingUrl($current_url);
+
     $connection = Database::getConnection();
     $query = $connection->select('user_tracking', 'ut')
       ->fields('ut', ['previous_url'])
       ->condition('uid', $uid)
-      ->condition('current_url', $current_url)
+      ->condition('current_url', $normalizedCurrentUrl)
       ->orderBy('created', 'DESC')
       ->range(0, 1); // Get the most recent entry
 
@@ -853,7 +931,7 @@ class Utils {
     if ($result) {
       $connection->delete('user_tracking')
         ->condition('uid', $uid)
-        ->condition('current_url', $current_url)
+        ->condition('current_url', $normalizedCurrentUrl)
         ->execute();
     }
 
@@ -865,11 +943,13 @@ class Utils {
    * Use this when you need to check the previous URL but will call trackingGetPreviousUrl later.
    */
   public static function trackingPeekPreviousUrl($uid, $current_url) {
+    $normalizedCurrentUrl = self::normalizeTrackingUrl($current_url);
+
     $connection = Database::getConnection();
     $query = $connection->select('user_tracking', 'ut')
       ->fields('ut', ['previous_url'])
       ->condition('uid', $uid)
-      ->condition('current_url', $current_url)
+      ->condition('current_url', $normalizedCurrentUrl)
       ->orderBy('created', 'DESC')
       ->range(0, 1);
 

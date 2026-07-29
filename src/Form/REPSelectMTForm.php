@@ -280,6 +280,7 @@ class REPSelectMTForm extends FormBase {
     // WKF GENERATION SECTION (only for WKF element type)
     if ($this->element_type === 'wkf') {
       $form['#attached']['library'][] = 'rep/wkf_instructions_modal';
+      $form['#attached']['library'][] = 'rep/wkf_ingestion_status_poll';
       
       $form['wkf_generation_section'] = [
         '#type' => 'container',
