@@ -17,6 +17,10 @@ use Drupal\rep\Entity\Ontology;
 
  class repNamespaceForm extends ConfigFormBase {
 
+    private function namespaceMutationUiBlocked() {
+      return TRUE;
+    }
+
      /**
      * Settings Variable.
      */
@@ -55,6 +59,7 @@ use Drupal\rep\Entity\Ontology;
 
      public function buildForm(array $form, FormStateInterface $form_state){
         $config = $this->config(static::CONFIGNAME);
+        $namespaceMutationBlocked = $this->namespaceMutationUiBlocked();
 
         $APIservice = \Drupal::service('rep.api_connector');
         $namespace_list = $APIservice->namespaceList();
@@ -89,20 +94,30 @@ use Drupal\rep\Entity\Ontology;
           '#type'       => 'submit',
           '#value'      => $this->t('Add'),
           '#name'       => 'add_ontology',
+          '#access'     => !$namespaceMutationBlocked,
           '#attributes' => ['class' => ['btn', 'btn-primary', 'mb-2', 'add-element-button']],
         ];
         $form['actions_wrapper']['col_ontology']['namespace_actions']['update_namespace'] = [
           '#type'       => 'submit',
           '#value'      => $this->t('Update Selected'),
           '#name'       => 'upd_selected',
+          '#access'     => !$namespaceMutationBlocked,
           '#attributes' => ['class' => ['btn', 'btn-warning', 'mb-2', 'save-button']],
         ];
         $form['actions_wrapper']['col_ontology']['namespace_actions']['delete_namespace'] = [
           '#type'       => 'submit',
           '#value'      => $this->t('Delete Selected'),
           '#name'       => 'del_selected',
+          '#access'     => !$namespaceMutationBlocked,
           '#attributes' => ['class' => ['btn', 'btn-danger', 'mb-2', 'delete-element-button']],
         ];
+
+        if ($namespaceMutationBlocked) {
+          $form['actions_wrapper']['col_ontology']['namespace_actions']['policy_notice'] = [
+            '#type' => 'item',
+            '#markup' => $this->t('<div class="text-warning"><strong>Policy:</strong> Namespace table mutation actions are disabled in this UI. Use approved PMSR flows.</div>'),
+          ];
+        }
 
         // --------------------------------------------------------------------------
         // COLUMN 2: All Triples Actions
@@ -293,6 +308,10 @@ use Drupal\rep\Entity\Ontology;
       }
 
       if ($button_name === 'add_ontology') {
+        if ($this->namespaceMutationUiBlocked()) {
+          \Drupal::messenger()->addWarning($this->t('Namespace table mutation is disabled in this UI by policy.'));
+          return;
+        }
         $uid = \Drupal::currentUser()->id();
         $previousUrl = Url::fromRoute('rep.admin_namespace_settings_custom')->toString();
         Utils::trackingStoreUrls($uid, $previousUrl, 'rep.admin_namespace_settings_custom');
@@ -303,6 +322,10 @@ use Drupal\rep\Entity\Ontology;
       }
 
       if ($button_name === 'upd_selected') {
+          if ($this->namespaceMutationUiBlocked()) {
+            \Drupal::messenger()->addWarning($this->t('Namespace table mutation is disabled in this UI by policy.'));
+            return;
+          }
           if (sizeof($rows) != 1) {
               \Drupal::messenger()->addWarning(t("Select the exact Ontology to be updated."));
           } else {
@@ -316,6 +339,10 @@ use Drupal\rep\Entity\Ontology;
       }
 
       if ($button_name === 'del_selected') {
+          if ($this->namespaceMutationUiBlocked()) {
+            \Drupal::messenger()->addWarning($this->t('Namespace table mutation is disabled in this UI by policy.'));
+            return;
+          }
           if (sizeof($rows) <= 0) {
               \Drupal::messenger()->addWarning(t("At least one Ontology needs to be selected for deletion."));
           } else {

@@ -662,15 +662,9 @@ class REPSettingsForm extends ConfigFormBase {
         $form_state->getValue('repository_description')
       );
 
-      // Namespace. The MIME/source arguments are now deprecated in the form,
-      // so we send empty strings (API may handle sensible defaults).
-      $resp .= $api->repoUpdateNamespace(
-        $api_url,
-        $form_state->getValue('repository_namespace_prefix'),
-        $form_state->getValue('repository_namespace_url'),
-        '',
-        ''
-      );
+      // Namespace table mutation is restricted by policy to approved PMSR flows.
+      // Keep local REP settings, but do not mutate namespace table from this form.
+      $messenger->addWarning($this->t('Namespace table updates are policy-restricted and are not executed from REP Settings. Use approved PMSR bootstrap/ingestion flows.'));
 
       if ($resp !== '') {
         $messenger->addMessage($this->t('Your new REP configuration has been saved.'));

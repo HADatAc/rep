@@ -15,6 +15,10 @@
 
  class REPUpdateNameSpaceForm extends ConfigFormBase {
 
+        private function namespaceMutationUiBlocked() {
+            return TRUE;
+        }
+
      /**
      * Settings Variable.
      */
@@ -52,6 +56,22 @@
      */
 
      public function buildForm(array $form, FormStateInterface $form_state, $abbreviation = NULL) {
+        if ($this->namespaceMutationUiBlocked()) {
+            $form['policy_notice'] = [
+                '#type' => 'item',
+                '#markup' => $this->t('<div class="messages messages--warning"><strong>Policy:</strong> Namespace table mutation is disabled in this UI. Use approved PMSR flows.</div>'),
+            ];
+            $form['cancel_submit'] = [
+                '#type' => 'submit',
+                '#value' => $this->t('Back'),
+                '#name' => 'back',
+                '#attributes' => [
+                  'class' => ['btn', 'btn-primary', 'cancel-button'],
+                ],
+            ];
+            return Parent::buildForm($form, $form_state);
+        }
+
         $config = $this->config(static::CONFIGNAME);
 
         if (!isset($abbreviation) || $abbreviation == '') {
@@ -181,6 +201,12 @@
      * {@inheritdoc}
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
+
+                if ($this->namespaceMutationUiBlocked()) {
+                    \Drupal::messenger()->addWarning(t("Namespace table mutation is disabled in this UI by policy."));
+                    self::backUrl();
+                    return;
+                }
 
         $submitted_values = $form_state->cleanValues()->getValues();
         $triggering_element = $form_state->getTriggeringElement();

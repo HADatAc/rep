@@ -1289,6 +1289,7 @@ class REPSelectMTForm extends FormBase {
         if ($datafileUri === NULL && isset($mt->hasDataFileUri) && is_string($mt->hasDataFileUri) && $mt->hasDataFileUri !== '') {
           $datafileUri = $mt->hasDataFileUri;
         }
+
       }
 
       // 1) Delete the Metadata Template / WKF itself (expected path for all MTs).
@@ -1447,8 +1448,14 @@ class REPSelectMTForm extends FormBase {
   protected function performIngest(array $uris, FormStateInterface $form_state, String $status) {
     //($status);
     $api = \Drupal::service('rep.api_connector');
-    $uri = reset($uris);
+    $rawUri = reset($uris);
+    $uri = Utils::plainUri($rawUri) ?: $rawUri;
     $template = $api->parseObjectResponse($api->getUri($uri), 'getUri');
+
+    // Fallback: retry with original token in case the selected row already had canonical URI.
+    if ($template == NULL && $rawUri !== $uri) {
+      $template = $api->parseObjectResponse($api->getUri($rawUri), 'getUri');
+    }
     
     // Debugging is handled via Drupal logger/messenger when needed.
     
@@ -1457,6 +1464,20 @@ class REPSelectMTForm extends FormBase {
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
+
+    // Keep template URI canonical before calling upload endpoint.
+    if (isset($template->uri) && is_string($template->uri) && $template->uri !== '') {
+      $template->uri = Utils::plainUri($template->uri) ?: $template->uri;
+    } else {
+      $template->uri = $uri;
+    }
+
+    // Some payloads embed hasDataFile but omit hasDataFileUri.
+    if ((!isset($template->hasDataFileUri) || $template->hasDataFileUri == NULL || $template->hasDataFileUri === '')
+      && isset($template->hasDataFile) && is_object($template->hasDataFile)
+      && isset($template->hasDataFile->uri) && is_string($template->hasDataFile->uri) && $template->hasDataFile->uri !== '') {
+      $template->hasDataFileUri = Utils::plainUri($template->hasDataFile->uri) ?: $template->hasDataFile->uri;
+    }
     
     // FIX: If template doesn't have hasDataFile embedded, fetch it separately
     if (!isset($template->hasDataFile) && isset($template->hasDataFileUri)) {
@@ -1464,9 +1485,11 @@ class REPSelectMTForm extends FormBase {
         '@uri' => $template->hasDataFileUri,
       ]);
       
-      $dataFile = $api->parseObjectResponse($api->getUri($template->hasDataFileUri), 'getUri');
+      $dataFileUri = Utils::plainUri($template->hasDataFileUri) ?: $template->hasDataFileUri;
+      $dataFile = $api->parseObjectResponse($api->getUri($dataFileUri), 'getUri');
       if ($dataFile != NULL) {
         $template->hasDataFile = $dataFile;
+        $template->hasDataFileUri = $dataFileUri;
         
         // DEBUG: Show ALL DataFile properties
         // \Drupal::messenger()->addStatus(t('[DEBUG] DataFile fetched - ALL PROPERTIES: @props', [
@@ -1484,16 +1507,228 @@ class REPSelectMTForm extends FormBase {
         ]);
       }
     }
+
+    // Hard pre-submit check: ensure the local file is actually readable before upload.
+    $readability = $this->verifyLocalDataFileReadability($template);
+    if (!$readability['ok']) {
+      $tried = !empty($readability['tried']) ? implode(' | ', $readability['tried']) : '(none)';
+      \Drupal::messenger()->addError(t('Ingestion aborted before submit: local file is not readable. Reason: @reason. Tried paths: @paths', [
+        '@reason' => $readability['reason'],
+        '@paths' => $tried,
+      ]));
+      $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+      return;
+    }
     
-    $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $template, $status), 'uploadTemplateStatus');
+    $uploadResponse = $api->uploadTemplate($this->element_type, $template, $status);
+    $msg = $api->parseObjectResponse($uploadResponse, 'uploadTemplateStatus');
     if ($msg == NULL) {
-      \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion."));
+      $detail = $this->extractIngestionFailureDetail($uploadResponse);
+      if ($detail === '') {
+        $detail = $this->extractDataFileFailureDetail($api, $template);
+      }
+      if ($detail !== '') {
+        \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion. Reason: @reason", [
+          '@reason' => $detail,
+        ]));
+      } else {
+        \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion."));
+      }
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
     \Drupal::messenger()->addMessage(t("The " . $this->single_class_name . " selected was successfully submited for Ingestion."));
     $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
     return;
+  }
+
+  /**
+   * Extract a concise backend reason from ingest API response payload.
+   */
+  protected function extractIngestionFailureDetail($uploadResponse): string {
+    if ($uploadResponse === NULL || $uploadResponse === FALSE) {
+      return '';
+    }
+
+    $raw = is_string($uploadResponse) ? trim($uploadResponse) : (string) $uploadResponse;
+    if ($raw === '') {
+      return '';
+    }
+
+    $obj = json_decode($raw);
+    if (!is_object($obj)) {
+      return '';
+    }
+
+    $body = '';
+    if (isset($obj->body) && is_string($obj->body)) {
+      $body = trim($obj->body);
+    } else if (isset($obj->message) && is_string($obj->message)) {
+      $body = trim($obj->message);
+    }
+
+    if ($body === '') {
+      return '';
+    }
+
+    $body = preg_replace('/\s+/', ' ', $body);
+    return mb_substr($body, 0, 300);
+  }
+
+  /**
+   * Verify readability of the local DataFile behind the selected template.
+   * Returns ['ok' => bool, 'reason' => string, 'tried' => string[]].
+   */
+  protected function verifyLocalDataFileReadability($template): array {
+    $result = [
+      'ok' => false,
+      'reason' => '',
+      'tried' => [],
+    ];
+
+    $fileId = NULL;
+    if (isset($template->hasDataFile) && is_object($template->hasDataFile) && isset($template->hasDataFile->id)) {
+      $fileId = $template->hasDataFile->id;
+    }
+
+    if (empty($fileId)) {
+      $result['reason'] = 'template has no Drupal File ID (hasDataFile.id)';
+      return $result;
+    }
+
+    $fileEntity = \Drupal\file\Entity\File::load($fileId);
+    if ($fileEntity === NULL) {
+      $result['reason'] = 'Drupal file entity not found for FID [' . $fileId . ']';
+      return $result;
+    }
+
+    $fileUri = (string) $fileEntity->getFileUri();
+    $filename = (string) $fileEntity->getFilename();
+
+    $tryPath = function (?string $path) use (&$result): bool {
+      if (!is_string($path) || trim($path) === '') {
+        return false;
+      }
+      $path = trim($path);
+      $result['tried'][] = $path;
+      return is_readable($path);
+    };
+
+    // Direct absolute path (if any).
+    if ($fileUri !== '' && !str_contains($fileUri, '://') && $tryPath($fileUri)) {
+      $result['ok'] = true;
+      $result['reason'] = 'readable absolute path';
+      return $result;
+    }
+
+    // Stream-wrapper URI realpath.
+    try {
+      $fileSystem = \Drupal::service('file_system');
+      $realPath = $fileSystem->realpath($fileUri);
+      if (is_string($realPath) && $tryPath($realPath)) {
+        $result['ok'] = true;
+        $result['reason'] = 'readable stream-wrapper realpath';
+        return $result;
+      }
+    } catch (\Throwable $e) {
+      // Continue with explicit fallbacks.
+    }
+
+    // public:// explicit fallbacks.
+    if ($fileUri !== '' && str_starts_with($fileUri, 'public://')) {
+      $relative = ltrim(substr($fileUri, strlen('public://')), '/');
+
+      $publicPath = (string) \Drupal::config('system.file')->get('path.public');
+      if ($publicPath !== '') {
+        $candidate = DRUPAL_ROOT . '/' . trim($publicPath, '/') . '/' . $relative;
+        if ($tryPath($candidate)) {
+          $result['ok'] = true;
+          $result['reason'] = 'readable configured public path';
+          return $result;
+        }
+      }
+
+      try {
+        $fileSystem = \Drupal::service('file_system');
+        $publicRoot = $fileSystem->realpath('public://');
+        if (is_string($publicRoot) && $publicRoot !== '') {
+          $candidate = rtrim($publicRoot, '/') . '/' . $relative;
+          if ($tryPath($candidate)) {
+            $result['ok'] = true;
+            $result['reason'] = 'readable public:// root path';
+            return $result;
+          }
+        }
+      } catch (\Throwable $e) {
+        // Continue.
+      }
+
+      $candidate = DRUPAL_ROOT . '/sites/default/files/' . $relative;
+      if ($tryPath($candidate)) {
+        $result['ok'] = true;
+        $result['reason'] = 'readable default public files path';
+        return $result;
+      }
+    }
+
+    // Known fallback for INS bootstrap file.
+    if ($filename !== '' && strcasecmp($filename, 'INS-PMSR.xlsx') === 0) {
+      try {
+        $pmsrPath = \Drupal::service('extension.list.module')->getPath('pmsr');
+        if (is_string($pmsrPath) && $pmsrPath !== '') {
+          $candidate = DRUPAL_ROOT . '/' . trim($pmsrPath, '/') . '/mts/' . $filename;
+          if ($tryPath($candidate)) {
+            $result['ok'] = true;
+            $result['reason'] = 'readable pmsr module mts fallback';
+            return $result;
+          }
+        }
+      } catch (\Throwable $e) {
+        // Continue.
+      }
+    }
+
+    $result['reason'] = 'no readable local path for FID [' . $fileId . '], URI [' . $fileUri . ']';
+    $result['tried'] = array_values(array_unique($result['tried']));
+    return $result;
+  }
+
+  /**
+   * Read DataFile state/log to explain ingest failures when API returns no direct reason.
+   */
+  protected function extractDataFileFailureDetail($api, $template): string {
+    if (!isset($template->hasDataFileUri) || !is_string($template->hasDataFileUri) || $template->hasDataFileUri === '') {
+      return '';
+    }
+
+    $dfUri = Utils::plainUri($template->hasDataFileUri) ?: $template->hasDataFileUri;
+    $df = $api->parseObjectResponse($api->getUri($dfUri), 'getUri');
+    if (!is_object($df)) {
+      return '';
+    }
+
+    $parts = [];
+    if (isset($df->fileStatus) && is_string($df->fileStatus) && trim($df->fileStatus) !== '') {
+      $parts[] = 'DataFile status: ' . trim($df->fileStatus);
+    }
+
+    $log = '';
+    if (isset($df->log) && is_string($df->log)) {
+      $log = trim($df->log);
+    } else if (isset($df->hasLog) && is_string($df->hasLog)) {
+      $log = trim($df->hasLog);
+    }
+
+    if ($log !== '') {
+      $logOneLine = preg_replace('/\s+/', ' ', $log);
+      if (preg_match('/Error in INSGenerator:[^\n\r]*/i', $logOneLine, $m)) {
+        $parts[] = trim($m[0]);
+      } else {
+        $parts[] = mb_substr($logOneLine, 0, 240);
+      }
+    }
+
+    return implode(' | ', $parts);
   }
 
   /**

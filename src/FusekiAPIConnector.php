@@ -2410,7 +2410,7 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function repoUpdateNamespace($api_url, $prefix, $url, $mime, $source) {
+  public function repoUpdateNamespace($api_url, $prefix, $url, $mime, $source, $component = NULL) {
     if ($mime == '') {
       $mime = '_';
     }
@@ -2424,14 +2424,22 @@ class FusekiAPIConnector {
       rawurlencode($source);
     $method = "GET";
     $data = $this->getHeader();
+    if (!isset($data['headers']) || !is_array($data['headers'])) {
+      $data['headers'] = [];
+    }
+    $data['headers'] = $this->withNamespaceApprovalHeaders($data['headers'], 'repoUpdateNamespace', $component);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function repoResetNamespaces() {
+  public function repoResetNamespaces($component = NULL) {
     $endpoint = "/hascoapi/api/repo/namespace/reset/";
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+    if (!isset($data['headers']) || !is_array($data['headers'])) {
+      $data['headers'] = [];
+    }
+    $data['headers'] = $this->withNamespaceApprovalHeaders($data['headers'], 'repoResetNamespaces', $component);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
@@ -2810,19 +2818,27 @@ class FusekiAPIConnector {
     return ['ok' => false, 'message' => $msg];
   }
 
-  public function repoDeleteSelectedNamespace($abbreviation) {
+  public function repoDeleteSelectedNamespace($abbreviation, $component = NULL) {
     $endpoint = "/hascoapi/api/repo/namespace/delete/".rawurlencode($abbreviation);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+    if (!isset($data['headers']) || !is_array($data['headers'])) {
+      $data['headers'] = [];
+    }
+    $data['headers'] = $this->withNamespaceApprovalHeaders($data['headers'], 'repoDeleteSelectedNamespace', $component);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
-  public function repoCreateNamespace($json) {
+  public function repoCreateNamespace($json, $component = NULL) {
     $endpoint = "/hascoapi/api/repo/namespace/create/".rawurlencode($json);
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+    if (!isset($data['headers']) || !is_array($data['headers'])) {
+      $data['headers'] = [];
+    }
+    $data['headers'] = $this->withNamespaceApprovalHeaders($data['headers'], 'repoCreateNamespace', $component);
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
@@ -2835,7 +2851,7 @@ class FusekiAPIConnector {
    * @param string $mimeType The MIME type (default: text/turtle)
    * @return string JSON response from API
    */
-  public function repoIngestNamespaceOntology($abbreviation, $namespaceUri, $ttlContent, $mimeType = 'text/turtle') {
+  public function repoIngestNamespaceOntology($abbreviation, $namespaceUri, $ttlContent, $mimeType = 'text/turtle', $component = NULL) {
     $client = new Client([
       'timeout' => 300, // 5 minutes for large ontologies
       'connect_timeout' => 10,
@@ -2859,6 +2875,7 @@ class FusekiAPIConnector {
     if ($authHeader !== '') {
       $headers['Authorization'] = $authHeader;
     }
+    $headers = $this->withNamespaceApprovalHeaders($headers, 'repoIngestNamespaceOntology', $component);
 
     try {
       // Create temporary file for the ontology content
@@ -2900,7 +2917,20 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
-    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+    $response = $this->perform_http_request($method,$api_url.$endpoint,$data);
+    if ($response !== NULL && $response !== FALSE && $response !== '') {
+      return $response;
+    }
+
+    $message = (string) ($this->getErrorMessage() ?? 'Unknown error');
+    if (trim($message) === '') {
+      $message = 'Unknown error';
+    }
+
+    return json_encode([
+      'isSuccessful' => false,
+      'body' => $message,
+    ]);
   }
 
   // GET     /hascoapi/api/repo/namespace/topclasses/:abbreviation org.hascoapi.console.controllers.restapi.RepoPage.getTopClasses(abbreviation : String)
@@ -2996,6 +3026,40 @@ class FusekiAPIConnector {
         'Authorization' => $this->bearer
       ]
     ];
+  }
+
+  /**
+   * Build namespace approval headers for guarded namespace mutation endpoints.
+   *
+   * Token resolution order:
+   * 1) Drupal config rep.settings.namespace_approval_token
+   * 2) Environment HASCOAPI_NAMESPACE_APPROVAL_TOKEN
+   */
+  private function withNamespaceApprovalHeaders(array $headers, string $action, $component = NULL): array {
+    $configToken = '';
+    try {
+      $configToken = (string) (\Drupal::config('rep.settings')->get('namespace_approval_token') ?? '');
+    }
+    catch (\Throwable $e) {
+      $configToken = '';
+    }
+
+    $envToken = getenv('HASCOAPI_NAMESPACE_APPROVAL_TOKEN');
+    if (!is_string($envToken)) {
+      $envToken = '';
+    }
+
+    $token = trim($configToken) !== '' ? trim($configToken) : trim($envToken);
+    if ($token === '') {
+      return $headers;
+    }
+
+    $headers['X-Namespace-Approval'] = $token;
+    $headers['X-Change-Id'] = 'drupal-' . $action . '-' . gmdate('YmdHis');
+    if (is_string($component) && trim($component) !== '') {
+      $headers['X-Namespace-Component'] = trim($component);
+    }
+    return $headers;
   }
 
   public function uploadTemplate($concept,$template,$status) {
@@ -3360,7 +3424,7 @@ class FusekiAPIConnector {
     }
 
     // 2) Empty response?
-    if ($response === NULL || $response === '') {
+    if ($response === NULL || $response === FALSE || $response === '') {
       \Drupal::messenger()->addError(t('API service has returned no response: called @method', [
         '@method' => $methodCalled,
       ]));
@@ -3675,13 +3739,86 @@ class FusekiAPIConnector {
     // RETRIEVE FILE CONTENT FROM FID
     $file_entity = \Drupal\file\Entity\File::load($fileId);
     if ($file_entity == NULL) {
-      \Drupal::messenger()->addError(t('Could not retrive file with following FID: [' . $fileId . ']'));
+      \Drupal::messenger()->addError(t('Could not retrieve file with following FID: [' . $fileId . ']'));
       return FALSE;
     }
 
     $filename = $file_entity->getFilename();
     $file_uri = $file_entity->getFileUri();
-    $file_content = file_get_contents($file_uri);
+    $file_content = @file_get_contents($file_uri);
+    $attempted_paths = [];
+
+    $read_if_possible = function (?string $path) use (&$attempted_paths) {
+      if (!is_string($path) || $path === '') {
+        return FALSE;
+      }
+      $attempted_paths[] = $path;
+      if (!is_readable($path)) {
+        return FALSE;
+      }
+      return @file_get_contents($path);
+    };
+
+    // Fallback: resolve stream-wrapper URI (public://, private://, etc.) to real path.
+    if ($file_content === FALSE || $file_content === '') {
+      try {
+        $file_system = \Drupal::service('file_system');
+        $real_path = $file_system->realpath($file_uri);
+        if (is_string($real_path) && $real_path !== '') {
+          $file_content = $read_if_possible($real_path);
+        }
+      } catch (\Throwable $e) {
+        // Keep fallback behavior below.
+      }
+    }
+
+    // Fallback: resolve public:// against configured public file path and common locations.
+    if (($file_content === FALSE || $file_content === '') && is_string($file_uri) && str_starts_with($file_uri, 'public://')) {
+      $relative = ltrim(substr($file_uri, strlen('public://')), '/');
+      $public_path = (string) \Drupal::config('system.file')->get('path.public');
+      if ($public_path !== '') {
+        $candidate = DRUPAL_ROOT . '/' . trim($public_path, '/') . '/' . $relative;
+        $file_content = $read_if_possible($candidate);
+      }
+
+      if ($file_content === FALSE || $file_content === '') {
+        try {
+          $file_system = \Drupal::service('file_system');
+          $public_root = $file_system->realpath('public://');
+          if (is_string($public_root) && $public_root !== '') {
+            $candidate = rtrim($public_root, '/') . '/' . $relative;
+            $file_content = $read_if_possible($candidate);
+          }
+        } catch (\Throwable $e) {
+          // Keep fallback behavior below.
+        }
+      }
+    }
+
+    // Fallback for known PMSR bootstrap template location.
+    if (($file_content === FALSE || $file_content === '') && is_string($filename) && $filename !== '') {
+      $candidate_paths = [
+        DRUPAL_ROOT . '/sites/default/files/mts/' . $filename,
+      ];
+
+      if (strcasecmp($filename, 'INS-PMSR.xlsx') === 0) {
+        try {
+          $pmsr_path = \Drupal::service('extension.list.module')->getPath('pmsr');
+          if (is_string($pmsr_path) && $pmsr_path !== '') {
+            $candidate_paths[] = DRUPAL_ROOT . '/' . trim($pmsr_path, '/') . '/mts/' . $filename;
+          }
+        } catch (\Throwable $e) {
+          // Keep generic fallbacks.
+        }
+      }
+
+      foreach ($candidate_paths as $candidate_path) {
+        $file_content = $read_if_possible($candidate_path);
+        if ($file_content !== FALSE && $file_content !== '') {
+          break;
+        }
+      }
+    }
     
     // \Drupal::messenger()->addStatus(t('[DEBUG] File loaded - filename: @name, size: @size bytes, URI: @uri', [
     //   '@name' => $filename,
@@ -3690,7 +3827,16 @@ class FusekiAPIConnector {
     // ]));
 
     if ($file_content === FALSE || $file_content === '') {
-      \Drupal::messenger()->addError(t('Could not retrive file content from file with following FID: [' . $fileId . ']'));
+      \Drupal::messenger()->addError(t('Could not retrieve file content from file with following FID: [@fid], URI: [@uri]', [
+        '@fid' => $fileId,
+        '@uri' => $file_uri,
+      ]));
+      if (!empty($attempted_paths)) {
+        \Drupal::logger('rep')->error('uploadFile failed for FID @fid. Tried paths: @paths', [
+          '@fid' => $fileId,
+          '@paths' => implode(' | ', array_unique($attempted_paths)),
+        ]);
+      }
       return FALSE;
     }
 

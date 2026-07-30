@@ -16,6 +16,10 @@ use Drupal\Core\Url;
  */
 class AddOntologiesForm extends FormBase {
 
+  private function namespaceMutationUiBlocked() {
+    return TRUE;
+  }
+
   /**
    * The HTTP client factory service.
    *
@@ -53,6 +57,26 @@ class AddOntologiesForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
+    if ($this->namespaceMutationUiBlocked()) {
+      $form['policy_notice'] = [
+        '#type' => 'item',
+        '#markup' => $this->t('<div class="messages messages--warning"><strong>Policy:</strong> Namespace table mutation is disabled in this UI. Use approved PMSR flows.</div>'),
+      ];
+
+      $form['actions'] = [
+        '#type' => 'container',
+      ];
+      $form['actions']['cancel'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Back'),
+        '#name' => 'cancel',
+        '#limit_validation_errors' => [],
+        '#submit' => ['::cancelForm'],
+        '#attributes' => ['class' => ['btn', 'btn-secondary']],
+      ];
+      return $form;
+    }
+
     // Wrapper row centered on screen.
     $form['wrapper'] = [
       '#type' => 'container',
@@ -187,6 +211,12 @@ class AddOntologiesForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+
+    if ($this->namespaceMutationUiBlocked()) {
+      $this->messenger()->addWarning($this->t('Namespace table mutation is disabled in this UI by policy.'));
+      self::backUrl();
+      return;
+    }
 
     $triggering_element = $form_state->getTriggeringElement();
     $button_name = $triggering_element['#name'];

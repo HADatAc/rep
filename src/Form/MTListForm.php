@@ -791,12 +791,30 @@ class MTListForm extends FormBase {
   protected function performIngest(array $uris, FormStateInterface $form_state, String $status) {
     //($status);
     $api = \Drupal::service('rep.api_connector');
-    $uri = reset($uris);
+    $rawUri = reset($uris);
+    $uri = Utils::plainUri($rawUri) ?: $rawUri;
     $template = $api->parseObjectResponse($api->getUri($uri), 'getUri');
+
+    if ($template == NULL && $rawUri !== $uri) {
+      $template = $api->parseObjectResponse($api->getUri($rawUri), 'getUri');
+    }
+
     if ($template == NULL) {
       \Drupal::messenger()->addError(t("Failed to retrieve the datafile to be ingested."));
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
+    }
+
+    if (isset($template->uri) && is_string($template->uri) && $template->uri !== '') {
+      $template->uri = Utils::plainUri($template->uri) ?: $template->uri;
+    } else {
+      $template->uri = $uri;
+    }
+
+    if ((!isset($template->hasDataFileUri) || $template->hasDataFileUri == NULL || $template->hasDataFileUri === '')
+      && isset($template->hasDataFile) && is_object($template->hasDataFile)
+      && isset($template->hasDataFile->uri) && is_string($template->hasDataFile->uri) && $template->hasDataFile->uri !== '') {
+      $template->hasDataFileUri = Utils::plainUri($template->hasDataFile->uri) ?: $template->hasDataFile->uri;
     }
     
     // FIX: If template doesn't have hasDataFile embedded, fetch it separately
@@ -805,9 +823,11 @@ class MTListForm extends FormBase {
         '@uri' => $template->hasDataFileUri,
       ]);
       
-      $dataFile = $api->parseObjectResponse($api->getUri($template->hasDataFileUri), 'getUri');
+      $dataFileUri = Utils::plainUri($template->hasDataFileUri) ?: $template->hasDataFileUri;
+      $dataFile = $api->parseObjectResponse($api->getUri($dataFileUri), 'getUri');
       if ($dataFile != NULL) {
         $template->hasDataFile = $dataFile;
+        $template->hasDataFileUri = $dataFileUri;
         \Drupal::logger('rep')->notice('performIngest: DataFile attached - id: @id, filename: @filename', [
           '@id' => isset($dataFile->id) ? $dataFile->id : 'NULL',
           '@filename' => isset($dataFile->filename) ? $dataFile->filename : 'NULL',
@@ -819,15 +839,97 @@ class MTListForm extends FormBase {
       }
     }
     
-    $msg = $api->parseObjectResponse($api->uploadTemplate($this->element_type, $template, $status), 'uploadTemplateStatus');
+    $uploadResponse = $api->uploadTemplate($this->element_type, $template, $status);
+    $msg = $api->parseObjectResponse($uploadResponse, 'uploadTemplateStatus');
     if ($msg == NULL) {
-      \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion."));
+      $detail = $this->extractIngestionFailureDetail($uploadResponse);
+      if ($detail === '') {
+        $detail = $this->extractDataFileFailureDetail($api, $template);
+      }
+      if ($detail !== '') {
+        \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion. Reason: @reason", [
+          '@reason' => $detail,
+        ]));
+      } else {
+        \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion."));
+      }
       $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
     \Drupal::messenger()->addMessage(t("The " . $this->single_class_name . " selected was successfully submited for Ingestion."));
     $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
     return;
+  }
+
+  /**
+   * Extract a concise backend reason from ingest API response payload.
+   */
+  protected function extractIngestionFailureDetail($uploadResponse): string {
+    if ($uploadResponse === NULL || $uploadResponse === FALSE) {
+      return '';
+    }
+
+    $raw = is_string($uploadResponse) ? trim($uploadResponse) : (string) $uploadResponse;
+    if ($raw === '') {
+      return '';
+    }
+
+    $obj = json_decode($raw);
+    if (!is_object($obj)) {
+      return '';
+    }
+
+    $body = '';
+    if (isset($obj->body) && is_string($obj->body)) {
+      $body = trim($obj->body);
+    } else if (isset($obj->message) && is_string($obj->message)) {
+      $body = trim($obj->message);
+    }
+
+    if ($body === '') {
+      return '';
+    }
+
+    $body = preg_replace('/\s+/', ' ', $body);
+    return mb_substr($body, 0, 300);
+  }
+
+  /**
+   * Read DataFile state/log to explain ingest failures when API returns no direct reason.
+   */
+  protected function extractDataFileFailureDetail($api, $template): string {
+    if (!isset($template->hasDataFileUri) || !is_string($template->hasDataFileUri) || $template->hasDataFileUri === '') {
+      return '';
+    }
+
+    $dfUri = Utils::plainUri($template->hasDataFileUri) ?: $template->hasDataFileUri;
+    $df = $api->parseObjectResponse($api->getUri($dfUri), 'getUri');
+    if (!is_object($df)) {
+      return '';
+    }
+
+    $parts = [];
+    if (isset($df->fileStatus) && is_string($df->fileStatus) && trim($df->fileStatus) !== '') {
+      $parts[] = 'DataFile status: ' . trim($df->fileStatus);
+    }
+
+    $log = '';
+    if (isset($df->log) && is_string($df->log)) {
+      $log = trim($df->log);
+    } else if (isset($df->hasLog) && is_string($df->hasLog)) {
+      $log = trim($df->hasLog);
+    }
+
+    if ($log !== '') {
+      $logOneLine = preg_replace('/\s+/', ' ', $log);
+      if (preg_match('/Error in INSGenerator:[^\n\r]*/i', $logOneLine, $m)) {
+        $parts[] = trim($m[0]);
+      } else {
+        $parts[] = mb_substr($logOneLine, 0, 240);
+      }
+    }
+
+    return implode(' | ', $parts);
   }
 
   /**

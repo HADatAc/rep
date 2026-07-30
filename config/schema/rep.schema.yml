@@ -1,0 +1,57 @@
+rep.settings:
+  type: config_object
+  label: 'REP settings'
+  mapping:
+    rep_home:
+      type: boolean
+      label: 'Use REP as homepage'
+    api_url:
+      type: string
+      label: 'REP API base URL'
+    ctt_url:
+      type: string
+      label: 'CTT editor URL'
+    rep_gui_version:
+      type: string
+      label: 'REP GUI version'
+    pmsr_new_landing_enabled:
+      type: boolean
+      label: 'Enable PMSR new landing page'
+    social_initiative_uri:
+      type: string
+      label: 'Social initiative URI'
+    preferred_platform:
+      type: string
+      label: 'Preferred platform'
+    graph_max_members_per_soc:
+      type: integer
+      label: 'Graph items per page in menus'
+    graph_page_size:
+      type: integer
+      label: 'Graph page size'
+    graph_max_live_nodes:
+      type: integer
+      label: 'Graph max visible nodes'
+    graph_auto_show_on_fetch:
+      type: integer
+      label: 'Graph auto show on fetch'
+    graph_predicates_hidden:
+      type: string
+      label: 'Graph hidden predicates'
+    graph_predicates_auto_expand:
+      type: string
+      label: 'Graph auto-expand predicates'
+    tree_default_expanded_instrument:
+      type: sequence
+      label: 'Default expanded instrument nodes'
+      sequence:
+        type: string
+    pagination_default_pagesize:
+      type: integer
+      label: 'Default pagination page size'
+    pagination_max_pagesize:
+      type: integer
+      label: 'Maximum pagination page size'
+    namespace_approval_token:
+      type: string
+      label: 'Namespace approval token'
