@@ -17,6 +17,26 @@ use Psr\Http\Message\ResponseInterface;
 class FusekiAPIConnector {
 
   /**
+   * Backend fallback token used when explicit token config/env is unavailable.
+   */
+  const DEFAULT_NAMESPACE_APPROVAL_TOKEN = 'rep-semantic-settings-token';
+
+  /**
+   * OAuth-backed Social API calls are opt-in and disabled by default.
+   */
+  private function isSocialOAuthEnabled(): bool {
+    $repConfig = \Drupal::config('rep.settings');
+    $oauthConfig = \Drupal::config('social.oauth.settings');
+
+    $socialEnabled = (bool) $repConfig->get('social_conf');
+    $oauthEnabled = (bool) $repConfig->get('social_oauth_enabled');
+    $oauthUrl = trim((string) $oauthConfig->get('oauth_url'));
+    $clientId = trim((string) $oauthConfig->get('client_id'));
+
+    return $socialEnabled && $oauthEnabled && $oauthUrl !== '' && $clientId !== '';
+  }
+
+  /**
    * Normalize UI-facing element types into the canonical HASCOAPI element types.
    *
    * The HASCOAPI SIRElementAPI supports "process"/"processstem" (not
@@ -182,6 +202,39 @@ class FusekiAPIConnector {
     $reencoded = json_encode($decoded, JSON_UNESCAPED_SLASHES);
     return ($reencoded === FALSE) ? $jsonPayload : $reencoded;
   }
+
+  /**
+   * Sanitize manager email values before sending them to hascoapi endpoints.
+   */
+  private function sanitizeManagerEmailParam(string $value): string {
+    $candidate = trim($value);
+    if ($candidate === '') {
+      return '';
+    }
+
+    // Accept values like "Label <email@domain>".
+    if (preg_match('/<([^>]+)>/', $candidate, $matches) && isset($matches[1])) {
+      $candidate = trim($matches[1]);
+    }
+
+    $lower = strtolower($candidate);
+    if (strpos($lower, 'mailto:') === 0) {
+      $candidate = trim(substr($candidate, 7));
+    }
+
+    // Guard against contaminated values like "user@x.com?manageremail=user@x.com".
+    $queryPos = strpos($candidate, '?');
+    if ($queryPos !== FALSE) {
+      $candidate = trim(substr($candidate, 0, $queryPos));
+    }
+
+    $ampPos = strpos($candidate, '&');
+    if ($ampPos !== FALSE) {
+      $candidate = trim(substr($candidate, 0, $ampPos));
+    }
+
+    return filter_var($candidate, FILTER_VALIDATE_EMAIL) ? $candidate : '';
+  }
   private $client;
   private $query;
   private $error;
@@ -206,6 +259,13 @@ class FusekiAPIConnector {
   private $last_request_url;
 
   /**
+   * Request-level signal to stop retry storms during transient triplestore outages.
+   *
+   * @var bool
+   */
+  private $triplestore_unavailable = FALSE;
+
+  /**
    * In-request cache for successful getUri responses.
    *
    * @var array<string, string>
@@ -218,6 +278,31 @@ class FusekiAPIConnector {
   Const CONFIGNAME = "rep.settings";
 
   public function __construct(ClientFactory $client){
+  }
+
+  /**
+   * Identify transient backend outage signals in API errors.
+   */
+  private function isTransientTriplestoreFailure(int $status = 0, string $details = ''): bool {
+    $details = (string) $details;
+    if ($status === 503) {
+      if (
+        stripos($details, 'triplestore_unavailable') !== FALSE
+        || stripos($details, 'EOF reached while reading') !== FALSE
+        || stripos($details, 'timeout') !== FALSE
+      ) {
+        return TRUE;
+      }
+    }
+
+    return (
+      stripos($details, 'EOF reached while reading') !== FALSE
+      || stripos($details, 'cURL error 56') !== FALSE
+      || stripos($details, 'Recv failure') !== FALSE
+      || stripos($details, 'Connection reset by peer') !== FALSE
+      || stripos($details, 'Connection was reset') !== FALSE
+      || stripos($details, 'timed out') !== FALSE
+    );
   }
 
   /**
@@ -315,7 +400,7 @@ class FusekiAPIConnector {
     // \Drupal::logger('rep')->debug('Legacy not successful, falling back to Social POST.');
 
     // 4) Fallback enabled?
-    if (!\Drupal::config('rep.settings')->get('social_conf')) {
+    if (!$this->isSocialOAuthEnabled()) {
       // \Drupal::logger('rep')->debug('Social fallback disabled, returning legacy JSON.');
       return is_string($rawLegacy)
         ? $rawLegacy
@@ -848,10 +933,7 @@ class FusekiAPIConnector {
       $status       = '_'
   ) {
     // 1. If social integration is disabled OR OAuth is not configured, call the fallback API and return immediately.
-    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    $oauthUrl = \Drupal::config('social.oauth.settings')->get('oauth_url');
-    
-    if (! $socialEnabled || empty($oauthUrl)) {
+    if (!$this->isSocialOAuthEnabled()) {
         $endpoint = "/hascoapi/api/{$elementType}/keywordtype/"
             . rawurlencode($project)      . '/'
             . rawurlencode($keyword)      . '/'
@@ -1013,10 +1095,7 @@ class FusekiAPIConnector {
     $status       = '_'
   ) {
     // 1. Fallback to legacy API if social is disabled OR OAuth is not configured
-    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
-    $oauthUrl = \Drupal::config('social.oauth.settings')->get('oauth_url');
-    
-    if (! $socialEnabled || empty($oauthUrl)) {
+    if (!$this->isSocialOAuthEnabled()) {
         $endpoint = "/hascoapi/api/{$elementType}/keywordtype/total/"
             . rawurlencode($project)      . '/'
             . rawurlencode($keyword)      . '/'
@@ -2968,6 +3047,38 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function wkfNamespaceList() {
+    $endpoint = "/hascoapi/api/repo/table/wkfnamespaces";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function wkfNamespaceUpdate($abbreviation, $json) {
+    $endpoint = "/hascoapi/api/repo/wkfnamespace/update/" . rawurlencode($abbreviation) . "/" . rawurlencode($json);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function wkfNamespaceDelete($abbreviation) {
+    $endpoint = "/hascoapi/api/repo/wkfnamespace/delete/" . rawurlencode($abbreviation);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function wkfNamespaceRemove($uri) {
+    $endpoint = "/hascoapi/api/repo/wkfnamespace/remove/" . rawurlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   public function informantList() {
     $endpoint = "/hascoapi/api/repo/table/informants";
     $method = "GET";
@@ -3051,7 +3162,7 @@ class FusekiAPIConnector {
 
     $token = trim($configToken) !== '' ? trim($configToken) : trim($envToken);
     if ($token === '') {
-      return $headers;
+      $token = static::DEFAULT_NAMESPACE_APPROVAL_TOKEN;
     }
 
     $headers['X-Namespace-Approval'] = $token;
@@ -3059,6 +3170,11 @@ class FusekiAPIConnector {
     if (is_string($component) && trim($component) !== '') {
       $headers['X-Namespace-Component'] = trim($component);
     }
+    \Drupal::logger('rep')->notice('Namespace approval headers added for @action using @source token source and component @component.', [
+      '@action' => $action,
+      '@source' => trim($configToken) !== '' ? 'config' : (trim($envToken) !== '' ? 'environment' : 'fallback'),
+      '@component' => (is_string($component) && trim($component) !== '') ? trim($component) : '-',
+    ]);
     return $headers;
   }
 
@@ -3140,6 +3256,19 @@ class FusekiAPIConnector {
 
     // STEP 2: Trigger ingestion (without file content in body)
     $endpoint = "/hascoapi/api/ingest/".rawurlencode($status)."/".$concept."/".rawurlencode($template->uri);
+    if (strtolower((string) $concept) === 'wkf') {
+      $managerEmail = '';
+      if (isset($template->hasSIRManagerEmail) && is_string($template->hasSIRManagerEmail) && trim($template->hasSIRManagerEmail) !== '') {
+        $managerEmail = trim($template->hasSIRManagerEmail);
+      } else {
+        $managerEmail = (string) \Drupal::currentUser()->getEmail();
+      }
+      $managerEmail = $this->sanitizeManagerEmailParam($managerEmail);
+      if ($managerEmail !== '') {
+        $separator = (strpos($endpoint, '?') === FALSE) ? '?' : '&';
+        $endpoint .= $separator . 'manageremail=' . rawurlencode($managerEmail);
+      }
+    }
 
     // MAKE CALL TO API ENDPOINT
     $api_url = $this->getApiUrl();
@@ -3180,6 +3309,19 @@ class FusekiAPIConnector {
 
     // APPEND DATAFILE URI AND STATUS TO ENDPOINT'S URL
     $endpoint = "/hascoapi/api/ingest/".rawurlencode($status)."/".$concept."/".rawurlencode($template->uri);
+    if (strtolower((string) $concept) === 'wkf') {
+      $managerEmail = '';
+      if (isset($template->hasSIRManagerEmail) && is_string($template->hasSIRManagerEmail) && trim($template->hasSIRManagerEmail) !== '') {
+        $managerEmail = trim($template->hasSIRManagerEmail);
+      } else {
+        $managerEmail = (string) \Drupal::currentUser()->getEmail();
+      }
+      $managerEmail = $this->sanitizeManagerEmailParam($managerEmail);
+      if ($managerEmail !== '') {
+        $separator = (strpos($endpoint, '?') === FALSE) ? '?' : '&';
+        $endpoint .= $separator . 'manageremail=' . rawurlencode($managerEmail);
+      }
+    }
 
     // MAKE CALL TO API ENDPOINT WITHOUT FILE CONTENT
     $api_url = $this->getApiUrl();
@@ -3220,6 +3362,14 @@ class FusekiAPIConnector {
     $this->last_response_body = NULL;
     $this->last_request_url = $url;
 
+    // Short-circuit noisy cascades once a transient triplestore outage is
+    // detected in this request lifecycle.
+    if ($this->triplestore_unavailable) {
+      $this->error = '503';
+      $this->error_message = 'Triplestore temporarily unavailable (request short-circuited after prior transient failure).';
+      return NULL;
+    }
+
     $options = [];
     if (is_array($data)) {
       $options = $data;
@@ -3241,18 +3391,36 @@ class FusekiAPIConnector {
     }
 
     $methodUpper = strtoupper((string) $method);
-    $maxAttempts = ($methodUpper === 'GET') ? 2 : 1;
+    $maxAttempts = ($methodUpper === 'GET') ? 3 : 1;
     $attempt = 0;
 
     while (TRUE) {
       $attempt++;
       try {
         $res = $client->request($method, $url, $options);
+
+        // Retry transient backend unavailability responses for GET requests.
+        $statusProbe = (int) $res->getStatusCode();
+        if ($methodUpper === 'GET' && $attempt < $maxAttempts && $statusProbe === 503) {
+          $bodyProbe = (string) $res->getBody();
+          $isTransient503 = $this->isTransientTriplestoreFailure($statusProbe, $bodyProbe);
+
+          if ($isTransient503) {
+            usleep(120000 * $attempt);
+            continue;
+          }
+        }
+
         break;
       }
       catch (ConnectException $e) {
+        if ($this->isTransientTriplestoreFailure(0, $e->getMessage())) {
+          $this->triplestore_unavailable = TRUE;
+        }
+
         $retryable = ($attempt < $maxAttempts);
         if ($retryable) {
+          usleep(120000 * $attempt);
           continue;
         }
 
@@ -3278,6 +3446,10 @@ class FusekiAPIConnector {
         }
 
         $message = (string) $e->getMessage();
+        if ($this->isTransientTriplestoreFailure(0, $message)) {
+          $this->triplestore_unavailable = TRUE;
+        }
+
         $retryable = ($attempt < $maxAttempts)
           && (
             stripos($message, 'cURL error 56') !== FALSE
@@ -3287,6 +3459,7 @@ class FusekiAPIConnector {
           );
 
         if ($retryable) {
+          usleep(120000 * $attempt);
           continue;
         }
 
@@ -3317,6 +3490,10 @@ class FusekiAPIConnector {
       $this->error_message = "API request returned the following status code: " . $status;
       if ($snippet !== '') {
         $this->error_message .= "; response: " . $snippet;
+      }
+
+      if ($this->isTransientTriplestoreFailure($status, $snippet)) {
+        $this->triplestore_unavailable = TRUE;
       }
 
       // Always log non-200 responses so they are visible even when UI
@@ -3395,6 +3572,20 @@ class FusekiAPIConnector {
   public function parseObjectResponse($response, $methodCalled) {
     // 1) Any prior connection or HTTP error?
     if ($this->error !== NULL) {
+      $statusCode = is_numeric($this->error) ? (int) $this->error : 0;
+      if ($this->isTransientTriplestoreFailure($statusCode, (string) $this->error_message)) {
+        try {
+          \Drupal::logger('rep.api')->warning('Transient API outage suppressed from UI for {method}: {message}', [
+            'method' => $methodCalled,
+            'message' => (string) $this->error_message,
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
+        return NULL;
+      }
+
       if ($this->error === 'REQ'
         && $methodCalled === 'getUri'
         && is_string($this->error_message)
@@ -3431,8 +3622,13 @@ class FusekiAPIConnector {
       return NULL;
     }
 
-    // 3) If already decoded into an array or object, return it immediately.
-    if (is_array($response) || is_object($response)) {
+    // 3) If already decoded into an array, return it immediately.
+    if (is_array($response)) {
+      return $response;
+    }
+
+    // If this is a non-stringable object, assume caller already passed a decoded payload.
+    if (is_object($response) && !method_exists($response, '__toString')) {
       return $response;
     }
 
@@ -3500,6 +3696,20 @@ class FusekiAPIConnector {
    */
   public function parseTotalResponse($response, $methodCalled) {
     if ($this->error != NULL) {
+      $statusCode = is_numeric($this->error) ? (int) $this->error : 0;
+      if ($this->isTransientTriplestoreFailure($statusCode, (string) $this->error_message)) {
+        try {
+          \Drupal::logger('rep.api')->warning('Transient total-response outage suppressed from UI for {method}: {message}', [
+            'method' => $methodCalled,
+            'message' => (string) $this->error_message,
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
+        return NULL;
+      }
+
       if ($this->error == 'CON') {
         \Drupal::messenger()->addError(t("Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect."));
       } else {
@@ -4181,6 +4391,10 @@ class FusekiAPIConnector {
  *   A PSR-7 response containing the binary data on success, or NULL on failure.
  */
   public function downloadFileSocial(string $uri, string $fileName) {
+    if (!$this->isSocialOAuthEnabled()) {
+      return NULL;
+    }
+
     // 1) Entry log
     // \Drupal::logger('rep')->debug('downloadFileSocial(): uri=@u, file=@f', [
     //   '@u' => $uri,

@@ -96,7 +96,12 @@ class SocialApiMakerController extends ControllerBase {
     }
 
     // 3) If legacy returned results, use them immediately.
-    $socialEnabled = \Drupal::config('rep.settings')->get('social_conf');
+    $repConfig = \Drupal::config('rep.settings');
+    $oauthConfig = \Drupal::config('social.oauth.settings');
+    $socialEnabled = (bool) $repConfig->get('social_conf')
+      && (bool) $repConfig->get('social_oauth_enabled')
+      && trim((string) $oauthConfig->get('oauth_url')) !== ''
+      && trim((string) $oauthConfig->get('client_id')) !== '';
     if (!empty($makers)) {
       foreach ($makers as $m) {
         if (is_array($m)) {

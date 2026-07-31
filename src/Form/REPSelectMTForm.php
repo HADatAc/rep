@@ -1250,6 +1250,7 @@ class REPSelectMTForm extends FormBase {
 
     $deleted = 0;
     $failed = 0;
+    $wkfManagerEmailsToRefresh = [];
 
     foreach ($uris as $raw_uri) {
       $uri = Utils::plainUri($raw_uri) ?: $raw_uri;
@@ -1311,6 +1312,13 @@ class REPSelectMTForm extends FormBase {
       if ($deleteConfirmed) {
         $deleted++;
 
+        if ($this->element_type === 'wkf') {
+          $candidateEmails = $this->extractManagerEmailsFromTemplateObject($mt);
+          foreach ($candidateEmails as $email) {
+            $wkfManagerEmailsToRefresh[$email] = true;
+          }
+        }
+
         // 2) Best-effort cleanup: delete associated DataFile (if known).
         if (!empty($datafileUri)) {
           $api->parseObjectResponse($api->datafileDel($datafileUri), 'datafileDel');
@@ -1354,6 +1362,17 @@ class REPSelectMTForm extends FormBase {
     }
     else {
       \Drupal::messenger()->addError(t("Failed to delete the selected " . $this->plural_class_name . "."));
+    }
+
+    if ($this->element_type === 'wkf' && $deleted > 0) {
+      if (empty($wkfManagerEmailsToRefresh)) {
+        $this->triggerPmsrMembersStatisticsRefreshByManagerEmail($this->manager_email);
+      }
+      else {
+        foreach (array_keys($wkfManagerEmailsToRefresh) as $email) {
+          $this->triggerPmsrMembersStatisticsRefreshByManagerEmail($email);
+        }
+      }
     }
 
     \Drupal::service('cache.default')->invalidateAll();
@@ -1538,8 +1557,135 @@ class REPSelectMTForm extends FormBase {
       return;
     }
     \Drupal::messenger()->addMessage(t("The " . $this->single_class_name . " selected was successfully submited for Ingestion."));
+    if ($this->element_type === 'wkf') {
+      $refreshEmails = $this->extractManagerEmailsFromTemplateObject($template);
+      if (empty($refreshEmails)) {
+        $this->triggerPmsrMembersStatisticsRefreshByManagerEmail($this->manager_email);
+      }
+      else {
+        foreach ($refreshEmails as $email) {
+          $this->triggerPmsrMembersStatisticsRefreshByManagerEmail($email);
+        }
+      }
+    }
     $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
     return;
+  }
+
+  /**
+   * Trigger lightweight PMSR members statistics refresh for one manager email.
+   */
+  protected function triggerPmsrMembersStatisticsRefreshByManagerEmail(?string $managerEmail): void {
+    if (!\Drupal::moduleHandler()->moduleExists('pmsr')) {
+      return;
+    }
+
+    $email = strtolower(trim((string) $managerEmail));
+    if ($email === '') {
+      return;
+    }
+
+    $baseUrl = \Drupal::request()->getSchemeAndHttpHost();
+    $url = rtrim($baseUrl, '/') . '/pmsr/api/statistics/refresh/members?manager_email=' . rawurlencode($email);
+
+    try {
+      $response = \Drupal::httpClient()->request('POST', $url, [
+        'timeout' => 25,
+        'connect_timeout' => 2,
+        'http_errors' => FALSE,
+      ]);
+
+      $status = (int) $response->getStatusCode();
+      $body = (string) $response->getBody();
+      $decoded = json_decode($body, TRUE);
+      $ok = ($status >= 200 && $status < 300) && (!is_array($decoded) || !array_key_exists('success', $decoded) || !empty($decoded['success']));
+
+      // Fallback to full members refresh when scoped refresh fails.
+      if (!$ok) {
+        $fallbackUrl = rtrim($baseUrl, '/') . '/pmsr/api/statistics/refresh/members';
+        \Drupal::httpClient()->request('POST', $fallbackUrl, [
+          'timeout' => 30,
+          'connect_timeout' => 2,
+          'http_errors' => FALSE,
+        ]);
+      }
+    }
+    catch (\Throwable $e) {
+      \Drupal::logger('rep')->notice('Could not trigger PMSR members statistics refresh: @message', [
+        '@message' => $e->getMessage(),
+      ]);
+    }
+  }
+
+  /**
+   * Normalize a raw manager email-ish value.
+   */
+  protected function normalizeManagerEmailValue($value): string {
+    $email = strtolower(trim((string) $value));
+    if ($email === '') {
+      return '';
+    }
+
+    if (strpos($email, 'mailto:') === 0) {
+      $email = substr($email, 7);
+    }
+
+    if (preg_match('/(?:^|[?&])manageremail=([^&\s]+)/i', $email, $m)) {
+      $email = trim((string) $m[1]);
+    }
+
+    $qPos = strpos($email, '?');
+    if ($qPos !== FALSE) {
+      $email = substr($email, 0, $qPos);
+    }
+
+    if (preg_match('/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i', $email, $m)) {
+      return strtolower(trim((string) $m[0]));
+    }
+
+    return '';
+  }
+
+  /**
+   * Extract manager emails from a metadata template-like API object.
+   */
+  protected function extractManagerEmailsFromTemplateObject($template): array {
+    $emails = [];
+    if (!is_object($template)) {
+      return $emails;
+    }
+
+    $candidates = [];
+    if (!empty($template->hasSIRManagerEmail)) {
+      $candidates[] = $template->hasSIRManagerEmail;
+    }
+    if (!empty($template->principalInvestigator)) {
+      $candidates[] = $template->principalInvestigator;
+    }
+    if (!empty($template->contactEmail)) {
+      $candidates[] = $template->contactEmail;
+    }
+
+    if (isset($template->hasDataFile) && is_object($template->hasDataFile)) {
+      if (!empty($template->hasDataFile->hasSIRManagerEmail)) {
+        $candidates[] = $template->hasDataFile->hasSIRManagerEmail;
+      }
+      if (!empty($template->hasDataFile->principalInvestigator)) {
+        $candidates[] = $template->hasDataFile->principalInvestigator;
+      }
+      if (!empty($template->hasDataFile->contactEmail)) {
+        $candidates[] = $template->hasDataFile->contactEmail;
+      }
+    }
+
+    foreach ($candidates as $candidate) {
+      $normalized = $this->normalizeManagerEmailValue($candidate);
+      if ($normalized !== '') {
+        $emails[$normalized] = true;
+      }
+    }
+
+    return array_keys($emails);
   }
 
   /**
@@ -1850,6 +1996,17 @@ class REPSelectMTForm extends FormBase {
     }
 
     \Drupal::messenger()->addStatus(t('The selected @type was successfully uningested.', ['@type' => $this->single_class_name]));
+    if ($this->element_type === 'wkf') {
+      $refreshEmails = $this->extractManagerEmailsFromTemplateObject($mt);
+      if (empty($refreshEmails)) {
+        $this->triggerPmsrMembersStatisticsRefreshByManagerEmail($this->manager_email);
+      }
+      else {
+        foreach ($refreshEmails as $email) {
+          $this->triggerPmsrMembersStatisticsRefreshByManagerEmail($email);
+        }
+      }
+    }
 
     // Optional: redirect back to the selector to refresh the list.
     $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));

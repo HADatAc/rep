@@ -30,26 +30,30 @@
         $messenger = \Drupal::service('messenger');
         $APIservice = \Drupal::service('rep.api_connector');
 
+        $config = \Drupal::config('rep.settings');
+
         // RETRIEVE CONFIGURATION FROM CURRENT IP
         $repoObj = $APIservice->parseObjectResponse($APIservice->repoInfo(),'repoInfo');
         if ($repoObj != NULL) {
             //dpm($repoObj);
-            $label = $repoObj->label;
-            $name = $repoObj->title;
-            $domainUrl = $repoObj->hasDomainURL;
-            $namespaceUrl = $repoObj->hasDefaultNamespaceURL;
-            $namespacePrefix = $repoObj->hasDefaultNamespacePrefix;
-            $namespaceSourceMime = $repoObj->hasDefaultNamespaceSourceMime;
-            $namespaceSource = $repoObj->hasDefaultNamespaceSource;
-            $description = $repoObj->comment;
+            $label = isset($repoObj->label) && $repoObj->label !== '' ? $repoObj->label : (string) ($config->get('site_label') ?? '');
+            $name = isset($repoObj->title) && $repoObj->title !== '' ? $repoObj->title : (string) ($config->get('site_name') ?? '');
+            $domainUrl = isset($repoObj->hasDomainURL) && $repoObj->hasDomainURL !== '' ? $repoObj->hasDomainURL : (string) ($config->get('repository_domain_url') ?? '');
+            $namespaceUrl = isset($repoObj->hasDefaultNamespaceURL) && $repoObj->hasDefaultNamespaceURL !== '' ? $repoObj->hasDefaultNamespaceURL : (string) ($config->get('repository_namespace_url') ?? '');
+            $namespacePrefix = isset($repoObj->hasDefaultNamespacePrefix) && $repoObj->hasDefaultNamespacePrefix !== '' ? $repoObj->hasDefaultNamespacePrefix : (string) ($config->get('repository_namespace_prefix') ?? '');
+            $namespaceSourceMime = isset($repoObj->hasDefaultNamespaceSourceMime) && $repoObj->hasDefaultNamespaceSourceMime !== '' ? $repoObj->hasDefaultNamespaceSourceMime : (string) ($config->get('repository_namespace_source_mime') ?? '');
+            $namespaceSource = isset($repoObj->hasDefaultNamespaceSource) && $repoObj->hasDefaultNamespaceSource !== '' ? $repoObj->hasDefaultNamespaceSource : (string) ($config->get('repository_namespace_source') ?? '');
+            $description = isset($repoObj->comment) && $repoObj->comment !== '' ? $repoObj->comment : (string) ($config->get('repository_description') ?? '');
         } else {
-            $label = "";
-            $name = "<<FAILED TO LOAD CONFIGURATION>>";
-            $domainUrl = "";
-            $namespaceUrl = "";
-            $namespaceSourceMime = "";
-            $namespaceSource = "";
-            $description = "";
+            $label = (string) ($config->get('site_label') ?? '');
+            $name = (string) ($config->get('site_name') ?? '<<FAILED TO LOAD CONFIGURATION>>');
+            $domainUrl = (string) ($config->get('repository_domain_url') ?? '');
+            $namespaceUrl = (string) ($config->get('repository_namespace_url') ?? '');
+            $namespacePrefix = (string) ($config->get('repository_namespace_prefix') ?? '');
+            $namespaceSourceMime = (string) ($config->get('repository_namespace_source_mime') ?? '');
+            $namespaceSource = (string) ($config->get('repository_namespace_source') ?? '');
+            $description = (string) ($config->get('repository_description') ?? '');
+            $messenger->addWarning($this->t('Could not retrieve repository configuration from API. Showing locally saved settings values.'));
         }
 
         $form['site_label'] = [

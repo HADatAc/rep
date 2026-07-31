@@ -1724,7 +1724,6 @@ class Utils {
         'element' => $elementEnc,
         'image' => $imageEnc,
       ], [
-        'absolute' => TRUE,
         'query' => [
           'ph' => $phEnc,
         ],

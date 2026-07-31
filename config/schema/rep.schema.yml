@@ -5,6 +5,30 @@ rep.settings:
     rep_home:
       type: boolean
       label: 'Use REP as homepage'
+    site_label:
+      type: string
+      label: 'Repository short name'
+    site_name:
+      type: string
+      label: 'Repository full name'
+    repository_domain_url:
+      type: string
+      label: 'Repository URL'
+    repository_namespace_prefix:
+      type: string
+      label: 'Base namespace prefix'
+    repository_namespace_url:
+      type: string
+      label: 'Base namespace URL'
+    repository_namespace_source_mime:
+      type: string
+      label: 'Base namespace MIME'
+    repository_namespace_source:
+      type: string
+      label: 'Base namespace source'
+    repository_description:
+      type: string
+      label: 'Repository description'
     api_url:
       type: string
       label: 'REP API base URL'

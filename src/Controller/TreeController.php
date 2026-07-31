@@ -17,7 +17,7 @@ class TreeController extends ControllerBase {
 
   private const CLASS_ENTRY_POINT_ROOT = 'http://hadatac.org/ont/hasco/ClassEntryPoint';
   private const VSTOI_PHYSICAL_INSTRUMENT = 'http://hadatac.org/ont/vstoi#PhysicalInstrument';
-  private const PMSR_PHYSICAL_INSTRUMENT = 'http://pmsr.net/ont/pmsr#PhysicalInstrument';
+  private const PMSR_PHYSICAL_INSTRUMENT = 'https://pmsr.net/ont/PhysicalInstrument';
   private const MAX_INSTANCE_LABEL_URI_LOOKUPS = 40;
   private const REQUIRED_CLASS_ENTRY_POINT_LOCAL_NAMES = [
     'AnnotationStemEntryPoint',

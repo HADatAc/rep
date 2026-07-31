@@ -247,6 +247,34 @@ class REPSettingsForm extends ConfigFormBase {
       '#description' => $this->t('This value is used to compose the URL of REP elements created within this repository.'),
     ];
 
+    // Optional MIME type for the base namespace source content.
+    $namespaceSourceMime = '';
+    if ($form_state->isRebuilding() && $form_state->hasValue('repository_namespace_source_mime')) {
+      $namespaceSourceMime = $form_state->getValue('repository_namespace_source_mime');
+    } elseif ($config->get('repository_namespace_source_mime') != NULL) {
+      $namespaceSourceMime = $config->get('repository_namespace_source_mime');
+    }
+    $form['repository_namespace_source_mime'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Mime for Base Namespace'),
+      '#default_value' => $namespaceSourceMime,
+      '#description' => $this->t('Example: text/turtle, application/rdf+xml.'),
+    ];
+
+    // Optional source URI for base namespace provenance.
+    $namespaceSource = '';
+    if ($form_state->isRebuilding() && $form_state->hasValue('repository_namespace_source')) {
+      $namespaceSource = $form_state->getValue('repository_namespace_source');
+    } elseif ($config->get('repository_namespace_source') != NULL) {
+      $namespaceSource = $config->get('repository_namespace_source');
+    }
+    $form['repository_namespace_source'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Source for Base Namespace'),
+      '#default_value' => $namespaceSource,
+      '#description' => $this->t('Optional source URL for the base namespace ontology.'),
+    ];
+
     // Human-readable description of the repository (used in APIs / GUI).
     $description = '';
     if ($form_state->isRebuilding() && $form_state->hasValue('repository_description')) {
@@ -403,6 +431,13 @@ class REPSettingsForm extends ConfigFormBase {
       }
     }
 
+    $namespaceSource = trim((string) $form_state->getValue('repository_namespace_source'));
+    if ($namespaceSource !== '' &&
+      (strtolower(substr($namespaceSource, 0, 7)) !== 'http://') &&
+      (strtolower(substr($namespaceSource, 0, 8)) !== 'https://')) {
+      $form_state->setErrorByName('repository_namespace_source', $this->t("Source for Base Namespace must start with 'http://' or 'https://' when provided."));
+    }
+
     $cttUrl = trim((string) $form_state->getValue('ctt_url'));
     if ($cttUrl !== '' &&
       (strtolower(substr($cttUrl, 0, 7)) !== 'http://') &&
@@ -509,6 +544,8 @@ class REPSettingsForm extends ConfigFormBase {
     $config->set('repository_domain_url', trim($form_state->getValue('repository_domain_url')));
     $config->set('repository_namespace_prefix', trim($form_state->getValue('repository_namespace_prefix')));
     $config->set('repository_namespace_url', trim($form_state->getValue('repository_namespace_url')));
+    $config->set('repository_namespace_source_mime', trim((string) $form_state->getValue('repository_namespace_source_mime')));
+    $config->set('repository_namespace_source', trim((string) $form_state->getValue('repository_namespace_source')));
     $config->set('repository_description', trim($form_state->getValue('repository_description')));
     $config->set('sagres_base_url', $form_state->getValue('sagres_base_url'));
     
@@ -524,6 +561,11 @@ class REPSettingsForm extends ConfigFormBase {
       }
     }
     
+    // Fallback to existing configured API URL when the form value is empty.
+    if (empty($api_url)) {
+      $api_url = trim((string) ($config->get('api_url') ?? ''));
+    }
+
     // Save the api_url to config.
     if (!empty($api_url)) {
       $config->set('api_url', $api_url);
@@ -534,6 +576,14 @@ class REPSettingsForm extends ConfigFormBase {
       $config->set('ctt_url', trim((string) $cttUrl));
     }
     $config->set('jwt_secret', $form_state->getValue('jwt_secret'));
+
+    // Namespace approval token is managed in backend config/env and not exposed
+    // in this form. If config is empty and env is present, persist it here.
+    $currentToken = trim((string) ($config->get('namespace_approval_token') ?? ''));
+    $envToken = getenv('HASCOAPI_NAMESPACE_APPROVAL_TOKEN');
+    if ($currentToken === '' && is_string($envToken) && trim($envToken) !== '') {
+      $config->set('namespace_approval_token', trim($envToken));
+    }
 
     // Graph settings.
     $config->set('graph_max_live_nodes', (int) $form_state->getValue('graph_max_live_nodes'));
@@ -637,40 +687,81 @@ class REPSettingsForm extends ConfigFormBase {
     if (!empty($api_url)) {
       $api = \Drupal::service('rep.api_connector');
 
-      $resp = '';
+      $syncOk = TRUE;
+      $syncErrors = [];
+
       // Label.
-      $resp .= $api->repoUpdateLabel(
+      $labelResp = $api->repoUpdateLabel(
         $api_url,
         $form_state->getValue('site_label')
       );
+      $labelData = json_decode($labelResp);
+      if (!$labelData || empty($labelData->isSuccessful)) {
+        $syncOk = FALSE;
+        $syncErrors[] = 'label';
+      }
 
       // Title.
-      $resp .= $api->repoUpdateTitle(
+      $titleResp = $api->repoUpdateTitle(
         $api_url,
         $form_state->getValue('site_name')
       );
+      $titleData = json_decode($titleResp);
+      if (!$titleData || empty($titleData->isSuccessful)) {
+        $syncOk = FALSE;
+        $syncErrors[] = 'title';
+      }
 
       // Domain URL.
-      $resp .= $api->repoUpdateURL(
+      $urlResp = $api->repoUpdateURL(
         $api_url,
         $form_state->getValue('repository_domain_url')
       );
+      $urlData = json_decode($urlResp);
+      if (!$urlData || empty($urlData->isSuccessful)) {
+        $syncOk = FALSE;
+        $syncErrors[] = 'domain URL';
+      }
 
       // Description.
-      $resp .= $api->repoUpdateDescription(
+      $descResp = $api->repoUpdateDescription(
         $api_url,
         $form_state->getValue('repository_description')
       );
+      $descData = json_decode($descResp);
+      if (!$descData || empty($descData->isSuccessful)) {
+        $syncOk = FALSE;
+        $syncErrors[] = 'description';
+      }
 
-      // Namespace table mutation is restricted by policy to approved PMSR flows.
-      // Keep local REP settings, but do not mutate namespace table from this form.
-      $messenger->addWarning($this->t('Namespace table updates are policy-restricted and are not executed from REP Settings. Use approved PMSR bootstrap/ingestion flows.'));
+      // Update default namespace (label + URI) using policy-approved component.
+      $namespaceResp = $api->repoUpdateNamespace(
+        $api_url,
+        trim((string) $form_state->getValue('repository_namespace_prefix')),
+        trim((string) $form_state->getValue('repository_namespace_url')),
+        trim((string) $form_state->getValue('repository_namespace_source_mime')),
+        trim((string) $form_state->getValue('repository_namespace_source')),
+        'semantic-repository-settings'
+      );
+      $namespaceData = json_decode($namespaceResp);
+      if ($namespaceData && !empty($namespaceData->isSuccessful)) {
+        $messenger->addMessage($this->t('Default namespace has been updated in the repository.'));
+      }
+      else {
+        $syncOk = FALSE;
+        $syncErrors[] = 'default namespace';
+        $namespaceErr = ($namespaceData && isset($namespaceData->body)) ? (string) $namespaceData->body : (string) $namespaceResp;
+        $messenger->addError($this->t('Failed to update default namespace. Message: [@msg]', ['@msg' => $namespaceErr]));
+        if (stripos($namespaceErr, 'approval') !== FALSE || stripos($namespaceErr, 'unauthorized component') !== FALSE) {
+          $messenger->addWarning($this->t('Default namespace update is policy-guarded. Verify backend token configuration (rep.settings.namespace_approval_token or HASCOAPI_NAMESPACE_APPROVAL_TOKEN) and confirm hascoapi is running with semantic-repository-settings in its allowlist.'));
+        }
+      }
 
-      if ($resp !== '') {
+      if ($syncOk) {
         $messenger->addMessage($this->t('Your new REP configuration has been saved.'));
       }
       else {
-        $messenger->addError($this->t('Failed to set REP configuration. Message: [@resp]', ['@resp' => $resp]));
+        $messenger->addError($this->t('Some repository fields could not be synchronized to API: @fields', ['@fields' => implode(', ', $syncErrors)]));
       }
     }
     else {
@@ -938,6 +1029,14 @@ class REPSettingsForm extends ConfigFormBase {
         if (isset($repoObj->hasDefaultNamespaceURL)) {
           $form_state->setValue('repository_namespace_url', $repoObj->hasDefaultNamespaceURL);
           $input['repository_namespace_url'] = $repoObj->hasDefaultNamespaceURL;
+        }
+        if (isset($repoObj->hasDefaultNamespaceSourceMime)) {
+          $form_state->setValue('repository_namespace_source_mime', $repoObj->hasDefaultNamespaceSourceMime);
+          $input['repository_namespace_source_mime'] = $repoObj->hasDefaultNamespaceSourceMime;
+        }
+        if (isset($repoObj->hasDefaultNamespaceSource)) {
+          $form_state->setValue('repository_namespace_source', $repoObj->hasDefaultNamespaceSource);
+          $input['repository_namespace_source'] = $repoObj->hasDefaultNamespaceSource;
         }
         if (isset($repoObj->comment)) {
           $form_state->setValue('repository_description', $repoObj->comment);

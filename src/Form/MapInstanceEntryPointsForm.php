@@ -11,7 +11,6 @@ use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\rep\Entity\Tables;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Url;
-use Drupal\rep\Controller\OntController;
 
 /**
  * Form to browse an ontology and save an INSTANCE mapping.
@@ -362,10 +361,23 @@ class MapInstanceEntryPointsForm extends FormBase {
         '@count' => count($safe_node_uris),
       ]));
 
-      // Trigger ontology ingestion (same behavior as clicking "Ingest App Ontology").
+      // Ingest updated hasco.ttl via allowed namespace-ingest path.
       try {
-        $ontController = new OntController();
-        $ontController->injest();
+        $api = \Drupal::service('rep.api_connector');
+        $file_content = (string) file_get_contents($ttl_path);
+        $ingest_result = $api->repoIngestNamespaceOntology(
+          'hasco',
+          'http://hadatac.org/ont/hasco/',
+          $file_content,
+          'text/turtle',
+          'rep-map-entrypoints'
+        );
+        $ingest_data = json_decode($ingest_result);
+        if (!$ingest_data || empty($ingest_data->isSuccessful)) {
+          $this->messenger()->addWarning($this->t('Automatic ingestion warning: @msg', [
+            '@msg' => $ingest_data->body ?? 'Unknown error while ingesting hasco.ttl',
+          ]));
+        }
       }
       catch (\Throwable $e) {
         $this->messenger()->addWarning($this->t('Error during automatic ingestion: @msg', ['@msg' => $e->getMessage()]));

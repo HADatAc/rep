@@ -140,6 +140,11 @@ class ApiImageController extends ControllerBase {
   }
 
   private function shouldTrySocialDownload(): bool {
+    $repConfig = \Drupal::config('rep.settings');
+    if (!(bool) $repConfig->get('social_conf') || !(bool) $repConfig->get('social_oauth_enabled')) {
+      return FALSE;
+    }
+
     // Social download endpoint depends on OAuth social settings.
     $oauthConfig = \Drupal::config('social.oauth.settings');
     $oauthUrl = trim((string) $oauthConfig->get('oauth_url'));
