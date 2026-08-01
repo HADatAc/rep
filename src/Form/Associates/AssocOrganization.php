@@ -16,6 +16,7 @@ class AssocOrganization {
   private const INSTANCE_PAGE_SIZE = 5;
   private const INSTANCE_FETCH_PAGE_SIZE = 100;
   private const INSTANCE_FETCH_LIMIT = 100;
+  private const INSTANCE_SCAN_LIMIT = 500;
 
   private static function normalizeEmail($value): string {
     if (!is_string($value)) {
@@ -236,6 +237,73 @@ class AssocOrganization {
     });
 
     return array_slice($items, 0, $limit);
+  }
+
+  private static function extractPartOfUri($item): string {
+    if (!is_object($item) || !isset($item->partOf)) {
+      return '';
+    }
+
+    $partOf = $item->partOf;
+    if (is_string($partOf)) {
+      return trim($partOf);
+    }
+
+    if (is_object($partOf)) {
+      return trim((string) ($partOf->uri ?? $partOf->hasURI ?? ''));
+    }
+
+    return '';
+  }
+
+  private static function listPlatformInstancesByPartOf($api, string $organizationUri): array {
+    $organizationUri = trim($organizationUri);
+    if ($organizationUri === '') {
+      return [];
+    }
+
+    $total = self::parseTotalValue($api->listSizeByKeyword('platforminstance', '_'));
+    if ($total <= 0) {
+      return [];
+    }
+
+    $target = min($total, self::INSTANCE_SCAN_LIMIT);
+    $pageSize = self::INSTANCE_FETCH_PAGE_SIZE;
+    $offset = 0;
+    $indexed = [];
+
+    while ($offset < $target) {
+      $chunk = self::parseListBody($api->listByKeyword('platforminstance', '_', $pageSize, $offset));
+      if (empty($chunk)) {
+        break;
+      }
+
+      foreach ($chunk as $item) {
+        if (!is_object($item) || empty($item->uri)) {
+          continue;
+        }
+
+        $partOf = self::extractPartOfUri($item);
+        if ($partOf !== '' && $partOf === $organizationUri) {
+          $indexed[(string) $item->uri] = $item;
+        }
+      }
+
+      if (count($chunk) < $pageSize) {
+        break;
+      }
+
+      $offset += $pageSize;
+    }
+
+    $items = array_values($indexed);
+    usort($items, function ($a, $b) {
+      $labelA = is_object($a) ? (string) ($a->label ?? '') : '';
+      $labelB = is_object($b) ? (string) ($b->label ?? '') : '';
+      return strcasecmp($labelA, $labelB);
+    });
+
+    return $items;
   }
 
   private static function listAffiliatedPeople($api, string $organizationUri): array {
@@ -629,7 +697,7 @@ class AssocOrganization {
     }
     */
 
-    // ORGANIZATION's MANAGER-OWNED INSTANCES (simulator/laboratory use case).
+    // ORGANIZATION's MANAGER-OWNED instrument instances.
     $managerEmails = self::extractOrganizationManagerEmails($element);
     if (!empty($managerEmails)) {
       $form['#attached']['library'][] = 'rep/describe_instance_tables';
@@ -642,8 +710,12 @@ class AssocOrganization {
         'Has ' . $preferredInstrument . ' instances',
         $instrumentInstances
       );
+    }
 
-      $platformInstances = self::listManagerOwnedInstances($api, 'platforminstance', $managerEmails);
+    // ORGANIZATION's platform/laboratory instances should be scoped by hasco:partOf.
+    $platformInstances = self::listPlatformInstancesByPartOf($api, (string) $element->uri);
+    if (!empty($platformInstances)) {
+      $form['#attached']['library'][] = 'rep/describe_instance_tables';
       self::appendInstanceSection(
         $form,
         'org_platform_instances',

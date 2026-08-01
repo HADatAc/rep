@@ -4253,6 +4253,8 @@ class FusekiAPIConnector {
 
     $api_url = $this->getApiUrl();
     $client = new Client();
+    $headers = $this->getHeader();
+    $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : $this->bearer;
     
     // Determine MIME type based on file extension
     $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
@@ -4270,7 +4272,7 @@ class FusekiAPIConnector {
       $res = $client->post($api_url . $endpoint, [
         'headers' => [
           'Content-Type' => $mimeType,
-          'Authorization' => $this->bearer
+          'Authorization' => $authHeader,
         ],
         'body' => $fileContent,
         'http_errors' => FALSE,
@@ -4327,11 +4329,13 @@ class FusekiAPIConnector {
 
     $api_url = $this->getApiUrl();
     $client = new Client();
+    $headers = $this->getHeader();
+    $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : $this->bearer;
 
     try {
       $res = $client->delete($api_url . $endpoint, [
         'headers' => [
-          'Authorization' => $this->bearer
+          'Authorization' => $authHeader,
         ],
         'http_errors' => FALSE,
       ]);
