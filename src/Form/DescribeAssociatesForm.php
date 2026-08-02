@@ -330,6 +330,11 @@ class DescribeAssociatesForm extends FormBase {
       }
     }
 
+    // Render Anatomy in the Associated Elements panel for instrument/component.
+    if (in_array($typeUri, [VSTOI::INSTRUMENT, VSTOI::COMPONENT], true)) {
+      $this->renderAnatomyAssociations($element, $form, $form_state);
+    }
+
     // ✅ Process associations by object type
 
     switch ($typeUri) {
@@ -462,6 +467,92 @@ class DescribeAssociatesForm extends FormBase {
     }
 
     return NULL;
+  }
+
+  private function renderAnatomyAssociations($element, array &$form, FormStateInterface $form_state) {
+    $anatomyUris = $this->extractAnatomyUris($element);
+    if (count($anatomyUris) === 0) {
+      return;
+    }
+
+    $api = \Drupal::service('rep.api_connector');
+    $items = '';
+
+    foreach ($anatomyUris as $uri) {
+      $label = $this->resolveAnatomyLabel($api, $uri);
+      $items .= '<li>'
+        . Html::escape($label)
+        . ' (' . Utils::link($uri, $uri) . ')'
+        . '</li>';
+    }
+
+    $form['associated_anatomy'] = [
+      '#type' => 'markup',
+      '#markup' => '<b>Anatomy</b>:<ul>' . $items . '</ul><br>',
+    ];
+  }
+
+  private function extractAnatomyUris($element): array {
+    $candidates = [];
+
+    if (is_object($element) && isset($element->hasAnatomyUris) && is_array($element->hasAnatomyUris)) {
+      foreach ($element->hasAnatomyUris as $value) {
+        if (is_string($value)) {
+          $candidates[] = $value;
+        }
+      }
+    }
+
+    if (is_object($element) && isset($element->hasAnatomy) && is_string($element->hasAnatomy)) {
+      $parts = preg_split('/[;,\n\r]+/', $element->hasAnatomy);
+      if (is_array($parts)) {
+        foreach ($parts as $part) {
+          if (is_string($part)) {
+            $candidates[] = $part;
+          }
+        }
+      }
+    }
+
+    $uris = [];
+    $seen = [];
+    foreach ($candidates as $candidate) {
+      $uri = trim((string) $candidate);
+      if ($uri === '' || filter_var($uri, FILTER_VALIDATE_URL) === false || isset($seen[$uri])) {
+        continue;
+      }
+      $seen[$uri] = true;
+      $uris[] = $uri;
+    }
+
+    return $uris;
+  }
+
+  private function resolveAnatomyLabel($api, string $uri): string {
+    try {
+      $raw = $api->getUri(Utils::plainUri($uri));
+      if (is_string($raw) && $raw !== '') {
+        $decoded = json_decode($raw);
+        if (is_object($decoded) && !empty($decoded->isSuccessful) && isset($decoded->body) && is_object($decoded->body)) {
+          if (!empty($decoded->body->label) && is_string($decoded->body->label)) {
+            return $decoded->body->label;
+          }
+          if (!empty($decoded->body->title) && is_string($decoded->body->title)) {
+            return $decoded->body->title;
+          }
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      // Keep URI itself as fallback label.
+    }
+
+    // Fallback to a readable token when the term is not available in KG.
+    if (preg_match('#/([A-Za-z]+)_([0-9]+)$#', $uri, $matches)) {
+      return strtoupper($matches[1]) . '_' . $matches[2];
+    }
+
+    return $uri;
   }
 
   public function validateForm(array &$form, FormStateInterface $form_state) {}

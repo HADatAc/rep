@@ -153,7 +153,16 @@
       '#title' => '<h3>Data Properties</h3>',
     ];
 
+    $hideAnatomyInDataProperties = (
+      $this->getElement() !== NULL
+      && (($this->getElement()->hascoTypeUri ?? '') === VSTOI::INSTRUMENT)
+    );
+
     foreach ($objectProperties['literals'] as $propertyName => $propertyValue) {
+
+      if ($hideAnatomyInDataProperties && $propertyName === 'hasAnatomy') {
+        continue;
+      }
 
       // Add a textfield element for each property
       if ($propertyValue !== NULL && $propertyValue !== "") {

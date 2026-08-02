@@ -351,6 +351,7 @@
             var selectedUri = selectedNode.uri || data.node.uri || nodeData.realUri || nodeData.uri || '';
             var selectedLabel = selectedNode.label || data.node.text || '';
             var selectedTypeNamespace = selectedNode.typeNamespace || data.node.typeNamespace || nodeData.typeNamespace || '';
+            var selectedUriDisplay = selectedUri || selectedTypeNamespace || '';
             var selectedStatus = selectedNode.hasStatus || data.node.hasStatus || nodeData.hasStatus || '';
             var selectedManagerEmail = selectedNode.hasSIRManagerEmail || data.node.hasSIRManagerEmail || nodeData.hasSIRManagerEmail || '';
             var isCategoryNode = !!(selectedNode.isCategory || data.node.isCategory || nodeData.isCategory);
@@ -424,25 +425,34 @@
               }
             }
 
-            // Build HTML for node details (Label, URI, Web Document, Description)
+            // Build node details using the same simulator card layout used in SIR anatomy results.
             var html = ''
-              + '<strong>Label:</strong> ' + (selectedLabel || '') + '<br/>'
-              + '<strong>URI:</strong> ';
+              + '<div class="sir-anatomy-results">'
+              + '<div class="sir-anatomy-results__grid">'
+              + '<article class="sir-anatomy-result-card">'
+              + '<div class="sir-anatomy-result-card__title">' + (selectedLabel || selectedUriDisplay || '') + '</div>'
+              + '<div class="sir-anatomy-result-card__field"><strong>URI:</strong> ';
 
-            if (selectedUri) {
+            if (selectedUriDisplay) {
               html += ''
-                + '<a href="' + drupalSettings.rep_tree.baseUrl + '/rep/uri/' + base64EncodeUnicode(selectedUri) + '" target="_new">'
-                + selectedUri + '</a><br/>';
+                + '<a href="' + drupalSettings.rep_tree.baseUrl + '/rep/uri/' + base64EncodeUnicode(selectedUriDisplay) + '" target="_new">'
+                + selectedUriDisplay + '</a>';
             } else {
-              html += '-<br/>';
+              html += '-';
+            }
+
+            html += '</div>';
+
+            if (selectedLabel) {
+              html += '<div class="sir-anatomy-result-card__field"><strong>Label:</strong> ' + selectedLabel + '</div>';
             }
 
             var webDocument = nodeData.hasWebDocument || selectedNode.hasWebDocument || "";
             if (webDocument.trim().length > 0) {
               if (webDocument.trim().toLowerCase().startsWith("http")) {
                 html += ''
-                  + '<strong>Web Document:</strong> '
-                  + '<a href="' + webDocument + '" target="_new">' + webDocument + '</a><br/>';
+                  + '<div class="sir-anatomy-result-card__field"><strong>Web Document:</strong> '
+                  + '<a href="' + webDocument + '" target="_new">' + webDocument + '</a></div>';
               } else {
                 var uriPart = selectedUri && selectedUri.includes('#/') ? selectedUri.split('#/')[1] : selectedUri;
                 if (uriPart) {
@@ -450,17 +460,20 @@
                     + '/rep/webdocdownload/' + encodeURIComponent(uriPart)
                     + '?doc=' + encodeURIComponent(webDocument);
                   html += ''
-                    + '<strong>Web Document:</strong> '
+                    + '<div class="sir-anatomy-result-card__field"><strong>Web Document:</strong> '
                     + '<a href="#" class="view-media-button" data-view-url="' + downloadUrl + '">'
-                    + webDocument + '</a><br/>';
+                    + webDocument + '</a></div>';
                 }
               }
             }
 
             var comment = nodeData.comment || selectedNode.comment || "";
             if (comment.trim().length > 0) {
-              html += '<br/><strong>Description:</strong><br/>' + comment;
+              html += '<div class="sir-anatomy-result-card__field"><strong>Description:</strong></div>';
+              html += '<div class="sir-anatomy-result-card__description">' + comment + '</div>';
             }
+
+            html += '</article></div></div>';
 
             $('#node-comment-display').html(html).show();
           });
