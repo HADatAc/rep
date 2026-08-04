@@ -1270,6 +1270,61 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  /**
+   * Register or update an analytical tool using HASCOAPI endpoint.
+   */
+  public function registerAnalyticalTool(array $payload) {
+    $endpoint = "/hascoapi/api/analyticaltool/register";
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = [
+      'headers' => [
+        'Content-Type' => 'application/json',
+      ],
+      'body' => json_encode($payload, JSON_UNESCAPED_SLASHES),
+    ];
+    return $this->perform_http_request($method, $api_url . $endpoint, $data);
+  }
+
+  /**
+   * List analytical tools available for a process (including wildcard tools).
+   */
+  public function listAnalyticalToolsByProcess($processUri) {
+    $endpoint = "/hascoapi/api/analyticaltool/byprocess/" . rawurlencode((string) $processUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url . $endpoint, $data);
+  }
+
+  /**
+   * Create explicit hasco:hasAnalyticalTool relation between process and tool.
+   */
+  public function linkAnalyticalToolToProcess($processUri, $toolUri) {
+    $endpoint = "/hascoapi/api/analyticaltool/link/"
+      . rawurlencode((string) $processUri)
+      . "/"
+      . rawurlencode((string) $toolUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url . $endpoint, $data);
+  }
+
+  /**
+   * Remove explicit hasco:hasAnalyticalTool relation between process and tool.
+   */
+  public function unlinkAnalyticalToolFromProcess($processUri, $toolUri) {
+    $endpoint = "/hascoapi/api/analyticaltool/unlink/"
+      . rawurlencode((string) $processUri)
+      . "/"
+      . rawurlencode((string) $toolUri);
+    $method = 'POST';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url . $endpoint, $data);
+  }
+
   // GET     /hascoapi/api/:elementtype/bysoc/:socuri/:pageSize/:offset                                  org.hascoapi.console.controllers.restapi.StudyObjectCollectionAPI.getElementsBySOC(socuri : String, elementtype: String, pageSize : Integer, offset : Integer)
   public function listElementsBySOC($elementType, $socuri, $pageSize, $offset) {
     $endpoint = "/hascoapi/api/".
@@ -3794,11 +3849,14 @@ class FusekiAPIConnector {
   }
 
   // GET     /hascoapi/api/mt/gen/perelement/:elementtype/:datafileuri/:elementuri/:filename/:mediafolder/:verifyuri              org.hascoapi.console.controllers.restapi.IngestionAPI.mtGenByElement(elementtype : String, datafileuri : String, elementuri: String, filename: String, mediafolder : String, verifyuri : String)
-  public function generateMTPerElement($elementtype, $datafileuri, $elementUri, $filename, $mediafolder, $verifyuri) {
+  public function generateMTPerElement($elementtype, $datafileuri, $elementUri, $filename, $mediafolder, $verifyuri, $includeWorkflowModel = TRUE) {
     $originalElementType = $elementtype;
     $normalizedElementType = $this->normalizeMtGenElementType($elementtype);
 
-    $endpoint = "/hascoapi/api/mt/gen/perelement/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($elementUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+    $includeWorkflowModelValue = $includeWorkflowModel ? 'true' : 'false';
+    $queryString = '?includeWorkflowModel=' . rawurlencode($includeWorkflowModelValue);
+
+    $endpoint = "/hascoapi/api/mt/gen/perelement/".rawurlencode($elementtype)."/".rawurlencode($datafileuri)."/".rawurlencode($elementUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri) . $queryString;
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
@@ -3815,7 +3873,7 @@ class FusekiAPIConnector {
     
     $response = $this->perform_http_request($method,$api_url.$endpoint,$data);
     if ($response === NULL && $normalizedElementType !== NULL && $normalizedElementType !== $originalElementType) {
-      $endpoint2 = "/hascoapi/api/mt/gen/perelement/".rawurlencode($normalizedElementType)."/".rawurlencode($datafileuri)."/".rawurlencode($elementUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri);
+      $endpoint2 = "/hascoapi/api/mt/gen/perelement/".rawurlencode($normalizedElementType)."/".rawurlencode($datafileuri)."/".rawurlencode($elementUri)."/".rawurlencode($filename)."/".rawurlencode($mediafolder)."/".rawurlencode($verifyuri) . $queryString;
       $response = $this->perform_http_request($method, $api_url . $endpoint2, $data);
     }
     return $response;

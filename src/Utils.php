@@ -124,6 +124,10 @@ class Utils {
       return trim((string) ($uri ?? ''));
     }
 
+    // Repair legacy fragment-like WKF path drift.
+    $value = str_replace('/WKF#/', '/', $value);
+    $value = str_replace('/WKF#', '/', $value);
+
     // Fix known identifier prefix drift in PMSR resources.
     $value = preg_replace('#/(WFK)[-_]#i', '/WKF-', $value);
     if (!is_string($value)) {
