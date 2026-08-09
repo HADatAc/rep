@@ -335,6 +335,10 @@ class DescribeAssociatesForm extends FormBase {
       $this->renderAnatomyAssociations($element, $form, $form_state);
     }
 
+    if ($typeUri === VSTOI::INSTRUMENT_INSTANCE) {
+      $this->appendAssociatedComponentInstances($form, $api, $element);
+    }
+
     // ✅ Process associations by object type
 
     switch ($typeUri) {
@@ -553,6 +557,137 @@ class DescribeAssociatesForm extends FormBase {
     }
 
     return $uri;
+  }
+
+  /**
+   * Render associated component instances for an instrument instance page.
+   */
+  private function appendAssociatedComponentInstances(array &$form, $api, $instrumentInstance): void {
+    $rows = [];
+    $items = $this->loadAssociatedComponentInstances($api, $instrumentInstance);
+
+    if (count($items) === 0) {
+      return;
+    }
+
+    foreach ($items as $item) {
+      $label = (string) ($item->label ?? Utils::namespaceUri((string) ($item->uri ?? '')));
+      $uri = (string) ($item->uri ?? '');
+      $typeUri = (string) ($item->hascoTypeUri ?? ($item->typeUri ?? VSTOI::COMPONENT_INSTANCE));
+      $status = isset($item->hasStatus) ? Utils::plainStatus((string) $item->hasStatus) : '';
+
+      $rows[] = [
+        ['data' => Markup::create(Utils::link($label, $uri))],
+        ['data' => Markup::create(Utils::link($uri, $uri))],
+        ['data' => Markup::create(Utils::link($typeUri, $typeUri))],
+        Html::escape($status),
+      ];
+    }
+
+    $form['associated_component_instances_header'] = [
+      '#type' => 'item',
+      '#title' => '<h3>Associated Component Instances</h3>',
+    ];
+
+    $form['associated_component_instances_table'] = [
+      '#type' => 'table',
+      '#header' => [
+        $this->t('Label'),
+        $this->t('URI'),
+        $this->t('Type URI'),
+        $this->t('Status'),
+      ],
+      '#rows' => $rows,
+      '#empty' => $this->t('No associated component instances found.'),
+    ];
+
+    $form['associated_component_instances_space'] = [
+      '#type' => 'markup',
+      '#markup' => $this->t('<br>'),
+    ];
+  }
+
+  /**
+   * Load associated component instances using INI token embedded in CPI URIs.
+   */
+  private function loadAssociatedComponentInstances($api, $instrumentInstance): array {
+    if (!is_object($instrumentInstance) || empty($instrumentInstance->uri)) {
+      return [];
+    }
+
+    $instanceToken = $this->extractLocalIdFromUri((string) $instrumentInstance->uri);
+    if ($instanceToken === '') {
+      return [];
+    }
+
+    $candidateUris = [];
+    $pageSize = 500;
+    $maxPages = 6;
+
+    for ($page = 0; $page < $maxPages; $page++) {
+      $offset = $page * $pageSize;
+      $raw = $api->listByKeywordType('componentinstance', $pageSize, $offset, 'all', '_', '_', '_', '_');
+      $objects = $api->parseObjectResponse($raw, 'listByKeywordType');
+
+      if ($objects == NULL) {
+        break;
+      }
+
+      if (!is_array($objects)) {
+        $objects = [$objects];
+      }
+
+      if (count($objects) === 0) {
+        break;
+      }
+
+      foreach ($objects as $object) {
+        if (!is_object($object) || empty($object->uri)) {
+          continue;
+        }
+
+        $uri = (string) $object->uri;
+        if (strpos($uri, $instanceToken) !== FALSE) {
+          $candidateUris[] = $uri;
+        }
+      }
+
+      if (count($objects) < $pageSize) {
+        break;
+      }
+    }
+
+    $componentUris = array_values(array_unique($candidateUris));
+
+    $instances = [];
+    foreach ($componentUris as $componentUri) {
+      $componentObj = $api->parseObjectResponse($api->getUri($componentUri), 'getUri');
+      if (!is_object($componentObj)) {
+        continue;
+      }
+
+      $componentType = (string) ($componentObj->hascoTypeUri ?? ($componentObj->typeUri ?? ''));
+      if ($componentType !== VSTOI::COMPONENT_INSTANCE) {
+        continue;
+      }
+
+      $instances[] = $componentObj;
+    }
+
+    return $instances;
+  }
+
+  /**
+   * Extract local identifier token from a full URI.
+   */
+  private function extractLocalIdFromUri(string $uri): string {
+    $trimmed = trim($uri);
+    if ($trimmed === '') {
+      return '';
+    }
+
+    $parts = explode('/', $trimmed);
+    return trim((string) end($parts));
   }
 
   public function validateForm(array &$form, FormStateInterface $form_state) {}

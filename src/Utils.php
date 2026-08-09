@@ -98,7 +98,7 @@ class Utils {
       return '';
     }
 
-    $normalized = preg_replace('#^https?://pmsr\.net/ont/pmsr#/?#i', self::PMSR_CANONICAL_BASE, $value);
+    $normalized = preg_replace('#^https?://pmsr\.net/ont/pmsr/?#i', self::PMSR_CANONICAL_BASE, $value);
     if (!is_string($normalized)) {
       $normalized = $value;
     }
@@ -119,7 +119,7 @@ class Utils {
       return '';
     }
 
-    $value = preg_replace('#^https?://pmsr\.net/ont/pmsr#/?#i', self::PMSR_CANONICAL_BASE, $value);
+    $value = preg_replace('#^https?://pmsr\.net/ont/pmsr/?#i', self::PMSR_CANONICAL_BASE, $value);
     if (!is_string($value)) {
       return trim((string) ($uri ?? ''));
     }
