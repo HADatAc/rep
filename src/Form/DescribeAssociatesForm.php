@@ -73,7 +73,7 @@ class DescribeAssociatesForm extends FormBase {
     }
 
     // Determine element type early so we can customize rendering.
-    $typeUri = $element->hascoTypeUri ?? ($element->typeUri ?? '');
+    $typeUri = !empty($element->hascoTypeUri) ? $element->hascoTypeUri : ($element->typeUri ?? '');
     $preferredInstrument = \Drupal::config('rep.settings')->get('preferred_instrument') ?? 'Instrument';
     $preferredComponent = \Drupal::config('rep.settings')->get('preferred_component') ?? 'Component';
     $isProject = ($typeUri === SCHEMA::PROJECT);
@@ -335,7 +335,7 @@ class DescribeAssociatesForm extends FormBase {
       $this->renderAnatomyAssociations($element, $form, $form_state);
     }
 
-    if ($typeUri === VSTOI::INSTRUMENT_INSTANCE) {
+    if ($typeUri === HASCO::INSTRUMENT_INSTANCE) {
       $this->appendAssociatedComponentInstances($form, $api, $element);
     }
 
@@ -379,7 +379,7 @@ class DescribeAssociatesForm extends FormBase {
           'Has ' . $preferredComponent . ' instances'
         );
         break;
-      case VSTOI::PLATFORM_INSTANCE:
+      case HASCO::PLATFORM_INSTANCE:
         AssocPlatformInstance::process($element, $form, $form_state);
         break;
       case HASCO::STREAM:
@@ -573,7 +573,7 @@ class DescribeAssociatesForm extends FormBase {
     foreach ($items as $item) {
       $label = (string) ($item->label ?? Utils::namespaceUri((string) ($item->uri ?? '')));
       $uri = (string) ($item->uri ?? '');
-      $typeUri = (string) ($item->hascoTypeUri ?? ($item->typeUri ?? VSTOI::COMPONENT_INSTANCE));
+      $typeUri = (string) ($item->hascoTypeUri ?? ($item->typeUri ?? HASCO::COMPONENT_INSTANCE));
       $status = isset($item->hasStatus) ? Utils::plainStatus((string) $item->hasStatus) : '';
 
       $rows[] = [
@@ -667,7 +667,7 @@ class DescribeAssociatesForm extends FormBase {
       }
 
       $componentType = (string) ($componentObj->hascoTypeUri ?? ($componentObj->typeUri ?? ''));
-      if ($componentType !== VSTOI::COMPONENT_INSTANCE) {
+      if ($componentType !== HASCO::COMPONENT_INSTANCE) {
         continue;
       }
 

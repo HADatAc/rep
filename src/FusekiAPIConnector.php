@@ -3180,7 +3180,18 @@ class FusekiAPIConnector {
 
   public function getApiUrl() {
     $config = \Drupal::config(static::CONFIGNAME);
-    return $config->get("api_url");
+    $url = trim((string) $config->get('api_url'));
+    if ($url === '') {
+      return $url;
+    }
+
+    // Local PMSR setups run hascoapi on 9001; normalize stale local port values.
+    $url = preg_replace('#^https?://(localhost|127\.0\.0\.1):\d+(?=/|$)#', 'http://localhost:9001', $url);
+    if (!is_string($url)) {
+      return (string) $config->get('api_url');
+    }
+
+    return $url;
   }
 
   public function getHeader() {
@@ -3330,6 +3341,9 @@ class FusekiAPIConnector {
     $client = new Client();
     try {
       $request_options = [
+        'timeout' => 20,
+        'connect_timeout' => 3,
+        'http_errors' => FALSE,
         'headers' => [
           'Content-Type' => 'application/json',
           // 'Authorization' => $this->bearer
@@ -3383,6 +3397,9 @@ class FusekiAPIConnector {
     $client = new Client();
     try {
       $res = $client->post($api_url.$endpoint, [
+        'timeout' => 20,
+        'connect_timeout' => 3,
+        'http_errors' => FALSE,
         'headers' => [
           'Content-Type' => 'application/json',
           // 'Authorization' => $this->bearer
@@ -3406,9 +3423,14 @@ class FusekiAPIConnector {
   }
 
   public function perform_http_request($method, $url, $data = false) {
+    $maxExec = (int) ini_get('max_execution_time');
+    $strictRuntimeBudget = ($maxExec > 0 && $maxExec <= 30);
+    $defaultTimeout = $strictRuntimeBudget ? 4 : 10;
+    $defaultConnectTimeout = $strictRuntimeBudget ? 1.5 : 3;
+
     $client = new Client([
-      'timeout' => 10,  // 10 seconds max per request
-      'connect_timeout' => 3,  // 3 seconds to establish connection
+      'timeout' => $defaultTimeout,
+      'connect_timeout' => $defaultConnectTimeout,
     ]);
     $res = NULL;
     $this->error = NULL;
@@ -3417,27 +3439,19 @@ class FusekiAPIConnector {
     $this->last_response_body = NULL;
     $this->last_request_url = $url;
 
-    // Short-circuit noisy cascades once a transient triplestore outage is
-    // detected in this request lifecycle.
-    if ($this->triplestore_unavailable) {
-      $this->error = '503';
-      $this->error_message = 'Triplestore temporarily unavailable (request short-circuited after prior transient failure).';
-      return NULL;
-    }
-
     $options = [];
     if (is_array($data)) {
       $options = $data;
       // Allow override of timeouts if specified in $data
       if (!isset($options['timeout'])) {
-        $options['timeout'] = 10;
+        $options['timeout'] = $defaultTimeout;
       }
       if (!isset($options['connect_timeout'])) {
-        $options['connect_timeout'] = 3;
+        $options['connect_timeout'] = $defaultConnectTimeout;
       }
     } else {
-      $options['timeout'] = 10;
-      $options['connect_timeout'] = 3;
+      $options['timeout'] = $defaultTimeout;
+      $options['connect_timeout'] = $defaultConnectTimeout;
     }
 
     // Always capture the status/body instead of throwing exceptions.
@@ -3446,9 +3460,10 @@ class FusekiAPIConnector {
     }
 
     $methodUpper = strtoupper((string) $method);
-    $maxAttempts = ($methodUpper === 'GET') ? 3 : 1;
+    $maxAttempts = ($methodUpper === 'GET')
+      ? ($strictRuntimeBudget ? 1 : 3)
+      : 1;
     $attempt = 0;
-
     while (TRUE) {
       $attempt++;
       try {
@@ -3469,10 +3484,6 @@ class FusekiAPIConnector {
         break;
       }
       catch (ConnectException $e) {
-        if ($this->isTransientTriplestoreFailure(0, $e->getMessage())) {
-          $this->triplestore_unavailable = TRUE;
-        }
-
         $retryable = ($attempt < $maxAttempts);
         if ($retryable) {
           usleep(120000 * $attempt);
@@ -3501,10 +3512,6 @@ class FusekiAPIConnector {
         }
 
         $message = (string) $e->getMessage();
-        if ($this->isTransientTriplestoreFailure(0, $message)) {
-          $this->triplestore_unavailable = TRUE;
-        }
-
         $retryable = ($attempt < $maxAttempts)
           && (
             stripos($message, 'cURL error 56') !== FALSE
@@ -3545,10 +3552,6 @@ class FusekiAPIConnector {
       $this->error_message = "API request returned the following status code: " . $status;
       if ($snippet !== '') {
         $this->error_message .= "; response: " . $snippet;
-      }
-
-      if ($this->isTransientTriplestoreFailure($status, $snippet)) {
-        $this->triplestore_unavailable = TRUE;
       }
 
       // Always log non-200 responses so they are visible even when UI
@@ -4120,6 +4123,8 @@ class FusekiAPIConnector {
     $client = new Client();
     try {
       $res = $client->post($api_url.$endpoint, [
+        'timeout' => 20,
+        'connect_timeout' => 3,
         'headers' => [
           'Content-Type' => $file_entity->getMimeType(),
           'Authorization' => $this->bearer

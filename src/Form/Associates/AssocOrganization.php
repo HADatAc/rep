@@ -256,23 +256,34 @@ class AssocOrganization {
     return '';
   }
 
+  private static function normalizeUriKey(string $uri): string {
+    $value = trim($uri);
+    if ($value === '') {
+      return '';
+    }
+
+    if (str_contains($value, '#/')) {
+      $value = str_replace('#/', '#', $value);
+    }
+
+    return strtolower(rtrim($value, '/'));
+  }
+
   private static function listPlatformInstancesByPartOf($api, string $organizationUri): array {
     $organizationUri = trim($organizationUri);
     if ($organizationUri === '') {
       return [];
     }
-
-    $total = self::parseTotalValue($api->listSizeByKeyword('platforminstance', '_'));
-    if ($total <= 0) {
-      return [];
-    }
-
-    $target = min($total, self::INSTANCE_SCAN_LIMIT);
+    $organizationKey = self::normalizeUriKey($organizationUri);
     $pageSize = self::INSTANCE_FETCH_PAGE_SIZE;
     $offset = 0;
     $indexed = [];
 
-    while ($offset < $target) {
+    // Do not trust list-size endpoint as a hard prerequisite.
+    // Some deployments return 0 totals while listByKeyword still returns rows.
+    $maxPages = max(1, (int) ceil(self::INSTANCE_SCAN_LIMIT / $pageSize));
+    for ($page = 0; $page < $maxPages; $page++) {
+      $offset = $page * $pageSize;
       $chunk = self::parseListBody($api->listByKeyword('platforminstance', '_', $pageSize, $offset));
       if (empty($chunk)) {
         break;
@@ -284,16 +295,30 @@ class AssocOrganization {
         }
 
         $partOf = self::extractPartOfUri($item);
-        if ($partOf !== '' && $partOf === $organizationUri) {
+        $partOfKey = self::normalizeUriKey($partOf);
+        $matchesScope = ($partOfKey !== '' && $partOfKey === $organizationKey);
+
+        if ($matchesScope) {
           $indexed[(string) $item->uri] = $item;
+          continue;
+        }
+
+        $uri = (string) $item->uri;
+        if (!isset($indexed[$uri])) {
+          $copy = clone $item;
+          $baseLabel = trim((string) ($copy->label ?? ''));
+          if ($baseLabel === '') {
+            $baseLabel = $uri;
+          }
+          $displayPartOf = $partOf !== '' ? $partOf : 'missing';
+          $copy->label = $baseLabel . ' [partOf mismatch: ' . $displayPartOf . ']';
+          $indexed[$uri] = $copy;
         }
       }
 
       if (count($chunk) < $pageSize) {
         break;
       }
-
-      $offset += $pageSize;
     }
 
     $items = array_values($indexed);
@@ -304,6 +329,65 @@ class AssocOrganization {
     });
 
     return $items;
+  }
+
+  private static function isLaboratoryInstance($item): bool {
+    if (!is_object($item)) {
+      return FALSE;
+    }
+
+    $candidates = [];
+
+    if (isset($item->typeUri) && is_string($item->typeUri)) {
+      $candidates[] = trim((string) $item->typeUri);
+    }
+    if (isset($item->hascoTypeUri) && is_string($item->hascoTypeUri)) {
+      $candidates[] = trim((string) $item->hascoTypeUri);
+    }
+    if (isset($item->type) && is_object($item->type)) {
+      $candidates[] = trim((string) ($item->type->uri ?? ''));
+      $candidates[] = trim((string) ($item->type->label ?? ''));
+      $candidates[] = trim((string) ($item->type->name ?? ''));
+    }
+    if (isset($item->hascoType) && is_object($item->hascoType)) {
+      $candidates[] = trim((string) ($item->hascoType->uri ?? ''));
+      $candidates[] = trim((string) ($item->hascoType->label ?? ''));
+      $candidates[] = trim((string) ($item->hascoType->name ?? ''));
+    }
+
+    foreach (['label', 'name', 'comment', 'description'] as $field) {
+      if (isset($item->{$field}) && is_string($item->{$field})) {
+        $candidates[] = trim((string) $item->{$field});
+      }
+    }
+
+    foreach ($candidates as $candidate) {
+      if ($candidate === '') {
+        continue;
+      }
+
+      $lower = strtolower($candidate);
+      if (str_contains($lower, 'laboratory') || str_contains($lower, 'laborat')) {
+        return TRUE;
+      }
+    }
+
+    return FALSE;
+  }
+
+  private static function filterLaboratoryInstances(array $items): array {
+    $filtered = [];
+    foreach ($items as $item) {
+      if (!is_object($item) || empty($item->uri)) {
+        continue;
+      }
+
+      if (self::isLaboratoryInstance($item)) {
+        $filtered[(string) $item->uri] = $item;
+      }
+    }
+
+    return array_values($filtered);
   }
 
   private static function listAffiliatedPeople($api, string $organizationUri): array {
@@ -723,6 +807,22 @@ class AssocOrganization {
         'Has ' . $preferredPlatform . ' instances',
         $platformInstances
       );
+
+      $laboratoryInstances = self::filterLaboratoryInstances($platformInstances);
+      if (empty($laboratoryInstances)) {
+        // Fallback: when lab typing metadata is sparse, expose platform instances
+        // under the laboratory section to keep organization associations visible.
+        $laboratoryInstances = $platformInstances;
+      }
+      if (!empty($laboratoryInstances)) {
+        self::appendInstanceSection(
+          $form,
+          'org_laboratory_instances',
+          'platforminstance',
+          'Has Laboratory instances',
+          $laboratoryInstances
+        );
+      }
     }
 
     return $form;

@@ -79,13 +79,34 @@ class Utils {
    */
   public static function configRepositoryURI() {
     // RETRIEVE CONFIGURATION FROM CURRENT IP
-    $api = \Drupal::service('rep.api_connector');
-    $repo = $api->repoInfo();
-    $obj = json_decode($repo);
-    if ($obj->isSuccessful) {
-      $repoObj = $obj->body;
-      return static::normalizeRepositoryNamespace((string) ($repoObj->hasDefaultNamespaceURL ?? ''));
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $repo = $api->repoInfo();
+      $obj = json_decode($repo);
+      if (is_object($obj) && !empty($obj->isSuccessful)) {
+        $repoObj = $obj->body;
+        $ns = static::normalizeRepositoryNamespace((string) ($repoObj->hasDefaultNamespaceURL ?? ''));
+        if ($ns !== '') {
+          return $ns;
+        }
+      }
     }
+    catch (\Throwable $e) {
+      // Fall back to local configuration below.
+    }
+
+    // Fallback: use locally saved REP settings namespace URL.
+    try {
+      $fallback = (string) (\Drupal::config('rep.settings')->get('repository_namespace_url') ?? '');
+      $fallback = static::normalizeRepositoryNamespace($fallback);
+      if ($fallback !== '') {
+        return $fallback;
+      }
+    }
+    catch (\Throwable $e) {
+      // Keep NULL return to signal caller that URI generation is unavailable.
+    }
+
     return NULL;
   }
 
@@ -300,11 +321,17 @@ class Utils {
       return NULL;
     }
     $short = Utils::elementPrefix($elementType);
+    if (!is_string($short) || trim($short) === '') {
+      return NULL;
+    }
     $repoUri = Utils::configRepositoryURI();
-    if ($repoUri == NULL) {
+    if (!is_string($repoUri) || trim($repoUri) === '') {
       return NULL;
     }
     $repoUri = static::normalizeRepositoryNamespace($repoUri);
+    if ($repoUri === '') {
+      return NULL;
+    }
     $uid = \Drupal::currentUser()->id();
     $iid = time().rand(10000,99999).$uid;
     // dpm($elementType);

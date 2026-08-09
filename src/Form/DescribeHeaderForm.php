@@ -5,6 +5,7 @@ namespace Drupal\rep\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\rep\Utils;
+use Drupal\rep\Vocabulary\HASCO;
 use Drupal\rep\Vocabulary\REPGUI;
 use Drupal\rep\Vocabulary\VSTOI;
 
@@ -235,9 +236,9 @@ class DescribeHeaderForm extends FormBase {
 
     // --- QR Code (via attached JS library) ---
     if (
-      $this->getElement()->hascoTypeUri === VSTOI::INSTRUMENT_INSTANCE ||
-      $this->getElement()->hascoTypeUri === VSTOI::COMPONENT_INSTANCE  ||
-      $this->getElement()->hascoTypeUri === VSTOI::PLATFORM_INSTANCE
+      $this->getElement()->hascoTypeUri === HASCO::INSTRUMENT_INSTANCE ||
+      $this->getElement()->hascoTypeUri === HASCO::COMPONENT_INSTANCE  ||
+      $this->getElement()->hascoTypeUri === HASCO::PLATFORM_INSTANCE
     ) {
       $form['qr_code'] = [
         '#type' => 'container',
@@ -259,9 +260,9 @@ class DescribeHeaderForm extends FormBase {
       }
 
      // QR Code logic using JS
-      if($this->getElement()->hascoTypeUri===VSTOI::INSTRUMENT_INSTANCE ||
-         $this->getElement()->hascoTypeUri===VSTOI::COMPONENT_INSTANCE ||
-         $this->getElement()->hascoTypeUri===VSTOI::PLATFORM_INSTANCE ){
+      if($this->getElement()->hascoTypeUri===HASCO::INSTRUMENT_INSTANCE ||
+        $this->getElement()->hascoTypeUri===HASCO::COMPONENT_INSTANCE ||
+        $this->getElement()->hascoTypeUri===HASCO::PLATFORM_INSTANCE ){
         $form['qr_code'] = [
           '#type' => 'container',
           '#attributes' => [
