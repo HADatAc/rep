@@ -395,6 +395,14 @@ class TreeForm extends FormBase {
           'http://hadatac.org/ont/vstoi#PhysicalInstrument',
         ];
       }
+
+      // Expand workflow hierarchy by default so modal opens beyond entry point.
+      if (empty($default_expanded_nodes) && in_array(strtolower($elementtype), ['workflowstem', 'processstem'], TRUE)) {
+        $default_expanded_nodes = [
+          EntryPoints::CLASS_EP_PMSR,
+          VSTOI::PROCESS_STEM,
+        ];
+      }
     }
 
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();

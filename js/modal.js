@@ -10,6 +10,7 @@
           const url = $(this).data('url');
           //const fieldId = $(this).data('field-id');
           const fieldId = $('#tree-root').data('field-id') || $(this).data('field-id');
+          const forceFreshHierarchy = fieldId === 'phase1ClinicalProcess';
           const elementtype = $(this).data('elementtype');
           const searchValue = $(this).val();
 
@@ -33,7 +34,7 @@
             ? $('#drupal-modal.ui-dialog-content')
             : $('#drupal-dialog.ui-dialog-content');
 
-          if (
+          if (!forceFreshHierarchy &&
             $existingModal.length &&
             JSON.stringify($existingModal.data('elementtype')) === JSON.stringify(elementtype)
           ) {
@@ -68,15 +69,23 @@
             modal: true,
             close: function () {
               const currentelementtype = $(this).data('elementtype') || ['unknown'];
+              const $field = $(`[name="${fieldId}"], #${fieldId}`);
+              const committed = !!$field.data('rep-tree-committed');
+
+              if (committed) {
+                $field.removeData('rep-tree-committed');
+                return;
+              }
 
               const initialValue = $(this).data('initial-value');
-              if (initialValue) {
-                $(`[name="${fieldId}"], #${fieldId}`).val(initialValue);
+              if (typeof initialValue !== 'undefined') {
+                $field.val(initialValue).trigger('change');
               }
             },
           };
 
-          const modalUrl = `${url}&field_id=${fieldId}`;
+          const separator = String(url).indexOf('?') === -1 ? '?' : '&';
+          const modalUrl = `${url}${separator}field_id=${encodeURIComponent(fieldId)}`;
           const $field = $(`[name="${fieldId}"], #${fieldId}`);
           const initialValue = $field.val();
 
@@ -137,13 +146,67 @@
           e.preventDefault();
 
           const selectedValue = $(this).data('selected-value');
-          // const fieldId = $(this).data('field-id');
-          const fieldId = $('#tree-root').data('field-id') || $(this).data('field-id');
+          const selectedLabel = $(this).data('selected-label');
+          const repTreeSettings = (typeof drupalSettings !== 'undefined' && drupalSettings.rep_tree) ? drupalSettings.rep_tree : {};
+          const fieldId = $('#tree-root').data('field-id') || $(this).data('field-id') || repTreeSettings.fieldId || '';
 
 
           if (fieldId && selectedValue) {
-            //$(`[name="${fieldId}"], #${fieldId}`).val(selectedValue);
-            $('#' + fieldId).val(selectedValue).trigger('change');
+            const $field = $(`[name="${fieldId}"], #${fieldId}`).first();
+            let finalValue = selectedValue;
+
+            if (fieldId === 'phase1ClinicalProcess') {
+              const raw = String(selectedValue || '').trim();
+              const bracketMatch = raw.match(/\[(https?:\/\/[^\]]+)\]\s*$/);
+              const selectedUri = bracketMatch && bracketMatch[1]
+                ? bracketMatch[1].trim()
+                : raw;
+              if (bracketMatch && bracketMatch[1]) {
+                finalValue = bracketMatch[1].trim();
+              }
+              else {
+                finalValue = selectedUri;
+              }
+
+              const displayLabel = String(selectedLabel || selectedUri).trim();
+              const displayValue = displayLabel + ' (' + selectedUri + ')';
+
+              if ($field.is('select')) {
+                let $opt = $field.find('option').filter(function () {
+                  return $(this).val() === finalValue;
+                }).first();
+
+                if (!$opt.length) {
+                  $opt = $('<option>', {
+                    value: finalValue,
+                    text: displayValue
+                  });
+                  $field.append($opt);
+                } else {
+                  $opt.text(displayValue);
+                }
+
+                $field.find('option').prop('selected', false);
+                $opt.prop('selected', true);
+              }
+
+              // If Core WKF Name is still empty, copy only procedure name (no URI).
+              const $wkfName = $('#phase1WkfName');
+              if ($wkfName.length) {
+                const currentWkfName = String($wkfName.val() || '').trim();
+                if (!currentWkfName) {
+                  const cleanLabel = String(displayLabel || '')
+                    .replace(/\s*\((https?:\/\/[^)]+)\)\s*$/, '')
+                    .trim();
+                  if (cleanLabel) {
+                    $wkfName.val(cleanLabel).trigger('change').trigger('input');
+                  }
+                }
+              }
+            }
+
+            $field.val(finalValue).trigger('change').trigger('input');
+            $field.data('rep-tree-committed', true);
           }
 
           // Close only the dialog that contains this tree picker.

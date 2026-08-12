@@ -66,6 +66,7 @@ class Constant {
   const FILE_STATUS_PROCESSED_STD         = "PROCESSED_STD";
   const FILE_STATUS_WORKING               = "WORKING";
   const FILE_STATUS_WORKING_STD           = "WORKING_STD";
+  const FILE_STATUS_ERROR                 = "ERROR";
 
   const TOT_PER_PAGE                      = 6;
   const TOT_OBJS_PER_PAGE                 = 20;

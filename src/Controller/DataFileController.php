@@ -194,8 +194,20 @@ class DataFileController extends ControllerBase {
     if ($dataFileUri != NULL) {
       $api = \Drupal::service('rep.api_connector');
       $dataFile = $api->parseObjectResponse($api->getUri($dataFileUri), 'getUri');
-      if ($dataFile != NULL && isset($dataFile->log) && $dataFile->log != NULL) {
-        $log_content = str_replace("<br>", "\n", $dataFile->log);
+      if ($dataFile != NULL) {
+        if (isset($dataFile->log) && is_string($dataFile->log) && $dataFile->log !== '') {
+          $log_content = str_replace("<br>", "\n", $dataFile->log);
+        } else if (isset($dataFile->hasLog) && is_string($dataFile->hasLog) && $dataFile->hasLog !== '') {
+          $log_content = str_replace("<br>", "\n", $dataFile->hasLog);
+        }
+      }
+
+      // Fallback: show Drupal-side diagnostics captured before HASCO worker starts.
+      if (trim((string) $log_content) === '') {
+        $stateStore = \Drupal::state()->get('rep.datafile_local_logs', []);
+        if (is_array($stateStore) && isset($stateStore[$dataFileUri]) && is_string($stateStore[$dataFileUri]) && trim($stateStore[$dataFileUri]) !== '') {
+          $log_content = "[Drupal fallback diagnostic log]\n" . $stateStore[$dataFileUri];
+        }
       }
     }
 

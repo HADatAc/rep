@@ -80,6 +80,10 @@ class AddMTForm extends FormBase {
 
     $api = \Drupal::service('rep.api_connector');
 
+    if ($elementtype === 'wkf') {
+      $form['#attached']['library'][] = 'rep/add_wkf_copy_name';
+    }
+
     // Study Prefered name
     $preferred_study = \Drupal::config('rep.settings')->get('preferred_study') ?? 'study';
 
@@ -232,6 +236,15 @@ class AddMTForm extends FormBase {
         ],
       ];
 
+      if ($this->getElementType() === 'wkf') {
+        $form['mt_copy_name'] = [
+          '#type' => 'checkbox',
+          '#title' => $this->t('copy name'),
+          '#description' => $this->t('If checked, copies the uploaded filename stem into both Name and Comment. Example: WKF-BIOPSY.xlsx -> BIOPSY.'),
+          '#default_value' => 1,
+        ];
+      }
+
     }
 
     // if ($this->getElementType() == 'da') {
@@ -289,6 +302,15 @@ class AddMTForm extends FormBase {
     $triggering_element = $form_state->getTriggeringElement();
     $button_name = $triggering_element['#name'];
 
+    if ($button_name === 'save' && $this->getElementType() === 'wkf' && $form_state->getValue('mt_copy_name')) {
+      $uploaded_name = $_FILES['files']['name']['mt_filename'] ?? '';
+      $copied_name = $this->extractNameFromFilename((string) $uploaded_name);
+      if ($copied_name !== '') {
+        $form_state->setValue('mt_name', $copied_name);
+        $form_state->setValue('mt_comment', $copied_name);
+      }
+    }
+
     if ($button_name === 'save') {
       if(strlen($form_state->getValue('mt_name')) < 1) {
         $form_state->setErrorByName('mt_name', $this->t('Please enter a valid name for the ' . $this->getElementName()));
@@ -321,6 +343,14 @@ class AddMTForm extends FormBase {
       $file_info = $_FILES['files'];
       $tmp_name = $file_info['tmp_name']['mt_filename'];
       $original_name = $file_info['name']['mt_filename'];
+
+      if ($this->getElementType() === 'wkf' && $form_state->getValue('mt_copy_name')) {
+        $copied_name = $this->extractNameFromFilename((string) $original_name);
+        if ($copied_name !== '') {
+          $form_state->setValue('mt_name', $copied_name);
+          $form_state->setValue('mt_comment', $copied_name);
+        }
+      }
 
       // Determine destination directory
       if ($this->getElementType() == 'kgr') {
@@ -465,6 +495,21 @@ class AddMTForm extends FormBase {
       $response->send();
       return;
     }
+  }
+
+  /**
+   * Build a display name from uploaded WKF filename.
+   */
+  protected function extractNameFromFilename(string $filename): string {
+    $base = pathinfo(trim($filename), PATHINFO_FILENAME);
+    if ($base === '') {
+      return '';
+    }
+
+    // Remove conventional WKF prefix and normalize separators.
+    $name = preg_replace('/^WKF[-_\s]*/i', '', $base) ?? $base;
+    $name = preg_replace('/[-_]+/', ' ', $name) ?? $name;
+    return trim($name);
   }
 
 }

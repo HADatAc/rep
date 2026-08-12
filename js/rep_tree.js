@@ -347,6 +347,8 @@
           $treeRoot.on('select_node.jstree', function (e, data) {
             var selectedNode = (data && data.node && data.node.original) ? data.node.original : {};
             var nodeData = (data && data.node && data.node.data) ? data.node.data : {};
+            var currentFieldId = $treeRoot.data('field-id') || $('#tree-root').data('field-id') || '';
+            var isPhase1ClinicalField = currentFieldId === 'phase1ClinicalProcess';
 
             var selectedUri = selectedNode.uri || data.node.uri || nodeData.realUri || nodeData.uri || '';
             var selectedLabel = selectedNode.label || data.node.text || '';
@@ -369,9 +371,19 @@
                              .addClass('disabled')
                              .removeData('selected-value');
 
+            // Phase I clinical-process picker accepts any node URI, including
+            // category/non-leaf nodes.
+            if (isPhase1ClinicalField && selectedUri) {
+              $selectNodeButton
+                .prop('disabled', false)
+                .removeClass('disabled')
+                .data('selected-value', selectedUri)
+                .data('selected-label', selectedLabel || selectedUri)
+                .data('field-id', currentFieldId);
+            }
             // Rule 1: Node is restricted (Draft/Deprecated/UnderReview) and not owned by current user → keep disabled
-            if (isCategoryNode) {
-              // Category folders are navigational only and cannot be selected.
+            else if (isCategoryNode) {
+              // Category folders are navigational only for non-Phase-I selectors.
             }
             // Rule 1: Node is restricted (Draft/Deprecated/UnderReview) and not owned by current user → keep disabled
             else if (
@@ -397,12 +409,17 @@
                 ? trimPreserveBracket((selectedLabel || selectedUri) + " [" + selectedUri + "]")
                 : selectedTypeNamespace;
 
+              if (isPhase1ClinicalField && selectedUri) {
+                selectedValueDraft = selectedUri;
+              }
+
               if (selectedValueDraft) {
                 $selectNodeButton
                   .prop('disabled', false)
                   .removeClass('disabled')
                   .data('selected-value', selectedValueDraft)
-                  .data('field-id', $treeRoot.data('field-id') || $('#tree-root').data('field-id'));
+                  .data('selected-label', selectedLabel || selectedUri)
+                  .data('field-id', currentFieldId);
               }
             }
             // Rule 4: Node is UnderReview and is owned by current user → still disabled
@@ -416,12 +433,17 @@
                 ? trimPreserveBracket((selectedLabel || selectedUri) + " [" + selectedUri + "]")
                 : selectedTypeNamespace;
 
+              if (isPhase1ClinicalField && selectedUri) {
+                selectedValue = selectedUri;
+              }
+
               if (selectedValue) {
                 $selectNodeButton
                   .prop('disabled', false)
                   .removeClass('disabled')
                   .data('selected-value', selectedValue)
-                  .data('field-id', $treeRoot.data('field-id') || $('#tree-root').data('field-id'));
+                  .data('selected-label', selectedLabel || selectedUri)
+                  .data('field-id', currentFieldId);
               }
             }
 

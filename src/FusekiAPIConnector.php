@@ -3334,6 +3334,15 @@ class FusekiAPIConnector {
         $separator = (strpos($endpoint, '?') === FALSE) ? '?' : '&';
         $endpoint .= $separator . 'manageremail=' . rawurlencode($managerEmail);
       }
+
+      $organizationUri = '';
+      if (isset($template->hasOrganizationUri) && is_string($template->hasOrganizationUri) && trim($template->hasOrganizationUri) !== '') {
+        $organizationUri = trim($template->hasOrganizationUri);
+      }
+      if ($organizationUri !== '') {
+        $separator = (strpos($endpoint, '?') === FALSE) ? '?' : '&';
+        $endpoint .= $separator . 'organizationuri=' . rawurlencode($organizationUri);
+      }
     }
 
     // MAKE CALL TO API ENDPOINT
@@ -3389,6 +3398,15 @@ class FusekiAPIConnector {
       if ($managerEmail !== '') {
         $separator = (strpos($endpoint, '?') === FALSE) ? '?' : '&';
         $endpoint .= $separator . 'manageremail=' . rawurlencode($managerEmail);
+      }
+
+      $organizationUri = '';
+      if (isset($template->hasOrganizationUri) && is_string($template->hasOrganizationUri) && trim($template->hasOrganizationUri) !== '') {
+        $organizationUri = trim($template->hasOrganizationUri);
+      }
+      if ($organizationUri !== '') {
+        $separator = (strpos($endpoint, '?') === FALSE) ? '?' : '&';
+        $endpoint .= $separator . 'organizationuri=' . rawurlencode($organizationUri);
       }
     }
 
@@ -3739,6 +3757,22 @@ class FusekiAPIConnector {
       if ($normalized !== '' && preg_match('/^No\b.*\b(has|have)\sbeen\sfound\.?$/i', $normalized)) {
         return [];
       }
+
+      // Soft-miss handling for unresolved URI lookups (common for stale references
+      // like legacy Person_* URIs). Keep UI usable and let callers decide fallback.
+      if ($methodCalled === 'getUri'
+        && stripos($normalized, 'returned no object from the knowledge graph') !== FALSE
+      ) {
+        try {
+          \Drupal::logger('rep.api')->notice('Soft-miss getUri lookup suppressed from UI: {message}', [
+            'message' => $normalized,
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
+        return NULL;
+      }
     }
 
     // 8) Otherwise surface the API error.
@@ -4063,6 +4097,34 @@ class FusekiAPIConnector {
         } catch (\Throwable $e) {
           // Keep fallback behavior below.
         }
+      }
+    }
+
+    // Fallback: resolve private:// against configured private file path and common locations.
+    if (($file_content === FALSE || $file_content === '') && is_string($file_uri) && str_starts_with($file_uri, 'private://')) {
+      $relative = ltrim(substr($file_uri, strlen('private://')), '/');
+      $private_path = (string) \Drupal::config('system.file')->get('path.private');
+      if ($private_path !== '') {
+        $candidate = rtrim($private_path, '/') . '/' . $relative;
+        $file_content = $read_if_possible($candidate);
+      }
+
+      if ($file_content === FALSE || $file_content === '') {
+        try {
+          $file_system = \Drupal::service('file_system');
+          $private_root = $file_system->realpath('private://');
+          if (is_string($private_root) && $private_root !== '') {
+            $candidate = rtrim($private_root, '/') . '/' . $relative;
+            $file_content = $read_if_possible($candidate);
+          }
+        } catch (\Throwable $e) {
+          // Keep fallback behavior below.
+        }
+      }
+
+      if ($file_content === FALSE || $file_content === '') {
+        $candidate = DRUPAL_ROOT . '/sites/default/files/private/' . $relative;
+        $file_content = $read_if_possible($candidate);
       }
     }
 

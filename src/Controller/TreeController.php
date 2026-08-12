@@ -19,6 +19,7 @@ class TreeController extends ControllerBase {
   private const VSTOI_PHYSICAL_INSTRUMENT = 'http://hadatac.org/ont/vstoi#PhysicalInstrument';
   private const PMSR_PHYSICAL_INSTRUMENT = 'https://pmsr.net/ont/PhysicalInstrument';
   private const MAX_INSTANCE_LABEL_URI_LOOKUPS = 40;
+  private const PMSR_ONTOLOGY_PREFIX = 'https://pmsr.net/ont/';
   private const REQUIRED_CLASS_ENTRY_POINT_LOCAL_NAMES = [
     'AnnotationStemEntryPoint',
     'AnatomicalPartEntryPoint',
@@ -474,6 +475,40 @@ class TreeController extends ControllerBase {
   }
 
   /**
+   * Keep Phase I clinical-process hierarchy focused on PMSR process stems.
+   *
+   * @param array<int, object> $items
+   * @return array<int, object>
+   */
+  private function filterPhase1ClinicalProcessItems(array $items): array {
+    $filtered = [];
+
+    foreach ($items as $item) {
+      if (!is_object($item) || empty($item->uri)) {
+        continue;
+      }
+
+      $uri = trim((string) $item->uri);
+      $isCategory = !empty($item->isCategory);
+
+      if ($isCategory) {
+        // Keep only meaningful category anchors for WKF clinical process selection.
+        if ($uri === VSTOI::PROCESS_STEM || str_starts_with($uri, self::PMSR_ONTOLOGY_PREFIX)) {
+          $filtered[] = $item;
+        }
+        continue;
+      }
+
+      // Selectable process stems should be PMSR resources.
+      if (str_starts_with($uri, self::PMSR_ONTOLOGY_PREFIX)) {
+        $filtered[] = $item;
+      }
+    }
+
+    return !empty($filtered) ? $filtered : $items;
+  }
+
+  /**
    * Build the same top-class node pool used by getTopClass().
    */
   private function buildTopClassPool(string $nodeUri): array {
@@ -766,10 +801,27 @@ class TreeController extends ControllerBase {
     // not the ontology class hierarchy (Detector/Actuator/etc.).
     $elementtype = $request->query->get('elementtype');
 
-    // When selecting a Workflow Stem (a.k.a. ProcessStem), we want manager-owned instances,
-    // not just the ontology class hierarchy.
-    if (in_array($elementtype, ['processstem', 'workflowstem'], true) && $nodeUri === VSTOI::PROCESS_STEM) {
-      return new JsonResponse($this->getManagerOwnedItems($elementtype));
+    // When selecting a Workflow Stem (a.k.a. ProcessStem), prefer manager-owned
+    // instances, but fallback to project-wide listing when empty. Also support
+    // both entry-point roots used in local deployments.
+    //
+    // Phase I clinical-process modal expects a grouped hierarchy (not a flat
+    // list), so skip this shortcut for that field and let instance hierarchy
+    // handling below shape categories/children.
+    if (in_array($elementtype, ['processstem', 'workflowstem'], true)
+      && in_array($nodeUri, [VSTOI::PROCESS_STEM, EntryPoints::CLASS_EP_PMSR], true)
+      && $fieldId !== 'phase1ClinicalProcess') {
+      $items = $this->getManagerOwnedItems($elementtype);
+      if (!empty($items)) {
+        return new JsonResponse($items);
+      }
+
+      $items = $this->getKeywordItems($elementtype);
+      if (!empty($items)) {
+        return new JsonResponse($items);
+      }
+
+      return new JsonResponse([]);
     }
 
     // Context-specific selectors that should prefer manager-owned definitions
@@ -785,10 +837,16 @@ class TreeController extends ControllerBase {
       'component' => EntryPoints::CLASS_EP_COMPONENT,
       'instrument' => EntryPoints::CLASS_EP_INSTRUMENT,
       'platform' => EntryPoints::CLASS_EP_PLATFORM,
+      'workflowstem' => EntryPoints::CLASS_EP_PMSR,
+      'processstem' => VSTOI::PROCESS_STEM,
     ];
-    if ($fieldId === 'instance_type' && isset($instanceHierarchyRoots[$elementtype])) {
+    if (in_array($fieldId, ['instance_type', 'phase1ClinicalProcess'], true)
+      && isset($instanceHierarchyRoots[$elementtype])) {
       $items = $this->getInstanceHierarchyItems($nodeUri, $elementtype, $instanceHierarchyRoots[$elementtype]);
       if ($items !== NULL) {
+        if ($fieldId === 'phase1ClinicalProcess' && in_array($elementtype, ['workflowstem', 'processstem'], true)) {
+          $items = $this->filterPhase1ClinicalProcessItems($items);
+        }
         return new JsonResponse($items);
       }
     }

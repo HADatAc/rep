@@ -226,6 +226,16 @@ rep.datafile_download:
     _permission: 'access content'
     _custom_access_check: 'TRUE'
 
+rep.wkf_phase1_download:
+  path: 'rep/wkf/phase1/download'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfDraftDownloadController::downloadPhase1Wkf'
+    _title: 'Download Phase I WKF'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
 # Configuration option
 
 rep.admin_settings_custom:

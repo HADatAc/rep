@@ -202,6 +202,8 @@ class MetadataTemplate
             } else {
               $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING_STD . '</font></b>';
             }
+          } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_ERROR) {
+            $filestatus = '<b><font style="color:#cc0000;">' . Constant::FILE_STATUS_ERROR . '</font></b>';
           } else {
             $filestatus = ' ';
           }
@@ -217,7 +219,7 @@ class MetadataTemplate
             );
           }
         }
-        if (isset($element->hasDataFile->log) && $element->hasDataFile->log != NULL) {
+        if (isset($element->hasDataFile->uri) && is_string($element->hasDataFile->uri) && $element->hasDataFile->uri !== '') {
           $link = $root_url . REPGUI::DATAFILE_LOG . base64_encode($element->hasDataFile->uri);
           $log = '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm read-button" ' .
             'data-dialog-type="modal" ' .
@@ -470,11 +472,13 @@ class MetadataTemplate
             $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_PROCESSED_STD . '</font></b>';
           } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING_STD) {
             $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING_STD . '</font></b>';
+          } else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_ERROR) {
+            $filestatus = '<b><font style="color:#cc0000;">' . Constant::FILE_STATUS_ERROR . '</font></b>';
           } else {
             $filestatus = ' ';
           }
         }
-        if (isset($element->hasDataFile->log) && $element->hasDataFile->log != NULL) {
+        if (isset($element->hasDataFile->uri) && is_string($element->hasDataFile->uri) && $element->hasDataFile->uri !== '') {
           $link = $root_url . REPGUI::DATAFILE_LOG . base64_encode($element->hasDataFile->uri);
           $log = '<a href="' . $link . '" class="use-ajax btn btn-primary btn-sm read-button" ' .
             'data-dialog-type="modal" ' .
@@ -765,6 +769,9 @@ class MetadataTemplate
         }
         else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_WORKING_STD) {
           $filestatus = '<b><font style="color:#ffA500;">' . Constant::FILE_STATUS_WORKING_STD . '</font></b>';
+        }
+        else if ($element->hasDataFile->fileStatus == Constant::FILE_STATUS_ERROR) {
+          $filestatus = '<b><font style="color:#cc0000;">' . Constant::FILE_STATUS_ERROR . '</font></b>';
         }
         else {
           $filestatus = ' ';

@@ -69,6 +69,10 @@ class REPSelectMTForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state, $elementtype = NULL, $mode = NULL, $page=1, $pagesize=9, $studyuri = NULL)
   {
+    // This management form contains dynamic, role-scoped content and custom JS;
+    // disable render caching to prevent stale WKF generation UI fragments.
+    $form['#cache']['max-age'] = 0;
+
     // STUDYURI OPTIONAL
     if ($studyuri == NULL) {
       $studyuri = "";
@@ -279,6 +283,7 @@ class REPSelectMTForm extends FormBase {
 
     // WKF GENERATION SECTION (only for WKF element type)
     if ($this->element_type === 'wkf') {
+      $form['#attached']['library'][] = 'rep/rep_modal';
       $form['#attached']['library'][] = 'rep/wkf_instructions_modal';
       $form['#attached']['library'][] = 'rep/wkf_ingestion_status_poll';
       
@@ -292,15 +297,10 @@ class REPSelectMTForm extends FormBase {
         '#markup' => '<h5 class="mb-3">WKF Generation</h5>',
       ];
 
-      // Instructions button and language selector row
+      // Language selector row (used by phase instruction buttons).
       $form['wkf_generation_section']['instructions_row'] = [
         '#type' => 'container',
         '#attributes' => ['class' => ['d-flex', 'align-items-center', 'mb-2', 'gap-2']],
-      ];
-
-      $form['wkf_generation_section']['instructions_row']['instructions_button'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('<button type="button" class="btn btn-info" id="openWkfInstructionsWindow">' . $this->t('WKF Generation Instructions') . '</button>'),
       ];
 
       $form['wkf_generation_section']['instructions_row']['language_selector'] = [
@@ -316,91 +316,192 @@ class REPSelectMTForm extends FormBase {
         ],
       ];
 
-      // Other buttons row
-      $form['wkf_generation_section']['buttons_row'] = [
+      $form['wkf_generation_section']['phase_context'] = [
+        '#type' => 'item',
+        '#markup' => '<p class="text-muted mb-3">Phase I creates the core WKF. Phases II to IV refine the same core WKF using the original document until the WKF is ready for PMSR ingestion.</p>',
+      ];
+
+      $form['wkf_generation_section']['phase_grid'] = [
         '#type' => 'container',
-        '#attributes' => ['class' => ['d-grid', 'gap-3', 'mt-3'], 'style' => 'grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));'],
+        '#attributes' => ['class' => ['row', 'g-3', 'mt-1']],
       ];
 
-      $form['wkf_generation_section']['buttons_row']['generation_prompt'] = [
+      $clinicalHierarchyOptionsHtml = $this->buildScenarioClinicalProcessOptionsHtml();
+      $phase1DownloadUrl = Url::fromRoute('rep.wkf_phase1_download')->toString();
+      $knowledgeGraphHierarchyUrl = Url::fromRoute('rep.tree_form', [
+        'mode' => 'modal',
+        'elementtype' => 'workflowstem',
+        'silent' => 'false',
+        'prefix' => 'false',
+      ])->toString();
+
+      // Phase I.
+      $form['wkf_generation_section']['phase_grid']['phase1'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['col-12', 'col-md-6', 'col-xl-3']],
+      ];
+      $form['wkf_generation_section']['phase_grid']['phase1']['card'] = [
         '#type' => 'markup',
-        '#markup' => Markup::create('<button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#wkfGenerationPromptModal">' . $this->t('Generation Prompt') . '</button>'),
+        '#markup' => Markup::create('
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column gap-2">
+              <h6 class="card-title">Phase I - Core WKF Generatiion</h6>
+              <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase1-instructions">Instruction</button>
+              <div class="mb-2">
+                <label for="phase1WkfName" class="form-label mb-1">Core WKF Name</label>
+                <input type="text" id="phase1WkfName" class="form-control form-control-sm" placeholder="e.g. WKF-INTUBACAO-CORE" />
+              </div>
+              <div class="mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label for="phase1ClinicalProcess" class="form-label mb-0">Clinical Process</label>
+                  <a href="' . $knowledgeGraphHierarchyUrl . '" class="small open-tree-modal" data-url="' . $knowledgeGraphHierarchyUrl . '" data-elementtype="[&quot;workflowstem&quot;]" data-dialog-type="modal" data-field-id="phase1ClinicalProcess">Knowledge Graph Hierarchy</a>
+                </div>
+                <select id="phase1ClinicalProcess" class="form-select form-select-sm">
+                  <option value="">Select clinical process...</option>
+                  ' . $clinicalHierarchyOptionsHtml . '
+                </select>
+              </div>
+              <button type="button" class="btn btn-primary btn-sm mt-auto" id="generatePhase1DraftWkf" data-download-url="' . $phase1DownloadUrl . '">Generate Draft WKF</button>
+            </div>
+          </div>
+        '),
       ];
 
-      $form['wkf_generation_section']['buttons_row']['validation_prompt'] = [
+      // Phase II.
+      $form['wkf_generation_section']['phase_grid']['phase2'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['col-12', 'col-md-6', 'col-xl-3']],
+      ];
+      $form['wkf_generation_section']['phase_grid']['phase2']['card'] = [
         '#type' => 'markup',
-        '#markup' => Markup::create('<button type="button" class="btn btn-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#wkfValidationPromptModal">' . $this->t('Validation Prompt') . '</button>'),
+        '#markup' => Markup::create('
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column gap-2">
+              <h6 class="card-title">Phase II - Task Model Generation</h6>
+              <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase2-instructions">Instruction</button>
+              <p class="small text-muted mb-2">Generate task model details using the original document + Phase I core WKF.</p>
+              <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase2PromptModal">Open Prompt</button>
+            </div>
+          </div>
+        '),
       ];
 
-      $form['wkf_generation_section']['buttons_row']['download_ontologies'] = [
+      // Phase III.
+      $form['wkf_generation_section']['phase_grid']['phase3'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['col-12', 'col-md-6', 'col-xl-3']],
+      ];
+      $form['wkf_generation_section']['phase_grid']['phase3']['card'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column gap-2">
+              <h6 class="card-title">Phase III - Properties Extraction</h6>
+              <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase3-instructions">Instruction</button>
+              <p class="small text-muted mb-2">Extract and encode detailed properties into the same core WKF.</p>
+              <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase3PromptModal">Open Prompt</button>
+            </div>
+          </div>
+        '),
+      ];
+
+      // Phase IV.
+      $form['wkf_generation_section']['phase_grid']['phase4'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['col-12', 'col-md-6', 'col-xl-3']],
+      ];
+      $form['wkf_generation_section']['phase_grid']['phase4']['card'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column gap-2">
+              <h6 class="card-title">Phase IV - Simulations Assignments</h6>
+              <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase4-instructions">Instruction</button>
+              <p class="small text-muted mb-2">Assign simulation assets and finalize WKF ingestion readiness.</p>
+              <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase4PromptModal">Open Prompt</button>
+            </div>
+          </div>
+        '),
+      ];
+
+      $form['wkf_generation_section']['footer_actions'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['d-flex', 'align-items-center', 'justify-content-end', 'mt-3']],
+      ];
+
+      $form['wkf_generation_section']['footer_actions']['download_ontologies'] = [
         '#type' => 'submit',
         '#value' => $this->t('Download Ontologies'),
         '#name' => 'wkf_download_ontologies',
-        '#attributes' => ['class' => ['btn', 'btn-success', 'btn-lg', 'w-100']],
+        '#attributes' => ['class' => ['btn', 'btn-success']],
         '#submit' => ['::wkfDownloadOntologiesSubmit'],
         '#limit_validation_errors' => [],
       ];
 
-      // Instructions Modal - Load from markdown files
+      // Instructions sources.
       $pmsr_module_path = \Drupal::service('extension.list.module')->getPath('pmsr');
       $instructions_en_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/instructions/instructions_EN.md';
       $instructions_pt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/instructions/instructions_PT.md';
-      
-      // Load markdown content
+
       $instructions_en_md = file_exists($instructions_en_path) ? file_get_contents($instructions_en_path) : '';
       $instructions_pt_md = file_exists($instructions_pt_path) ? file_get_contents($instructions_pt_path) : '';
-      
-      // Convert markdown to HTML (simple conversion for the structured format)
+
       $instructions_en = $this->convertMarkdownToHtml($instructions_en_md);
       $instructions_pt = $this->convertMarkdownToHtml($instructions_pt_md);
 
-      $form['wkf_generation_section']['instructions_modal'] = [
-        '#type' => 'markup',
-        '#markup' => '
-          <div class="modal fade" id="wkfInstructionsModal" tabindex="-1" aria-labelledby="wkfInstructionsModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="wkfInstructionsModalLabel">WKF Generation Instructions</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                  <div id="instructions-en" class="instructions-content" style="display:none;">' . $instructions_en . '</div>
-                  <div id="instructions-pt" class="instructions-content">' . $instructions_pt . '</div>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ',
-      ];
-
-      // Generation Prompt Modal - Load from pmsrgui/prompts/
-      $generation_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-MESTRE-WKF.md';
-      $generation_prompt = file_exists($generation_prompt_path) ? file_get_contents($generation_prompt_path) : 'Generation prompt file not found.';
-
-      $form['wkf_generation_section']['generation_prompt_modal'] = [
+      // Hidden phase instruction payloads (opened in dedicated window by JS).
+      $form['wkf_generation_section']['phase_instruction_payloads'] = [
         '#type' => 'markup',
         '#markup' => Markup::create('
-          <div class="modal fade" id="wkfGenerationPromptModal" tabindex="-1" aria-labelledby="wkfGenerationPromptModalLabel" aria-hidden="true">
+          <div id="wkf-phase1-instructions" class="d-none">
+            <div class="instructions-content-phase" data-lang="en"><h5>Phase I - Core WKF Generatiion</h5><p>Fill the small form and generate a real ingestion-ready Draft WKF (version 1) directly from the panel.</p><ul><li>Provide a Core WKF Name.</li><li>Select a Clinical Process from the hierarchy used in Scenario Search.</li><li>Download the generated WKF file and reuse it in Phases II to IV.</li></ul></div>
+            <div class="instructions-content-phase" data-lang="pt"><h5>Phase I - Core WKF Generatiion</h5><p>Preencha o formulario e gere o prompt. Anexe o documento original no ChatGPT e gere o WKF base que sera reutilizado nas fases seguintes.</p><ul><li>Foque em entidades e relacoes estruturais.</li><li>Evite detalhes que pertencem as fases posteriores.</li><li>Baixe o WKF core para reutilizacao.</li></ul></div>
+          </div>
+          <div id="wkf-phase2-instructions" class="d-none">
+            <div class="instructions-content-phase" data-lang="en"><h5>Phase II - Task Model Generation</h5><p>Use the original document and the Phase I core WKF together. Ask ChatGPT to derive and encode task-model semantics into the same WKF.</p></div>
+            <div class="instructions-content-phase" data-lang="pt"><h5>Phase II - Task Model Generation</h5><p>Use o documento original e o WKF core da Fase I. Solicite ao ChatGPT a geracao do modelo de tarefas no mesmo WKF.</p></div>
+          </div>
+          <div id="wkf-phase3-instructions" class="d-none">
+            <div class="instructions-content-phase" data-lang="en"><h5>Phase III - Properties Extraction</h5><p>Inspect detailed attributes from the source document and encode them into the existing WKF without breaking previously generated structure.</p></div>
+            <div class="instructions-content-phase" data-lang="pt"><h5>Phase III - Properties Extraction</h5><p>Extraia propriedades detalhadas do documento e codifique no WKF existente sem quebrar a estrutura das fases anteriores.</p></div>
+          </div>
+          <div id="wkf-phase4-instructions" class="d-none">
+            <div class="instructions-content-phase" data-lang="en"><h5>Phase IV - Simulations Assignments</h5><p>Complete simulation assignments and final readiness checks so the WKF can be ingested into PMSR.</p></div>
+            <div class="instructions-content-phase" data-lang="pt"><h5>Phase IV - Simulations Assignments</h5><p>Finalize atribuicoes de simulacao e verificacoes finais para ingestao do WKF no PMSR.</p></div>
+          </div>
+          <div id="wkf-legacy-instructions" class="d-none">
+            <div id="instructions-en" class="instructions-content">' . $instructions_en . '</div>
+            <div id="instructions-pt" class="instructions-content">' . $instructions_pt . '</div>
+          </div>
+        '),
+      ];
+
+      // Prompt files for Phases II-IV.
+      $phase2_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE2-TASK-MODEL.md';
+      $phase3_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE3-PROPERTIES.md';
+      $phase4_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE4-SIMULATIONS.md';
+
+      $phase2_prompt = file_exists($phase2_prompt_path) ? file_get_contents($phase2_prompt_path) : "PHASE II - TASK MODEL GENERATION\n\nUse the original document and the Phase I core WKF.\nEncode task model details into the same WKF and return the updated file.";
+      $phase3_prompt = file_exists($phase3_prompt_path) ? file_get_contents($phase3_prompt_path) : "PHASE III - PROPERTIES EXTRACTION\n\nUse the original document and the current WKF from previous phases.\nExtract missing properties and encode them in the same WKF. Return the updated file.";
+      $phase4_prompt = file_exists($phase4_prompt_path) ? file_get_contents($phase4_prompt_path) : "PHASE IV - SIMULATIONS ASSIGNMENTS\n\nUse the original document and the current WKF.\nAssign simulation mappings and finalize ingestion-readiness fields. Return the final WKF file.";
+
+      // Phase I prompt modal (text generated from form by JS).
+      $form['wkf_generation_section']['phase1_prompt_modal'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('
+          <div class="modal fade" id="wkfPhase1CorePromptModal" tabindex="-1" aria-labelledby="wkfPhase1CorePromptModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-scrollable">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="wkfGenerationPromptModalLabel">WKF Generation Prompt</h5>
+                  <h5 class="modal-title" id="wkfPhase1CorePromptModalLabel">Phase I - Draft WKF Prompt</h5>
                   <div class="ms-auto d-flex gap-2">
-                    <button type="button" class="btn btn-primary" id="copyGenerationPrompt">
-                      <i class="fas fa-copy"></i> Copy to Clipboard
-                    </button>
+                    <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase1CorePromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                   </div>
                 </div>
                 <div class="modal-body">
-                  <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> Copy this prompt and paste it into ChatGPT to generate your WKF template.
-                  </div>
-                  <pre id="generationPromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $generation_prompt . '</pre>
+                  <div class="alert alert-info"><i class="fas fa-info-circle"></i> Phase I now generates and downloads a real WKF file directly from the card inputs.</div>
+                  <pre id="phase1CorePromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">Use "Generate Draft WKF" in Phase I to download the generated WKF file.</pre>
                 </div>
               </div>
             </div>
@@ -408,30 +509,74 @@ class REPSelectMTForm extends FormBase {
         '),
       ];
 
-      // Validation Prompt Modal - Load from pmsrgui/prompts/
-      $validation_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-VALIDADOR-WKF.md';
-      $validation_prompt = file_exists($validation_prompt_path) ? file_get_contents($validation_prompt_path) : 'Validation prompt file not found.';
-
-      $form['wkf_generation_section']['validation_prompt_modal'] = [
+      $form['wkf_generation_section']['phase2_prompt_modal'] = [
         '#type' => 'markup',
         '#markup' => Markup::create('
-          <div class="modal fade" id="wkfValidationPromptModal" tabindex="-1" aria-labelledby="wkfValidationPromptModalLabel" aria-hidden="true">
+          <div class="modal fade" id="wkfPhase2PromptModal" tabindex="-1" aria-labelledby="wkfPhase2PromptModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-scrollable">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="wkfValidationPromptModalLabel">WKF Validation Prompt</h5>
+                  <h5 class="modal-title" id="wkfPhase2PromptModalLabel">Phase II - Task Model Prompt</h5>
                   <div class="ms-auto d-flex gap-2">
-                    <button type="button" class="btn btn-primary" id="copyValidationPrompt">
-                      <i class="fas fa-copy"></i> Copy to Clipboard
-                    </button>
+                    <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase2PromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                   </div>
                 </div>
                 <div class="modal-body">
                   <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> Copy this prompt and paste it into ChatGPT along with your WKF content to validate it.
+                    <i class="fas fa-info-circle"></i> Use this with the original document and the Phase I core WKF.
                   </div>
-                  <pre id="validationPromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $validation_prompt . '</pre>
+                  <pre id="phase2PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase2_prompt . '</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        '),
+      ];
+
+      $form['wkf_generation_section']['phase3_prompt_modal'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('
+          <div class="modal fade" id="wkfPhase3PromptModal" tabindex="-1" aria-labelledby="wkfPhase3PromptModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="wkfPhase3PromptModalLabel">Phase III - Properties Extraction Prompt</h5>
+                  <div class="ms-auto d-flex gap-2">
+                    <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase3PromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  </div>
+                </div>
+                <div class="modal-body">
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Use this with the original document and the WKF generated in previous phases.
+                  </div>
+                  <pre id="phase3PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase3_prompt . '</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        '),
+      ];
+
+      $form['wkf_generation_section']['phase4_prompt_modal'] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('
+          <div class="modal fade" id="wkfPhase4PromptModal" tabindex="-1" aria-labelledby="wkfPhase4PromptModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="wkfPhase4PromptModalLabel">Phase IV - Simulations Assignments Prompt</h5>
+                  <div class="ms-auto d-flex gap-2">
+                    <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase4PromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  </div>
+                </div>
+                <div class="modal-body">
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Use this final phase prompt with the original document and current WKF to complete PMSR ingestion readiness.
+                  </div>
+                  <pre id="phase4PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase4_prompt . '</pre>
                 </div>
               </div>
             </div>
@@ -1531,12 +1676,11 @@ class REPSelectMTForm extends FormBase {
     $readability = $this->verifyLocalDataFileReadability($template);
     if (!$readability['ok']) {
       $tried = !empty($readability['tried']) ? implode(' | ', $readability['tried']) : '(none)';
-      \Drupal::messenger()->addError(t('Ingestion aborted before submit: local file is not readable. Reason: @reason. Tried paths: @paths', [
+      $this->appendLocalDataFileDiagnosticLog($template, 'Local file precheck warning before submit: ' . $readability['reason'] . '. Tried paths: ' . $tried);
+      \Drupal::messenger()->addWarning(t('Local file precheck warning before submit: @reason. Tried paths: @paths. Submission will continue and backend/upload diagnostics will be used if it fails.', [
         '@reason' => $readability['reason'],
         '@paths' => $tried,
       ]));
-      $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
-      return;
     }
     
     $uploadResponse = $api->uploadTemplate($this->element_type, $template, $status);
@@ -1546,6 +1690,13 @@ class REPSelectMTForm extends FormBase {
       if ($detail === '') {
         $detail = $this->extractDataFileFailureDetail($api, $template);
       }
+      if ($detail === '' && method_exists($api, 'getErrorMessage')) {
+        $apiError = trim((string) $api->getErrorMessage());
+        if ($apiError !== '') {
+          $detail = $apiError;
+        }
+      }
+      $this->appendLocalDataFileDiagnosticLog($template, 'Ingestion submit failed before worker start: ' . ($detail !== '' ? $detail : 'No backend detail returned.'));
       if ($detail !== '') {
         \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion. Reason: @reason", [
           '@reason' => $detail,
@@ -1817,6 +1968,43 @@ class REPSelectMTForm extends FormBase {
       }
     }
 
+    // private:// explicit fallbacks.
+    if ($fileUri !== '' && str_starts_with($fileUri, 'private://')) {
+      $relative = ltrim(substr($fileUri, strlen('private://')), '/');
+
+      $privatePath = (string) \Drupal::config('system.file')->get('path.private');
+      if ($privatePath !== '') {
+        $candidate = rtrim($privatePath, '/') . '/' . $relative;
+        if ($tryPath($candidate)) {
+          $result['ok'] = true;
+          $result['reason'] = 'readable configured private path';
+          return $result;
+        }
+      }
+
+      try {
+        $fileSystem = \Drupal::service('file_system');
+        $privateRoot = $fileSystem->realpath('private://');
+        if (is_string($privateRoot) && $privateRoot !== '') {
+          $candidate = rtrim($privateRoot, '/') . '/' . $relative;
+          if ($tryPath($candidate)) {
+            $result['ok'] = true;
+            $result['reason'] = 'readable private:// root path';
+            return $result;
+          }
+        }
+      } catch (\Throwable $e) {
+        // Continue.
+      }
+
+      $candidate = DRUPAL_ROOT . '/sites/default/files/private/' . $relative;
+      if ($tryPath($candidate)) {
+        $result['ok'] = true;
+        $result['reason'] = 'readable default private files path';
+        return $result;
+      }
+    }
+
     // Known fallback for INS bootstrap file.
     if ($filename !== '' && strcasecmp($filename, 'INS-PMSR.xlsx') === 0) {
       try {
@@ -1875,6 +2063,50 @@ class REPSelectMTForm extends FormBase {
     }
 
     return implode(' | ', $parts);
+  }
+
+  /**
+   * Persist Drupal-side ingestion diagnostics when HASCO DataFile log is empty.
+   */
+  protected function appendLocalDataFileDiagnosticLog($template, string $message): void {
+    if (!is_object($template)) {
+      return;
+    }
+
+    $dataFileUri = '';
+    if (isset($template->hasDataFileUri) && is_string($template->hasDataFileUri) && trim($template->hasDataFileUri) !== '') {
+      $dataFileUri = trim((string) $template->hasDataFileUri);
+    } else if (isset($template->hasDataFile) && is_object($template->hasDataFile) && isset($template->hasDataFile->uri) && is_string($template->hasDataFile->uri)) {
+      $dataFileUri = trim((string) $template->hasDataFile->uri);
+    }
+
+    $dataFileUri = Utils::plainUri($dataFileUri) ?: $dataFileUri;
+    if ($dataFileUri === '' || trim($message) === '') {
+      return;
+    }
+
+    $stateKey = 'rep.datafile_local_logs';
+    $store = \Drupal::state()->get($stateKey, []);
+    if (!is_array($store)) {
+      $store = [];
+    }
+
+    $existing = '';
+    if (isset($store[$dataFileUri]) && is_string($store[$dataFileUri])) {
+      $existing = $store[$dataFileUri];
+    }
+
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . trim($message);
+    $combined = trim($existing) === '' ? $line : ($existing . "\n" . $line);
+
+    // Keep only tail to avoid unbounded growth in state.
+    $maxChars = 16000;
+    if (strlen($combined) > $maxChars) {
+      $combined = substr($combined, -$maxChars);
+    }
+
+    $store[$dataFileUri] = $combined;
+    \Drupal::state()->set($stateKey, $store);
   }
 
   /**
@@ -2040,6 +2272,111 @@ class REPSelectMTForm extends FormBase {
     \Drupal::messenger()->addMessage($this->t('Download Ontologies'));
     // TODO: Implement ontologies download logic
     $form_state->setRebuild();
+  }
+
+  /**
+   * Build Phase I hierarchy options from Scenario Search process stems.
+   */
+  private function buildScenarioClinicalProcessOptionsHtml(): string {
+    $options = [];
+    foreach ($this->getScenarioProcessStemFilters() as $filter) {
+      if (!is_array($filter)) {
+        continue;
+      }
+
+      $label = trim((string) ($filter['label'] ?? ''));
+      if ($label === '') {
+        continue;
+      }
+
+      $value = trim((string) ($filter['slug'] ?? ''));
+      if ($value === '') {
+        $value = trim((string) ($filter['uri'] ?? ''));
+      }
+      if ($value === '') {
+        $value = $label;
+      }
+
+      $options[$value] = $label;
+    }
+
+    if (empty($options)) {
+      return '<option value="">No clinical process found</option>';
+    }
+
+    $html = '';
+    foreach ($options as $value => $label) {
+      $html .= '<option value="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</option>';
+    }
+    return $html;
+  }
+
+  /**
+   * Get aggregated process-stem filters exactly as Scenario Search uses.
+   *
+   * @return array<int, array<string, mixed>>
+   */
+  private function getScenarioProcessStemFilters(): array {
+    if (!\Drupal::moduleHandler()->moduleExists('std') || !\Drupal::hasService('rep.api_connector')) {
+      return [];
+    }
+
+    try {
+      if (\Drupal::hasService('std.study_variable_search')) {
+        $searchService = \Drupal::service('std.study_variable_search');
+      }
+      else {
+        $searchService = new \Drupal\std\Service\StudyVariableSearchService(
+          \Drupal::service('rep.api_connector'),
+          \Drupal::service('file_system'),
+        );
+      }
+
+      $currentUser = \Drupal::currentUser();
+      $userEmail = trim((string) $currentUser->getEmail());
+      $isAdmin = ManageOwnerFilter::isAdmin() || $currentUser->hasPermission('administer study search');
+
+      $context = $searchService->buildContext(
+        $userEmail,
+        $isAdmin,
+        $currentUser->isAuthenticated(),
+      );
+
+      $processFilters = is_array($context['process_filters'] ?? NULL)
+        ? $context['process_filters']
+        : [];
+
+      $aggregated = [];
+      foreach ($processFilters as $processData) {
+        if (!is_array($processData)) {
+          continue;
+        }
+
+        $stemSlug = trim((string) ($processData['stem_slug'] ?? ''));
+        $stemLabel = trim((string) ($processData['stem_label'] ?? ''));
+        $stemUri = trim((string) ($processData['stem_uri'] ?? ''));
+        if ($stemSlug === '' || $stemLabel === '') {
+          continue;
+        }
+
+        if (!isset($aggregated[$stemSlug])) {
+          $aggregated[$stemSlug] = [
+            'slug' => $stemSlug,
+            'label' => $stemLabel,
+            'uri' => $stemUri,
+            'count' => 0,
+          ];
+        }
+
+        $aggregated[$stemSlug]['count'] += (int) ($processData['count'] ?? 0);
+      }
+
+      uasort($aggregated, static fn(array $a, array $b): int => strcasecmp((string) ($a['label'] ?? ''), (string) ($b['label'] ?? '')));
+      return array_values($aggregated);
+    }
+    catch (\Throwable $e) {
+      return [];
+    }
   }
 
   /**

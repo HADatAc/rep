@@ -26,7 +26,7 @@ scrollable_table:
     theme:
       css/scrollable_table.css: {}
 rep_tree:
-  version: 1.2
+  version: 1.5
   css:
     theme:
       https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css: {}
@@ -36,7 +36,7 @@ rep_tree:
   dependencies:
     - core/jquery
 rep_modal:
-  version: 1.x
+  version: 1.4
   js:
     js/modal.js: {}
   dependencies:
@@ -44,13 +44,22 @@ rep_modal:
     - core/drupal.dialog
     - core/drupal.ajax
 
+add_wkf_copy_name:
+  version: 1.0
+  js:
+    js/add_wkf_copy_name.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
+
 rep_autocomplete_ux:
   version: 1.x
   js:
     js/autocomplete-ux.js: {}
 
 wkf_instructions_modal:
-  version: 1.x
+  version: 1.2
   js:
     js/wkf_instructions_modal.js: {}
   dependencies:
