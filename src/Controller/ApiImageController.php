@@ -206,13 +206,46 @@ class ApiImageController extends ControllerBase {
   private function tryDownloadFromSocialMediaFolders($api, string $elementUri, string $imageRef) {
     $candidates = $this->resolveMediaFolderCandidates($api, $elementUri, $imageRef);
     foreach ($candidates as $folder) {
-      $resp = $api->downloadFile($folder, $imageRef);
-      $status = ($resp && method_exists($resp, 'getStatusCode')) ? $resp->getStatusCode() : NULL;
-      if ($status === 200) {
-        return $resp;
+      foreach ($this->buildImageRefCandidates($imageRef) as $candidateImageRef) {
+        $resp = $api->downloadFile($folder, $candidateImageRef);
+        $status = ($resp && method_exists($resp, 'getStatusCode')) ? $resp->getStatusCode() : NULL;
+        if ($status === 200) {
+          return $resp;
+        }
       }
     }
     return NULL;
+  }
+
+  private function buildImageRefCandidates(string $imageRef): array {
+    $imageRef = trim((string) $imageRef);
+    if ($imageRef === '') {
+      return [];
+    }
+
+    $candidates = [$imageRef];
+    $slashPos = strrpos($imageRef, '/');
+    $basename = $slashPos === FALSE ? $imageRef : substr($imageRef, $slashPos + 1);
+    $dirname = $slashPos === FALSE ? '' : substr($imageRef, 0, $slashPos + 1);
+
+    if ($basename !== '') {
+      $candidates[] = $dirname . strtoupper($basename);
+      $candidates[] = $dirname . strtolower($basename);
+
+      $dotPos = strrpos($basename, '.');
+      if ($dotPos !== FALSE) {
+        $name = substr($basename, 0, $dotPos);
+        $ext = substr($basename, $dotPos);
+        if ($name !== '') {
+          $candidates[] = $dirname . strtoupper($name) . strtolower($ext);
+          $candidates[] = $dirname . strtolower($name) . strtolower($ext);
+        }
+      }
+    }
+
+    return array_values(array_unique(array_filter($candidates, static function ($v) {
+      return is_string($v) && trim($v) !== '';
+    })));
   }
 
   private function shouldPreferFolderFallback(string $elementUri): bool {
@@ -227,6 +260,7 @@ class ApiImageController extends ControllerBase {
 
   private function resolveMediaFolderCandidates($api, string $elementUri, string $imageRef): array {
     $candidates = [];
+    $resourceFamily = 'unknown';
 
     // If callers pass "folder/filename", keep the folder hint.
     $normalized = str_replace('\\', '/', trim($imageRef));
@@ -239,12 +273,15 @@ class ApiImageController extends ControllerBase {
 
     $term = strtoupper((string) Utils::extractResourceFolderFromUri($elementUri));
     if (str_starts_with($term, 'PJT') || str_starts_with($term, 'FSC')) {
+      $resourceFamily = 'initiative';
       $candidates[] = 'initiative';
     }
     if (str_starts_with($term, 'ORG') || str_starts_with($term, 'PS')) {
+      $resourceFamily = 'organization';
       $candidates[] = 'organizations';
     }
     if (str_starts_with($term, 'PLC') || str_starts_with($term, 'PA')) {
+      $resourceFamily = 'place';
       $candidates[] = 'countries';
       $candidates[] = 'distritos';
       $candidates[] = 'concelhos';
@@ -258,12 +295,21 @@ class ApiImageController extends ControllerBase {
           $typeText = strtolower((string) (($obj->hascoTypeUri ?? '') . ' ' . ($obj->typeUri ?? '') . ' ' . ($obj->hascoTypeLabel ?? '') . ' ' . ($obj->typeLabel ?? '')));
 
           if (str_contains($typeText, 'project') || str_contains($typeText, 'fundingscheme') || str_contains($typeText, 'funding scheme')) {
+            if ($resourceFamily === 'unknown') {
+              $resourceFamily = 'initiative';
+            }
             $candidates[] = 'initiative';
           }
           if (str_contains($typeText, 'organization') || str_contains($typeText, 'person') || str_contains($typeText, 'collegeoruniversity')) {
+            if ($resourceFamily === 'unknown') {
+              $resourceFamily = 'organization';
+            }
             $candidates[] = 'organizations';
           }
           if (str_contains($typeText, 'place') || str_contains($typeText, 'country') || str_contains($typeText, 'postaladdress')) {
+            if ($resourceFamily === 'unknown') {
+              $resourceFamily = 'place';
+            }
             $candidates[] = 'countries';
             $candidates[] = 'distritos';
             $candidates[] = 'concelhos';
@@ -275,12 +321,27 @@ class ApiImageController extends ControllerBase {
       }
     }
 
-    // Keep common social media folders as final fallback.
-    $candidates[] = 'initiative';
-    $candidates[] = 'organizations';
-    $candidates[] = 'countries';
-    $candidates[] = 'distritos';
-    $candidates[] = 'concelhos';
+    // Final fallback folders are constrained by entity family to avoid
+    // cross-domain logo collisions (e.g., ORG UA vs country UA).
+    if ($resourceFamily === 'organization') {
+      $candidates[] = 'organizations';
+    }
+    elseif ($resourceFamily === 'initiative') {
+      $candidates[] = 'initiative';
+      $candidates[] = 'organizations';
+    }
+    elseif ($resourceFamily === 'place') {
+      $candidates[] = 'countries';
+      $candidates[] = 'distritos';
+      $candidates[] = 'concelhos';
+    }
+    else {
+      $candidates[] = 'initiative';
+      $candidates[] = 'organizations';
+      $candidates[] = 'countries';
+      $candidates[] = 'distritos';
+      $candidates[] = 'concelhos';
+    }
 
     $candidates = array_map(static function ($v) {
       return strtolower(trim((string) $v));

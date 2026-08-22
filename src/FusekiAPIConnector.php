@@ -235,6 +235,40 @@ class FusekiAPIConnector {
 
     return filter_var($candidate, FILTER_VALIDATE_EMAIL) ? $candidate : '';
   }
+
+  /**
+   * Resolve a safe manager email fallback for ingest endpoints.
+   */
+  private function resolveManagerEmailFallback(string $candidate = ''): string {
+    $email = $this->sanitizeManagerEmailParam($candidate);
+    if ($email !== '') {
+      return $email;
+    }
+
+    try {
+      $current = (string) \Drupal::currentUser()->getEmail();
+      $email = $this->sanitizeManagerEmailParam($current);
+      if ($email !== '') {
+        return $email;
+      }
+    }
+    catch (\Throwable $e) {
+      // Ignore and continue fallback chain.
+    }
+
+    try {
+      $siteMail = (string) (\Drupal::config('system.site')->get('mail') ?? '');
+      $email = $this->sanitizeManagerEmailParam($siteMail);
+      if ($email !== '') {
+        return $email;
+      }
+    }
+    catch (\Throwable $e) {
+      // Ignore and continue fallback chain.
+    }
+
+    return 'admin@pmsr.com';
+  }
   private $client;
   private $query;
   private $error;
@@ -2845,6 +2879,15 @@ class FusekiAPIConnector {
   }
 
   public function sparqlQuery(string $sparql): string {
+    // Preserve historical behavior for existing call sites while preventing
+    // indefinite hangs due to missing client timeouts.
+    return $this->sparqlQueryWithTimeout($sparql, 120, 10);
+  }
+
+  /**
+   * Execute a SPARQL SELECT/ASK query with explicit HTTP timeouts.
+   */
+  public function sparqlQueryWithTimeout(string $sparql, int $timeoutSeconds = 30, int $connectTimeoutSeconds = 5): string {
     $client = new Client();
     $last = ['url' => null, 'status' => null, 'body' => null];
 
@@ -2852,6 +2895,8 @@ class FusekiAPIConnector {
       try {
         $res = $client->request('POST', $url, [
           'http_errors' => false,
+          'timeout' => max(1, $timeoutSeconds),
+          'connect_timeout' => max(1, $connectTimeoutSeconds),
           'headers' => [
             'Content-Type' => 'application/sparql-query',
             'Accept' => 'application/sparql-results+json',
@@ -3051,6 +3096,9 @@ class FusekiAPIConnector {
     $method = "GET";
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
+    // Ontology loading can take significantly longer on remote/cloud hosts.
+    $data['connect_timeout'] = 10;
+    $data['timeout'] = 180;
     $response = $this->perform_http_request($method,$api_url.$endpoint,$data);
     if ($response !== NULL && $response !== FALSE && $response !== '') {
       return $response;
@@ -3181,16 +3229,6 @@ class FusekiAPIConnector {
   public function getApiUrl() {
     $config = \Drupal::config(static::CONFIGNAME);
     $url = trim((string) $config->get('api_url'));
-    if ($url === '') {
-      return $url;
-    }
-
-    // Local PMSR setups run hascoapi on 9001; normalize stale local port values.
-    $url = preg_replace('#^https?://(localhost|127\.0\.0\.1):\d+(?=/|$)#', 'http://localhost:9001', $url);
-    if (!is_string($url)) {
-      return (string) $config->get('api_url');
-    }
-
     return $url;
   }
 
@@ -3288,6 +3326,8 @@ class FusekiAPIConnector {
 
     // If we still don't have a DataFile URI, we cannot upload any content.
     if (!isset($template->hasDataFileUri) || $template->hasDataFileUri == NULL || $template->hasDataFileUri == '') {
+      $this->error = 'DATAFILE_URI_MISSING';
+      $this->error_message = 'UploadTemplate: Missing hasDataFileUri for template: ' . (isset($template->uri) ? $template->uri : '(unknown)');
       \Drupal::messenger()->addError(t('UploadTemplate: Missing hasDataFileUri for template: @uri', [
         '@uri' => isset($template->uri) ? $template->uri : '(unknown)',
       ]));
@@ -3305,7 +3345,11 @@ class FusekiAPIConnector {
       ]);
       
       $uploadResult = $this->uploadFile($template->hasDataFileUri, $template->hasDataFile->id);
-      if ($uploadResult === NULL || $uploadResult === FALSE || $uploadResult === '') {
+      if ($uploadResult === NULL || $uploadResult === FALSE) {
+        if (!is_string($this->error_message) || trim($this->error_message) === '') {
+          $this->error = 'UPLOAD_FILE_FAILED';
+          $this->error_message = 'Could not upload file to API before ingestion for template: ' . $template->uri;
+        }
         \Drupal::messenger()->addError(t('Could not upload file to API before ingestion for template: @uri', ['@uri' => $template->uri]));
         return FALSE;
       }
@@ -3326,10 +3370,8 @@ class FusekiAPIConnector {
       $managerEmail = '';
       if (isset($template->hasSIRManagerEmail) && is_string($template->hasSIRManagerEmail) && trim($template->hasSIRManagerEmail) !== '') {
         $managerEmail = trim($template->hasSIRManagerEmail);
-      } else {
-        $managerEmail = (string) \Drupal::currentUser()->getEmail();
       }
-      $managerEmail = $this->sanitizeManagerEmailParam($managerEmail);
+      $managerEmail = $this->resolveManagerEmailFallback($managerEmail);
       if ($managerEmail !== '') {
         $separator = (strpos($endpoint, '?') === FALSE) ? '?' : '&';
         $endpoint .= $separator . 'manageremail=' . rawurlencode($managerEmail);
@@ -3355,11 +3397,33 @@ class FusekiAPIConnector {
         'http_errors' => FALSE,
         'headers' => [
           'Content-Type' => 'application/json',
-          // 'Authorization' => $this->bearer
+          'Authorization' => $this->bearer,
         ],
       ];
 
       $res = $client->post($api_url.$endpoint, $request_options);
+      $status = (int) $res->getStatusCode();
+      if ($status !== 200) {
+        $this->last_status_code = $status;
+        $this->last_request_url = $api_url . $endpoint;
+        $this->last_response_body = (string) $res->getBody();
+        $snippet = substr(preg_replace('/\s+/', ' ', (string) $this->last_response_body), 0, 500);
+        $this->error = (string) $status;
+        $this->error_message = 'API request returned HTTP ' . $status . ($snippet ? '; response: ' . $snippet : '');
+        
+        try {
+          \Drupal::logger('rep.api')->error('uploadTemplate POST {url} returned HTTP {status}: {snippet}', [
+            'url' => $this->last_request_url,
+            'status' => $status,
+            'snippet' => $snippet ?: '(empty)',
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
+
+        return NULL;
+      }
     } catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
@@ -3391,10 +3455,8 @@ class FusekiAPIConnector {
       $managerEmail = '';
       if (isset($template->hasSIRManagerEmail) && is_string($template->hasSIRManagerEmail) && trim($template->hasSIRManagerEmail) !== '') {
         $managerEmail = trim($template->hasSIRManagerEmail);
-      } else {
-        $managerEmail = (string) \Drupal::currentUser()->getEmail();
       }
-      $managerEmail = $this->sanitizeManagerEmailParam($managerEmail);
+      $managerEmail = $this->resolveManagerEmailFallback($managerEmail);
       if ($managerEmail !== '') {
         $separator = (strpos($endpoint, '?') === FALSE) ? '?' : '&';
         $endpoint .= $separator . 'manageremail=' . rawurlencode($managerEmail);
@@ -3420,9 +3482,31 @@ class FusekiAPIConnector {
         'http_errors' => FALSE,
         'headers' => [
           'Content-Type' => 'application/json',
-          // 'Authorization' => $this->bearer
+          'Authorization' => $this->bearer,
         ],
       ]);
+      $status = (int) $res->getStatusCode();
+      if ($status !== 200) {
+        $this->last_status_code = $status;
+        $this->last_request_url = $api_url . $endpoint;
+        $this->last_response_body = (string) $res->getBody();
+        $snippet = substr(preg_replace('/\s+/', ' ', (string) $this->last_response_body), 0, 500);
+        $this->error = (string) $status;
+        $this->error_message = 'API request returned HTTP ' . $status . ($snippet ? '; response: ' . $snippet : '');
+
+        try {
+          \Drupal::logger('rep.api')->error('simplifiedUpload POST {url} returned HTTP {status}: {snippet}', [
+            'url' => $this->last_request_url,
+            'status' => $status,
+            'snippet' => $snippet ?: '(empty)',
+          ]);
+        }
+        catch (\Throwable $t) {
+          // Ignore logging failures.
+        }
+
+        return NULL;
+      }
     } catch(ConnectException $e){
       $this->error="CON";
       $this->error_message = "Connection error the following message: " . $e->getMessage();
@@ -3776,6 +3860,8 @@ class FusekiAPIConnector {
     }
 
     // 8) Otherwise surface the API error.
+    $this->error = 'API_UNSUCCESSFUL';
+    $this->error_message = is_string($obj->body) ? $obj->body : json_encode($obj->body);
     \Drupal::messenger()->addError(t('API service has failed with following message: @msg', [
       '@msg' => $obj->body,
     ]));
@@ -4044,6 +4130,8 @@ class FusekiAPIConnector {
     // RETRIEVE FILE CONTENT FROM FID
     $file_entity = \Drupal\file\Entity\File::load($fileId);
     if ($file_entity == NULL) {
+      $this->error = 'FILE_ENTITY_NOT_FOUND';
+      $this->error_message = 'Could not retrieve file entity for FID: ' . $fileId;
       \Drupal::messenger()->addError(t('Could not retrieve file with following FID: [' . $fileId . ']'));
       return FALSE;
     }
@@ -4134,6 +4222,21 @@ class FusekiAPIConnector {
         DRUPAL_ROOT . '/sites/default/files/mts/' . $filename,
       ];
 
+      // WKF scenario ingestion source folder fallback.
+      $candidate_paths[] = DRUPAL_ROOT . '/modules/custom/pmsrgui/wkf/' . $filename;
+      $candidate_paths[] = DRUPAL_ROOT . '/modules/custom/pmsr/wkf/' . $filename;
+      foreach (['pmsr', 'pmsrgui'] as $module_key) {
+        try {
+          $module_path = \Drupal::service('extension.list.module')->getPath($module_key);
+          if (is_string($module_path) && $module_path !== '') {
+            $candidate_paths[] = DRUPAL_ROOT . '/' . trim($module_path, '/') . '/wkf/' . $filename;
+          }
+        }
+        catch (\Throwable $e) {
+          // Keep generic fallbacks.
+        }
+      }
+
       if (strcasecmp($filename, 'INS-PMSR.xlsx') === 0) {
         try {
           $pmsr_path = \Drupal::service('extension.list.module')->getPath('pmsr');
@@ -4160,11 +4263,14 @@ class FusekiAPIConnector {
     // ]));
 
     if ($file_content === FALSE || $file_content === '') {
+      $this->error = 'FILE_CONTENT_UNREADABLE';
+      $this->error_message = 'Could not retrieve file content for FID ' . $fileId . ' (URI: ' . $file_uri . ')';
       \Drupal::messenger()->addError(t('Could not retrieve file content from file with following FID: [@fid], URI: [@uri]', [
         '@fid' => $fileId,
         '@uri' => $file_uri,
       ]));
       if (!empty($attempted_paths)) {
+        $this->error_message .= '; tried paths: ' . implode(' | ', array_unique($attempted_paths));
         \Drupal::logger('rep')->error('uploadFile failed for FID @fid. Tried paths: @paths', [
           '@fid' => $fileId,
           '@paths' => implode(' | ', array_unique($attempted_paths)),

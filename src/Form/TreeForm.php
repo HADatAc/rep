@@ -363,7 +363,12 @@ class TreeForm extends FormBase {
     }
     if ($this->getRootNode() == NULL) {
       $this->setRootNode((object) ['uri' => $nodeUri]);
-      \Drupal::messenger()->addWarning($this->t('Could not resolve root node metadata for @uri. Loading tree from this URI directly.', ['@uri' => $nodeUri]));
+
+      // Class entry points may not resolve as full objects via getUri(), but
+      // the tree can still be loaded directly from the URI.
+      if (strpos((string) $nodeUri, 'EntryPoint') === false) {
+        \Drupal::messenger()->addWarning($this->t('Could not resolve root node metadata for @uri. Loading tree from this URI directly.', ['@uri' => $nodeUri]));
+      }
     }
 
     // If output_field_selector is not provided, use the default

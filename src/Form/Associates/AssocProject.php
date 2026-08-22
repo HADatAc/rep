@@ -10,6 +10,29 @@ use Drupal\rep\Utils;
 
 class AssocProject {
 
+  /**
+   * Determine whether a contributor payload represents an organization.
+   */
+  private static function isOrganizationContributor($contributor): bool {
+    if (is_string($contributor)) {
+      $uri = trim($contributor);
+      return $uri !== '' && strpos($uri, '/ont/ORG') !== FALSE;
+    }
+
+    if (!is_object($contributor)) {
+      return FALSE;
+    }
+
+    $uri = trim((string) ($contributor->uri ?? ''));
+    $typeUri = strtolower(trim((string) ($contributor->hascoTypeUri ?? ($contributor->typeUri ?? ''))));
+
+    if ($typeUri !== '' && (strpos($typeUri, 'schema.org/organization') !== FALSE || strpos($typeUri, 'schema.org/collegeoruniversity') !== FALSE || strpos($typeUri, 'schema.org/educationalorganization') !== FALSE)) {
+      return TRUE;
+    }
+
+    return $uri !== '' && strpos($uri, '/ont/ORG') !== FALSE;
+  }
+
   public static function process($element, array &$form, FormStateInterface $form_state) {
     $t = \Drupal::service('string_translation');
 
@@ -110,7 +133,7 @@ class AssocProject {
     // Prefer full contributor objects when present.
     if (!empty($element->contributors) && is_array($element->contributors)) {
       foreach ($element->contributors as $c) {
-        if (is_object($c) && !empty($c->uri)) {
+        if (self::isOrganizationContributor($c) && is_object($c) && !empty($c->uri)) {
           $contributors[(string) $c->uri] = $c;
         }
       }
@@ -120,10 +143,10 @@ class AssocProject {
     // much larger set than "contributors".
     if (empty($contributors) && !empty($element->contributorUris) && is_array($element->contributorUris)) {
       foreach ($element->contributorUris as $u) {
-        if (is_string($u) && $u !== '') {
+        if (is_string($u) && $u !== '' && self::isOrganizationContributor($u)) {
           $contributors[$u] = $contributors[$u] ?? (object) ['uri' => $u];
         }
-        elseif (is_object($u) && !empty($u->uri)) {
+        elseif (is_object($u) && !empty($u->uri) && self::isOrganizationContributor($u)) {
           $contributors[(string) $u->uri] = $contributors[(string) $u->uri] ?? $u;
         }
       }

@@ -6,6 +6,50 @@ use Drupal\rep\Vocabulary\REPGUI;
 
 class ListManagerEmailPage {
 
+  private static function normalizeListElementType($elementtype): string {
+    // Keep WKF listings strictly on WKF endpoints.
+    // Mapping to workflow/process leaks non-WKF Process records (e.g., AnyProcess).
+    return (string) $elementtype;
+  }
+
+  private static function isWkfType($elementtype): bool {
+    return strtolower(trim((string) $elementtype)) === 'wkf';
+  }
+
+  private static function isWkfRecord($item): bool {
+    if (!is_object($item) && !is_array($item)) {
+      return FALSE;
+    }
+
+    $uri = strtolower(trim((string) self::extractField($item, 'uri')));
+    $typeUri = strtolower(trim((string) self::extractField($item, 'typeUri')));
+    $hascoTypeUri = strtolower(trim((string) self::extractField($item, 'hascoTypeUri')));
+
+    if ($typeUri !== '' && strpos($typeUri, 'wkf') !== FALSE) {
+      return TRUE;
+    }
+    if ($hascoTypeUri !== '' && strpos($hascoTypeUri, 'wkf') !== FALSE) {
+      return TRUE;
+    }
+
+    // Conservative URI fallback for legacy payloads missing explicit type fields.
+    return $uri !== '' && strpos($uri, '/wkf') !== FALSE;
+  }
+
+  private static function filterWkfRecords($items): array {
+    if ($items === NULL) {
+      return [];
+    }
+
+    if (!is_array($items)) {
+      $items = [$items];
+    }
+
+    return array_values(array_filter($items, function ($item) {
+      return self::isWkfRecord($item);
+    }));
+  }
+
   private static function isAllOwnersToken($manageremail): bool {
     $value = strtolower(trim((string) $manageremail));
     return $value === '' || $value === '_' || $value === 'all';
@@ -202,18 +246,26 @@ class ListManagerEmailPage {
     }
 
     $api = \Drupal::service('rep.api_connector');
+    $listElementType = self::normalizeListElementType($elementtype);
     $isAllOwners = self::isAllOwnersToken($manageremail);
-    if (!$isAllOwners && !self::shouldBypassManagerEndpoint($elementtype)) {
-      $raw = $api->listByManagerEmail($elementtype, $manageremail, $pagesize, $offset);
+    if (!$isAllOwners && !self::shouldBypassManagerEndpoint($listElementType)) {
+      $raw = $api->listByManagerEmail($listElementType, $manageremail, $pagesize, $offset);
       if ($raw !== NULL) {
         $elements = $api->parseObjectResponse($raw, 'listByManagerEmail');
         if ($elements !== NULL) {
+          if (self::isWkfType($elementtype)) {
+            return self::filterWkfRecords($elements);
+          }
           return $elements;
         }
       }
     }
 
-    $elements = self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail, '_', FALSE, (int) $pagesize, (int) $offset);
+    $elements = self::fallbackListByKeyword($api, $listElementType, $isAllOwners ? '_' : $manageremail, '_', FALSE, (int) $pagesize, (int) $offset);
+
+    if (self::isWkfType($elementtype)) {
+      return self::filterWkfRecords($elements);
+    }
 
     //dpm($elements);
     return $elements;
@@ -250,18 +302,27 @@ class ListManagerEmailPage {
     $offset = ($page <= 1) ? 0 : (($page - 1) * $pagesize);
 
     $api = \Drupal::service('rep.api_connector');
+    $listElementType = self::normalizeListElementType($elementtype);
     $isAllOwners = self::isAllOwnersToken($manageremail);
-    if (!$isAllOwners && !self::shouldBypassManagerEndpoint($elementtype)) {
-      $raw = $api->listByStatusManagerEmail($elementtype, $status, $manageremail, (bool) $withCurrent, $pagesize, $offset);
+    if (!$isAllOwners && !self::shouldBypassManagerEndpoint($listElementType)) {
+      $raw = $api->listByStatusManagerEmail($listElementType, $status, $manageremail, (bool) $withCurrent, $pagesize, $offset);
       if ($raw !== NULL) {
         $elements = $api->parseObjectResponse($raw, 'listByStatusManagerEmail');
-        if ($elements !== NULL && self::responseRespectsStatusFilter($elements, $status, (bool) $withCurrent)) {
-          return $elements;
+        if ($elements !== NULL) {
+          if (self::isWkfType($elementtype)) {
+            $elements = self::filterWkfRecords($elements);
+          }
+          if (self::responseRespectsStatusFilter($elements, $status, (bool) $withCurrent)) {
+            return $elements;
+          }
         }
       }
     }
 
-    $elements = self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail, $status, (bool) $withCurrent, (int) $pagesize, (int) $offset);
+    $elements = self::fallbackListByKeyword($api, $listElementType, $isAllOwners ? '_' : $manageremail, $status, (bool) $withCurrent, (int) $pagesize, (int) $offset);
+    if (self::isWkfType($elementtype)) {
+      return self::filterWkfRecords($elements);
+    }
     return $elements;
   }
 
@@ -270,10 +331,11 @@ class ListManagerEmailPage {
       return -1;
     }
     $api = \Drupal::service('rep.api_connector');
+    $listElementType = self::normalizeListElementType($elementtype);
     $isAllOwners = self::isAllOwnersToken($manageremail);
-    $response = (self::shouldBypassManagerEndpoint($elementtype) || $isAllOwners)
+    $response = (self::shouldBypassManagerEndpoint($listElementType) || $isAllOwners)
       ? NULL
-      : $api->listSizeByManagerEmail($elementtype,$manageremail);
+      : $api->listSizeByManagerEmail($listElementType,$manageremail);
     $listSize = -1;
     if ($response != NULL) {
       $obj = json_decode($response);
@@ -292,7 +354,7 @@ class ListManagerEmailPage {
     }
 
     if ($listSize < 0) {
-      if (self::isProcessBasedStudyType($elementtype)) {
+      if (self::isProcessBasedStudyType($listElementType)) {
         $response = $api->listProcessBasedStudiesTotal();
         if ($response != NULL) {
           $obj = json_decode($response);
@@ -312,7 +374,11 @@ class ListManagerEmailPage {
       }
 
       if ($listSize < 0) {
-        $listSize = count(self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail));
+        $items = self::fallbackListByKeyword($api, $listElementType, $isAllOwners ? '_' : $manageremail);
+        if (self::isWkfType($elementtype)) {
+          $items = self::filterWkfRecords($items);
+        }
+        $listSize = count($items);
       }
     }
 
@@ -357,7 +423,11 @@ class ListManagerEmailPage {
     }
 
     if ($listSize < 0) {
-      $listSize = count(self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail, $status, (bool) $withCurrent));
+      $items = self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail, $status, (bool) $withCurrent);
+      if (self::isWkfType($elementtype)) {
+        $items = self::filterWkfRecords($items);
+      }
+      $listSize = count($items);
     }
 
     return $listSize;
