@@ -98,10 +98,30 @@ rep.select_element:
   options:
     no_cache: 'TRUE'
 
+rep.select_mt_wkf_element:
+  path: 'rep/select/mt/wkf/{mode}/{page}/{pagesize}/{studyuri}'
+  defaults:
+    _form: '\Drupal\rep\Form\REPSelectWKFForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'
+  options:
+    no_cache: 'TRUE'
+
 rep.select_mt_element:
   path: 'rep/select/mt/{elementtype}/{mode}/{page}/{pagesize}/{studyuri}'
   defaults:
     _form: '\Drupal\rep\Form\REPSelectMTForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'
+  options:
+    no_cache: 'TRUE'
+
+rep.select_wkf_element:
+  path: 'rep/select/wkf/{mode}/{page}/{pagesize}/{studyuri}'
+  defaults:
+    _form: '\Drupal\rep\Form\REPSelectWKFForm'
   requirements:
     _permission: 'access content'
     _custom_access_check: 'TRUE'
@@ -170,6 +190,16 @@ rep.tree_form:
   requirements:
     _permission: 'access content'
 
+rep.tree_create_processstem_subnode:
+  path: '/rep/tree/processstem/create-subnode'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::createProcessStemSubNode'
+    _title: 'Create Process Stem Sub-Node'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
 rep.webdocdownload:
   path: '/rep/webdocdownload/{instrumenturi}'
   defaults:
@@ -231,6 +261,118 @@ rep.wkf_phase1_download:
   defaults:
     _controller: '\Drupal\rep\Controller\WkfDraftDownloadController::downloadPhase1Wkf'
     _title: 'Download Phase I WKF'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_packet_build:
+  path: 'rep/wkf/phase/packet/{phase}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::buildPacket'
+    _title: 'Build WKF Phase Packet'
+  requirements:
+    _permission: 'access content'
+    phase: '\d+'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_packet_history:
+  path: 'rep/wkf/phase/packet/history'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::listHistory'
+    _title: 'List WKF Phase Packet History'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_packet_item:
+  path: 'rep/wkf/phase/packet/history/item/{packetId}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::getHistoryItem'
+    _title: 'Get WKF Phase Packet Item'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_packet_item_delete:
+  path: 'rep/wkf/phase/packet/history/item/{packetId}/delete'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::deleteHistoryItem'
+    _title: 'Delete WKF Phase Packet Item'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_packet_history_clear:
+  path: 'rep/wkf/phase/packet/history/clear'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::clearHistory'
+    _title: 'Clear WKF Phase Packet History'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_response_apply:
+  path: 'rep/wkf/phase/response/{phase}/apply'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::applyResponse'
+    _title: 'Apply WKF Phase Response'
+  requirements:
+    _permission: 'access content'
+    phase: '\d+'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_response_history:
+  path: 'rep/wkf/phase/response/history'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::listResponseHistory'
+    _title: 'List WKF Phase Response History'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_response_item:
+  path: 'rep/wkf/phase/response/history/item/{responseId}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::getResponseHistoryItem'
+    _title: 'Get WKF Phase Response Item'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_response_item_delete:
+  path: 'rep/wkf/phase/response/history/item/{responseId}/delete'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::deleteResponseHistoryItem'
+    _title: 'Delete WKF Phase Response Item'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_phase_response_history_clear:
+  path: 'rep/wkf/phase/response/history/clear'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::clearResponseHistory'
+    _title: 'Clear WKF Phase Response History'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_sheet_update:
+  path: 'rep/wkf/sheet/update'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::updateSheet'
+    _title: 'Apply WKF Sheet Update'
   requirements:
     _permission: 'access content'
   options:

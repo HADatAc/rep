@@ -19,16 +19,53 @@ class Tables {
     $this->connection = $connection ?: \Drupal::database();
   }
 
+  /**
+   * Provides a stable namespace set when API namespace listing is unavailable.
+   */
+  private function getFallbackNamespaces(): array {
+    return [
+      'bfo' => 'http://purl.obolibrary.org/obo/BFO_',
+      'dcterms' => 'http://purl.org/dc/terms/',
+      'default' => 'http://hadatac.org/kb/default/',
+      'foaf' => 'http://xmlns.com/foaf/0.1/',
+      'hadatac' => 'https://hadatac.org/ont/hadatac#',
+      'hasco' => 'http://hadatac.org/ont/hasco/',
+      'ncit' => 'http://purl.obolibrary.org/obo/NCIT_',
+      'owl' => 'http://www.w3.org/2002/07/owl#',
+      'pmsr' => 'https://pmsr.net/ont/',
+      'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+      'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
+      'sio' => 'http://semanticscience.org/resource/',
+      'uberon' => 'http://purl.obolibrary.org/obo/UBERON_',
+      'vstoi' => 'http://hadatac.org/ont/vstoi#',
+      'xsd' => 'http://www.w3.org/2001/XMLSchema#',
+    ];
+  }
+
   public function getNamespaces() {
     $APIservice = \Drupal::service('rep.api_connector');
     $namespaces = $APIservice->parseObjectResponse($APIservice->namespaceList(), 'namespaceList');
-    if ($namespaces == NULL) {
-      return NULL;
+    $results = [];
+    if (is_array($namespaces)) {
+      foreach ($namespaces as $namespace) {
+        if (!is_object($namespace)) {
+          continue;
+        }
+        $label = trim((string) ($namespace->label ?? ''));
+        $uri = trim((string) ($namespace->uri ?? ''));
+        if ($label === '' || $uri === '') {
+          continue;
+        }
+        $results[$label] = $uri;
+      }
     }
-    $results = array();
-    foreach ($namespaces as $namespace) {
-      $results[$namespace->label] = $namespace->uri;
+
+    if (empty($results)) {
+      \Drupal::logger('rep')->warning('Namespace list API returned empty or invalid payload; using fallback namespace map.');
+      $results = $this->getFallbackNamespaces();
     }
+
+    ksort($results, SORT_NATURAL | SORT_FLAG_CASE);
     return $results;
   }
 

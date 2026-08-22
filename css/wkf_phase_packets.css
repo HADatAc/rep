@@ -1,0 +1,144 @@
+#element-cards-wrapper .wkf-card-phase-controls {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 0;
+}
+
+#element-cards-wrapper .wkf-card-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  row-gap: 0.75rem;
+  padding: 0.75rem 0.9rem 1rem;
+  min-height: 12rem;
+  align-items: stretch !important;
+}
+
+#element-cards-wrapper .wkf-card-footer .mb-0.ms-auto {
+  margin-left: 0 !important;
+  width: 100%;
+}
+
+#element-cards-wrapper .wkf-card-footer .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+  margin: 0 !important;
+}
+
+#element-cards-wrapper .wkf-card-footer .wkf-card-phase-controls {
+  width: 100%;
+  order: 1;
+}
+
+#element-cards-wrapper .wkf-card-footer .wkf-card-sheet-controls {
+  width: 100%;
+  order: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+#element-cards-wrapper .wkf-card-footer .actions,
+#element-cards-wrapper .wkf-card-footer .form-actions {
+  order: 3;
+  width: 100%;
+  margin-left: 0 !important;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+#element-cards-wrapper .wkf-card-footer .actions .btn,
+#element-cards-wrapper .wkf-card-footer .form-actions .btn,
+#element-cards-wrapper .wkf-card-footer .actions input[type="submit"],
+#element-cards-wrapper .wkf-card-footer .form-actions input[type="submit"] {
+  width: 100%;
+  margin: 0 !important;
+}
+
+#element-cards-wrapper .wkf-card-footer .edit-element-button {
+  order: 1;
+}
+
+#element-cards-wrapper .wkf-card-footer .uningest_mt-element-button {
+  order: 2;
+}
+
+#element-cards-wrapper .wkf-card-footer .ingest_mt-button {
+  order: 3;
+}
+
+#element-cards-wrapper .wkf-card-footer .validate-wkf-button {
+  order: 4;
+}
+
+#element-cards-wrapper .wkf-card-footer .delete-element-button {
+  order: 5;
+}
+
+#element-cards-wrapper .wkf-card-footer .form-actions .btn {
+  flex: 0 0 auto;
+}
+
+#element-cards-wrapper .wkf-card-phase-controls .d-flex {
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+#element-cards-wrapper .wkf-card-phase-controls .wkf-card-phase-selector {
+  min-width: 8rem;
+  flex: 1 1 9rem;
+  max-width: 12rem;
+}
+
+#element-cards-wrapper .wkf-card-phase-controls .wkf-card-build-phase-packet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  min-height: 2rem;
+  flex: 0 0 auto;
+}
+
+#element-cards-wrapper .wkf-card-sheet-controls .wkf-card-scenario-update,
+#element-cards-wrapper .wkf-card-sheet-controls .wkf-card-task-model-update {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  min-height: 2rem;
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  #element-cards-wrapper .wkf-card-phase-controls .wkf-card-phase-selector,
+  #element-cards-wrapper .wkf-card-phase-controls .wkf-card-build-phase-packet,
+  #element-cards-wrapper .wkf-card-sheet-controls .wkf-card-scenario-update,
+  #element-cards-wrapper .wkf-card-sheet-controls .wkf-card-task-model-update {
+    width: 100%;
+  }
+
+  #element-cards-wrapper .wkf-card-footer .form-actions {
+    justify-content: stretch;
+  }
+
+  #element-cards-wrapper .wkf-card-footer .form-actions .btn {
+    width: 100%;
+  }
+
+  #element-cards-wrapper .wkf-card-footer .actions,
+  #element-cards-wrapper .wkf-card-footer .form-actions,
+  #element-cards-wrapper .wkf-card-footer .wkf-card-sheet-controls {
+    grid-template-columns: 1fr;
+  }
+}

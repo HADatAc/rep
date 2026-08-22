@@ -63,6 +63,7 @@ wkf_instructions_modal:
   js:
     js/wkf_instructions_modal.js: {}
   dependencies:
+    - rep/pdfjs
     - core/jquery
     - core/drupal
     - core/once
@@ -71,6 +72,28 @@ wkf_ingestion_status_poll:
   version: 1.x
   js:
     js/wkf_ingestion_status_poll.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+
+wkf_validation_panel:
+  version: 1.x
+  css:
+    theme:
+      css/wkf_validation_panel.css: {}
+  js:
+    js/wkf_validation_panel.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+
+wkf_phase_packets:
+  version: 1.x
+  css:
+    theme:
+      css/wkf_phase_packets.css: {}
+  js:
+    js/wkf_phase_packets.js: {}
   dependencies:
     - core/drupal
     - core/once

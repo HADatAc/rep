@@ -14,6 +14,22 @@ use Drupal\rep\Vocabulary\VSTOI;
 class REPSelectForm extends FormBase
 {
 
+  private function normalizeStatusFilter($status_filter): string {
+    $value = trim((string) $status_filter);
+    if ($value === '' || $value === '_' || strtolower($value) === 'none') {
+      return '_';
+    }
+
+    $allowed = [
+      (string) VSTOI::DRAFT,
+      (string) VSTOI::UNDER_REVIEW,
+      (string) VSTOI::CURRENT,
+      (string) VSTOI::DEPRECATED,
+    ];
+
+    return in_array($value, $allowed, TRUE) ? $value : '_';
+  }
+
   /**
    * {@inheritdoc}
    */
@@ -78,6 +94,8 @@ class REPSelectForm extends FormBase
     else {
       $session->set('rep_select_status_filter', $status_filter);
     }
+    $status_filter = $this->normalizeStatusFilter($status_filter);
+    $session->set('rep_select_status_filter', $status_filter);
 
     $is_admin = ManageOwnerFilter::isAdmin();
     $manager_filter_key = 'rep_select_manager_filter.' . (string) $this->element_type;

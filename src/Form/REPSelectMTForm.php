@@ -6,6 +6,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
+use Drupal\Component\Utility\Html;
 use Drupal\file\Entity\File;
 use Drupal\rep\ListManagerEmailPage;
 use Drupal\rep\ManageOwnerFilter;
@@ -14,6 +15,22 @@ use Drupal\rep\Entity\MetadataTemplate;
 use Drupal\rep\Vocabulary\VSTOI;
 
 class REPSelectMTForm extends FormBase {
+
+  private function normalizeStatusFilter($status_filter): string {
+    $value = trim((string) $status_filter);
+    if ($value === '' || $value === '_' || strtolower($value) === 'none') {
+      return '_';
+    }
+
+    $allowed = [
+      (string) VSTOI::DRAFT,
+      (string) VSTOI::UNDER_REVIEW,
+      (string) VSTOI::CURRENT,
+      (string) VSTOI::DEPRECATED,
+    ];
+
+    return in_array($value, $allowed, TRUE) ? $value : '_';
+  }
 
   /**
    * {@inheritdoc}
@@ -92,6 +109,10 @@ class REPSelectMTForm extends FormBase {
 
     // GET ELEMENT TYPE
     $this->element_type = $elementtype;
+    if ($this->element_type === 'wkf') {
+      $this->suppressWkfSelectPageMessages();
+      $this->suppressLegacyWkfValidationMessages();
+    }
     if ($this->element_type != NULL) {
       $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
     }
@@ -115,6 +136,8 @@ class REPSelectMTForm extends FormBase {
     else {
       $session->set($status_filter_key, $status_filter);
     }
+    $status_filter = $this->normalizeStatusFilter($status_filter);
+    $session->set($status_filter_key, $status_filter);
 
     $is_admin = ManageOwnerFilter::isAdmin();
     $manager_filter_key = 'rep_select_mt_manager_filter.' . (string) $elementtype;
@@ -261,7 +284,7 @@ class REPSelectMTForm extends FormBase {
         break;
       default:
         \Drupal::messenger()->addError(t("[ERROR] Element [" . $this->element_type . "] is of unknown type."));
-        $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+        $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
         return;
     }
 
@@ -281,308 +304,9 @@ class REPSelectMTForm extends FormBase {
       ]),
     ];
 
-    // WKF GENERATION SECTION (only for WKF element type)
+    // WKF generation/validation UI is specialized in REPSelectWKFForm.
     if ($this->element_type === 'wkf') {
-      $form['#attached']['library'][] = 'rep/rep_modal';
-      $form['#attached']['library'][] = 'rep/wkf_instructions_modal';
-      $form['#attached']['library'][] = 'rep/wkf_ingestion_status_poll';
-      
-      $form['wkf_generation_section'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['wkf-generation-section', 'mb-4', 'p-3', 'border', 'rounded', 'bg-light']],
-      ];
-
-      $form['wkf_generation_section']['section_title'] = [
-        '#type' => 'item',
-        '#markup' => '<h5 class="mb-3">WKF Generation</h5>',
-      ];
-
-      // Language selector row (used by phase instruction buttons).
-      $form['wkf_generation_section']['instructions_row'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['d-flex', 'align-items-center', 'mb-2', 'gap-2']],
-      ];
-
-      $form['wkf_generation_section']['instructions_row']['language_selector'] = [
-        '#type' => 'select',
-        '#options' => [
-          'pt' => $this->t('Português'),
-          'en' => $this->t('English'),
-        ],
-        '#default_value' => 'pt',
-        '#attributes' => [
-          'class' => ['form-select', 'w-auto'],
-          'id' => 'wkf-language-selector',
-        ],
-      ];
-
-      $form['wkf_generation_section']['phase_context'] = [
-        '#type' => 'item',
-        '#markup' => '<p class="text-muted mb-3">Phase I creates the core WKF. Phases II to IV refine the same core WKF using the original document until the WKF is ready for PMSR ingestion.</p>',
-      ];
-
-      $form['wkf_generation_section']['phase_grid'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['row', 'g-3', 'mt-1']],
-      ];
-
-      $clinicalHierarchyOptionsHtml = $this->buildScenarioClinicalProcessOptionsHtml();
-      $phase1DownloadUrl = Url::fromRoute('rep.wkf_phase1_download')->toString();
-      $knowledgeGraphHierarchyUrl = Url::fromRoute('rep.tree_form', [
-        'mode' => 'modal',
-        'elementtype' => 'workflowstem',
-        'silent' => 'false',
-        'prefix' => 'false',
-      ])->toString();
-
-      // Phase I.
-      $form['wkf_generation_section']['phase_grid']['phase1'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['col-12', 'col-md-6', 'col-xl-3']],
-      ];
-      $form['wkf_generation_section']['phase_grid']['phase1']['card'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('
-          <div class="card h-100 shadow-sm">
-            <div class="card-body d-flex flex-column gap-2">
-              <h6 class="card-title">Phase I - Core WKF Generatiion</h6>
-              <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase1-instructions">Instruction</button>
-              <div class="mb-2">
-                <label for="phase1WkfName" class="form-label mb-1">Core WKF Name</label>
-                <input type="text" id="phase1WkfName" class="form-control form-control-sm" placeholder="e.g. WKF-INTUBACAO-CORE" />
-              </div>
-              <div class="mb-2">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <label for="phase1ClinicalProcess" class="form-label mb-0">Clinical Process</label>
-                  <a href="' . $knowledgeGraphHierarchyUrl . '" class="small open-tree-modal" data-url="' . $knowledgeGraphHierarchyUrl . '" data-elementtype="[&quot;workflowstem&quot;]" data-dialog-type="modal" data-field-id="phase1ClinicalProcess">Knowledge Graph Hierarchy</a>
-                </div>
-                <select id="phase1ClinicalProcess" class="form-select form-select-sm">
-                  <option value="">Select clinical process...</option>
-                  ' . $clinicalHierarchyOptionsHtml . '
-                </select>
-              </div>
-              <button type="button" class="btn btn-primary btn-sm mt-auto" id="generatePhase1DraftWkf" data-download-url="' . $phase1DownloadUrl . '">Generate Draft WKF</button>
-            </div>
-          </div>
-        '),
-      ];
-
-      // Phase II.
-      $form['wkf_generation_section']['phase_grid']['phase2'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['col-12', 'col-md-6', 'col-xl-3']],
-      ];
-      $form['wkf_generation_section']['phase_grid']['phase2']['card'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('
-          <div class="card h-100 shadow-sm">
-            <div class="card-body d-flex flex-column gap-2">
-              <h6 class="card-title">Phase II - Task Model Generation</h6>
-              <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase2-instructions">Instruction</button>
-              <p class="small text-muted mb-2">Generate task model details using the original document + Phase I core WKF.</p>
-              <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase2PromptModal">Open Prompt</button>
-            </div>
-          </div>
-        '),
-      ];
-
-      // Phase III.
-      $form['wkf_generation_section']['phase_grid']['phase3'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['col-12', 'col-md-6', 'col-xl-3']],
-      ];
-      $form['wkf_generation_section']['phase_grid']['phase3']['card'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('
-          <div class="card h-100 shadow-sm">
-            <div class="card-body d-flex flex-column gap-2">
-              <h6 class="card-title">Phase III - Properties Extraction</h6>
-              <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase3-instructions">Instruction</button>
-              <p class="small text-muted mb-2">Extract and encode detailed properties into the same core WKF.</p>
-              <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase3PromptModal">Open Prompt</button>
-            </div>
-          </div>
-        '),
-      ];
-
-      // Phase IV.
-      $form['wkf_generation_section']['phase_grid']['phase4'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['col-12', 'col-md-6', 'col-xl-3']],
-      ];
-      $form['wkf_generation_section']['phase_grid']['phase4']['card'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('
-          <div class="card h-100 shadow-sm">
-            <div class="card-body d-flex flex-column gap-2">
-              <h6 class="card-title">Phase IV - Simulations Assignments</h6>
-              <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase4-instructions">Instruction</button>
-              <p class="small text-muted mb-2">Assign simulation assets and finalize WKF ingestion readiness.</p>
-              <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase4PromptModal">Open Prompt</button>
-            </div>
-          </div>
-        '),
-      ];
-
-      $form['wkf_generation_section']['footer_actions'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['d-flex', 'align-items-center', 'justify-content-end', 'mt-3']],
-      ];
-
-      $form['wkf_generation_section']['footer_actions']['download_ontologies'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Download Ontologies'),
-        '#name' => 'wkf_download_ontologies',
-        '#attributes' => ['class' => ['btn', 'btn-success']],
-        '#submit' => ['::wkfDownloadOntologiesSubmit'],
-        '#limit_validation_errors' => [],
-      ];
-
-      // Instructions sources.
-      $pmsr_module_path = \Drupal::service('extension.list.module')->getPath('pmsr');
-      $instructions_en_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/instructions/instructions_EN.md';
-      $instructions_pt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/instructions/instructions_PT.md';
-
-      $instructions_en_md = file_exists($instructions_en_path) ? file_get_contents($instructions_en_path) : '';
-      $instructions_pt_md = file_exists($instructions_pt_path) ? file_get_contents($instructions_pt_path) : '';
-
-      $instructions_en = $this->convertMarkdownToHtml($instructions_en_md);
-      $instructions_pt = $this->convertMarkdownToHtml($instructions_pt_md);
-
-      // Hidden phase instruction payloads (opened in dedicated window by JS).
-      $form['wkf_generation_section']['phase_instruction_payloads'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('
-          <div id="wkf-phase1-instructions" class="d-none">
-            <div class="instructions-content-phase" data-lang="en"><h5>Phase I - Core WKF Generatiion</h5><p>Fill the small form and generate a real ingestion-ready Draft WKF (version 1) directly from the panel.</p><ul><li>Provide a Core WKF Name.</li><li>Select a Clinical Process from the hierarchy used in Scenario Search.</li><li>Download the generated WKF file and reuse it in Phases II to IV.</li></ul></div>
-            <div class="instructions-content-phase" data-lang="pt"><h5>Phase I - Core WKF Generatiion</h5><p>Preencha o formulario e gere o prompt. Anexe o documento original no ChatGPT e gere o WKF base que sera reutilizado nas fases seguintes.</p><ul><li>Foque em entidades e relacoes estruturais.</li><li>Evite detalhes que pertencem as fases posteriores.</li><li>Baixe o WKF core para reutilizacao.</li></ul></div>
-          </div>
-          <div id="wkf-phase2-instructions" class="d-none">
-            <div class="instructions-content-phase" data-lang="en"><h5>Phase II - Task Model Generation</h5><p>Use the original document and the Phase I core WKF together. Ask ChatGPT to derive and encode task-model semantics into the same WKF.</p></div>
-            <div class="instructions-content-phase" data-lang="pt"><h5>Phase II - Task Model Generation</h5><p>Use o documento original e o WKF core da Fase I. Solicite ao ChatGPT a geracao do modelo de tarefas no mesmo WKF.</p></div>
-          </div>
-          <div id="wkf-phase3-instructions" class="d-none">
-            <div class="instructions-content-phase" data-lang="en"><h5>Phase III - Properties Extraction</h5><p>Inspect detailed attributes from the source document and encode them into the existing WKF without breaking previously generated structure.</p></div>
-            <div class="instructions-content-phase" data-lang="pt"><h5>Phase III - Properties Extraction</h5><p>Extraia propriedades detalhadas do documento e codifique no WKF existente sem quebrar a estrutura das fases anteriores.</p></div>
-          </div>
-          <div id="wkf-phase4-instructions" class="d-none">
-            <div class="instructions-content-phase" data-lang="en"><h5>Phase IV - Simulations Assignments</h5><p>Complete simulation assignments and final readiness checks so the WKF can be ingested into PMSR.</p></div>
-            <div class="instructions-content-phase" data-lang="pt"><h5>Phase IV - Simulations Assignments</h5><p>Finalize atribuicoes de simulacao e verificacoes finais para ingestao do WKF no PMSR.</p></div>
-          </div>
-          <div id="wkf-legacy-instructions" class="d-none">
-            <div id="instructions-en" class="instructions-content">' . $instructions_en . '</div>
-            <div id="instructions-pt" class="instructions-content">' . $instructions_pt . '</div>
-          </div>
-        '),
-      ];
-
-      // Prompt files for Phases II-IV.
-      $phase2_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE2-TASK-MODEL.md';
-      $phase3_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE3-PROPERTIES.md';
-      $phase4_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE4-SIMULATIONS.md';
-
-      $phase2_prompt = file_exists($phase2_prompt_path) ? file_get_contents($phase2_prompt_path) : "PHASE II - TASK MODEL GENERATION\n\nUse the original document and the Phase I core WKF.\nEncode task model details into the same WKF and return the updated file.";
-      $phase3_prompt = file_exists($phase3_prompt_path) ? file_get_contents($phase3_prompt_path) : "PHASE III - PROPERTIES EXTRACTION\n\nUse the original document and the current WKF from previous phases.\nExtract missing properties and encode them in the same WKF. Return the updated file.";
-      $phase4_prompt = file_exists($phase4_prompt_path) ? file_get_contents($phase4_prompt_path) : "PHASE IV - SIMULATIONS ASSIGNMENTS\n\nUse the original document and the current WKF.\nAssign simulation mappings and finalize ingestion-readiness fields. Return the final WKF file.";
-
-      // Phase I prompt modal (text generated from form by JS).
-      $form['wkf_generation_section']['phase1_prompt_modal'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('
-          <div class="modal fade" id="wkfPhase1CorePromptModal" tabindex="-1" aria-labelledby="wkfPhase1CorePromptModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="wkfPhase1CorePromptModalLabel">Phase I - Draft WKF Prompt</h5>
-                  <div class="ms-auto d-flex gap-2">
-                    <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase1CorePromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                  </div>
-                </div>
-                <div class="modal-body">
-                  <div class="alert alert-info"><i class="fas fa-info-circle"></i> Phase I now generates and downloads a real WKF file directly from the card inputs.</div>
-                  <pre id="phase1CorePromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">Use "Generate Draft WKF" in Phase I to download the generated WKF file.</pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        '),
-      ];
-
-      $form['wkf_generation_section']['phase2_prompt_modal'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('
-          <div class="modal fade" id="wkfPhase2PromptModal" tabindex="-1" aria-labelledby="wkfPhase2PromptModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="wkfPhase2PromptModalLabel">Phase II - Task Model Prompt</h5>
-                  <div class="ms-auto d-flex gap-2">
-                    <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase2PromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                  </div>
-                </div>
-                <div class="modal-body">
-                  <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> Use this with the original document and the Phase I core WKF.
-                  </div>
-                  <pre id="phase2PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase2_prompt . '</pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        '),
-      ];
-
-      $form['wkf_generation_section']['phase3_prompt_modal'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('
-          <div class="modal fade" id="wkfPhase3PromptModal" tabindex="-1" aria-labelledby="wkfPhase3PromptModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="wkfPhase3PromptModalLabel">Phase III - Properties Extraction Prompt</h5>
-                  <div class="ms-auto d-flex gap-2">
-                    <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase3PromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                  </div>
-                </div>
-                <div class="modal-body">
-                  <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> Use this with the original document and the WKF generated in previous phases.
-                  </div>
-                  <pre id="phase3PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase3_prompt . '</pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        '),
-      ];
-
-      $form['wkf_generation_section']['phase4_prompt_modal'] = [
-        '#type' => 'markup',
-        '#markup' => Markup::create('
-          <div class="modal fade" id="wkfPhase4PromptModal" tabindex="-1" aria-labelledby="wkfPhase4PromptModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="wkfPhase4PromptModalLabel">Phase IV - Simulations Assignments Prompt</h5>
-                  <div class="ms-auto d-flex gap-2">
-                    <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase4PromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                  </div>
-                </div>
-                <div class="modal-body">
-                  <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> Use this final phase prompt with the original document and current WKF to complete PMSR ingestion readiness.
-                  </div>
-                  <pre id="phase4PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase4_prompt . '</pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        '),
-      ];
+      $this->buildWkfSpecializedSection($form, $form_state);
     }
 
     $show_owner_indicator = $is_admin && $manager_filter !== '' && strcasecmp($effective_manager_email, $manager_filter) === 0;
@@ -643,14 +367,16 @@ class REPSelectMTForm extends FormBase {
       ],
     ];
 
-    $form['actions_wrapper']['buttons_container']['add_element'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Add New ' . $this->single_class_name),
-      '#name' => 'add_element',
-      '#attributes' => [
-        'class' => ['btn', 'btn-primary', 'add-element-button'],
-      ],
-    ];
+    if ($this->single_class_name !== 'WKF') {
+      $form['actions_wrapper']['buttons_container']['add_element'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('Add New ' . $this->single_class_name),
+        '#name' => 'add_element',
+        '#attributes' => [
+          'class' => ['btn', 'btn-primary', 'add-element-button'],
+        ],
+      ];
+    }
 
     if ($view_type == 'table') {
       $form['actions_wrapper']['buttons_container']['edit_selected_element'] = [
@@ -665,6 +391,17 @@ class REPSelectMTForm extends FormBase {
           'class' => ['btn', 'btn-primary', 'edit-element-button'],
         ],
       ];
+
+      if ($this->single_class_name === 'WKF') {
+        $form['actions_wrapper']['buttons_container']['validate_selected_wkf'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Validate Selected WKF'),
+          '#name' => 'validate_selected_wkf',
+          '#attributes' => [
+            'class' => ['btn', 'btn-primary', 'validate-wkf-button'],
+          ],
+        ];
+      }
 
       if ($this->single_class_name !== 'WKF') {
         $form['actions_wrapper']['buttons_container']['delete_selected_element'] = [
@@ -915,6 +652,16 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
+   * Hook for WKF-only UI blocks.
+   *
+   * Base MT form keeps this empty; REPSelectWKFForm owns the specialized
+   * 5-phase generation and validation panel UI.
+   */
+  protected function buildWkfSpecializedSection(array &$form, FormStateInterface $form_state): void {
+    // Intentionally empty in the generic MT form.
+  }
+
+  /**
    * AJAX callback to reload list when filters change.
    */
   public function ajaxReloadTable(array &$form, FormStateInterface $form_state) {
@@ -928,6 +675,25 @@ class REPSelectMTForm extends FormBase {
   public function ajaxReloadCards(array &$form, FormStateInterface $form_state) {
     $form_state->setRebuild(TRUE);
     return $form['cards_lazy_wrapper'];
+  }
+
+  /**
+   * AJAX callback to refresh WKF validation panel wrapper.
+   */
+  public function ajaxClearWkfValidationPanel(array &$form, FormStateInterface $form_state) {
+    $form_state->setRebuild(TRUE);
+    return $form['wkf_validation_panel_wrapper'];
+  }
+
+  /**
+   * Submit handler for clearing WKF validation panel state.
+   */
+  public function clearWkfValidationPanelSubmit(array &$form, FormStateInterface $form_state) {
+    $this->setSkipLegacyWkfValidationRecovery(TRUE);
+    $this->clearWkfValidationPanelData();
+    // Clear all pending messages so nothing repopulates the panel after clear.
+    \Drupal::messenger()->deleteAll();
+    $form_state->setRebuild(TRUE);
   }
 
   /**
@@ -963,6 +729,12 @@ class REPSelectMTForm extends FormBase {
 
     if ($button_name === 'clear_filters') {
       $this->clearSavedFilters($form_state);
+      return;
+    }
+
+    if ($button_name === 'clear_wkf_validation_panel') {
+      $this->clearWkfValidationPanelData();
+      $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
 
@@ -1019,6 +791,29 @@ class REPSelectMTForm extends FormBase {
       } else {
         $this->performIngest($rows, $form_state, VSTOI::CURRENT);
       }
+    } elseif ($button_name === 'validate_selected_wkf') {
+      if (sizeof($rows) < 1) {
+        $this->setWkfValidationPanelData([
+          'valid' => FALSE,
+          'summary' => 'Please select exactly one WKF to be validated.',
+          'wkfUri' => '',
+          'rules' => [],
+          'validatedAt' => date('Y-m-d H:i:s'),
+        ]);
+        $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+      } else if ((sizeof($rows) > 1)) {
+        $this->setWkfValidationPanelData([
+          'valid' => FALSE,
+          'summary' => 'Not more than one WKF can be validated simultaneously.',
+          'wkfUri' => '',
+          'rules' => [],
+          'validatedAt' => date('Y-m-d H:i:s'),
+        ]);
+        $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+      } else {
+        $first = array_shift($rows);
+        $this->performValidateWKF($first, $form_state);
+      }
     } elseif ($button_name === 'uningest_mt') {
       if (sizeof($rows) < 1) {
         \Drupal::messenger()->addWarning(t("Please select exactly one " . $this->single_class_name . " to be uningested."));
@@ -1073,6 +868,7 @@ class REPSelectMTForm extends FormBase {
   {
 
     // IMAGE PLACEHOLDER
+    $placeholder_image = '';
     switch ($this->element_type) {
       case 'ins':
         $placeholder_image = base_path() . \Drupal::service('extension.list.module')->getPath('rep') . '/images/placeholders/ins_placeholder.png';
@@ -1114,6 +910,7 @@ class REPSelectMTForm extends FormBase {
 
     foreach ($output as $key => $item) {
       $sanitized_key = md5($key);
+      $wkfPhaseControlsMarkup = '';
 
       $form['element_cards_wrapper'][$sanitized_key] = [
         '#type' => 'container',
@@ -1215,28 +1012,138 @@ class REPSelectMTForm extends FormBase {
         ];
       }
 
+      $wkfPhaseControlConfig = NULL;
+      if ($this->element_type === 'wkf') {
+        $sourceDocument = isset($item['element_filename']) ? (string) $item['element_filename'] : '';
+        if (trim(strip_tags($sourceDocument)) === '') {
+          $sourceDocument = 'N/A';
+        }
+
+        $wkfUri = is_string($key) ? trim($key) : '';
+        $currentPhase = $this->getWkfCurrentPublicPhaseFromHistory($wkfUri);
+        $currentPhaseRoman = $this->wkfPhaseToRoman($currentPhase);
+        $phaseOptions = [];
+        for ($phase = 2; $phase <= $currentPhase; $phase++) {
+          $phaseOptions[(string) $phase] = 'Phase ' . $this->wkfPhaseToRoman($phase);
+        }
+        if (empty($phaseOptions)) {
+          $phaseOptions['2'] = 'Phase II';
+        }
+
+        $wkfPhaseControlConfig = [
+          'uri' => $wkfUri,
+          'current_phase' => (string) $currentPhase,
+          'current_phase_label' => $currentPhaseRoman,
+          'options' => $phaseOptions,
+        ];
+
+        $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content']['source_document'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'class' => ['field-container'],
+          ],
+          'label' => [
+            '#type' => 'html_tag',
+            '#tag' => 'strong',
+            '#value' => $this->t('Source document') . ': ',
+          ],
+          'value' => [
+            '#markup' => $sourceDocument,
+          ],
+        ];
+
+      }
+
       // Adicionando o rodapé na mesma coluna de conteúdo
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer'] = [
         '#type' => 'container',
         '#attributes' => [
           'style' => 'margin-bottom:0!important;',
-          'class' => ['d-flex', 'card-footer', 'justify-content-end'],
+          'class' => ['d-flex', 'card-footer', 'justify-content-between', 'align-items-center', 'wkf-card-footer'],
         ],
       ];
+
+      if ($this->element_type === 'wkf' && $wkfPhaseControlConfig !== NULL) {
+        $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['wkf_phase_controls'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'class' => ['wkf-card-phase-controls'],
+          ],
+        ];
+
+        $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['wkf_phase_controls']['row'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'class' => ['d-flex', 'gap-2', 'align-items-center'],
+          ],
+        ];
+
+        $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['wkf_phase_controls']['row']['phase_selector'] = [
+          '#type' => 'select',
+          '#title' => $this->t('Phase selector'),
+          '#title_display' => 'invisible',
+          '#options' => $wkfPhaseControlConfig['options'],
+          '#default_value' => $wkfPhaseControlConfig['current_phase'],
+          '#attributes' => [
+            'class' => ['form-select', 'form-select-sm', 'wkf-card-phase-selector'],
+            'data-wkf-uri' => $wkfPhaseControlConfig['uri'],
+          ],
+        ];
+
+        $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['wkf_phase_controls']['row']['build_button'] = [
+          '#type' => 'html_tag',
+          '#tag' => 'button',
+          '#attributes' => [
+            'type' => 'button',
+            'class' => ['btn', 'btn-outline-secondary', 'btn-sm', 'wkf-card-build-phase-packet'],
+            'data-wkf-uri' => $wkfPhaseControlConfig['uri'],
+          ],
+          '#value' => $this->t('Build Packet'),
+        ];
+
+        $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['wkf_sheet_controls'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'class' => ['wkf-card-sheet-controls'],
+          ],
+        ];
+
+        $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['wkf_sheet_controls']['task_model_update_button'] = [
+          '#type' => 'html_tag',
+          '#tag' => 'button',
+          '#attributes' => [
+            'type' => 'button',
+            'class' => ['btn', 'btn-outline-warning', 'btn-sm', 'wkf-card-task-model-update'],
+            'data-wkf-uri' => $wkfPhaseControlConfig['uri'],
+          ],
+          '#value' => $this->t('Task Model Update'),
+        ];
+
+        $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['wkf_sheet_controls']['scenario_update_button'] = [
+          '#type' => 'html_tag',
+          '#tag' => 'button',
+          '#attributes' => [
+            'type' => 'button',
+            'class' => ['btn', 'btn-outline-info', 'btn-sm', 'wkf-card-scenario-update'],
+            'data-wkf-uri' => $wkfPhaseControlConfig['uri'],
+          ],
+          '#value' => $this->t('Scenario Update'),
+        ];
+      }
 
       // Adicionando os botões ao rodapé
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions'] = [
         '#type' => 'actions',
         '#attributes' => [
           'style' => 'margin-bottom:0!important;',
-          'class' => ['mb-0'],
+          'class' => ['mb-0', 'ms-auto'],
         ],
       ];
 
       // Botão Editar
       $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['edit'] = [
         '#type' => 'submit',
-        '#value' => $this->t('Edit'),
+        '#value' => $this->t($this->element_type === 'wkf' ? 'Open WKF Workflow' : 'Edit'),
         '#name' => 'edit_element_' . $sanitized_key,
         '#attributes' => [
           'class' => ['btn', 'btn-primary', 'btn-sm', 'edit-element-button'],
@@ -1285,7 +1192,88 @@ class REPSelectMTForm extends FormBase {
         '#limit_validation_errors' => [],
         '#element_uri' => $key,
       ];
+
+      if ($this->element_type === 'wkf') {
+        $form['element_cards_wrapper'][$sanitized_key]['card']['footer']['actions']['validate'] = [
+          '#type' => 'submit',
+          '#value' => $this->t('Validate'),
+          '#name' => 'validate_mt_' . $sanitized_key,
+          '#attributes' => [
+            'class' => ['btn', 'btn-info', 'btn-sm', 'validate-wkf-button'],
+          ],
+          '#submit' => ['::validateElementSubmit'],
+          '#limit_validation_errors' => [],
+          '#element_uri' => $key,
+        ];
+      }
     }
+  }
+
+  protected function resolveWkfScopeFromUri(string $wkfUri): string {
+    $normalized = Utils::plainUri($wkfUri) ?: trim($wkfUri);
+    if ($normalized === '') {
+      return '__global__';
+    }
+    return 'wkf_' . substr(sha1($normalized), 0, 16);
+  }
+
+  protected function getWkfCurrentPublicPhaseFromHistory(string $wkfUri): int {
+    $scope = $this->resolveWkfScopeFromUri($wkfUri);
+    $maxPublicPhase = 2;
+
+    $packetHistory = \Drupal::keyValue('rep.wkf.phase_packets.by_scope')->get($scope, []);
+    if (is_array($packetHistory)) {
+      foreach ($packetHistory as $entry) {
+        if (!is_array($entry)) {
+          continue;
+        }
+        $phase = isset($entry['phase']) ? (int) $entry['phase'] : 0;
+        $publicPhase = $this->mapBackendPhaseToPublicPhase($phase);
+        if ($publicPhase >= 2 && $publicPhase <= 4) {
+          $maxPublicPhase = max($maxPublicPhase, $publicPhase);
+        }
+      }
+    }
+
+    $responseHistory = \Drupal::keyValue('rep.wkf.phase_responses.by_scope')->get($scope, []);
+    if (is_array($responseHistory)) {
+      foreach ($responseHistory as $entry) {
+        if (!is_array($entry)) {
+          continue;
+        }
+        $phase = isset($entry['phase']) ? (int) $entry['phase'] : 0;
+        $publicPhase = $this->mapBackendPhaseToPublicPhase($phase);
+        if ($publicPhase >= 2 && $publicPhase <= 4) {
+          $maxPublicPhase = max($maxPublicPhase, $publicPhase);
+        }
+      }
+    }
+
+    return max(2, min(4, $maxPublicPhase));
+  }
+
+  protected function mapBackendPhaseToPublicPhase(int $phase): int {
+    if ($phase === 5) {
+      return 4;
+    }
+    if ($phase === 4) {
+      return 3;
+    }
+
+    // Legacy task-model correction (backend phase 3) is optional and does not
+    // advance official phase progression.
+    return 2;
+  }
+
+  protected function wkfPhaseToRoman(int $phase): string {
+    $map = [
+      1 => 'I',
+      2 => 'II',
+      3 => 'III',
+      4 => 'IV',
+      5 => 'V',
+    ];
+    return $map[$phase] ?? (string) $phase;
   }
 
   /**
@@ -1341,6 +1329,16 @@ class REPSelectMTForm extends FormBase {
     $uri = $triggering_element['#element_uri'];
 
     $this->performIngest([$uri], $form_state, VSTOI::DRAFT);
+  }
+
+  /**
+   * HANDLER TO VALIDATE CARD
+   */
+  public function validateElementSubmit(array &$form, FormStateInterface $form_state)
+  {
+    $triggering_element = $form_state->getTriggeringElement();
+    $uri = $triggering_element['#element_uri'];
+    $this->performValidateWKF($uri, $form_state);
   }
 
   /**
@@ -1625,7 +1623,7 @@ class REPSelectMTForm extends FormBase {
     
     if ($template == NULL) {
       \Drupal::messenger()->addError(t("Failed to retrieve the datafile to be ingested."));
-      $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+      $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
 
@@ -1704,7 +1702,7 @@ class REPSelectMTForm extends FormBase {
       } else {
         \Drupal::messenger()->addError(t("The " . $this->single_class_name . " selected FAILED to be submited for Ingestion."));
       }
-      $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+      $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
       return;
     }
     \Drupal::messenger()->addMessage(t("The " . $this->single_class_name . " selected was successfully submited for Ingestion."));
@@ -1719,8 +1717,1352 @@ class REPSelectMTForm extends FormBase {
         }
       }
     }
-    $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+    $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
     return;
+  }
+
+  /**
+   * Validate selected WKF without ingesting it.
+   */
+  protected function performValidateWKF($uri, FormStateInterface $form_state) {
+    $api = \Drupal::service('rep.api_connector');
+    $rawWkfUri = (string) $uri;
+    $wkfUri = Utils::plainUri($rawWkfUri) ?: $rawWkfUri;
+    $previousWorkflowState = $this->getWkfWorkflowState();
+    $validatedAt = date('Y-m-d H:i:s');
+    $wkfCopyReason = '';
+    $wkfCopyContent = $this->extractValidatedWkfTextForCopy($api, $wkfUri, $rawWkfUri, $wkfCopyReason);
+
+    $raw = $api->validateWKF($wkfUri);
+    $result = NULL;
+    $detail = '';
+
+    if (is_string($raw) && trim($raw) !== '') {
+      $decoded = json_decode($raw);
+      if (is_object($decoded)) {
+        $isSuccessful = !empty($decoded->isSuccessful);
+        $body = $decoded->body ?? NULL;
+
+        if ($isSuccessful) {
+          if (is_object($body)) {
+            $result = $body;
+          }
+          elseif (is_string($body) && trim($body) !== '') {
+            $decodedBody = json_decode($body);
+            if (is_object($decodedBody)) {
+              $result = $decodedBody;
+            }
+          }
+        }
+        else {
+          if (is_string($body) && trim($body) !== '') {
+            $detail = trim($body);
+          }
+          elseif ($body !== NULL) {
+            $detail = trim((string) json_encode($body));
+          }
+        }
+      }
+    }
+
+    if ($result == NULL || !is_object($result)) {
+      // Keep diagnostics in the panel and avoid Drupal messenger for WKF validation flow.
+      if (method_exists($api, 'getErrorMessage')) {
+        $apiError = (string) $api->getErrorMessage();
+        if ($detail === '' && trim($apiError) !== '') {
+          $detail = trim($apiError);
+        }
+      }
+      if ($detail === '' && is_string($raw) && trim($raw) !== '') {
+        $decoded = json_decode($raw);
+        if (is_object($decoded) && isset($decoded->body) && is_string($decoded->body)) {
+          $detail = trim($decoded->body);
+        }
+      }
+
+      $summary = $detail !== ''
+        ? 'Failed to validate selected WKF. Reason: ' . $detail
+        : 'Failed to validate selected WKF.';
+      $snapshotId = substr(sha1($wkfUri . '|' . $validatedAt . '|' . $summary), 0, 12);
+      $this->setWkfWorkflowState([
+        'hasValidation' => TRUE,
+        'lastValidationValid' => FALSE,
+        'wkfUri' => $wkfUri,
+        'validatedAt' => $validatedAt,
+        'snapshotId' => $snapshotId,
+        'lastBrokenRuleMap' => [],
+      ]);
+      $this->setWkfValidationPanelData([
+        'valid' => FALSE,
+        'summary' => $summary,
+        'wkfUri' => $wkfUri,
+        'snapshotId' => $snapshotId,
+        'rules' => [],
+        'newBrokenRules' => [],
+        'resolvedBrokenRules' => [],
+        'wkfCopyContent' => $wkfCopyContent,
+        'wkfCopyReason' => $wkfCopyReason,
+        'validatedAt' => $validatedAt,
+      ]);
+      $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+      return;
+    }
+
+    $isValid = !empty($result->valid);
+    $rules = [];
+    if (isset($result->brokenRuleDetails) && is_array($result->brokenRuleDetails)) {
+      foreach ($result->brokenRuleDetails as $detail) {
+        if (!is_object($detail)) {
+          continue;
+        }
+
+        $ruleId = '';
+        if (isset($detail->ruleId) && is_string($detail->ruleId)) {
+          $ruleId = trim($detail->ruleId);
+        }
+
+        $message = '';
+        if (isset($detail->message) && is_string($detail->message)) {
+          $message = trim($detail->message);
+        }
+
+        $specSection = '';
+        if (isset($detail->specSection) && is_string($detail->specSection)) {
+          $specSection = trim($detail->specSection);
+        }
+
+        if ($message === '' && $ruleId === '') {
+          continue;
+        }
+
+        $rules[] = [
+          'ruleId' => $ruleId,
+          'message' => $message,
+          'specSection' => $specSection,
+        ];
+      }
+    }
+
+    if (empty($rules) && isset($result->brokenRules) && is_array($result->brokenRules)) {
+      foreach ($result->brokenRules as $rule) {
+        if (is_string($rule) && trim($rule) !== '') {
+          $rules[] = [
+            'ruleId' => '',
+            'message' => trim($rule),
+            'specSection' => '',
+          ];
+        }
+      }
+    }
+
+    $summary = isset($result->summary) && is_string($result->summary) ? trim($result->summary) : '';
+    if ($summary === '') {
+      $summary = $isValid
+        ? 'WKF is valid.'
+        : 'WKF validation failed with no explicit broken rule list.';
+    }
+
+    $previousRuleMap = [];
+    if (isset($previousWorkflowState['lastBrokenRuleMap']) && is_array($previousWorkflowState['lastBrokenRuleMap'])) {
+      $previousRuleMap = $previousWorkflowState['lastBrokenRuleMap'];
+    }
+
+    $currentRuleMap = [];
+    foreach ($rules as $rule) {
+      if (!is_array($rule)) {
+        continue;
+      }
+      $ruleKey = $this->buildValidationRuleKey($rule);
+      if ($ruleKey === '') {
+        continue;
+      }
+
+      $ruleLine = $rule['message'] ?? '';
+      if (isset($rule['ruleId']) && is_string($rule['ruleId']) && trim($rule['ruleId']) !== '') {
+        $ruleLine = trim((string) $rule['ruleId']) . ': ' . trim((string) $ruleLine);
+      }
+      $currentRuleMap[$ruleKey] = trim((string) $ruleLine);
+    }
+
+    $previousKeys = array_keys($previousRuleMap);
+    $currentKeys = array_keys($currentRuleMap);
+    $newKeys = array_values(array_diff($currentKeys, $previousKeys));
+    $resolvedKeys = array_values(array_diff($previousKeys, $currentKeys));
+    $newBrokenRules = array_values(array_filter(array_map(function ($key) use ($currentRuleMap) {
+      return isset($currentRuleMap[$key]) ? (string) $currentRuleMap[$key] : '';
+    }, $newKeys)));
+    $resolvedBrokenRules = array_values(array_filter(array_map(function ($key) use ($previousRuleMap) {
+      return isset($previousRuleMap[$key]) ? (string) $previousRuleMap[$key] : '';
+    }, $resolvedKeys)));
+    $snapshotId = substr(sha1($wkfUri . '|' . $validatedAt . '|' . $summary . '|' . json_encode($rules)), 0, 12);
+    $this->setWkfWorkflowState([
+      'hasValidation' => TRUE,
+      'lastValidationValid' => $isValid,
+      'wkfUri' => $wkfUri,
+      'validatedAt' => $validatedAt,
+      'snapshotId' => $snapshotId,
+      'lastBrokenRuleMap' => $currentRuleMap,
+    ]);
+
+    $this->setWkfValidationPanelData([
+      'valid' => $isValid,
+      'summary' => $summary,
+      'wkfUri' => $wkfUri,
+      'snapshotId' => $snapshotId,
+      'rules' => $rules,
+      'newBrokenRules' => $newBrokenRules,
+      'resolvedBrokenRules' => $resolvedBrokenRules,
+      'wkfCopyContent' => $wkfCopyContent,
+      'wkfCopyReason' => $wkfCopyReason,
+      'validatedAt' => $validatedAt,
+    ]);
+
+    $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+  }
+
+  protected function getWkfValidationPanelSessionKey(): string {
+    return 'rep.wkf.validation.panel.by_scope';
+  }
+
+  protected function getSkipLegacyWkfValidationRecoverySessionKey(): string {
+    return 'rep.wkf.validation.skip_legacy_recovery';
+  }
+
+  protected function getWkfWorkflowStateSessionKey(): string {
+    return 'rep.wkf.workflow.state.by_scope';
+  }
+
+  protected function getActiveWkfScopeSessionKey(): string {
+    return 'rep.wkf.scope.active';
+  }
+
+  protected function getDefaultWkfScope(): string {
+    return '__global__';
+  }
+
+  protected function buildWkfScopeFromUri(?string $wkfUri): string {
+    $uri = is_string($wkfUri) ? trim($wkfUri) : '';
+    if ($uri === '') {
+      return $this->getDefaultWkfScope();
+    }
+
+    $normalized = Utils::plainUri($uri) ?: $uri;
+    return 'wkf_' . substr(sha1($normalized), 0, 16);
+  }
+
+  protected function setActiveWkfScopeByUri(?string $wkfUri): void {
+    $session = \Drupal::request()->getSession();
+    $session->set($this->getActiveWkfScopeSessionKey(), $this->buildWkfScopeFromUri($wkfUri));
+  }
+
+  protected function getActiveWkfScope(): string {
+    $session = \Drupal::request()->getSession();
+    $scope = $session->get($this->getActiveWkfScopeSessionKey());
+    if (!is_string($scope) || trim($scope) === '') {
+      return $this->getDefaultWkfScope();
+    }
+    return trim($scope);
+  }
+
+  protected function resolveWkfScope(?string $wkfUri = NULL): string {
+    if (is_string($wkfUri) && trim($wkfUri) !== '') {
+      return $this->buildWkfScopeFromUri($wkfUri);
+    }
+    return $this->getActiveWkfScope();
+  }
+
+  protected function setWkfValidationPanelData(array $data, ?string $wkfUri = NULL): void {
+    $session = \Drupal::request()->getSession();
+    $panelStore = $session->get($this->getWkfValidationPanelSessionKey(), []);
+    if (!is_array($panelStore)) {
+      $panelStore = [];
+    }
+
+    $panelUri = $wkfUri;
+    if ((!is_string($panelUri) || trim($panelUri) === '')
+      && isset($data['wkfUri']) && is_string($data['wkfUri']) && trim($data['wkfUri']) !== '') {
+      $panelUri = $data['wkfUri'];
+    }
+
+    $scope = $this->resolveWkfScope($panelUri);
+    $panelStore[$scope] = $data;
+    $session->set($this->getWkfValidationPanelSessionKey(), $panelStore);
+
+    if (is_string($panelUri) && trim($panelUri) !== '') {
+      $this->setActiveWkfScopeByUri($panelUri);
+    }
+    else {
+      $session->set($this->getActiveWkfScopeSessionKey(), $scope);
+    }
+  }
+
+  protected function getWkfValidationPanelData(?string $wkfUri = NULL): ?array {
+    $session = \Drupal::request()->getSession();
+    $panelStore = $session->get($this->getWkfValidationPanelSessionKey(), []);
+    if (!is_array($panelStore)) {
+      return NULL;
+    }
+
+    $scope = $this->resolveWkfScope($wkfUri);
+    if (isset($panelStore[$scope]) && is_array($panelStore[$scope])) {
+      return $panelStore[$scope];
+    }
+
+    return NULL;
+  }
+
+  protected function clearWkfValidationPanelData(?string $wkfUri = NULL): void {
+    $session = \Drupal::request()->getSession();
+    $panelStore = $session->get($this->getWkfValidationPanelSessionKey(), []);
+    if (!is_array($panelStore)) {
+      return;
+    }
+
+    $scope = $this->resolveWkfScope($wkfUri);
+    unset($panelStore[$scope]);
+    $session->set($this->getWkfValidationPanelSessionKey(), $panelStore);
+  }
+
+  protected function setWkfWorkflowState(array $state, ?string $wkfUri = NULL): void {
+    $session = \Drupal::request()->getSession();
+    $stateStore = $session->get($this->getWkfWorkflowStateSessionKey(), []);
+    if (!is_array($stateStore)) {
+      $stateStore = [];
+    }
+
+    $stateUri = $wkfUri;
+    if ((!is_string($stateUri) || trim($stateUri) === '')
+      && isset($state['wkfUri']) && is_string($state['wkfUri']) && trim($state['wkfUri']) !== '') {
+      $stateUri = $state['wkfUri'];
+    }
+
+    $scope = $this->resolveWkfScope($stateUri);
+    $stateStore[$scope] = $state;
+    $session->set($this->getWkfWorkflowStateSessionKey(), $stateStore);
+
+    if (is_string($stateUri) && trim($stateUri) !== '') {
+      $this->setActiveWkfScopeByUri($stateUri);
+    }
+    else {
+      $session->set($this->getActiveWkfScopeSessionKey(), $scope);
+    }
+  }
+
+  protected function getWkfWorkflowState(?string $wkfUri = NULL): array {
+    $session = \Drupal::request()->getSession();
+    $stateStore = $session->get($this->getWkfWorkflowStateSessionKey(), []);
+    $scope = $this->resolveWkfScope($wkfUri);
+    $state = (is_array($stateStore) && isset($stateStore[$scope]) && is_array($stateStore[$scope]))
+      ? $stateStore[$scope]
+      : NULL;
+    if (!is_array($state)) {
+      return [
+        'hasValidation' => FALSE,
+        'lastValidationValid' => FALSE,
+        'wkfUri' => '',
+        'validatedAt' => '',
+        'snapshotId' => '',
+        'lastBrokenRuleMap' => [],
+      ];
+    }
+
+    $lastBrokenRuleMap = [];
+    if (isset($state['lastBrokenRuleMap']) && is_array($state['lastBrokenRuleMap'])) {
+      foreach ($state['lastBrokenRuleMap'] as $key => $value) {
+        if (is_string($key) && is_string($value) && trim($key) !== '' && trim($value) !== '') {
+          $lastBrokenRuleMap[$key] = $value;
+        }
+      }
+    }
+
+    return [
+      'hasValidation' => !empty($state['hasValidation']),
+      'lastValidationValid' => !empty($state['lastValidationValid']),
+      'wkfUri' => isset($state['wkfUri']) && is_string($state['wkfUri']) ? $state['wkfUri'] : '',
+      'validatedAt' => isset($state['validatedAt']) && is_string($state['validatedAt']) ? $state['validatedAt'] : '',
+      'snapshotId' => isset($state['snapshotId']) && is_string($state['snapshotId']) ? $state['snapshotId'] : '',
+      'lastBrokenRuleMap' => $lastBrokenRuleMap,
+    ];
+  }
+
+  protected function buildValidationRuleKey(array $rule): string {
+    $ruleId = isset($rule['ruleId']) && is_string($rule['ruleId']) ? trim($rule['ruleId']) : '';
+    $message = isset($rule['message']) && is_string($rule['message']) ? trim($rule['message']) : '';
+    $specSection = isset($rule['specSection']) && is_string($rule['specSection']) ? trim($rule['specSection']) : '';
+
+    if ($ruleId === '' && $message === '' && $specSection === '') {
+      return '';
+    }
+
+    return sha1($ruleId . '|' . $message . '|' . $specSection);
+  }
+
+  protected function buildWkfVersionLabel(string $wkfUri, string $snapshotId = ''): string {
+    $wkfUri = trim($wkfUri);
+    $snapshotId = trim($snapshotId);
+
+    if ($wkfUri === '') {
+      return 'none';
+    }
+
+    $uriPath = parse_url($wkfUri, PHP_URL_PATH);
+    $base = is_string($uriPath) && $uriPath !== '' ? basename($uriPath) : basename($wkfUri);
+    if ($base === '') {
+      $base = $wkfUri;
+    }
+
+    if ($snapshotId !== '') {
+      return $base . ' @ ' . $snapshotId;
+    }
+
+    return $base;
+  }
+
+  protected function setSkipLegacyWkfValidationRecovery(bool $skip): void {
+    $session = \Drupal::request()->getSession();
+    $session->set($this->getSkipLegacyWkfValidationRecoverySessionKey(), $skip ? 1 : 0);
+  }
+
+  protected function consumeSkipLegacyWkfValidationRecovery(): bool {
+    $session = \Drupal::request()->getSession();
+    $value = (int) $session->get($this->getSkipLegacyWkfValidationRecoverySessionKey(), 0);
+    $session->remove($this->getSkipLegacyWkfValidationRecoverySessionKey());
+    return $value === 1;
+  }
+
+  /**
+   * Remove old WKF validation messages from Drupal messenger.
+   *
+   * This keeps validation feedback in the dedicated panel and avoids
+   * duplicated legacy bullet-list errors from previous requests.
+   */
+  protected function suppressLegacyWkfValidationMessages(): void {
+    $skipLegacyRecovery = $this->consumeSkipLegacyWkfValidationRecovery();
+
+    $messenger = \Drupal::messenger();
+    $messages = $messenger->deleteAll();
+    if (!is_array($messages) || empty($messages)) {
+      return;
+    }
+
+    $legacyValidationLines = [];
+
+    foreach ($messages as $type => $typedMessages) {
+      if (!is_array($typedMessages)) {
+        continue;
+      }
+
+      foreach ($typedMessages as $message) {
+        $text = trim(strip_tags((string) $message));
+        if ($text === '') {
+          continue;
+        }
+
+        $isLegacyWkfValidation =
+          (strpos($text, 'WKF-RULE-') !== FALSE)
+          || (stripos($text, 'WKF validation failed') !== FALSE)
+          || (stripos($text, 'broken validation rule') !== FALSE)
+          || (stripos($text, 'Failed to validate selected WKF') !== FALSE);
+
+        if ($isLegacyWkfValidation) {
+          foreach (preg_split('/[\r\n]+/', $text) as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+              continue;
+            }
+            if (strpos($line, '* ') === 0 || strpos($line, '- ') === 0) {
+              $line = trim(substr($line, 2));
+            }
+            $legacyValidationLines[] = $line;
+          }
+          continue;
+        }
+
+        switch ($type) {
+          case 'error':
+            $messenger->addError($message);
+            break;
+
+          case 'warning':
+            $messenger->addWarning($message);
+            break;
+
+          case 'status':
+          default:
+            $messenger->addStatus($message);
+            break;
+        }
+      }
+    }
+
+    if (!$skipLegacyRecovery && !empty($legacyValidationLines) && $this->getWkfValidationPanelData() === NULL) {
+      $rules = [];
+      foreach ($legacyValidationLines as $line) {
+        $ruleId = '';
+        $message = $line;
+
+        if (preg_match('/^(WKF-RULE-[0-9]+)\s*:\s*(.+)$/', $line, $m)) {
+          $ruleId = trim($m[1]);
+          $message = trim($m[2]);
+        }
+
+        if ($message === '') {
+          continue;
+        }
+
+        $rules[] = [
+          'ruleId' => $ruleId,
+          'message' => $message,
+          'specSection' => '',
+        ];
+      }
+
+      $summary = 'WKF validation failed.';
+      if (!empty($rules)) {
+        $summary .= ' Imported ' . count($rules) . ' legacy validation message(s) into the panel.';
+      }
+
+      $this->setWkfValidationPanelData([
+        'valid' => FALSE,
+        'summary' => $summary,
+        'wkfUri' => '',
+        'rules' => $rules,
+        'validatedAt' => date('Y-m-d H:i:s'),
+      ]);
+    }
+  }
+
+  /**
+   * Remove non-panel warning/error messages on WKF select page.
+   *
+   * This keeps UX consistent by rendering WKF validation feedback only
+   * inside the dedicated in-page panel.
+   */
+  protected function suppressWkfSelectPageMessages(): void {
+    $messenger = \Drupal::messenger();
+
+    // Drop warning/error streams unconditionally for this page context.
+    $messenger->deleteByType('warning');
+    $messenger->deleteByType('error');
+  }
+
+  protected function buildWkfValidationPanel(): ?array {
+    $panel = $this->getWkfValidationPanelData();
+    if ($panel === NULL) {
+      return NULL;
+    }
+
+    // Consume panel data so validation results behave like a flash message:
+    // visible on first render, cleared on subsequent refreshes.
+    $this->clearWkfValidationPanelData();
+
+    $isValid = !empty($panel['valid']);
+    $summary = isset($panel['summary']) && is_string($panel['summary'])
+      ? trim($panel['summary'])
+      : ($isValid ? 'WKF is valid.' : 'WKF validation failed.');
+    $wkfUri = isset($panel['wkfUri']) && is_string($panel['wkfUri']) ? trim($panel['wkfUri']) : '';
+    $snapshotId = isset($panel['snapshotId']) && is_string($panel['snapshotId']) ? trim($panel['snapshotId']) : '';
+    $versionLabel = $this->buildWkfVersionLabel($wkfUri, $snapshotId);
+    $validatedAt = isset($panel['validatedAt']) && is_string($panel['validatedAt']) ? trim($panel['validatedAt']) : '';
+    $rules = [];
+    if (isset($panel['rules']) && is_array($panel['rules'])) {
+      $rules = $panel['rules'];
+    }
+    $newBrokenRules = [];
+    if (isset($panel['newBrokenRules']) && is_array($panel['newBrokenRules'])) {
+      foreach ($panel['newBrokenRules'] as $line) {
+        if (is_string($line) && trim($line) !== '') {
+          $newBrokenRules[] = trim($line);
+        }
+      }
+    }
+    $resolvedBrokenRules = [];
+    if (isset($panel['resolvedBrokenRules']) && is_array($panel['resolvedBrokenRules'])) {
+      foreach ($panel['resolvedBrokenRules'] as $line) {
+        if (is_string($line) && trim($line) !== '') {
+          $resolvedBrokenRules[] = trim($line);
+        }
+      }
+    }
+    $wkfCopyContent = isset($panel['wkfCopyContent']) && is_string($panel['wkfCopyContent'])
+      ? trim($panel['wkfCopyContent'])
+      : '';
+    $wkfCopyReason = isset($panel['wkfCopyReason']) && is_string($panel['wkfCopyReason'])
+      ? trim($panel['wkfCopyReason'])
+      : '';
+    $wkfCopyUnavailable = ($wkfCopyContent === '');
+    $wkfCopyHintText = $wkfCopyUnavailable
+      ? ('WKF snapshot unavailable: ' . ($wkfCopyReason !== '' ? $wkfCopyReason : 'unknown reason.'))
+      : 'WKF snapshot ready for copy.';
+    $wkfCopyHintClass = $wkfCopyUnavailable ? 'text-muted' : 'text-success';
+
+    $copyLines = [];
+    $copyLines[] = $summary;
+    if ($wkfUri !== '') {
+      $copyLines[] = 'WKF URI: ' . $wkfUri;
+    }
+    $copyLines[] = 'WKF Version: ' . $versionLabel;
+    if ($snapshotId !== '') {
+      $copyLines[] = 'Validation Snapshot ID: ' . $snapshotId;
+    }
+    if ($validatedAt !== '') {
+      $copyLines[] = 'Validated at: ' . $validatedAt;
+    }
+
+    $items = [];
+    foreach ($rules as $rule) {
+      if (!is_array($rule)) {
+        continue;
+      }
+      $ruleId = isset($rule['ruleId']) && is_string($rule['ruleId']) ? trim($rule['ruleId']) : '';
+      $message = isset($rule['message']) && is_string($rule['message']) ? trim($rule['message']) : '';
+      $specSection = isset($rule['specSection']) && is_string($rule['specSection']) ? trim($rule['specSection']) : '';
+
+      if ($ruleId === '' && $message === '') {
+        continue;
+      }
+
+      $lineText = '';
+      if ($ruleId !== '') {
+        $lineText .= $ruleId;
+        if ($message !== '') {
+          $lineText .= ': ';
+        }
+      }
+      if ($message !== '') {
+        $lineText .= $message;
+      }
+      if ($specSection !== '') {
+        $lineText .= ' (' . $specSection . ')';
+      }
+      $copyLines[] = '- ' . $lineText;
+
+      $lineHtml = '';
+      if ($ruleId !== '') {
+        $lineHtml .= '<strong>' . Html::escape($ruleId) . '</strong>';
+        if ($message !== '') {
+          $lineHtml .= ': ';
+        }
+      }
+      if ($message !== '') {
+        $lineHtml .= Html::escape($message);
+      }
+      if ($specSection !== '') {
+        $lineHtml .= ' <em>(' . Html::escape($specSection) . ')</em>';
+      }
+      $items[] = '<li>' . $lineHtml . '</li>';
+    }
+
+    if (!empty($newBrokenRules)) {
+      $copyLines[] = '';
+      $copyLines[] = 'New broken rules since previous validation:';
+      foreach ($newBrokenRules as $line) {
+        $copyLines[] = '+ ' . $line;
+      }
+    }
+
+    if (!empty($resolvedBrokenRules)) {
+      $copyLines[] = '';
+      $copyLines[] = 'Resolved broken rules since previous validation:';
+      foreach ($resolvedBrokenRules as $line) {
+        $copyLines[] = '- ' . $line;
+      }
+    }
+
+    if (!$isValid) {
+      $taskModelCorrectionPrompt = trim($this->getWkfTaskModelCorrectionPromptText());
+      if ($taskModelCorrectionPrompt !== '') {
+        $copyLines[] = '';
+        $copyLines[] = '--- TASK MODEL CORRECTION PROMPT ---';
+        $copyLines[] = $taskModelCorrectionPrompt;
+      }
+    }
+
+    $copyText = implode("\n", $copyLines);
+
+    $repairLines = [];
+    $repairLines[] = 'WKF TASK MODEL REPAIR PACKET';
+    $repairLines[] = 'Use this packet with ChatGPT to fix the validated WKF.';
+    $repairLines[] = '';
+    $repairLines[] = '--- VALIDATION MESSAGES ---';
+    $repairLines[] = $copyText;
+    $repairLines[] = '';
+    $repairLines[] = '--- TASK MODEL CORRECTION PROMPT ---';
+    $repairPrompt = trim($this->getWkfTaskModelCorrectionPromptText());
+    $repairLines[] = ($repairPrompt !== '') ? $repairPrompt : '(prompt not available)';
+    $repairLines[] = '';
+    $repairLines[] = '--- VALIDATED WKF CONTENT ---';
+    if ($wkfCopyContent !== '') {
+      $repairLines[] = $wkfCopyContent;
+    }
+    else {
+      $repairLines[] = '(validated WKF content is unavailable in this runtime)';
+    }
+    $repairText = implode("\n", $repairLines);
+    $panelBorderClass = $isValid ? 'border-success' : 'border-danger';
+    $panelHeaderClass = $isValid ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis';
+    $title = $isValid ? 'WKF validation passed' : 'WKF validation failed';
+
+    $normalizedTitle = strtolower(trim($title, " \t\n\r\0\x0B.:-"));
+    $normalizedSummary = strtolower(trim($summary, " \t\n\r\0\x0B.:-"));
+    $showSummary = ($normalizedSummary !== '' && $normalizedSummary !== $normalizedTitle);
+    $nextStepHint = $isValid
+      ? 'Next step: proceed with the next official WKF generation phase (Phase III or Phase IV) using this validated WKF version.'
+      : 'Next step: optionally run task-model verification/correction, then continue with official WKF phases.';
+    $nextStepHintClass = $isValid ? 'text-success-emphasis' : 'text-danger-emphasis';
+
+    $markup = '<section class="wkf-validation-panel card ' . Html::escape($panelBorderClass) . ' mt-3 mb-4" role="status" style="max-width:100%; overflow:hidden;">'
+      . '<div class="card-header ' . Html::escape($panelHeaderClass) . '">'
+      . '<div class="small fw-bold text-uppercase">Dedicated WKF Validation Panel</div>'
+      . '</div>'
+      . '<div class="card-body">'
+      . '<div class="d-flex flex-wrap justify-content-between align-items-start gap-2" style="min-width:0;">'
+      . '<div style="flex:1 1 auto; min-width:0;">'
+      . '<h5 class="mb-1">' . Html::escape($title) . '</h5>'
+      . ($showSummary ? '<div class="mb-1">' . Html::escape($summary) . '</div>' : '')
+      . ($wkfUri !== '' ? '<div class="small text-muted">WKF URI: ' . Html::escape($wkfUri) . '</div>' : '')
+      . '<div class="small text-muted">WKF version: ' . Html::escape($versionLabel) . '</div>'
+      . ($snapshotId !== '' ? '<div class="small text-muted">Validation snapshot: ' . Html::escape($snapshotId) . '</div>' : '')
+      . ($validatedAt !== '' ? '<div class="small text-muted">Validated at: ' . Html::escape($validatedAt) . '</div>' : '')
+      . '<div class="small mt-1 ' . Html::escape($nextStepHintClass) . '">' . Html::escape($nextStepHint) . '</div>'
+      . '</div>'
+      . '<div class="d-flex flex-column align-items-end gap-1" style="flex:0 0 auto; min-width:0;">'
+      . '<div class="d-flex align-items-center gap-2">'
+      . '<button type="button" class="btn btn-primary btn-sm wkf-validation-copy-btn" data-copy-source="#wkf-validation-copy-source">Copy Messages</button>'
+      . '<button type="button" class="btn btn-outline-secondary btn-sm wkf-validation-copy-btn" data-copy-source="#wkf-validation-repair-source">Copy Repair Packet</button>'
+      . '<button type="button" class="btn btn-outline-primary btn-sm wkf-validation-copy-btn" data-copy-source="#wkf-validation-wkf-source"' . ($wkfCopyUnavailable ? ' disabled aria-disabled="true" title="Validated WKF content is not available locally."' : '') . '>Copy WKF</button>'
+      . '<span class="small text-success wkf-validation-copy-status" aria-live="polite"></span>'
+      . '</div>'
+      . '<div class="small ' . Html::escape($wkfCopyHintClass) . '">' . Html::escape($wkfCopyHintText) . '</div>'
+      . '</div>'
+      . '</div>';
+
+    if (!empty($items)) {
+      $markup .= '<hr class="my-2" />'
+        . '<div><strong>' . Html::escape('Broken validation rules:') . '</strong>'
+        . '<div class="wkf-validation-rules mt-2" style="max-height: 22rem; overflow-y: auto; overflow-x: hidden; border: 1px solid rgba(0,0,0,0.15); border-radius: .25rem; padding: .5rem .75rem; background: rgba(255,255,255,0.55); overflow-wrap:anywhere; word-break:break-word; white-space:normal;">'
+        . '<ul class="mb-0" style="overflow-wrap:anywhere; word-break:break-word; white-space:normal;">'
+        . implode('', $items)
+        . '</ul></div></div>';
+
+    }
+
+    if (!empty($newBrokenRules) || !empty($resolvedBrokenRules)) {
+      $deltaItems = '';
+      if (!empty($newBrokenRules)) {
+        $deltaItems .= '<div class="small text-danger-emphasis"><strong>New broken rules:</strong></div>';
+        $deltaItems .= '<ul class="mb-2">';
+        foreach ($newBrokenRules as $line) {
+          $deltaItems .= '<li class="small">' . Html::escape($line) . '</li>';
+        }
+        $deltaItems .= '</ul>';
+      }
+      if (!empty($resolvedBrokenRules)) {
+        $deltaItems .= '<div class="small text-success-emphasis"><strong>Resolved broken rules:</strong></div>';
+        $deltaItems .= '<ul class="mb-0">';
+        foreach ($resolvedBrokenRules as $line) {
+          $deltaItems .= '<li class="small">' . Html::escape($line) . '</li>';
+        }
+        $deltaItems .= '</ul>';
+      }
+
+      $markup .= '<hr class="my-2" />'
+        . '<div><strong>' . Html::escape('Validation delta (vs previous validation):') . '</strong>'
+        . '<div class="mt-2" style="border: 1px solid rgba(0,0,0,0.15); border-radius: .25rem; padding: .5rem .75rem; background: rgba(255,255,255,0.55);">'
+        . $deltaItems
+        . '</div></div>';
+    }
+
+    $markup .= '<textarea id="wkf-validation-copy-source" class="visually-hidden" readonly>'
+      . Html::escape($copyText)
+      . '</textarea>'
+      . '<textarea id="wkf-validation-repair-source" class="visually-hidden" readonly>'
+      . Html::escape($repairText)
+      . '</textarea>'
+      . '<textarea id="wkf-validation-wkf-source" class="visually-hidden" readonly>'
+      . Html::escape($wkfCopyContent)
+      . '</textarea>'
+      . '</div>'
+      . '</section>';
+
+    return [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'wkf-validation-result-panel'],
+      'actions' => [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['d-flex', 'justify-content-end', 'align-items-center', 'gap-2', 'mb-2']],
+        'clear_panel' => [
+          '#type' => 'submit',
+          '#name' => 'clear_wkf_validation_panel',
+          '#value' => $this->t('Clear panel'),
+          '#submit' => ['::clearWkfValidationPanelSubmit'],
+          '#limit_validation_errors' => [],
+          '#ajax' => [
+            'callback' => '::ajaxClearWkfValidationPanel',
+            'wrapper' => 'wkf-validation-panel-wrapper',
+            'event' => 'click',
+          ],
+          '#attributes' => ['class' => ['btn', 'btn-outline-secondary', 'btn-sm']],
+        ],
+      ],
+      'content' => [
+        '#type' => 'markup',
+        '#markup' => Markup::create($markup),
+      ],
+    ];
+  }
+
+  /**
+   * Load the core prompt used to fix WKF task model issues.
+   */
+  protected function getWkfTaskModelCorrectionPromptText(): string {
+    $pmsr_module_path = \Drupal::service('extension.list.module')->getPath('pmsr');
+    $prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE3-TASK-MODEL-CORRECTION.md';
+
+    if (is_file($prompt_path)) {
+      $content = file_get_contents($prompt_path);
+      if (is_string($content) && trim($content) !== '') {
+        return trim($content);
+      }
+    }
+
+    return "PHASE III - TASK MODEL CORRECTION\n\n"
+      . "Input:\n"
+      . "1) The current WKF file\n"
+      . "2) The WKF validation output (rule IDs and messages)\n"
+      . "3) The original source document\n\n"
+      . "Goal:\n"
+      . "Correct only task-model inconsistencies so the WKF passes task-model validation without regressing valid content.\n\n"
+      . "Mandatory rules:\n"
+      . "- Preserve existing URIs and structure whenever possible.\n"
+      . "- Fix each reported task-model violation precisely and minimally.\n"
+      . "- Do not invent entities that are not supported by the source document.\n"
+      . "- Keep all previously valid sections unchanged.\n\n"
+      . "Output:\n"
+      . "Return the corrected full WKF content and a short change log grouped by validation rule ID.";
+  }
+
+  /**
+   * Build a textual snapshot of the just-validated WKF for clipboard usage.
+   */
+  protected function extractValidatedWkfTextForCopy($api, string $wkfUri, ?string $rawWkfUri = NULL, string &$reason = ''): string {
+    $reason = '';
+    $candidateUris = [];
+    $candidateUris[] = trim($wkfUri);
+    if (is_string($rawWkfUri) && trim($rawWkfUri) !== '') {
+      $candidateUris[] = trim($rawWkfUri);
+      $decodedRaw = rawurldecode(trim($rawWkfUri));
+      if ($decodedRaw !== '') {
+        $candidateUris[] = $decodedRaw;
+      }
+    }
+
+    $template = NULL;
+    foreach (array_values(array_unique($candidateUris)) as $candidateUri) {
+      if (!is_string($candidateUri) || $candidateUri === '') {
+        continue;
+      }
+      $candidate = Utils::plainUri($candidateUri) ?: $candidateUri;
+      $template = $api->parseObjectResponse($api->getUri($candidate), 'getUri');
+      if (is_object($template)) {
+        break;
+      }
+    }
+
+    if (!is_object($template)) {
+      $reason = 'WKF metadata could not be loaded.';
+      return '';
+    }
+
+    // Some payloads embed hasDataFile but omit hasDataFileUri.
+    if ((!isset($template->hasDataFileUri) || $template->hasDataFileUri == NULL || $template->hasDataFileUri === '')
+      && isset($template->hasDataFile) && is_object($template->hasDataFile)
+      && isset($template->hasDataFile->uri) && is_string($template->hasDataFile->uri) && $template->hasDataFile->uri !== '') {
+      $template->hasDataFileUri = Utils::plainUri($template->hasDataFile->uri) ?: $template->hasDataFile->uri;
+    }
+
+    if (!isset($template->hasDataFile) && isset($template->hasDataFileUri) && is_string($template->hasDataFileUri) && $template->hasDataFileUri !== '') {
+      $dataFileUri = Utils::plainUri($template->hasDataFileUri) ?: $template->hasDataFileUri;
+      $dataFile = $api->parseObjectResponse($api->getUri($dataFileUri), 'getUri');
+      if ($dataFile != NULL) {
+        $template->hasDataFile = $dataFile;
+      }
+    }
+
+    // If DataFile exists but lacks filename/id, enrich it from the KG object.
+    if (isset($template->hasDataFileUri) && is_string($template->hasDataFileUri) && trim($template->hasDataFileUri) !== '') {
+      $needsEnrichment = TRUE;
+      if (isset($template->hasDataFile) && is_object($template->hasDataFile)) {
+        $hasFilename = isset($template->hasDataFile->filename) && is_string($template->hasDataFile->filename) && trim((string) $template->hasDataFile->filename) !== '';
+        $hasId = isset($template->hasDataFile->id) && trim((string) $template->hasDataFile->id) !== '';
+        $needsEnrichment = !($hasFilename && $hasId);
+      }
+
+      if ($needsEnrichment) {
+        $dataFileUri = Utils::plainUri($template->hasDataFileUri) ?: $template->hasDataFileUri;
+        $dataFile = $api->parseObjectResponse($api->getUri($dataFileUri), 'getUri');
+        if (is_object($dataFile)) {
+          $template->hasDataFile = $dataFile;
+        }
+      }
+    }
+
+    $readability = $this->verifyLocalDataFileReadability($template);
+
+    $resolvedPath = '';
+    if (isset($readability['resolved_path']) && is_string($readability['resolved_path'])) {
+      $resolvedPath = trim($readability['resolved_path']);
+    }
+
+    if (!empty($readability['ok']) && $resolvedPath === '' && isset($readability['tried']) && is_array($readability['tried'])) {
+      foreach ($readability['tried'] as $candidate) {
+        if (is_string($candidate) && $candidate !== '' && is_readable($candidate)) {
+          $resolvedPath = $candidate;
+          break;
+        }
+      }
+    }
+
+    if ($resolvedPath === '') {
+      // Fallback: use the exact file version from API when local filesystem
+      // resolution is unavailable in this runtime.
+      return $this->extractValidatedWkfTextFromRemoteDataFile($api, $template, $wkfUri, $reason);
+    }
+
+    $text = $this->renderWorkbookAsPlainText($resolvedPath, $wkfUri);
+    if ($text === '') {
+      $reason = 'Workbook parser could not read local WKF file.';
+    }
+    return $text;
+  }
+
+  /**
+   * Build WKF copy text by downloading the just-validated datafile from API.
+   */
+  protected function extractValidatedWkfTextFromRemoteDataFile($api, $template, string $wkfUri, string &$reason = ''): string {
+    if (!is_object($template) || !method_exists($api, 'downloadFile')) {
+      $reason = 'Download API is unavailable in this environment.';
+      return '';
+    }
+
+    $dataFileUri = '';
+    if (isset($template->hasDataFileUri) && is_string($template->hasDataFileUri) && trim($template->hasDataFileUri) !== '') {
+      $dataFileUri = trim((string) $template->hasDataFileUri);
+    }
+    else if (isset($template->hasDataFile) && is_object($template->hasDataFile)
+      && isset($template->hasDataFile->uri) && is_string($template->hasDataFile->uri) && trim($template->hasDataFile->uri) !== '') {
+      $dataFileUri = trim((string) $template->hasDataFile->uri);
+    }
+
+    $dataFileUri = Utils::plainUri($dataFileUri) ?: $dataFileUri;
+    if ($dataFileUri === '') {
+      $reason = 'No DataFile URI found for the validated WKF.';
+      return '';
+    }
+
+    // Refresh DataFile object if filename is missing.
+    if ((!isset($template->hasDataFile) || !is_object($template->hasDataFile)
+      || !isset($template->hasDataFile->filename) || trim((string) $template->hasDataFile->filename) === '')) {
+      $df = $api->parseObjectResponse($api->getUri($dataFileUri), 'getUri');
+      if (is_object($df)) {
+        $template->hasDataFile = $df;
+      }
+    }
+
+    $filenameCandidates = [];
+
+    if (isset($template->hasDataFile) && is_object($template->hasDataFile)
+      && isset($template->hasDataFile->filename) && is_string($template->hasDataFile->filename)) {
+      $filenameCandidates[] = trim((string) $template->hasDataFile->filename);
+    }
+
+    // Try Drupal file entity filename when FID is available.
+    if (isset($template->hasDataFile) && is_object($template->hasDataFile)
+      && isset($template->hasDataFile->id) && trim((string) $template->hasDataFile->id) !== '') {
+      $fid = (int) $template->hasDataFile->id;
+      if ($fid > 0) {
+        $fileEntity = File::load($fid);
+        if ($fileEntity !== NULL) {
+          $filenameCandidates[] = trim((string) $fileEntity->getFilename());
+        }
+      }
+    }
+
+    // Fallback from URI path (may still be useful in some setups).
+    $uriPath = parse_url($dataFileUri, PHP_URL_PATH);
+    if (is_string($uriPath) && $uriPath !== '') {
+      $filenameCandidates[] = basename($uriPath);
+    }
+
+    // Common PMSR MT workbook fallback names.
+    $filenameCandidates[] = 'INS-PMSR.xlsx';
+    $filenameCandidates[] = 'WKF-PMSR.xlsx';
+
+    // If backend keeps filename without extension, probe expected spreadsheet extensions.
+    $extensionVariants = [];
+    foreach ($filenameCandidates as $candidateName) {
+      $base = trim((string) $candidateName);
+      if ($base === '' || strpos($base, '.') !== FALSE) {
+        continue;
+      }
+      $extensionVariants[] = $base . '.xlsx';
+      $extensionVariants[] = $base . '.xlsm';
+      $extensionVariants[] = $base . '.xls';
+    }
+    $filenameCandidates = array_merge($filenameCandidates, $extensionVariants);
+
+    $filenameCandidates = array_values(array_filter(array_unique($filenameCandidates), function ($name) {
+      return is_string($name) && trim($name) !== '';
+    }));
+
+    if (empty($filenameCandidates)) {
+      $reason = 'No candidate filename could be resolved for WKF download.';
+      return '';
+    }
+
+    $binary = '';
+    $chosenFilename = '';
+    $elementUriCandidates = array_values(array_filter(array_unique([
+      trim($dataFileUri),
+      trim($wkfUri),
+    ]), function ($candidateUri) {
+      return is_string($candidateUri) && $candidateUri !== '';
+    }));
+
+    foreach ($elementUriCandidates as $elementUriCandidate) {
+      foreach ($filenameCandidates as $candidateFilename) {
+        $downloadResponse = $api->downloadFile($elementUriCandidate, $candidateFilename);
+        if (!is_object($downloadResponse) || !method_exists($downloadResponse, 'getContent')) {
+          continue;
+        }
+
+        $payload = (string) $downloadResponse->getContent();
+        if ($payload === '') {
+          continue;
+        }
+
+        $binary = $payload;
+        $chosenFilename = $candidateFilename;
+        break 2;
+      }
+    }
+
+    if ($binary === '') {
+      $reason = 'Remote WKF download returned empty content for all filename candidates.';
+      return '';
+    }
+
+    $tmpRoot = '';
+    try {
+      $tmpRoot = (string) \Drupal::service('file_system')->realpath('temporary://');
+    }
+    catch (\Throwable $e) {
+      $tmpRoot = '';
+    }
+    if ($tmpRoot === '') {
+      $tmpRoot = sys_get_temp_dir();
+    }
+
+    $ext = strtolower((string) pathinfo($chosenFilename, PATHINFO_EXTENSION));
+    if ($ext === '') {
+      $ext = 'xlsx';
+    }
+    $tmpPath = rtrim($tmpRoot, '/') . '/wkf-copy-' . uniqid('', TRUE) . '.' . $ext;
+
+    if (@file_put_contents($tmpPath, $binary) === FALSE) {
+      $reason = 'Temporary file write failed while preparing WKF copy text.';
+      return '';
+    }
+
+    try {
+      $text = $this->renderWorkbookAsPlainText($tmpPath, $wkfUri);
+      if ($text === '') {
+        $reason = 'Workbook parser could not read downloaded WKF content.';
+      }
+      return $text;
+    }
+    finally {
+      @unlink($tmpPath);
+    }
+  }
+
+  /**
+   * Convert an XLSX workbook to a compact, copy-friendly text snapshot.
+   */
+  protected function renderWorkbookAsPlainText(string $filePath, string $wkfUri): string {
+    if (!is_readable($filePath)) {
+      return '';
+    }
+
+    $ext = strtolower((string) pathinfo($filePath, PATHINFO_EXTENSION));
+
+    // Plain-text artifacts can be copied directly.
+    if (in_array($ext, ['txt', 'csv', 'tsv', 'json', 'xml', 'md'], TRUE)) {
+      $raw = @file_get_contents($filePath);
+      if (!is_string($raw) || trim($raw) === '') {
+        return '';
+      }
+
+      $text = 'WKF URI: ' . $wkfUri . "\n"
+        . 'Source file: ' . basename($filePath) . "\n\n"
+        . trim($raw);
+      $maxChars = 250000;
+      if (strlen($text) > $maxChars) {
+        $text = substr($text, 0, $maxChars) . "\n\n[TRUNCATED: WKF snapshot exceeded copy size limit]";
+      }
+      return $text;
+    }
+
+    if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory')) {
+      return $this->renderWorkbookFromXlsxZipFallback($filePath, $wkfUri);
+    }
+
+    try {
+      $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
+      $lines = [];
+      $lines[] = 'WKF URI: ' . $wkfUri;
+      $lines[] = 'Source file: ' . basename($filePath);
+      $lines[] = '';
+
+      foreach ($spreadsheet->getWorksheetIterator() as $worksheet) {
+        $sheetName = (string) $worksheet->getTitle();
+        $highestRow = (int) $worksheet->getHighestDataRow();
+        $highestCol = (string) $worksheet->getHighestDataColumn();
+
+        $lines[] = '### Sheet: ' . $sheetName;
+        if ($highestRow <= 0 || $highestCol === '') {
+          $lines[] = '(empty)';
+          $lines[] = '';
+          continue;
+        }
+
+        $rows = $worksheet->rangeToArray('A1:' . $highestCol . $highestRow, '', TRUE, FALSE);
+        foreach ($rows as $row) {
+          $cells = [];
+          foreach ($row as $cell) {
+            $value = is_scalar($cell) ? (string) $cell : '';
+            $value = trim(str_replace(["\r", "\n", "\t"], ' ', $value));
+            $cells[] = $value;
+          }
+
+          while (!empty($cells) && end($cells) === '') {
+            array_pop($cells);
+          }
+
+          if (empty($cells)) {
+            continue;
+          }
+
+          $lines[] = implode("\t", $cells);
+        }
+        $lines[] = '';
+      }
+
+      $text = trim(implode("\n", $lines));
+      $maxChars = 250000;
+      if (strlen($text) > $maxChars) {
+        $text = substr($text, 0, $maxChars) . "\n\n[TRUNCATED: WKF snapshot exceeded copy size limit]";
+      }
+
+      return $text;
+    }
+    catch (\Throwable $e) {
+      return $this->renderWorkbookFromXlsxZipFallback($filePath, $wkfUri);
+    }
+  }
+
+  /**
+   * Lightweight XLSX parser fallback based on ZIP/XML.
+   */
+  protected function renderWorkbookFromXlsxZipFallback(string $filePath, string $wkfUri): string {
+    if (!class_exists('\\ZipArchive')) {
+      return '';
+    }
+
+    $zip = new \ZipArchive();
+    if ($zip->open($filePath) !== TRUE) {
+      return '';
+    }
+
+    try {
+      $sharedStrings = $this->extractXlsxSharedStrings($zip);
+      $workbookXml = $zip->getFromName('xl/workbook.xml');
+      $workbookRelsXml = $zip->getFromName('xl/_rels/workbook.xml.rels');
+      if (!is_string($workbookXml) || $workbookXml === '' || !is_string($workbookRelsXml) || $workbookRelsXml === '') {
+        return '';
+      }
+
+      $workbook = @simplexml_load_string($workbookXml);
+      $rels = @simplexml_load_string($workbookRelsXml);
+      if ($workbook === FALSE || $rels === FALSE) {
+        return '';
+      }
+
+      $relMap = [];
+      foreach ($rels->Relationship as $rel) {
+        $attrs = $rel->attributes();
+        $id = (string) ($attrs['Id'] ?? '');
+        $target = (string) ($attrs['Target'] ?? '');
+        if ($id !== '' && $target !== '') {
+          $relMap[$id] = 'xl/' . ltrim($target, '/');
+        }
+      }
+
+      $lines = [];
+      $lines[] = 'WKF URI: ' . $wkfUri;
+      $lines[] = 'Source file: ' . basename($filePath);
+      $lines[] = '';
+
+      $sheetCount = 0;
+      foreach ($workbook->sheets->sheet as $sheet) {
+        $sheetName = (string) ($sheet['name'] ?? 'Sheet');
+        $sheetRid = (string) ($sheet->attributes('r', TRUE)['id'] ?? '');
+        if ($sheetRid === '' || !isset($relMap[$sheetRid])) {
+          continue;
+        }
+
+        $sheetXml = $zip->getFromName($relMap[$sheetRid]);
+        if (!is_string($sheetXml) || $sheetXml === '') {
+          continue;
+        }
+
+        $sheetObj = @simplexml_load_string($sheetXml);
+        if ($sheetObj === FALSE) {
+          continue;
+        }
+
+        $sheetCount++;
+        $lines[] = '### Sheet: ' . $sheetName;
+
+        $rows = [];
+        foreach ($sheetObj->sheetData->row as $row) {
+          $rowCells = [];
+          foreach ($row->c as $cell) {
+            $cellRef = (string) ($cell['r'] ?? '');
+            $colIndex = $this->xlsxColumnIndexFromRef($cellRef);
+            $type = (string) ($cell['t'] ?? '');
+            $value = '';
+
+            if ($type === 'inlineStr' && isset($cell->is->t)) {
+              $value = (string) $cell->is->t;
+            }
+            else if ($type === 's' && isset($cell->v)) {
+              $sharedIndex = (int) ((string) $cell->v);
+              $value = $sharedStrings[$sharedIndex] ?? '';
+            }
+            else if (isset($cell->v)) {
+              $value = (string) $cell->v;
+            }
+
+            $value = trim(str_replace(["\r", "\n", "\t"], ' ', $value));
+            $rowCells[$colIndex] = $value;
+          }
+
+          if (empty($rowCells)) {
+            continue;
+          }
+
+          ksort($rowCells);
+          $maxIndex = max(array_keys($rowCells));
+          $ordered = [];
+          for ($i = 1; $i <= $maxIndex; $i++) {
+            $ordered[] = $rowCells[$i] ?? '';
+          }
+
+          while (!empty($ordered) && end($ordered) === '') {
+            array_pop($ordered);
+          }
+
+          if (!empty($ordered)) {
+            $rows[] = implode("\t", $ordered);
+          }
+        }
+
+        if (empty($rows)) {
+          $lines[] = '(empty)';
+        }
+        else {
+          foreach ($rows as $line) {
+            $lines[] = $line;
+          }
+        }
+
+        $lines[] = '';
+      }
+
+      if ($sheetCount === 0) {
+        return '';
+      }
+
+      $text = trim(implode("\n", $lines));
+      $maxChars = 250000;
+      if (strlen($text) > $maxChars) {
+        $text = substr($text, 0, $maxChars) . "\n\n[TRUNCATED: WKF snapshot exceeded copy size limit]";
+      }
+
+      return $text;
+    }
+    catch (\Throwable $e) {
+      return '';
+    }
+    finally {
+      $zip->close();
+    }
+  }
+
+  /**
+   * Parse XLSX shared strings table.
+   */
+  protected function extractXlsxSharedStrings(\ZipArchive $zip): array {
+    $xml = $zip->getFromName('xl/sharedStrings.xml');
+    if (!is_string($xml) || $xml === '') {
+      return [];
+    }
+
+    $doc = @simplexml_load_string($xml);
+    if ($doc === FALSE) {
+      return [];
+    }
+
+    $strings = [];
+    foreach ($doc->si as $si) {
+      if (isset($si->t)) {
+        $strings[] = (string) $si->t;
+        continue;
+      }
+
+      $acc = '';
+      foreach ($si->r as $run) {
+        if (isset($run->t)) {
+          $acc .= (string) $run->t;
+        }
+      }
+      $strings[] = $acc;
+    }
+
+    return $strings;
+  }
+
+  /**
+   * Convert A1-style cell reference to 1-based column index.
+   */
+  protected function xlsxColumnIndexFromRef(string $cellRef): int {
+    if ($cellRef === '') {
+      return 1;
+    }
+
+    if (!preg_match('/^([A-Z]+)\d+$/', strtoupper($cellRef), $matches)) {
+      return 1;
+    }
+
+    $letters = $matches[1];
+    $index = 0;
+    $len = strlen($letters);
+    for ($i = 0; $i < $len; $i++) {
+      $index = ($index * 26) + (ord($letters[$i]) - ord('A') + 1);
+    }
+
+    return max(1, $index);
   }
 
   /**
@@ -1881,6 +3223,7 @@ class REPSelectMTForm extends FormBase {
       'ok' => false,
       'reason' => '',
       'tried' => [],
+      'resolved_path' => '',
     ];
 
     $fileId = NULL;
@@ -1908,7 +3251,11 @@ class REPSelectMTForm extends FormBase {
       }
       $path = trim($path);
       $result['tried'][] = $path;
-      return is_readable($path);
+      $ok = is_readable($path);
+      if ($ok) {
+        $result['resolved_path'] = $path;
+      }
+      return $ok;
     };
 
     // Direct absolute path (if any).
@@ -2241,7 +3588,7 @@ class REPSelectMTForm extends FormBase {
     }
 
     // Optional: redirect back to the selector to refresh the list.
-    $form_state->setRedirectUrl(self::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+    $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
     return;
   }
 
@@ -2251,8 +3598,13 @@ class REPSelectMTForm extends FormBase {
    */
   public static function backSelect($elementType, $mode, $studyuri)
   {
-    $url = Url::fromRoute('rep.select_mt_element');
-    $url->setRouteParameter('elementtype', $elementType);
+    if ($elementType === 'wkf') {
+      $url = Url::fromRoute('rep.select_wkf_element');
+    }
+    else {
+      $url = Url::fromRoute('rep.select_mt_element');
+      $url->setRouteParameter('elementtype', $elementType);
+    }
     $url->setRouteParameter('mode', $mode);
     $url->setRouteParameter('page', 0);
     $url->setRouteParameter('pagesize', 9);
@@ -2277,7 +3629,7 @@ class REPSelectMTForm extends FormBase {
   /**
    * Build Phase I hierarchy options from Scenario Search process stems.
    */
-  private function buildScenarioClinicalProcessOptionsHtml(): string {
+  protected function buildScenarioClinicalProcessOptionsHtml(): string {
     $options = [];
     foreach ($this->getScenarioProcessStemFilters() as $filter) {
       if (!is_array($filter)) {
@@ -2382,7 +3734,7 @@ class REPSelectMTForm extends FormBase {
   /**
    * Convert markdown to HTML for WKF instructions
    */
-  private function convertMarkdownToHtml($markdown) {
+  protected function convertMarkdownToHtml($markdown) {
     if (empty($markdown)) {
       return '';
     }

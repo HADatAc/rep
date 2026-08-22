@@ -274,6 +274,10 @@
         var hideDraft = (drupalSettings.rep_tree && drupalSettings.rep_tree.hideDraft) || false;
         var hideDeprecated = (drupalSettings.rep_tree && drupalSettings.rep_tree.hideDeprecated) || false;
         var showLabel = (drupalSettings.rep_tree && drupalSettings.rep_tree.showLabel) || 'label';
+
+        function getTreeFieldId() {
+          return $treeRoot.data('field-id') || $('#tree-root').data('field-id') || drupalSettings.rep_tree.fieldId || '';
+        }
         // // console.log('[tree] Initialization: prefixIsActive =', prefixIsActive,
         //             ', hideDraft =', hideDraft,
         //             ', hideDeprecated =', hideDeprecated,
@@ -995,7 +999,7 @@
                     data: {
                       nodeUri: node.original.uri,
                       elementtype: drupalSettings.rep_tree.elementType,
-                      field_id: drupalSettings.rep_tree.fieldId || ''
+                      field_id: getTreeFieldId()
                     },
                     dataType: 'json',
                     success: function (data) {
@@ -1043,7 +1047,7 @@
       data: {
         nodeUri: promotionTargetUri,
         elementtype: drupalSettings.rep_tree.elementType,
-        field_id: drupalSettings.rep_tree.fieldId || ''
+        field_id: getTreeFieldId()
       },
       dataType: 'json',
       success: function (grandchildren) {
@@ -1258,7 +1262,7 @@
                     data: {
                       nodeUri: node.original.uri,
                       elementtype: drupalSettings.rep_tree.elementType,
-                      field_id: drupalSettings.rep_tree.fieldId || ''
+                      field_id: getTreeFieldId()
                     },
                     dataType: 'json',
                     success: function (data) {
@@ -1306,7 +1310,7 @@
                             data: {
                               nodeUri: promotionTargetUri,
                               elementtype: drupalSettings.rep_tree.elementType,
-                              field_id: drupalSettings.rep_tree.fieldId || ''
+                              field_id: getTreeFieldId()
                             },
                           dataType: 'json',
                           success: function (grandchildren) {
@@ -1404,6 +1408,23 @@
                           }
                           return false;
                         }
+
+                        function waitAndExpandNodeByUri(uriToFind, done, retriesLeft) {
+                          var attemptsLeft = (typeof retriesLeft === 'number') ? retriesLeft : 12;
+                          var expanded = expandNodeByUri(uriToFind, done);
+                          if (expanded) {
+                            return;
+                          }
+
+                          if (attemptsLeft <= 0) {
+                            done(false);
+                            return;
+                          }
+
+                          setTimeout(function() {
+                            waitAndExpandNodeByUri(uriToFind, done, attemptsLeft - 1);
+                          }, 250);
+                        }
                         
                         // Expand nodes sequentially with proper waiting
                         function expandNext(index) {
@@ -1413,17 +1434,14 @@
                           
                           var uri = defaultExpandedNodes[index];
                           
-                          var expanded = expandNodeByUri(uri, function() {
-                            // Node opened successfully, wait a bit for children to load
+                          waitAndExpandNodeByUri(uri, function(expanded) {
+                            // Whether found or skipped, continue sequence.
+                            // If expanded, wait for lazy children to materialize.
+                            var delay = expanded === false ? 100 : 500;
                             setTimeout(function() {
                               expandNext(index + 1);
-                            }, 500);
+                            }, delay);
                           });
-                          
-                          if (!expanded) {
-                            // Node not found, skip to next immediately
-                            expandNext(index + 1);
-                          }
                         }
                         
                         expandNext(0);

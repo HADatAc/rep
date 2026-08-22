@@ -435,6 +435,10 @@ class Utils {
   }
 
   public static function namespaceUriWithNS($uri, $namespaces) {
+    if (!is_array($namespaces) && !($namespaces instanceof \Traversable)) {
+      return $uri;
+    }
+
     foreach ($namespaces as $abbrev => $ns) {
       if ($abbrev != NULL && $abbrev != "" && $ns != NULL && $ns != "") {
         if (str_starts_with($uri,$ns)) {
@@ -472,6 +476,10 @@ class Utils {
     static $namespaces = NULL;
     if ($namespaces === NULL) {
       $namespaces = (new Tables())->getNamespaces();
+    }
+
+    if (!is_array($namespaces) && !($namespaces instanceof \Traversable)) {
+      return $uri;
     }
 
     foreach ($namespaces as $abbrev => $ns) {

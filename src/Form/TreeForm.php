@@ -410,6 +410,17 @@ class TreeForm extends FormBase {
       }
     }
 
+    // Phase I WKF selector should open directly to the process-stem branch and
+    // expose first-level procedures under Medical Simulation Process Stem.
+    if ($field_id === 'phase1ClinicalProcess' && in_array(strtolower($elementtype), ['workflowstem', 'processstem'], TRUE)) {
+      $default_expanded_nodes = [
+        EntryPoints::CLASS_EP_PMSR,
+        VSTOI::PROCESS_STEM,
+        'https://pmsr.net/ont/SimulationProcessStem',
+        'https://pmsr.net/ont/MedicalSimulationProcessStem',
+      ];
+    }
+
     $base_url = \Drupal::request()->getSchemeAndHttpHost() . \Drupal::request()->getBaseUrl();
     $form['#attached']['drupalSettings']['rep_tree'] = [
       'baseUrl' => $base_url,
@@ -432,6 +443,11 @@ class TreeForm extends FormBase {
       'prefix' => $prefix,
       'defaultExpandedNodes' => $default_expanded_nodes,
     ];
+
+    $isProcessStemHierarchy = in_array(strtolower((string) $firstType), ['workflowstem', 'processstem'], TRUE);
+    if ($isProcessStemHierarchy) {
+      $form['#attached']['drupalSettings']['rep_tree']['createProcessStemEndpoint'] = Url::fromRoute('rep.tree_create_processstem_subnode')->toString();
+    }
 
     if ($mode == 'browse')
     {
@@ -609,6 +625,40 @@ class TreeForm extends FormBase {
             'label'      => $this->t('Select Node'),
           ],
         ];
+
+        if ($isProcessStemHierarchy) {
+          $form['create_sub_node'] = [
+            '#type' => 'inline_template',
+            '#template' => '
+              <div class="mt-2 mb-3">
+                <label for="create-sub-node-name" class="form-label mb-1">{{ field_label }}</label>
+                <div class="input-group input-group-sm">
+                  <input type="text"
+                         id="create-sub-node-name"
+                         class="form-control"
+                         maxlength="180"
+                         placeholder="{{ placeholder }}"
+                         aria-label="{{ field_label }}" />
+                  <button type="button"
+                          id="create-sub-node-btn"
+                          class="btn btn-outline-primary"
+                          data-field-id="{{ field_id }}">
+                    {{ button_label }}
+                  </button>
+                </div>
+                <small class="text-muted d-block mt-1">{{ helper_text }}</small>
+                <div id="create-sub-node-status" class="small mt-1" aria-live="polite"></div>
+              </div>',
+            '#context' => [
+              'field_id' => 
+                \Drupal::request()->query->get('field_id'),
+              'field_label' => $this->t('New process stem name'),
+              'placeholder' => $this->t('Enter process stem name'),
+              'button_label' => $this->t('Create Sub-Node'),
+              'helper_text' => $this->t('Creates a child node under the currently selected process stem.'),
+            ],
+          ];
+        }
       }
     }
 

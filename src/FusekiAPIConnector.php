@@ -17,6 +17,22 @@ use Psr\Http\Message\ResponseInterface;
 class FusekiAPIConnector {
 
   /**
+   * Runtime-safe timeout defaults for direct Guzzle requests.
+   *
+   * Keeps each HTTP call bounded so PHP max_execution_time (often 30s)
+   * is not exceeded by slow upstream endpoints.
+   */
+  private function getRuntimeSafeTimeoutOptions(): array {
+    $maxExec = (int) ini_get('max_execution_time');
+    $strictRuntimeBudget = ($maxExec > 0 && $maxExec <= 30);
+
+    return [
+      'timeout' => $strictRuntimeBudget ? 8 : 12,
+      'connect_timeout' => $strictRuntimeBudget ? 2 : 3,
+    ];
+  }
+
+  /**
    * Backend fallback token used when explicit token config/env is unavailable.
    */
   const DEFAULT_NAMESPACE_APPROVAL_TOKEN = 'rep-semantic-settings-token';
@@ -487,6 +503,8 @@ class FusekiAPIConnector {
     $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
     $postOptions= [
       'http_errors'=> FALSE,
+      'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+      'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
       'headers'    => [
         'Authorization'=> "Bearer {$token}",
         'Accept'       => 'application/json',
@@ -1025,6 +1043,8 @@ class FusekiAPIConnector {
     $baseOptions = [
         // Prevent Guzzle from throwing exceptions on 4xx/5xx so we can handle status manually.
         'http_errors' => FALSE,
+      'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+      'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
         'headers'     => [
             'Authorization' => "Bearer {$token}",
             'Accept'        => 'application/json',
@@ -1179,6 +1199,8 @@ class FusekiAPIConnector {
 
     $baseOptions = [
         'http_errors' => FALSE,
+      'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+      'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
         'headers'     => [
             'Authorization' => "Bearer {$token}",
             'Accept'        => 'application/json',
@@ -1275,6 +1297,14 @@ class FusekiAPIConnector {
     $api_url = $this->getApiUrl();
     $data = $this->getHeader();
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  public function validateWKF($wkfUri) {
+    $endpoint = "/hascoapi/api/validate/wkf/" . rawurlencode($wkfUri);
+    $method = 'GET';
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method, $api_url . $endpoint, $data);
   }
 
   public function elementAdd($elementType, $elementJson) {
@@ -2843,6 +2873,8 @@ class FusekiAPIConnector {
       try {
         $res = $client->request('POST', $url, [
           'http_errors' => false,
+          'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+          'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
           'headers' => [
             'Content-Type' => 'application/sparql-update',
             'Accept' => 'application/json',
@@ -2937,6 +2969,8 @@ class FusekiAPIConnector {
     try {
       $res = $client->request('GET', $url, [
         'http_errors' => false,
+        'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+        'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
         'allow_redirects' => true,
         'headers' => [
           'Accept' => $preferredMime ?: '*/*',
@@ -2963,6 +2997,8 @@ class FusekiAPIConnector {
       try {
         $res = $client->request('PUT', $url, [
           'http_errors' => false,
+          'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+          'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
           'headers' => [
             'Content-Type' => $contentType ?: 'text/turtle',
             'Accept' => 'application/json',
@@ -3527,8 +3563,10 @@ class FusekiAPIConnector {
   public function perform_http_request($method, $url, $data = false) {
     $maxExec = (int) ini_get('max_execution_time');
     $strictRuntimeBudget = ($maxExec > 0 && $maxExec <= 30);
-    $defaultTimeout = $strictRuntimeBudget ? 4 : 10;
-    $defaultConnectTimeout = $strictRuntimeBudget ? 1.5 : 3;
+    // Keep strict-budget requests responsive but avoid overly aggressive
+    // timeouts that can intermittently break Drupal AJAX flows.
+    $defaultTimeout = $strictRuntimeBudget ? 8 : 12;
+    $defaultConnectTimeout = $strictRuntimeBudget ? 2 : 3;
 
     $client = new Client([
       'timeout' => $defaultTimeout,
@@ -3563,7 +3601,7 @@ class FusekiAPIConnector {
 
     $methodUpper = strtoupper((string) $method);
     $maxAttempts = ($methodUpper === 'GET')
-      ? ($strictRuntimeBudget ? 1 : 3)
+      ? ($strictRuntimeBudget ? 2 : 3)
       : 1;
     $attempt = 0;
     while (TRUE) {
@@ -3730,6 +3768,8 @@ class FusekiAPIConnector {
 //   }
 
   public function parseObjectResponse($response, $methodCalled) {
+    $isWkfValidationCall = ($methodCalled === 'validateWKF');
+
     // 1) Any prior connection or HTTP error?
     if ($this->error !== NULL) {
       $statusCode = is_numeric($this->error) ? (int) $this->error : 0;
@@ -3762,23 +3802,27 @@ class FusekiAPIConnector {
         return NULL;
       }
 
-      if ($this->error === 'CON') {
-        \Drupal::messenger()->addError(t('Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect.'));
-      }
-      else {
-        \Drupal::messenger()->addError(t('API ERROR @code. Message: @msg', [
-          '@code' => $this->error,
-          '@msg'  => $this->error_message,
-        ]));
+      if (!$isWkfValidationCall) {
+        if ($this->error === 'CON') {
+          \Drupal::messenger()->addError(t('Connection with API is broken. Either the Internet is down, the API is down or the API IP configuration is incorrect.'));
+        }
+        else {
+          \Drupal::messenger()->addError(t('API ERROR @code. Message: @msg', [
+            '@code' => $this->error,
+            '@msg'  => $this->error_message,
+          ]));
+        }
       }
       return NULL;
     }
 
     // 2) Empty response?
     if ($response === NULL || $response === FALSE || $response === '') {
-      \Drupal::messenger()->addError(t('API service has returned no response: called @method', [
-        '@method' => $methodCalled,
-      ]));
+      if (!$isWkfValidationCall) {
+        \Drupal::messenger()->addError(t('API service has returned no response: called @method', [
+          '@method' => $methodCalled,
+        ]));
+      }
       return NULL;
     }
 
@@ -3804,13 +3848,15 @@ class FusekiAPIConnector {
       $snippet = substr(preg_replace('/\s+/', ' ', (string) $raw), 0, 500);
       $status = $this->last_status_code !== NULL ? (string) $this->last_status_code : 'unknown';
       $url = $this->last_request_url ?: 'unknown';
-      
-      \Drupal::messenger()->addError(t('API service returned a non-JSON response for @method (HTTP @status). URL: @url Response: @snippet', [
-        '@method' => $methodCalled,
-        '@status' => $status,
-        '@url' => $url,
-        '@snippet' => $snippet ?: '(empty)',
-      ]));
+
+      if (!$isWkfValidationCall) {
+        \Drupal::messenger()->addError(t('API service returned a non-JSON response for @method (HTTP @status). URL: @url Response: @snippet', [
+          '@method' => $methodCalled,
+          '@status' => $status,
+          '@url' => $url,
+          '@snippet' => $snippet ?: '(empty)',
+        ]));
+      }
       return NULL;
     }
 
@@ -3862,9 +3908,11 @@ class FusekiAPIConnector {
     // 8) Otherwise surface the API error.
     $this->error = 'API_UNSUCCESSFUL';
     $this->error_message = is_string($obj->body) ? $obj->body : json_encode($obj->body);
-    \Drupal::messenger()->addError(t('API service has failed with following message: @msg', [
-      '@msg' => $obj->body,
-    ]));
+    if (!$isWkfValidationCall) {
+      \Drupal::messenger()->addError(t('API service has failed with following message: @msg', [
+        '@msg' => $obj->body,
+      ]));
+    }
     return NULL;
   }
 
@@ -4075,6 +4123,8 @@ class FusekiAPIConnector {
 
     try {
       $res = $client->post($api_url . $endpoint, [
+        'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+        'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
         'headers' => [
           'Authorization' => $this->bearer,
         ],
@@ -4291,8 +4341,8 @@ class FusekiAPIConnector {
     $client = new Client();
     try {
       $res = $client->post($api_url.$endpoint, [
-        'timeout' => 20,
-        'connect_timeout' => 3,
+        'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+        'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
         'headers' => [
           'Content-Type' => $file_entity->getMimeType(),
           'Authorization' => $this->bearer
@@ -4341,6 +4391,8 @@ class FusekiAPIConnector {
 
     try {
       $res = $client->post($api_url . $endpoint, [
+        'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+        'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
         'headers' => [
           'Authorization' => $this->bearer,
         ],
@@ -4411,6 +4463,8 @@ class FusekiAPIConnector {
     $client = new Client();
     try {
       $res = $client->post($api_url.$endpoint, [
+        'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+        'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
         'headers' => [
           'Content-Type' => $file_entity->getMimeType(),
           'Authorization' => $this->bearer
@@ -4501,6 +4555,8 @@ class FusekiAPIConnector {
 
     try {
       $res = $client->post($api_url . $endpoint, [
+        'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+        'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
         'headers' => [
           'Content-Type' => $mimeType,
           'Authorization' => $authHeader,
@@ -4565,6 +4621,8 @@ class FusekiAPIConnector {
 
     try {
       $res = $client->delete($api_url . $endpoint, [
+        'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+        'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
         'headers' => [
           'Authorization' => $authHeader,
         ],
@@ -4689,6 +4747,8 @@ class FusekiAPIConnector {
     $consumerId = \Drupal::config('social.oauth.settings')->get('client_id');
     $options    = [
       'http_errors' => FALSE,
+      'timeout' => $this->getRuntimeSafeTimeoutOptions()['timeout'],
+      'connect_timeout' => $this->getRuntimeSafeTimeoutOptions()['connect_timeout'],
       'headers'     => [
         'Authorization' => "Bearer {$token}",
         'Accept'        => 'application/octet-stream',

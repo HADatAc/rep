@@ -8,8 +8,9 @@
           e.preventDefault();
 
           const url = $(this).data('url');
-          //const fieldId = $(this).data('field-id');
-          const fieldId = $('#tree-root').data('field-id') || $(this).data('field-id');
+          // Always prioritize the clicked trigger field id; stale tree-root state
+          // from previous dialogs can otherwise prevent Phase I hierarchy opening.
+          const fieldId = $(this).data('field-id') || $('#tree-root').data('field-id');
           const forceFreshHierarchy = fieldId === 'phase1ClinicalProcess';
           const elementtype = $(this).data('elementtype');
           const searchValue = $(this).val();
@@ -23,6 +24,7 @@
           }
 
           drupalSettings.rep_tree.searchValue = searchValue;
+          drupalSettings.rep_tree.fieldId = fieldId;
 
           const $searchField = $('#tree-search');
           const $clearButton = $('#clear-search');
@@ -91,11 +93,21 @@
 
           $field.data('initial-value', initialValue);
 
-          Drupal.ajax({
-            url: modalUrl,
-            dialogType: dialogType,
-            dialog: dialogOptions,
-          }).execute();
+          if (typeof Drupal.ajax !== 'function') {
+            window.location.href = modalUrl;
+            return;
+          }
+
+          try {
+            Drupal.ajax({
+              url: modalUrl,
+              dialogType: dialogType,
+              dialog: dialogOptions,
+            }).execute();
+          } catch (err) {
+            window.location.href = modalUrl;
+            return;
+          }
 
           setTimeout(() => {
             const valToSet = drupalSettings.rep_tree.searchValue || '';
@@ -220,6 +232,142 @@
           e.stopImmediatePropagation();
         });
     },
+  };
+
+  Drupal.behaviors.repTreeCreateSubNode = {
+    attach: function (context, settings) {
+      var $createButton = $('#create-sub-node-btn', context);
+      if (!$createButton.length) {
+        return;
+      }
+
+      var $status = $('#create-sub-node-status', context);
+      var defaultButtonText = String($createButton.text() || 'Create Sub-Node').trim();
+
+      function setStatus(message, kind) {
+        if (!$status.length) {
+          return;
+        }
+        $status.removeClass('text-success text-danger text-muted');
+        if (kind === 'success') {
+          $status.addClass('text-success');
+        } else if (kind === 'error') {
+          $status.addClass('text-danger');
+        } else {
+          $status.addClass('text-muted');
+        }
+        $status.text(String(message || ''));
+      }
+
+      $createButton
+        .off('click.repTreeCreateSubNode')
+        .on('click.repTreeCreateSubNode', function (e) {
+          e.preventDefault();
+
+          var endpoint = (typeof drupalSettings !== 'undefined' && drupalSettings.rep_tree && drupalSettings.rep_tree.createProcessStemEndpoint)
+            ? String(drupalSettings.rep_tree.createProcessStemEndpoint)
+            : '/rep/tree/processstem/create-subnode';
+
+          var $selectButton = $('#select-tree-node');
+          var selectedRaw = String($selectButton.data('selected-value') || '').trim();
+          var selectedLabel = String($selectButton.data('selected-label') || '').trim();
+          var match = selectedRaw.match(/\[(https?:\/\/[^\]]+)\]\s*$/);
+          var parentUri = match && match[1] ? String(match[1]).trim() : selectedRaw;
+          if (!parentUri) {
+            setStatus('Select a parent node before creating a sub-node.', 'error');
+            return;
+          }
+
+          var $nameInput = $('#create-sub-node-name');
+          var nodeName = String($nameInput.val() || '').trim();
+          if (!nodeName) {
+            setStatus('Enter the new process stem name.', 'error');
+            return;
+          }
+
+          var fieldId = $('#tree-root').data('field-id') || $selectButton.data('field-id') || $createButton.data('field-id') || '';
+          var $field = fieldId ? $(`[name="${fieldId}"], #${fieldId}`).first() : $();
+
+          setStatus('Creating sub-node...', 'info');
+          $createButton.prop('disabled', true).text('Creating...');
+
+          fetch(endpoint, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              parentUri: parentUri,
+              name: nodeName
+            })
+          })
+            .then(function (resp) {
+              return resp.json().catch(function () { return {}; }).then(function (data) {
+                if (!resp.ok || !data || data.success !== true || !data.node || !data.node.uri) {
+                  var msg = data && data.error ? data.error : 'Failed to create sub-node.';
+                  throw new Error(msg);
+                }
+                return data;
+              });
+            })
+            .then(function (data) {
+              var uri = String((data.node && data.node.uri) || '').trim();
+              var label = String((data.node && data.node.label) || nodeName || '').trim();
+              var optionText = label + ' (' + uri + ')';
+
+              if ($field.length && $field.is('select')) {
+                var $opt = $field.find('option').filter(function () {
+                  return $(this).val() === uri;
+                }).first();
+
+                if (!$opt.length) {
+                  $opt = $('<option>', { value: uri, text: optionText });
+                  $field.append($opt);
+                } else {
+                  $opt.text(optionText);
+                }
+
+                $field.find('option').prop('selected', false);
+                $opt.prop('selected', true);
+                $field.val(uri).trigger('change').trigger('input');
+              }
+
+              if ($field.length) {
+                $field.data('rep-tree-committed', true);
+              }
+
+              // Update selection context so user can keep creating siblings quickly.
+              $selectButton
+                .prop('disabled', false)
+                .removeClass('disabled')
+                .data('selected-value', uri)
+                .data('selected-label', label)
+                .data('field-id', fieldId);
+
+              var $tree = $('#tree-root');
+              if ($tree.length && $tree.data('jstree')) {
+                var tree = $tree.jstree(true);
+                if (tree) {
+                  try {
+                    tree.refresh();
+                  } catch (refreshErr) {
+                    // Ignore tree refresh errors.
+                  }
+                }
+              }
+
+              $nameInput.val('');
+              setStatus('Sub-node created successfully.', 'success');
+            })
+            .catch(function (err) {
+              setStatus('Create Sub-Node failed: ' + err.message, 'error');
+            })
+            .finally(function () {
+              $createButton.prop('disabled', false).text(defaultButtonText);
+            });
+        });
+    }
   };
 })(Drupal, jQuery);
 

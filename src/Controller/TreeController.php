@@ -11,6 +11,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Drupal\rep\Entity\Tables;
 use Drupal\rep\EntryPoints;
 use Drupal\rep\ListManagerEmailPage;
+use Drupal\rep\Utils;
 use Drupal\rep\Vocabulary\VSTOI;
 
 class TreeController extends ControllerBase {
@@ -76,6 +77,86 @@ class TreeController extends ControllerBase {
   ];
   private array $instanceLabelCache = [];
   private int $instanceLabelLookupCount = 0;
+
+  /**
+   * Creates a process-stem child node under the selected parent URI.
+   */
+  public function createProcessStemSubNode(Request $request): JsonResponse {
+    $payload = json_decode((string) $request->getContent(), TRUE);
+    if (!is_array($payload)) {
+      $payload = $request->request->all();
+    }
+
+    $parentUri = trim((string) ($payload['parentUri'] ?? ''));
+    $name = trim((string) ($payload['name'] ?? ''));
+
+    if ($parentUri === '' || $name === '') {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => 'Both parentUri and name are required.',
+      ], 400);
+    }
+
+    if (mb_strlen($name) > 180) {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => 'Name is too long (max 180 characters).',
+      ], 400);
+    }
+
+    $newUri = Utils::uriGen('workflowstem') ?: Utils::uriGen('processstem');
+    if (!is_string($newUri) || trim($newUri) === '') {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => 'Could not generate URI for new process stem.',
+      ], 500);
+    }
+
+    $api = \Drupal::service('rep.api_connector');
+    $currentUserEmail = (string) \Drupal::currentUser()->getEmail();
+
+    $body = [
+      'uri' => $newUri,
+      'typeUri' => VSTOI::PROCESS_STEM,
+      'hascoTypeUri' => VSTOI::PROCESS_STEM,
+      'label' => $name,
+      'comment' => 'Created from Knowledge Graph Hierarchy under ' . $parentUri,
+      'superUri' => $parentUri,
+      'hasStatus' => VSTOI::DRAFT,
+      'hasSIRManagerEmail' => $currentUserEmail,
+    ];
+
+    $json = json_encode($body);
+    if (!is_string($json) || $json === '') {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => 'Could not serialize new process stem payload.',
+      ], 500);
+    }
+
+    $created = $api->parseObjectResponse($api->workflowstemAdd($json), 'workflowstemAdd');
+    if ($created === NULL) {
+      // Fallback for deployments that only expose generic elementAdd.
+      $created = $api->parseObjectResponse($api->elementAdd('processstem', $json), 'elementAdd');
+    }
+
+    if ($created === NULL) {
+      $detail = method_exists($api, 'getErrorMessage') ? trim((string) $api->getErrorMessage()) : '';
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => $detail !== '' ? $detail : 'Failed to create process stem sub-node.',
+      ], 500);
+    }
+
+    return new JsonResponse([
+      'success' => TRUE,
+      'node' => [
+        'uri' => $newUri,
+        'label' => $name,
+        'superUri' => $parentUri,
+      ],
+    ]);
+  }
 
   /**
    * Formats API list payloads to jsTree-compatible selectable leaves.
@@ -170,6 +251,30 @@ class TreeController extends ControllerBase {
       if (is_string($last) && $last !== '') {
         return rawurldecode($last);
       }
+    }
+
+    return $uri;
+  }
+
+  /**
+   * Normalizes equivalent PMSR ontology URIs used by different KG exports.
+   */
+  private function normalizePmsrOntologyUri(string $uri): string {
+    $uri = trim($uri);
+    if ($uri === '') {
+      return '';
+    }
+
+    // Expand CURIE-like values (for example, pmsr:WST...) to full URIs so
+    // parent/child matching stays stable across mixed KG payload formats.
+    $expanded = Utils::plainUri($uri);
+    if (is_string($expanded) && trim($expanded) !== '') {
+      $uri = trim($expanded);
+    }
+
+    $hascoPrefix = self::PMSR_ONTOLOGY_PREFIX . 'hasco/';
+    if (str_starts_with($uri, $hascoPrefix)) {
+      return self::PMSR_ONTOLOGY_PREFIX . substr($uri, strlen($hascoPrefix));
     }
 
     return $uri;
@@ -330,15 +435,38 @@ class TreeController extends ControllerBase {
     $managerEmail = \Drupal::currentUser()->getEmail();
     $api = \Drupal::service('rep.api_connector');
 
-    $elements = $this->getManagerOwnedRawItems($elementtype);
-    if (empty($elements)) {
-      $elements = $this->getKeywordRawItems($elementtype);
+    $elements = [];
+
+    // For process-stem selection (Phase I clinical process), show the full
+    // project hierarchy while keeping manager-owned drafts visible as well.
+    if (in_array($elementtype, ['processstem', 'workflowstem'], TRUE)) {
+      $managerOwned = $this->getManagerOwnedRawItems($elementtype);
+      $projectWide = $this->getKeywordRawItems($elementtype);
+
+      $mergedByUri = [];
+      foreach (array_merge($projectWide, $managerOwned) as $el) {
+        if (is_array($el)) {
+          $el = (object) $el;
+        }
+        if (!is_object($el) || empty($el->uri)) {
+          continue;
+        }
+        $mergedByUri[(string) $el->uri] = $el;
+      }
+      $elements = array_values($mergedByUri);
+    }
+    else {
+      $elements = $this->getManagerOwnedRawItems($elementtype);
+      if (empty($elements)) {
+        $elements = $this->getKeywordRawItems($elementtype);
+      }
     }
     if (empty($elements)) {
       return NULL;
     }
 
     $itemsByUri = [];
+    $normalizedNodeUri = $this->normalizePmsrOntologyUri((string) $nodeUri);
     $parentUriByItem = [];
     $parentLabelByItem = [];
     $fallbackCategoryLabelByParentUri = [];
@@ -350,8 +478,11 @@ class TreeController extends ControllerBase {
         continue;
       }
 
-      $uri = (string) $el->uri;
-      $parentUri = $this->getInstanceGroupingParentUri($el, $elementtype);
+      $uri = $this->normalizePmsrOntologyUri((string) $el->uri);
+      if ($uri === '') {
+        continue;
+      }
+      $parentUri = $this->normalizePmsrOntologyUri($this->getInstanceGroupingParentUri($el, $elementtype));
       $parentLabel = $this->getInstanceGroupingParentLabel($el, $elementtype);
 
       $parentUriByItem[$uri] = $parentUri;
@@ -393,7 +524,7 @@ class TreeController extends ControllerBase {
       $childrenCount[$superUri] = ($childrenCount[$superUri] ?? 0) + 1;
     }
 
-    if ($nodeUri === $entryPointUri) {
+    if ((string) $nodeUri === $entryPointUri) {
       $root = [];
 
       foreach ($itemsByUri as $item) {
@@ -451,14 +582,14 @@ class TreeController extends ControllerBase {
 
     // If this URI is not a known parent in the instance list hierarchy,
     // allow caller fallback to ontology-class exploration.
-    if (!isset($childrenCount[$nodeUri])) {
+    if (!isset($childrenCount[$normalizedNodeUri])) {
       return NULL;
     }
 
     $children = [];
     foreach ($itemsByUri as $item) {
       $superUri = trim((string) ($parentUriByItem[$item->uri] ?? ''));
-      if ($superUri !== $nodeUri) {
+      if ($superUri !== $normalizedNodeUri) {
         continue;
       }
 
@@ -840,8 +971,29 @@ class TreeController extends ControllerBase {
       'workflowstem' => EntryPoints::CLASS_EP_PMSR,
       'processstem' => VSTOI::PROCESS_STEM,
     ];
-    if (in_array($fieldId, ['instance_type', 'phase1ClinicalProcess'], true)
-      && isset($instanceHierarchyRoots[$elementtype])) {
+    $useInstanceHierarchy = in_array($fieldId, ['instance_type', 'phase1ClinicalProcess'], true)
+      && isset($instanceHierarchyRoots[$elementtype]);
+
+    // For Phase I clinical process selection, only use the custom instance
+    // hierarchy at root anchors. For deeper ontology nodes (for example NCIT
+    // categories like Endoscopic Procedure), fall back to KG children so all
+    // existing subclasses remain visible.
+    if ($useInstanceHierarchy
+      && $fieldId === 'phase1ClinicalProcess'
+      && in_array($elementtype, ['workflowstem', 'processstem'], true)) {
+      $normalizedNodeUri = $this->normalizePmsrOntologyUri((string) $nodeUri);
+      $rootAnchors = [
+        EntryPoints::CLASS_EP_PMSR,
+        VSTOI::PROCESS_STEM,
+        'https://pmsr.net/ont/SimulationProcessStem',
+        'https://pmsr.net/ont/MedicalSimulationProcessStem',
+      ];
+      if (!in_array($normalizedNodeUri, $rootAnchors, true)) {
+        $useInstanceHierarchy = false;
+      }
+    }
+
+    if ($useInstanceHierarchy) {
       $items = $this->getInstanceHierarchyItems($nodeUri, $elementtype, $instanceHierarchyRoots[$elementtype]);
       if ($items !== NULL) {
         if ($fieldId === 'phase1ClinicalProcess' && in_array($elementtype, ['workflowstem', 'processstem'], true)) {

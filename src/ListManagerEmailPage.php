@@ -6,9 +6,84 @@ use Drupal\rep\Vocabulary\REPGUI;
 
 class ListManagerEmailPage {
 
+  /**
+   * Detect strict PHP runtime budgets (typical local 30s max execution time).
+   */
+  private static function hasStrictRuntimeBudget(): bool {
+    $maxExec = (int) ini_get('max_execution_time');
+    return ($maxExec > 0 && $maxExec <= 30);
+  }
+
+  private static function wkfDebug(string $stage, array $context = []): void {
+    if (empty($context['is_wkf'])) {
+      return;
+    }
+
+    $payload = [
+      '@stage' => $stage,
+      '@etype' => (string) ($context['elementtype'] ?? ''),
+      '@ltype' => (string) ($context['list_element_type'] ?? ''),
+      '@status' => (string) ($context['status'] ?? ''),
+      '@manager' => (string) ($context['manager'] ?? ''),
+      '@with_current' => !empty($context['with_current']) ? '1' : '0',
+      '@page' => (string) ($context['page'] ?? ''),
+      '@pagesize' => (string) ($context['pagesize'] ?? ''),
+      '@offset' => (string) ($context['offset'] ?? ''),
+      '@raw_count' => (string) ($context['raw_count'] ?? ''),
+      '@filtered_count' => (string) ($context['filtered_count'] ?? ''),
+      '@list_size' => (string) ($context['list_size'] ?? ''),
+      '@source' => (string) ($context['source'] ?? ''),
+      '@sample_uri' => (string) ($context['sample_uri'] ?? ''),
+      '@sample_type' => (string) ($context['sample_type'] ?? ''),
+      '@sample_hasco_type' => (string) ($context['sample_hasco_type'] ?? ''),
+      '@sample_top_task' => (string) ($context['sample_top_task'] ?? ''),
+    ];
+
+    \Drupal::logger('rep')->notice(
+      'WKF debug @stage etype=@etype ltype=@ltype status=@status manager=@manager withCurrent=@with_current page=@page pageSize=@pagesize offset=@offset raw=@raw_count filtered=@filtered_count total=@list_size source=@source sampleUri=@sample_uri sampleType=@sample_type sampleHascoType=@sample_hasco_type sampleTopTask=@sample_top_task',
+      $payload
+    );
+  }
+
+  private static function asArray($items): array {
+    if ($items === NULL) {
+      return [];
+    }
+    return is_array($items) ? $items : [$items];
+  }
+
+  private static function countItems($items): int {
+    return count(self::asArray($items));
+  }
+
+  private static function sampleItemMeta($items): array {
+    $list = self::asArray($items);
+    if (count($list) === 0) {
+      return [
+        'sample_uri' => '',
+        'sample_type' => '',
+        'sample_hasco_type' => '',
+        'sample_top_task' => '',
+      ];
+    }
+
+    $first = $list[0];
+    $topTask = trim((string) self::extractField($first, 'hasTopTaskUri'));
+    if ($topTask === '') {
+      $topTask = trim((string) self::extractField($first, 'hasTopTask'));
+    }
+
+    return [
+      'sample_uri' => (string) self::extractField($first, 'uri'),
+      'sample_type' => (string) self::extractField($first, 'typeUri'),
+      'sample_hasco_type' => (string) self::extractField($first, 'hascoTypeUri'),
+      'sample_top_task' => $topTask,
+    ];
+  }
+
   private static function normalizeListElementType($elementtype): string {
-    // Keep WKF listings strictly on WKF endpoints.
-    // Mapping to workflow/process leaks non-WKF Process records (e.g., AnyProcess).
+    // Preserve explicit type so deployments that expose dedicated WKF
+    // endpoints continue to return WKF rows (status/manager scoped).
     return (string) $elementtype;
   }
 
@@ -33,7 +108,26 @@ class ListManagerEmailPage {
     }
 
     // Conservative URI fallback for legacy payloads missing explicit type fields.
-    return $uri !== '' && strpos($uri, '/wkf') !== FALSE;
+    if ($uri !== '' && strpos($uri, '/wkf') !== FALSE) {
+      return TRUE;
+    }
+
+    // Process-based fallback: keep real process workflows with task hierarchy,
+    // but avoid generic placeholders such as AnyProcess.
+    $isProcessType = ($typeUri !== '' && strpos($typeUri, 'process') !== FALSE)
+      || ($hascoTypeUri !== '' && strpos($hascoTypeUri, 'process') !== FALSE);
+    if ($isProcessType) {
+      if (strpos($uri, 'anyprocess') !== FALSE) {
+        return FALSE;
+      }
+      $topTask = trim((string) self::extractField($item, 'hasTopTaskUri'));
+      if ($topTask === '') {
+        $topTask = trim((string) self::extractField($item, 'hasTopTask'));
+      }
+      return $topTask !== '';
+    }
+
+    return FALSE;
   }
 
   private static function filterWkfRecords($items): array {
@@ -135,8 +229,14 @@ class ListManagerEmailPage {
     ?int $pageSize = NULL,
     int $offset = 0
   ): array {
+    $strictRuntimeBudget = self::hasStrictRuntimeBudget();
+    $fallbackBatchSize = ($pageSize === NULL)
+      ? ($strictRuntimeBudget ? 200 : 1000)
+      : max(1, min((int) $pageSize, 200));
+    $fallbackOffset = ($pageSize === NULL) ? 0 : max(0, (int) $offset);
+
     if (self::isProcessBasedStudyType($elementtype)) {
-      $raw = $api->listProcessBasedStudies(5000, 0);
+      $raw = $api->listProcessBasedStudies($fallbackBatchSize, $fallbackOffset);
       if ($raw === NULL) {
         return [];
       }
@@ -181,10 +281,11 @@ class ListManagerEmailPage {
         return $filtered;
       }
 
-      return array_slice($filtered, max(0, $offset), max(0, $pageSize));
+      // Already queried with paging bounds; avoid re-slicing by original offset.
+      return array_slice($filtered, 0, max(0, $pageSize));
     }
 
-    $raw = $api->listByKeyword($elementtype, '_', 5000, 0);
+    $raw = $api->listByKeyword($elementtype, '_', $fallbackBatchSize, $fallbackOffset);
     if ($raw === NULL) {
       return [];
     }
@@ -229,7 +330,8 @@ class ListManagerEmailPage {
       return $filtered;
     }
 
-    return array_slice($filtered, max(0, $offset), max(0, $pageSize));
+    // Already queried with paging bounds; avoid re-slicing by original offset.
+    return array_slice($filtered, 0, max(0, $pageSize));
   }
 
   public static function exec($elementtype, $manageremail, $page, $pagesize) {
@@ -247,14 +349,29 @@ class ListManagerEmailPage {
 
     $api = \Drupal::service('rep.api_connector');
     $listElementType = self::normalizeListElementType($elementtype);
+    $isWkf = self::isWkfType($elementtype);
     $isAllOwners = self::isAllOwnersToken($manageremail);
     if (!$isAllOwners && !self::shouldBypassManagerEndpoint($listElementType)) {
       $raw = $api->listByManagerEmail($listElementType, $manageremail, $pagesize, $offset);
       if ($raw !== NULL) {
         $elements = $api->parseObjectResponse($raw, 'listByManagerEmail');
         if ($elements !== NULL) {
-          if (self::isWkfType($elementtype)) {
-            return self::filterWkfRecords($elements);
+          if ($isWkf) {
+            $rawCount = self::countItems($elements);
+            $filtered = self::filterWkfRecords($elements);
+            self::wkfDebug('exec_manager_primary', array_merge([
+              'is_wkf' => TRUE,
+              'elementtype' => $elementtype,
+              'list_element_type' => $listElementType,
+              'manager' => $manageremail,
+              'page' => $page,
+              'pagesize' => $pagesize,
+              'offset' => $offset,
+              'raw_count' => $rawCount,
+              'filtered_count' => self::countItems($filtered),
+              'source' => 'listByManagerEmail',
+            ], self::sampleItemMeta($elements)));
+            return $filtered;
           }
           return $elements;
         }
@@ -263,8 +380,22 @@ class ListManagerEmailPage {
 
     $elements = self::fallbackListByKeyword($api, $listElementType, $isAllOwners ? '_' : $manageremail, '_', FALSE, (int) $pagesize, (int) $offset);
 
-    if (self::isWkfType($elementtype)) {
-      return self::filterWkfRecords($elements);
+    if ($isWkf) {
+      $rawCount = self::countItems($elements);
+      $filtered = self::filterWkfRecords($elements);
+      self::wkfDebug('exec_fallback', array_merge([
+        'is_wkf' => TRUE,
+        'elementtype' => $elementtype,
+        'list_element_type' => $listElementType,
+        'manager' => $manageremail,
+        'page' => $page,
+        'pagesize' => $pagesize,
+        'offset' => $offset,
+        'raw_count' => $rawCount,
+        'filtered_count' => self::countItems($filtered),
+        'source' => 'fallbackListByKeyword',
+      ], self::sampleItemMeta($elements)));
+      return $filtered;
     }
 
     //dpm($elements);
@@ -303,14 +434,30 @@ class ListManagerEmailPage {
 
     $api = \Drupal::service('rep.api_connector');
     $listElementType = self::normalizeListElementType($elementtype);
+    $isWkf = self::isWkfType($elementtype);
     $isAllOwners = self::isAllOwnersToken($manageremail);
     if (!$isAllOwners && !self::shouldBypassManagerEndpoint($listElementType)) {
       $raw = $api->listByStatusManagerEmail($listElementType, $status, $manageremail, (bool) $withCurrent, $pagesize, $offset);
       if ($raw !== NULL) {
         $elements = $api->parseObjectResponse($raw, 'listByStatusManagerEmail');
         if ($elements !== NULL) {
-          if (self::isWkfType($elementtype)) {
+          if ($isWkf) {
+            $rawCount = self::countItems($elements);
             $elements = self::filterWkfRecords($elements);
+            self::wkfDebug('exec_status_primary', array_merge([
+              'is_wkf' => TRUE,
+              'elementtype' => $elementtype,
+              'list_element_type' => $listElementType,
+              'status' => $status,
+              'manager' => $manageremail,
+              'with_current' => (bool) $withCurrent,
+              'page' => $page,
+              'pagesize' => $pagesize,
+              'offset' => $offset,
+              'raw_count' => $rawCount,
+              'filtered_count' => self::countItems($elements),
+              'source' => 'listByStatusManagerEmail',
+            ], self::sampleItemMeta($elements)));
           }
           if (self::responseRespectsStatusFilter($elements, $status, (bool) $withCurrent)) {
             return $elements;
@@ -320,8 +467,24 @@ class ListManagerEmailPage {
     }
 
     $elements = self::fallbackListByKeyword($api, $listElementType, $isAllOwners ? '_' : $manageremail, $status, (bool) $withCurrent, (int) $pagesize, (int) $offset);
-    if (self::isWkfType($elementtype)) {
-      return self::filterWkfRecords($elements);
+    if ($isWkf) {
+      $rawCount = self::countItems($elements);
+      $filtered = self::filterWkfRecords($elements);
+      self::wkfDebug('exec_status_fallback', array_merge([
+        'is_wkf' => TRUE,
+        'elementtype' => $elementtype,
+        'list_element_type' => $listElementType,
+        'status' => $status,
+        'manager' => $manageremail,
+        'with_current' => (bool) $withCurrent,
+        'page' => $page,
+        'pagesize' => $pagesize,
+        'offset' => $offset,
+        'raw_count' => $rawCount,
+        'filtered_count' => self::countItems($filtered),
+        'source' => 'fallbackListByKeyword',
+      ], self::sampleItemMeta($elements)));
+      return $filtered;
     }
     return $elements;
   }
@@ -332,6 +495,7 @@ class ListManagerEmailPage {
     }
     $api = \Drupal::service('rep.api_connector');
     $listElementType = self::normalizeListElementType($elementtype);
+    $isWkf = self::isWkfType($elementtype);
     $isAllOwners = self::isAllOwnersToken($manageremail);
     $response = (self::shouldBypassManagerEndpoint($listElementType) || $isAllOwners)
       ? NULL
@@ -374,12 +538,40 @@ class ListManagerEmailPage {
       }
 
       if ($listSize < 0) {
+        if (self::hasStrictRuntimeBudget()) {
+          // Avoid expensive fallback full scans under strict runtime budgets.
+          $listSize = 0;
+        }
+      }
+
+      if ($listSize < 0) {
         $items = self::fallbackListByKeyword($api, $listElementType, $isAllOwners ? '_' : $manageremail);
-        if (self::isWkfType($elementtype)) {
+        if ($isWkf) {
+          $rawCount = self::countItems($items);
           $items = self::filterWkfRecords($items);
+          self::wkfDebug('total_fallback', array_merge([
+            'is_wkf' => TRUE,
+            'elementtype' => $elementtype,
+            'list_element_type' => $listElementType,
+            'manager' => $manageremail,
+            'raw_count' => $rawCount,
+            'filtered_count' => self::countItems($items),
+            'source' => 'fallbackListByKeyword',
+          ], self::sampleItemMeta($items)));
         }
         $listSize = count($items);
       }
+    }
+
+    if ($isWkf) {
+      self::wkfDebug('total_result', [
+        'is_wkf' => TRUE,
+        'elementtype' => $elementtype,
+        'list_element_type' => $listElementType,
+        'manager' => $manageremail,
+        'list_size' => $listSize,
+        'source' => ($response != NULL) ? 'listSizeByManagerEmail' : 'fallback/other',
+      ]);
     }
 
     return $listSize;
@@ -391,10 +583,12 @@ class ListManagerEmailPage {
       return -1;
     }
     $api = \Drupal::service('rep.api_connector');
+    $listElementType = self::normalizeListElementType($elementtype);
+    $isWkf = self::isWkfType($elementtype);
     $isAllOwners = self::isAllOwnersToken($manageremail);
-    $response = (self::shouldBypassManagerEndpoint($elementtype) || $isAllOwners)
+    $response = (self::shouldBypassManagerEndpoint($listElementType) || $isAllOwners)
       ? NULL
-      : $api->listSizeByStatusManagerEmail($elementtype, $status, $manageremail, (bool) $withCurrent);
+      : $api->listSizeByStatusManagerEmail($listElementType, $status, $manageremail, (bool) $withCurrent);
     $listSize = -1;
     if ($response != NULL) {
       $obj = json_decode($response);
@@ -412,8 +606,8 @@ class ListManagerEmailPage {
       }
     }
 
-    if ($listSize > 0 && !self::shouldBypassManagerEndpoint($elementtype)) {
-      $sampleRaw = $api->listByStatusManagerEmail($elementtype, $status, $manageremail, (bool) $withCurrent, 1, 0);
+    if ($listSize > 0 && !self::shouldBypassManagerEndpoint($listElementType)) {
+      $sampleRaw = $api->listByStatusManagerEmail($listElementType, $status, $manageremail, (bool) $withCurrent, 1, 0);
       if ($sampleRaw !== NULL) {
         $sample = $api->parseObjectResponse($sampleRaw, 'listByStatusManagerEmail');
         if (!self::responseRespectsStatusFilter($sample, $status, (bool) $withCurrent)) {
@@ -423,11 +617,43 @@ class ListManagerEmailPage {
     }
 
     if ($listSize < 0) {
-      $items = self::fallbackListByKeyword($api, $elementtype, $isAllOwners ? '_' : $manageremail, $status, (bool) $withCurrent);
-      if (self::isWkfType($elementtype)) {
+      if (self::hasStrictRuntimeBudget()) {
+        // Avoid expensive fallback full scans under strict runtime budgets.
+        $listSize = 0;
+      }
+    }
+
+    if ($listSize < 0) {
+      $items = self::fallbackListByKeyword($api, $listElementType, $isAllOwners ? '_' : $manageremail, $status, (bool) $withCurrent);
+      if ($isWkf) {
+        $rawCount = self::countItems($items);
         $items = self::filterWkfRecords($items);
+        self::wkfDebug('total_status_fallback', array_merge([
+          'is_wkf' => TRUE,
+          'elementtype' => $elementtype,
+          'list_element_type' => $listElementType,
+          'status' => $status,
+          'manager' => $manageremail,
+          'with_current' => (bool) $withCurrent,
+          'raw_count' => $rawCount,
+          'filtered_count' => self::countItems($items),
+          'source' => 'fallbackListByKeyword',
+        ], self::sampleItemMeta($items)));
       }
       $listSize = count($items);
+    }
+
+    if ($isWkf) {
+      self::wkfDebug('total_status_result', [
+        'is_wkf' => TRUE,
+        'elementtype' => $elementtype,
+        'list_element_type' => $listElementType,
+        'status' => $status,
+        'manager' => $manageremail,
+        'with_current' => (bool) $withCurrent,
+        'list_size' => $listSize,
+        'source' => ($response != NULL) ? 'listSizeByStatusManagerEmail' : 'fallback/other',
+      ]);
     }
 
     return $listSize;
@@ -474,12 +700,20 @@ class ListManagerEmailPage {
     //dpr($elementtype.'-'.$page.'-'.$pagesize.'-'.$module);
     $root_url = \Drupal::request()->getBaseUrl();
     if ($elementtype != NULL && $page > 0 && $pagesize > 0) {
-     return $root_url . '/' . $module . REPGUI::SELECT_PAGE . 'mt/' .
-          $elementtype .
-          '/table' . '/' .
+      if (self::isWkfType($elementtype)) {
+        return $root_url . '/' . $module . REPGUI::SELECT_PAGE .
+          'wkf/table/' .
           strval($page) . '/' .
           strval($pagesize) .
           '/none';
+      }
+
+      return $root_url . '/' . $module . REPGUI::SELECT_PAGE . 'mt/' .
+        $elementtype .
+        '/table/' .
+        strval($page) . '/' .
+        strval($pagesize) .
+        '/none';
     }
     return '';
   }

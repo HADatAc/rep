@@ -65,6 +65,25 @@ class MapEntryPointsForm extends FormBase {
       return [];
     }
 
+    // Recovery guard: if no class entry-point mappings are stored locally,
+    // rebuild them from the current KG/TTL view so mapped values are visible.
+    $existingMappings = $tables->getAllMappings();
+    if (empty($existingMappings)) {
+      $result = $this->rebuildClassEntryPointMappingsFromKg();
+      if (!empty($result['success'])) {
+        $this->messenger()->addStatus($this->t(
+          'Entry-point mappings were automatically recovered from KG/TTL (@count mapping(s)).',
+          ['@count' => (int) ($result['mappings_rebuilt'] ?? 0)]
+        ));
+      }
+      else {
+        $this->messenger()->addWarning($this->t(
+          'Entry-point mappings are empty and automatic recovery did not complete. You can use "Resync from KG" to retry. @msg',
+          ['@msg' => (string) ($result['message'] ?? '')]
+        ));
+      }
+    }
+
     // Root URI for the LEFT tree.
     // In a more advanced setup, this could come from configuration.
     $root_from_settings = (string) 'http://hadatac.org/ont/hasco/ClassEntryPoint';

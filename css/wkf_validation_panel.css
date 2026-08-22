@@ -1,0 +1,25 @@
+.wkf-validation-panel {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.wkf-validation-panel .wkf-validation-rules,
+.wkf-validation-panel .wkf-validation-rules ul,
+.wkf-validation-panel .wkf-validation-rules li,
+.wkf-validation-panel .small,
+.wkf-validation-panel div,
+.wkf-validation-panel span,
+.wkf-validation-panel em,
+.wkf-validation-panel strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.wkf-validation-panel .wkf-validation-copy-btn {
+  white-space: nowrap;
+}
+
+.wkf-validation-panel .d-flex {
+  min-width: 0;
+}

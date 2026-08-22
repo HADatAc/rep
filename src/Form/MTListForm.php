@@ -966,8 +966,13 @@ class MTListForm extends FormBase {
    */
   public static function backSelect($elementType, $mode, $studyuri)
   {
-    $url = Url::fromRoute('rep.select_mt_element');
-    $url->setRouteParameter('elementtype', $elementType);
+    if ($elementType === 'wkf') {
+      $url = Url::fromRoute('rep.select_wkf_element');
+    }
+    else {
+      $url = Url::fromRoute('rep.select_mt_element');
+      $url->setRouteParameter('elementtype', $elementType);
+    }
     $url->setRouteParameter('mode', $mode);
     $url->setRouteParameter('page', 0);
     $url->setRouteParameter('pagesize', 9);
