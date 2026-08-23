@@ -1805,6 +1805,29 @@ class FusekiAPIConnector {
   }
 
   /**
+   * Normalize uploaded filename so ingestion prefix checks can succeed.
+   */
+  private function normalizeIngestionUploadFilename(string $filename): string {
+    $clean = basename(trim($filename));
+    if ($clean === '') {
+      return $clean;
+    }
+
+    if (preg_match('/^(DA-|DD-|DOI-|DP2-|DSG-|INS-|KGR-|SDD-|STR-|WKF-)/i', $clean) === 1) {
+      return $clean;
+    }
+
+    if (preg_match('/(?:^|[-_])(DA-|DD-|DOI-|DP2-|DSG-|INS-|KGR-|SDD-|STR-|WKF-)([A-Za-z0-9_.-]*)$/i', $clean, $m) === 1) {
+      $prefix = strtoupper((string) $m[1]);
+      $suffix = (string) ($m[2] ?? '');
+      $candidate = $prefix . $suffix;
+      return $candidate !== '' ? $candidate : $clean;
+    }
+
+    return $clean;
+  }
+
+  /**
    *   DEPLOYMENT
    */
 
@@ -3360,6 +3383,51 @@ class FusekiAPIConnector {
       }
     }
 
+    // Fallback: when hasco DataFile lacks a file ID, try to recover a local Drupal
+    // file entity by filename so we can still upload binary content before ingestion.
+    if (isset($template->hasDataFile)
+      && (!isset($template->hasDataFile->id) || $template->hasDataFile->id == NULL || trim((string) $template->hasDataFile->id) === '')
+      && isset($template->hasDataFile->filename)
+      && is_string($template->hasDataFile->filename)
+      && trim($template->hasDataFile->filename) !== '') {
+      $rawFilename = trim((string) $template->hasDataFile->filename);
+      $candidates = [$rawFilename];
+
+      $normalizedUploadName = $this->normalizeIngestionUploadFilename($rawFilename);
+      if ($normalizedUploadName !== '' && !in_array($normalizedUploadName, $candidates, TRUE)) {
+        $candidates[] = $normalizedUploadName;
+      }
+
+      // Also try suffix matching for names prefixed with timestamps.
+      if (preg_match('/(WKF-[A-Za-z0-9_.-]+)$/i', $rawFilename, $m) === 1) {
+        $suffix = (string) $m[1];
+        if ($suffix !== '' && !in_array($suffix, $candidates, TRUE)) {
+          $candidates[] = $suffix;
+        }
+      }
+
+      foreach ($candidates as $candidateName) {
+        $ids = \Drupal::entityQuery('file')
+          ->condition('filename', $candidateName)
+          ->sort('fid', 'DESC')
+          ->range(0, 1)
+          ->accessCheck(FALSE)
+          ->execute();
+        if (!empty($ids)) {
+          $fid = (int) reset($ids);
+          if ($fid > 0) {
+            $template->hasDataFile->id = $fid;
+            // Keep KG filename untouched; upload endpoint gets normalized name later.
+            \Drupal::logger('rep')->notice('uploadTemplate: Recovered missing file ID @fid for DataFile filename @filename', [
+              '@fid' => $fid,
+              '@filename' => $candidateName,
+            ]);
+            break;
+          }
+        }
+      }
+    }
+
     // If we still don't have a DataFile URI, we cannot upload any content.
     if (!isset($template->hasDataFileUri) || $template->hasDataFileUri == NULL || $template->hasDataFileUri == '') {
       $this->error = 'DATAFILE_URI_MISSING';
@@ -4187,6 +4255,7 @@ class FusekiAPIConnector {
     }
 
     $filename = $file_entity->getFilename();
+    $uploadFilename = $this->normalizeIngestionUploadFilename((string) $filename);
     $file_uri = $file_entity->getFileUri();
     $file_content = @file_get_contents($file_uri);
     $attempted_paths = [];
@@ -4330,7 +4399,7 @@ class FusekiAPIConnector {
     }
 
     // APPEND ELEMENT URI ENDPOINT'S URL
-    $endpoint = "/hascoapi/api/uploadFile/".rawurlencode($elementuri). "/" . rawurlencode($filename);
+    $endpoint = "/hascoapi/api/uploadFile/".rawurlencode($elementuri). "/" . rawurlencode($uploadFilename);
     
     // \Drupal::messenger()->addStatus(t('[DEBUG] Uploading to endpoint: @endpoint', [
     //   '@endpoint' => $endpoint,

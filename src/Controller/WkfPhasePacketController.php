@@ -6,6 +6,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\file\Entity\File;
 use Drupal\rep\Utils;
+use Drupal\rep\Vocabulary\HASCO;
 use Drupal\rep\Vocabulary\VSTOI;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -70,8 +71,8 @@ class WkfPhasePacketController extends ControllerBase {
     if ($wkfContent === '' && isset($sessionContext['wkfContent']) && is_string($sessionContext['wkfContent'])) {
       $wkfContent = trim($sessionContext['wkfContent']);
     }
+    $scope = $this->resolveWkfScope($request, $wkfUri);
     if ($wkfContent === '') {
-      $scope = $this->resolveWkfScope($request, $wkfUri);
       $workingCopy = $this->getWorkingCopyForScope($scope);
       if (isset($workingCopy['wkfContent']) && is_string($workingCopy['wkfContent'])) {
         $wkfContent = trim($workingCopy['wkfContent']);
@@ -90,20 +91,42 @@ class WkfPhasePacketController extends ControllerBase {
     $promptText = $promptOverride !== ''
       ? $promptOverride
       : $this->getPhasePromptText($phase);
+    $latestWorkbookTsv = $this->resolveCurrentWkfWorkbookContent($request, $wkfUri, $scope);
+    if ($latestWorkbookTsv === '') {
+      if ($wkfContent !== '') {
+        $latestWorkbookTsv = $wkfContent;
+      }
+      elseif ($phase1WkfTableTsv !== '') {
+        $latestWorkbookTsv = $phase1WkfTableTsv;
+      }
+    }
+
+    $latestTasksSheetTsv = '';
+    if ($latestWorkbookTsv !== '') {
+      $latestTasksSheetTsv = $this->extractSheetBlockFromWorkbookTsv($latestWorkbookTsv, 'Tasks');
+      if ($latestTasksSheetTsv === '') {
+        $latestTasksSheetTsv = $this->extractTasksSheetFromAnyTsv($latestWorkbookTsv);
+      }
+    }
+
+    $stdSheetTsv = '';
+    if ($phase === 2 && $latestWorkbookTsv !== '') {
+      $stdSheetTsv = $this->extractSheetBlockFromWorkbookTsv($latestWorkbookTsv, 'STD');
+      if ($stdSheetTsv === '') {
+        $stdSheetTsv = $this->extractStdSheetFromAnyTsv($latestWorkbookTsv);
+      }
+    }
+
+    $instrumentInstanceComponentList = '';
+    if ($phase === 5) {
+      $instrumentInstanceComponentList = $this->buildInstrumentInstanceComponentList($wkfUri);
+    }
+
     $wkfSpecV3Text = $phase === 2 ? $this->getWkfSpecV3Text() : '';
     $phase1TasksSheetTsv = '';
     if ($phase === 2) {
-      $phase1BaseWorkbook = '';
-      if ($phase1WkfTableTsv !== '') {
-        $phase1BaseWorkbook = $phase1WkfTableTsv;
-      }
-      elseif ($wkfContent !== '') {
-        $phase1BaseWorkbook = $wkfContent;
-      }
-      $phase1TasksSheetTsv = $this->extractSheetBlockFromWorkbookTsv($phase1BaseWorkbook, 'Tasks');
-      if ($phase1TasksSheetTsv === '') {
-        $phase1TasksSheetTsv = $this->extractTasksSheetFromAnyTsv($phase1BaseWorkbook);
-      }
+      // Keep legacy section name for compatibility while feeding latest Tasks sheet content.
+      $phase1TasksSheetTsv = $latestTasksSheetTsv;
     }
 
     $phaseTitle = $this->getPhaseTitle($phase);
@@ -162,6 +185,12 @@ class WkfPhasePacketController extends ControllerBase {
       $lines[] = 'END_PHASE1_TASKS_SHEET_TSV';
       $lines[] = '';
 
+      $lines[] = 'STD_SHEET_TSV';
+      $lines[] = 'BEGIN_STD_SHEET_TSV';
+      $lines[] = $stdSheetTsv !== '' ? $stdSheetTsv : '[MISSING_STD_SHEET_TSV]';
+      $lines[] = 'END_STD_SHEET_TSV';
+      $lines[] = '';
+
       $lines[] = 'INPUT CONSISTENCY GATE';
       $lines[] = 'If PHASE1_TASKS_SHEET_TSV clearly refers to a different clinical process than SOURCE_DOCUMENT_CONTENT, return exactly:';
       $lines[] = 'ABORT: Inconsistent inputs (Phase I Tasks sheet and source document refer to different processes).';
@@ -187,6 +216,20 @@ class WkfPhasePacketController extends ControllerBase {
         $lines[] = '[MISSING_PHASE1_WKF_TABLE_TSV]';
       }
       $lines[] = 'END_PHASE1_WKF_TABLE_TSV';
+      $lines[] = '';
+    }
+
+    if ($phase === 5) {
+      $lines[] = 'LATEST_TASKS_SHEET_TSV';
+      $lines[] = 'BEGIN_LATEST_TASKS_SHEET_TSV';
+      $lines[] = $latestTasksSheetTsv !== '' ? $latestTasksSheetTsv : '[MISSING_LATEST_TASKS_SHEET_TSV]';
+      $lines[] = 'END_LATEST_TASKS_SHEET_TSV';
+      $lines[] = '';
+
+      $lines[] = 'INSTRUMENT_INSTANCES_WITH_COMPONENT_INSTANCES';
+      $lines[] = 'BEGIN_INSTRUMENT_INSTANCES_WITH_COMPONENT_INSTANCES';
+      $lines[] = $instrumentInstanceComponentList !== '' ? $instrumentInstanceComponentList : '[MISSING_INSTRUMENT_INSTANCE_COMPONENT_LIST]';
+      $lines[] = 'END_INSTRUMENT_INSTANCES_WITH_COMPONENT_INSTANCES';
       $lines[] = '';
     }
 
@@ -1007,6 +1050,258 @@ class WkfPhasePacketController extends ControllerBase {
     }
 
     return $normalized;
+  }
+
+  /**
+   * Best-effort extraction of STD sheet when input is plain TSV (no sheet markers).
+   */
+  protected function extractStdSheetFromAnyTsv(string $content): string {
+    $normalized = str_replace(["\r\n", "\r"], "\n", trim($content));
+    if ($normalized === '') {
+      return '';
+    }
+
+    if (stripos($normalized, '### SHEET:') !== FALSE) {
+      return '';
+    }
+
+    $lines = explode("\n", $normalized);
+    if (empty($lines)) {
+      return '';
+    }
+
+    $header = trim((string) $lines[0]);
+    if ($header === '' || strpos($header, "\t") === FALSE) {
+      return '';
+    }
+
+    // STD rows usually include process and study identifiers.
+    $headerLower = strtolower($header);
+    $looksLikeStd = (strpos($headerLower, 'hasco:hasprocess') !== FALSE)
+      || (strpos($headerLower, 'study id') !== FALSE)
+      || (strpos($headerLower, 'workflow') !== FALSE);
+    if (!$looksLikeStd) {
+      return '';
+    }
+
+    return $normalized;
+  }
+
+  /**
+   * Build organization-scoped instrument instance list with related component instances.
+   */
+  protected function buildInstrumentInstanceComponentList(string $wkfUri): string {
+    $api = \Drupal::service('rep.api_connector');
+
+    $emails = $this->extractOrganizationManagerEmailsFromWkf($api, $wkfUri);
+    if (empty($emails)) {
+      $current = trim((string) $this->currentUser()->getEmail());
+      if ($current !== '') {
+        $emails[] = strtolower($current);
+      }
+    }
+
+    if (empty($emails)) {
+      return '';
+    }
+
+    $indexed = [];
+    foreach ($emails as $email) {
+      $raw = $api->listByManagerEmail('instrumentinstance', $email, 200, 0);
+      $items = $api->parseObjectResponse($raw, 'listByManagerEmail');
+      if (!is_array($items)) {
+        continue;
+      }
+      foreach ($items as $item) {
+        if (!is_object($item) || empty($item->uri)) {
+          continue;
+        }
+        $indexed[(string) $item->uri] = $item;
+      }
+    }
+
+    if (empty($indexed)) {
+      return '';
+    }
+
+    $componentPool = $this->loadManagerOwnedComponentInstances($api, $emails);
+
+    $lines = [];
+    $instanceCount = 0;
+    foreach ($indexed as $instUri => $instObj) {
+      $instanceCount++;
+      if ($instanceCount > 80) {
+        $lines[] = '[TRUNCATED: instrument instance limit reached]';
+        break;
+      }
+
+      $label = trim((string) ($instObj->label ?? $instUri));
+      $lines[] = 'InstrumentInstance: ' . $label . ' [' . $instUri . ']';
+
+      $components = $this->loadAssociatedComponentInstancesByInstrument((string) $instUri, $componentPool);
+      if (empty($components)) {
+        $lines[] = '  Components: (none found)';
+        continue;
+      }
+
+      foreach ($components as $component) {
+        if (!is_object($component) || empty($component->uri)) {
+          continue;
+        }
+        $compUri = trim((string) $component->uri);
+        $compLabel = trim((string) ($component->label ?? $compUri));
+        $lines[] = '  - ComponentInstance: ' . $compLabel . ' [' . $compUri . ']';
+      }
+    }
+
+    return trim(implode("\n", $lines));
+  }
+
+  /**
+   * Resolve organization manager emails from the WKF's organization relation.
+   */
+  protected function extractOrganizationManagerEmailsFromWkf($api, string $wkfUri): array {
+    $normalizedWkfUri = trim($wkfUri);
+    if ($normalizedWkfUri === '') {
+      return [];
+    }
+
+    $wkf = $api->parseObjectResponse($api->getUri($normalizedWkfUri), 'getUri');
+    if (!is_object($wkf) || empty($wkf->hasOrganizationUri)) {
+      return [];
+    }
+
+    $orgUri = trim((string) $wkf->hasOrganizationUri);
+    if ($orgUri === '') {
+      return [];
+    }
+
+    $org = $api->parseObjectResponse($api->getUri($orgUri), 'getUri');
+    if (!is_object($org)) {
+      return [];
+    }
+
+    $emails = [];
+    foreach (['hasSIRManagerEmail', 'mbox', 'hasEmail', 'email'] as $field) {
+      if (!isset($org->{$field})) {
+        continue;
+      }
+      $value = $org->{$field};
+      if (is_string($value)) {
+        $normalized = $this->normalizeManagerEmail($value);
+        if ($normalized !== '') {
+          $emails[$normalized] = TRUE;
+        }
+      }
+      elseif (is_array($value)) {
+        foreach ($value as $entry) {
+          if (!is_string($entry)) {
+            continue;
+          }
+          $normalized = $this->normalizeManagerEmail($entry);
+          if ($normalized !== '') {
+            $emails[$normalized] = TRUE;
+          }
+        }
+      }
+    }
+
+    return array_keys($emails);
+  }
+
+  /**
+   * Normalize and validate manager email values.
+   */
+  protected function normalizeManagerEmail(string $value): string {
+    $email = trim($value);
+    if ($email === '') {
+      return '';
+    }
+
+    if (stripos($email, 'mailto:') === 0) {
+      $email = trim(substr($email, 7));
+    }
+
+    return strtolower($email);
+  }
+
+  /**
+   * Load manager-owned component instances with hard limits to avoid packet timeouts.
+   */
+  protected function loadManagerOwnedComponentInstances($api, array $emails): array {
+    $indexed = [];
+    foreach ($emails as $email) {
+      if (!is_string($email) || trim($email) === '') {
+        continue;
+      }
+
+      $raw = $api->listByManagerEmail('componentinstance', trim($email), 250, 0);
+      $objects = $api->parseObjectResponse($raw, 'listByManagerEmail');
+      if (!is_array($objects)) {
+        continue;
+      }
+
+      foreach ($objects as $object) {
+        if (!is_object($object) || empty($object->uri)) {
+          continue;
+        }
+        $indexed[(string) $object->uri] = $object;
+      }
+
+      if (count($indexed) >= 600) {
+        break;
+      }
+    }
+
+    return array_values($indexed);
+  }
+
+  /**
+   * Match related component instances by instrument local token within URI strings.
+   */
+  protected function loadAssociatedComponentInstancesByInstrument(string $instrumentInstanceUri, array $componentPool): array {
+    $token = $this->extractLocalIdFromUri($instrumentInstanceUri);
+    if ($token === '') {
+      return [];
+    }
+
+    if (empty($componentPool)) {
+      return [];
+    }
+
+    $instances = [];
+    foreach ($componentPool as $object) {
+      if (!is_object($object) || empty($object->uri)) {
+        continue;
+      }
+      $uri = (string) $object->uri;
+      if (strpos($uri, $token) !== FALSE) {
+        $typeUri = (string) ($object->hascoTypeUri ?? ($object->typeUri ?? ''));
+        if ($typeUri !== '' && $typeUri !== HASCO::COMPONENT_INSTANCE) {
+          continue;
+        }
+        $instances[] = $object;
+        if (count($instances) >= 20) {
+          break;
+        }
+      }
+    }
+
+    return $instances;
+  }
+
+  /**
+   * Extract local identifier token from URI path.
+   */
+  protected function extractLocalIdFromUri(string $uri): string {
+    $trimmed = trim($uri);
+    if ($trimmed === '') {
+      return '';
+    }
+
+    $parts = explode('/', $trimmed);
+    $last = end($parts);
+    return is_string($last) ? trim($last) : '';
   }
 
   /**

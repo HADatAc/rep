@@ -184,7 +184,6 @@ class REPSelectWKFForm extends REPSelectMTForm {
             <h6 class="card-title">Phase II - Task Model Generation</h6>
             <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase2-instructions">Instruction</button>
             <p class="small text-muted mb-2">Generate task model details using the original document + Phase I core WKF.</p>
-            <button type="button" class="btn btn-outline-success btn-sm wkf-open-response-modal" data-phase="2">Paste/Apply Response</button>
             <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase2PromptModal">Open Prompt</button>
           </div>
         </div>
@@ -203,7 +202,6 @@ class REPSelectWKFForm extends REPSelectMTForm {
             <h6 class="card-title">Phase III - Properties Extraction</h6>
             <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase4-instructions">Instruction</button>
             <p class="small text-muted mb-2">Extract and encode detailed properties into the same core WKF.</p>
-            <button type="button" class="btn btn-outline-success btn-sm wkf-open-response-modal" data-phase="4">Paste/Apply Response</button>
             <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase4PromptModal"' . $phase4PromptDisabledAttr . '>Open Prompt</button>
           </div>
         </div>
@@ -222,25 +220,10 @@ class REPSelectWKFForm extends REPSelectMTForm {
             <h6 class="card-title">Phase IV - Simulations Assignments</h6>
             <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase5-instructions">Instruction</button>
             <p class="small text-muted mb-2">Assign simulation assets and finalize WKF ingestion readiness.</p>
-            <button type="button" class="btn btn-outline-success btn-sm wkf-open-response-modal" data-phase="5">Paste/Apply Response</button>
             <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase5PromptModal"' . $phase5PromptDisabledAttr . '>Open Prompt</button>
           </div>
         </div>
       '),
-    ];
-
-    $form['wkf_generation_section']['footer_actions'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['d-flex', 'align-items-center', 'justify-content-end', 'mt-3']],
-    ];
-
-    $form['wkf_generation_section']['footer_actions']['download_ontologies'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Download Ontologies'),
-      '#name' => 'wkf_download_ontologies',
-      '#attributes' => ['class' => ['btn', 'btn-success']],
-      '#submit' => ['::wkfDownloadOntologiesSubmit'],
-      '#limit_validation_errors' => [],
     ];
 
     $pmsr_module_path = \Drupal::service('extension.list.module')->getPath('pmsr');

@@ -1670,6 +1670,12 @@ class REPSelectMTForm extends FormBase {
       }
     }
 
+    // Normalize WKF file entity names like "20260823-WKF-...xlsx" to "WKF-...xlsx"
+    // because hascoapi validates ingest parser type by filename prefix.
+    if ($this->element_type === 'wkf') {
+      $this->normalizeWkfFileEntityFilenameForIngestion($template);
+    }
+
     // Hard pre-submit check: ensure the local file is actually readable before upload.
     $readability = $this->verifyLocalDataFileReadability($template);
     if (!$readability['ok']) {
@@ -1719,6 +1725,52 @@ class REPSelectMTForm extends FormBase {
     }
     $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
     return;
+  }
+
+  /**
+   * Ensure WKF uploaded file names start with WKF- so hascoapi prefix checks pass.
+   */
+  protected function normalizeWkfFileEntityFilenameForIngestion($template): void {
+    if (!is_object($template) || !isset($template->hasDataFile) || !is_object($template->hasDataFile)) {
+      return;
+    }
+    if (!isset($template->hasDataFile->id) || trim((string) $template->hasDataFile->id) === '') {
+      return;
+    }
+
+    $fid = (int) $template->hasDataFile->id;
+    $fileEntity = File::load($fid);
+    if (!$fileEntity) {
+      return;
+    }
+
+    $currentName = trim((string) $fileEntity->getFilename());
+    if ($currentName === '') {
+      return;
+    }
+
+    // If WKF- already starts the filename, keep as-is.
+    if (stripos($currentName, 'WKF-') === 0) {
+      return;
+    }
+
+    $normalized = '';
+    if (preg_match('/(WKF-[A-Za-z0-9_.-]+)$/i', $currentName, $m) === 1) {
+      $normalized = (string) $m[1];
+    }
+
+    if ($normalized === '') {
+      return;
+    }
+
+    if (strcasecmp($normalized, $currentName) === 0) {
+      return;
+    }
+
+    $fileEntity->setFilename($normalized);
+    $fileEntity->save();
+
+    $template->hasDataFile->filename = $normalized;
   }
 
   /**
@@ -3614,16 +3666,6 @@ class REPSelectMTForm extends FormBase {
       $url->setRouteParameter('studyuri', $studyuri);
     }
     return $url;
-  }
-
-  /**
-   * HANDLER FOR DOWNLOAD ONTOLOGIES BUTTON
-   */
-  public function wkfDownloadOntologiesSubmit(array &$form, FormStateInterface $form_state)
-  {
-    \Drupal::messenger()->addMessage($this->t('Download Ontologies'));
-    // TODO: Implement ontologies download logic
-    $form_state->setRebuild();
   }
 
   /**
