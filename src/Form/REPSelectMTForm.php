@@ -57,6 +57,27 @@ class REPSelectMTForm extends FormBase {
 
   protected $studyuri;
 
+  /**
+   * Per-request cache for WKF URI -> owner affiliation organization label.
+   *
+   * @var array<string, string>
+   */
+  protected $wkfOwnerOrganizationLabelCache = [];
+
+  /**
+   * Per-request cache for owner email -> affiliation organization label.
+   *
+   * @var array<string, string>
+   */
+  protected $ownerAffiliationLabelByEmailCache = [];
+
+  /**
+   * Per-request cache for WKF URI -> owner email.
+   *
+   * @var array<string, string>
+   */
+  protected $wkfOwnerEmailCache = [];
+
   public function getMode() {
     return $this->mode;
   }
@@ -655,7 +676,7 @@ class REPSelectMTForm extends FormBase {
    * Hook for WKF-only UI blocks.
    *
    * Base MT form keeps this empty; REPSelectWKFForm owns the specialized
-   * 5-phase generation and validation panel UI.
+  * 4-phase generation and validation panel UI.
    */
   protected function buildWkfSpecializedSection(array &$form, FormStateInterface $form_state): void {
     // Intentionally empty in the generic MT form.
@@ -953,77 +974,178 @@ class REPSelectMTForm extends FormBase {
         ],
       ];
 
-      // Column for the image
-      $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['image'] = [
-        '#type' => 'container',
-        '#attributes' => [
-          'class' => ['col-md-5', 'texta-align-center'],
-          'style' => 'margin-bottom:0!important;text-align:center!important;',
-        ],
-        'image' => [
-          '#type' => 'html_tag',
-          '#tag' => 'img',
-          '#attributes' => [
-              'src' => $image_uri,
-              'alt' => $header_text,
-              'style' => 'max-width: 70%; height: auto;',
-          ]
-        ],
-      ];
-
-      // Column for main content and footer
-      $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'] = [
-        '#type' => 'container',
-        '#attributes' => [
-          'class' => ['col-md-7', 'card-body'],
-          'style' => 'margin-bottom:0!important;',
-        ],
-      ];
-
-      // Iterando sobre o conteúdo existente e adicionando-o à coluna de conteúdo
-      foreach ($header as $column_key => $column_label) {
-        $value = isset($item[$column_key]) ? $item[$column_key] : '';
-        if ($column_label == 'Name') {
-          continue;
-        }
-
-        if ($column_label == 'Status') {
-          $value_rendered = [
-            '#markup' => $value,
-            '#allowed_tags' => ['b', 'font', 'span', 'div', 'strong', 'em'],
-          ];
-        } else {
-          $value_rendered = [
-            '#markup' => $value,
-          ];
-        }
-
-        $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'][$column_key] = [
+      if ($this->element_type !== 'wkf') {
+        // Column for the image.
+        $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['image'] = [
           '#type' => 'container',
           '#attributes' => [
-            'class' => ['field-container'],
+            'class' => ['col-md-5', 'texta-align-center'],
+            'style' => 'margin-bottom:0!important;text-align:center!important;',
           ],
-          'label' => [
+          'image' => [
             '#type' => 'html_tag',
-            '#tag' => 'strong',
-            '#value' => $column_label . ': ',
+            '#tag' => 'img',
+            '#attributes' => [
+                'src' => $image_uri,
+                'alt' => $header_text,
+                'style' => 'max-width: 70%; height: auto;',
+            ]
           ],
-          'value' => $value_rendered,
+        ];
+
+        // Column for main content and footer.
+        $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'class' => ['col-md-7', 'card-body'],
+            'style' => 'margin-bottom:0!important;',
+          ],
+        ];
+
+        // Iterando sobre o conteúdo existente e adicionando-o à coluna de conteúdo.
+        foreach ($header as $column_key => $column_label) {
+          $value = isset($item[$column_key]) ? $item[$column_key] : '';
+          if ($column_label == 'Name') {
+            continue;
+          }
+
+          if ($column_label == 'Status') {
+            $value_rendered = [
+              '#markup' => $value,
+              '#allowed_tags' => ['b', 'font', 'span', 'div', 'strong', 'em'],
+            ];
+          } else {
+            $value_rendered = [
+              '#markup' => $value,
+            ];
+          }
+
+          $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'][$column_key] = [
+            '#type' => 'container',
+            '#attributes' => [
+              'class' => ['field-container'],
+            ],
+            'label' => [
+              '#type' => 'html_tag',
+              '#tag' => 'strong',
+              '#value' => $column_label . ': ',
+            ],
+            'value' => $value_rendered,
+          ];
+        }
+      }
+      else {
+        $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'class' => ['col-12', 'card-body'],
+            'style' => 'margin-bottom:0!important;',
+          ],
+        ];
+
+        $wkfUri = is_string($key) ? trim($key) : '';
+        $uriValue = isset($item['element_uri']) ? (string) $item['element_uri'] : Html::escape($wkfUri);
+        $statusValue = isset($item['element_status']) ? (string) $item['element_status'] : 'N/A';
+        $logValue = isset($item['element_log']) ? (string) $item['element_log'] : 'N/A';
+        $downloadValue = isset($item['element_download']) ? (string) $item['element_download'] : 'N/A';
+
+        $sourceInfo = $this->resolveWkfSourceDocumentInfo($wkfUri);
+        $sourceName = $sourceInfo['name'] ?? 'N/A';
+        $sourceUrl = $sourceInfo['url'] ?? '';
+        $sourceIsPdf = !empty($sourceInfo['is_pdf']);
+        if ($sourceName === '') {
+          $sourceName = 'N/A';
+        }
+
+        $sourceValue = Html::escape($sourceName);
+        if ($sourceUrl !== '') {
+          $sourceButtonLabel = $sourceIsPdf ? 'Open PDF' : 'Open Source';
+          $sourceValue .= ' <a href="' . Html::escape($sourceUrl) . '" target="_blank" rel="noopener" class="btn btn-primary btn-sm ms-2" role="button">' . Html::escape($sourceButtonLabel) . '</a>';
+        }
+        else {
+          $sourceButtonLabel = $sourceIsPdf ? 'Open PDF' : 'Open Source';
+          $sourceValue .= ' <button type="button" class="btn btn-secondary btn-sm ms-2" disabled aria-disabled="true">' . Html::escape($sourceButtonLabel) . '</button>';
+        }
+
+        $sourceTextInfo = $this->resolveWkfSourceTextInfo($wkfUri, $sourceName);
+        $sourceTextName = $sourceTextInfo['name'] ?? 'N/A';
+        $sourceTextUrl = $sourceTextInfo['url'] ?? '';
+        $sourceTextValue = '<button type="button" class="btn btn-outline-secondary btn-sm" disabled aria-disabled="true">' . Html::escape($sourceTextName) . '</button>';
+        if ($sourceTextUrl !== '') {
+          $sourceTextValue .= ' <a href="' . Html::escape($sourceTextUrl) . '" target="_blank" rel="noopener" class="btn btn-primary btn-sm ms-2" role="button">Open txt</a>';
+        }
+        else {
+          $sourceTextValue .= ' <button type="button" class="btn btn-secondary btn-sm ms-2" disabled aria-disabled="true">Open txt</button>';
+        }
+
+        $taskResolution = $this->resolveWkfTaskCountAndProcessUri($wkfUri);
+        $taskCount = $taskResolution['count'];
+        $interactiveAutoTaskCount = $this->resolveWkfInteractiveAutoTaskCountFromLocalContext($wkfUri);
+        $processStemUri = $this->resolveWkfProcessStemUriForCard($wkfUri);
+        $ownerEmail = $this->resolveWkfOwnerEmailForCard($wkfUri);
+        $organizationName = $this->resolveWkfOwnerOrganizationLabelForCard($wkfUri);
+        $usedComponentsCount = $this->resolveWkfUsedComponentsCountFromLocalContext($wkfUri);
+        $scenarioPropsCount = $this->resolveWkfScenarioPropsCountFromLocalContext($wkfUri);
+
+        $processStemValue = 'N/A';
+        if ($processStemUri !== '') {
+          $processStemDisplay = Utils::namespaceUri($processStemUri);
+          $processStemHref = Url::fromRoute('rep.describe_element', [
+            'elementuri' => base64_encode($processStemUri),
+          ])->toString();
+          $processStemValue = '<a href="' . Html::escape($processStemHref) . '">' . Html::escape($processStemDisplay) . '</a>';
+        }
+
+        $taskCountLabel = ($taskCount === NULL) ? 'N/A' : (string) $taskCount;
+        $tasksValue = Html::escape($taskCountLabel);
+        $ownerEmailValue = Html::escape($ownerEmail !== '' ? $ownerEmail : 'N/A');
+        $organizationValue = Html::escape($organizationName !== '' ? $organizationName : 'N/A');
+        $usedComponentsLabel = ($usedComponentsCount === NULL) ? 'N/A' : (string) $usedComponentsCount;
+        $usedComponentsValue = Html::escape($usedComponentsLabel);
+        if ($usedComponentsCount !== NULL && $usedComponentsCount === 0 && $interactiveAutoTaskCount !== NULL) {
+          $usedComponentsValue = Html::escape($usedComponentsLabel . ' (of ' . (string) $interactiveAutoTaskCount . ' interactive/auto tasks)');
+        }
+        $scenarioPropsLabel = ($scenarioPropsCount === NULL) ? 'N/A' : (string) $scenarioPropsCount;
+        $scenarioPropsValue = Html::escape($scenarioPropsLabel);
+
+        if ($wkfUri !== '') {
+          $wkfDownloadUrl = Url::fromRoute('rep.wkf_current_download', [
+            'wkfuri' => base64_encode($wkfUri),
+          ])->toString();
+          $downloadValue = '<a href="' . Html::escape($wkfDownloadUrl) . '" class="btn btn-primary btn-sm download-button" role="button">Get It</a>';
+        }
+
+        $wkfList = '<ul class="list-unstyled mb-0">'
+          . '<li><strong>URI:</strong> ' . $uriValue . '</li>'
+          . '<li><strong>Proc. Stem URI:</strong> ' . $processStemValue . '</li>'
+          . '<li><strong>Status:</strong> ' . $statusValue . '</li>'
+          . '<li><strong>Owner email:</strong> ' . $ownerEmailValue . '</li>'
+          . '<li><strong>Organization:</strong> ' . $organizationValue . '</li>'
+          . '<li><strong>Number of scenario prop w/values:</strong> ' . $scenarioPropsValue . '</li>'
+          . '<li><strong>Number of tasks:</strong> ' . $tasksValue . '</li>'
+          . '<li><strong>Number of used components:</strong> ' . $usedComponentsValue . '</li>'
+          . '<li><strong>Source:</strong> ' . $sourceValue . '</li>'
+          . '<li><strong>Src Txt:</strong> ' . $sourceTextValue . '</li>'
+          . '<li><strong>Log:</strong> ' . $logValue . '</li>'
+          . '<li><strong>Download:</strong> ' . $downloadValue . '</li>'
+          . '</ul>';
+
+        $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content']['wkf_summary_list'] = [
+          '#type' => 'container',
+          '#markup' => $wkfList,
+          '#allowed_tags' => ['ul', 'li', 'strong', 'a', 'b', 'font', 'span', 'div', 'em'],
         ];
       }
 
       $wkfPhaseControlConfig = NULL;
       if ($this->element_type === 'wkf') {
-        $sourceDocument = isset($item['element_filename']) ? (string) $item['element_filename'] : '';
-        if (trim(strip_tags($sourceDocument)) === '') {
-          $sourceDocument = 'N/A';
-        }
-
         $wkfUri = is_string($key) ? trim($key) : '';
         $currentPhase = $this->getWkfCurrentPublicPhaseFromHistory($wkfUri);
         $currentPhaseRoman = $this->wkfPhaseToRoman($currentPhase);
         $phaseOptions = [];
-        for ($phase = 2; $phase <= $currentPhase; $phase++) {
+        // Keep selector values stable across submits to avoid form validation
+        // errors when a stale client-side value (e.g. 4) is posted.
+        for ($phase = 2; $phase <= 4; $phase++) {
           $phaseOptions[(string) $phase] = 'Phase ' . $this->wkfPhaseToRoman($phase);
         }
         if (empty($phaseOptions)) {
@@ -1035,21 +1157,6 @@ class REPSelectMTForm extends FormBase {
           'current_phase' => (string) $currentPhase,
           'current_phase_label' => $currentPhaseRoman,
           'options' => $phaseOptions,
-        ];
-
-        $form['element_cards_wrapper'][$sanitized_key]['card']['content_wrapper']['content']['source_document'] = [
-          '#type' => 'container',
-          '#attributes' => [
-            'class' => ['field-container'],
-          ],
-          'label' => [
-            '#type' => 'html_tag',
-            '#tag' => 'strong',
-            '#value' => $this->t('Source document') . ': ',
-          ],
-          'value' => [
-            '#markup' => $sourceDocument,
-          ],
         ];
 
       }
@@ -1221,6 +1328,41 @@ class REPSelectMTForm extends FormBase {
     $scope = $this->resolveWkfScopeFromUri($wkfUri);
     $maxPublicPhase = 2;
 
+    $tablePhase = $this->getPersistedWkfPublicPhaseFromTable($scope);
+    if ($tablePhase !== NULL) {
+      $maxPublicPhase = max($maxPublicPhase, $tablePhase);
+    }
+
+    // If Task Model Update was already applied and persisted for this WKF,
+    // keep selector at least on Phase III even if packet/response history lags.
+    $persistedTasks = $this->getPersistedWkfTaskCount($wkfUri);
+    if ($persistedTasks !== NULL) {
+      $maxPublicPhase = max($maxPublicPhase, 3);
+    }
+
+    $phaseStore = \Drupal::keyValue('rep.wkf.public_phase.by_scope');
+    $phaseEntry = $phaseStore->get($scope, []);
+    if (is_array($phaseEntry) && isset($phaseEntry['phase'])) {
+      $savedPhase = (int) $phaseEntry['phase'];
+      if ($savedPhase >= 2 && $savedPhase <= 4) {
+        $maxPublicPhase = max($maxPublicPhase, $savedPhase);
+      }
+    }
+
+    $session = \Drupal::request()->getSession();
+    if ($session !== NULL) {
+      $workflowStore = $session->get('rep.wkf.workflow.state.by_scope', []);
+      if (is_array($workflowStore) && isset($workflowStore[$scope]) && is_array($workflowStore[$scope])) {
+        $workflowState = $workflowStore[$scope];
+        if (isset($workflowState['currentPublicPhase'])) {
+          $currentPhase = (int) $workflowState['currentPublicPhase'];
+          if ($currentPhase >= 2 && $currentPhase <= 4) {
+            $maxPublicPhase = max($maxPublicPhase, $currentPhase);
+          }
+        }
+      }
+    }
+
     $packetHistory = \Drupal::keyValue('rep.wkf.phase_packets.by_scope')->get($scope, []);
     if (is_array($packetHistory)) {
       foreach ($packetHistory as $entry) {
@@ -1252,16 +1394,44 @@ class REPSelectMTForm extends FormBase {
     return max(2, min(4, $maxPublicPhase));
   }
 
+  /**
+   * Read persisted public phase from table-backed storage.
+   */
+  protected function getPersistedWkfPublicPhaseFromTable(string $scope): ?int {
+    if ($scope === '') {
+      return NULL;
+    }
+
+    try {
+      $phase = \Drupal::database()
+        ->select('rep_wkf_phase_state', 'w')
+        ->fields('w', ['public_phase'])
+        ->condition('scope', $scope)
+        ->range(0, 1)
+        ->execute()
+        ->fetchField();
+    }
+    catch (\Throwable $e) {
+      return NULL;
+    }
+
+    if ($phase === FALSE || $phase === NULL) {
+      return NULL;
+    }
+
+    $value = (int) $phase;
+    return ($value >= 2 && $value <= 4) ? $value : NULL;
+  }
+
   protected function mapBackendPhaseToPublicPhase(int $phase): int {
-    if ($phase === 5) {
+    if ($phase === 4) {
       return 4;
     }
-    if ($phase === 4) {
+    if ($phase === 3) {
       return 3;
     }
 
-    // Legacy task-model correction (backend phase 3) is optional and does not
-    // advance official phase progression.
+    // Default to Phase II when unknown/legacy data is encountered.
     return 2;
   }
 
@@ -1271,7 +1441,6 @@ class REPSelectMTForm extends FormBase {
       2 => 'II',
       3 => 'III',
       4 => 'IV',
-      5 => 'V',
     ];
     return $map[$phase] ?? (string) $phase;
   }
@@ -3644,6 +3813,897 @@ class REPSelectMTForm extends FormBase {
     return;
   }
 
+
+  /**
+   * Extract the first href value from an HTML anchor snippet.
+   */
+  protected function extractHrefFromAnchorHtml(string $html): string {
+    $html = trim($html);
+    if ($html === '') {
+      return '';
+    }
+
+    $matches = [];
+    if (preg_match('/href\s*=\s*"([^"]+)"/i', $html, $matches) === 1 && !empty($matches[1])) {
+      return html_entity_decode((string) $matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+    if (preg_match("/href\\s*=\\s*'([^']+)'/i", $html, $matches) === 1 && !empty($matches[1])) {
+      return html_entity_decode((string) $matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    return '';
+  }
+
+  /**
+   * Resolve source document display data for a WKF card.
+   *
+   * @return array{name:string,url:string,is_pdf:bool}
+   */
+  protected function resolveWkfSourceDocumentInfo(string $wkfUri): array {
+    $context = $this->getPersistedPhase1ContextByWkfUri($wkfUri);
+    if (empty($context)) {
+      return ['name' => 'N/A', 'url' => '', 'is_pdf' => FALSE];
+    }
+
+    $sourceName = '';
+    if (isset($context['sourceDocumentName']) && is_string($context['sourceDocumentName'])) {
+      $sourceName = trim($context['sourceDocumentName']);
+    }
+
+    if ($sourceName === '' && isset($context['sourceDocumentContext']) && is_string($context['sourceDocumentContext'])) {
+      $sourceContext = trim($context['sourceDocumentContext']);
+      if ($sourceContext !== '') {
+        $matches = [];
+        if (preg_match('/Supporting\s+document\s+filename\s*:\s*(.+)$/i', $sourceContext, $matches) === 1 && !empty($matches[1])) {
+          $sourceName = trim((string) $matches[1]);
+        }
+        else {
+          $sourceName = $sourceContext;
+        }
+      }
+    }
+
+    if ($sourceName === '') {
+      $sourceName = 'N/A';
+    }
+
+    $sourceUrl = '';
+    $sourceFileUri = isset($context['sourceDocumentFileUri']) && is_string($context['sourceDocumentFileUri'])
+      ? trim($context['sourceDocumentFileUri'])
+      : '';
+    if ($wkfUri !== '' && ($sourceFileUri !== '' || strtolower((string) pathinfo($sourceName, PATHINFO_EXTENSION)) === 'pdf')) {
+      $sourceUrl = Url::fromRoute('rep.wkf_source_view', [
+        'wkfuri' => base64_encode($wkfUri),
+      ])->toString();
+    }
+
+    $isPdf = (strtolower((string) pathinfo($sourceName, PATHINFO_EXTENSION)) === 'pdf');
+
+    return [
+      'name' => $sourceName,
+      'url' => $sourceUrl,
+      'is_pdf' => $isPdf,
+    ];
+  }
+
+  /**
+   * Read persisted Phase I packet context keyed by WKF URI.
+   */
+  protected function getPersistedPhase1ContextByWkfUri(string $wkfUri): array {
+    $normalized = Utils::plainUri($wkfUri) ?: trim($wkfUri);
+    if ($normalized === '') {
+      return [];
+    }
+
+    $store = \Drupal::keyValue('rep.wkf.phase1.context.by_uri');
+    $entry = $store->get($normalized, []);
+    return is_array($entry) ? $entry : [];
+  }
+
+  /**
+   * Resolve source text display data for a WKF card.
+   *
+   * @return array{name:string,url:string}
+   */
+  protected function resolveWkfSourceTextInfo(string $wkfUri, string $sourceName): array {
+    $context = $this->getPersistedPhase1ContextByWkfUri($wkfUri);
+    $textName = isset($context['sourceTextFileName']) && is_string($context['sourceTextFileName'])
+      ? trim($context['sourceTextFileName'])
+      : '';
+    $sourceText = isset($context['sourceDocumentContent']) && is_string($context['sourceDocumentContent'])
+      ? trim($context['sourceDocumentContent'])
+      : '';
+
+    if ($textName === '') {
+      $baseName = trim((string) pathinfo($sourceName, PATHINFO_FILENAME));
+      if ($baseName === '') {
+        $baseName = 'source_document';
+      }
+      $textName = $baseName . '.txt';
+    }
+
+    $textUrl = '';
+    $sourceTextFileUri = isset($context['sourceTextFileUri']) && is_string($context['sourceTextFileUri'])
+      ? trim($context['sourceTextFileUri'])
+      : '';
+    if ($wkfUri !== '' && ($sourceTextFileUri !== '' || $sourceText !== '')) {
+      $textUrl = Url::fromRoute('rep.wkf_source_text_view', [
+        'wkfuri' => base64_encode($wkfUri),
+      ])->toString();
+    }
+
+    return [
+      'name' => $textName,
+      'url' => $textUrl,
+    ];
+  }
+
+  /**
+   * Resolve owner affiliation organization label for a WKF card.
+   */
+  protected function resolveWkfOwnerOrganizationLabelForCard(string $wkfUri): string {
+    $wkfUri = trim($wkfUri);
+    if ($wkfUri === '') {
+      return 'N/A';
+    }
+
+    if (array_key_exists($wkfUri, $this->wkfOwnerOrganizationLabelCache)) {
+      return $this->wkfOwnerOrganizationLabelCache[$wkfUri];
+    }
+
+    $label = 'N/A';
+
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $raw = $api->getUri($wkfUri);
+      $wkf = $api->parseObjectResponse($raw, 'getUri');
+
+      if (is_object($wkf)) {
+        $ownerEmail = '';
+        if (isset($wkf->hasSIRManagerEmail) && is_string($wkf->hasSIRManagerEmail)) {
+          $ownerEmail = trim((string) $wkf->hasSIRManagerEmail);
+        }
+        elseif (isset($wkf->managerEmail) && is_string($wkf->managerEmail)) {
+          $ownerEmail = trim((string) $wkf->managerEmail);
+        }
+
+        if ($ownerEmail !== '') {
+          $label = $this->resolveOwnerAffiliationOrganizationLabelByEmail($ownerEmail);
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      $label = 'N/A';
+    }
+
+    if ($label === '') {
+      $label = 'N/A';
+    }
+    $this->wkfOwnerOrganizationLabelCache[$wkfUri] = $label;
+
+    return $label;
+  }
+
+  /**
+   * Resolve owner email for a WKF card.
+   */
+  protected function resolveWkfOwnerEmailForCard(string $wkfUri): string {
+    $wkfUri = trim($wkfUri);
+    if ($wkfUri === '') {
+      return '';
+    }
+
+    if (array_key_exists($wkfUri, $this->wkfOwnerEmailCache)) {
+      return $this->wkfOwnerEmailCache[$wkfUri];
+    }
+
+    $ownerEmail = '';
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $raw = $api->getUri($wkfUri);
+      $wkf = $api->parseObjectResponse($raw, 'getUri');
+      if (is_object($wkf)) {
+        if (isset($wkf->hasSIRManagerEmail) && is_string($wkf->hasSIRManagerEmail)) {
+          $ownerEmail = $this->normalizeEmailValue((string) $wkf->hasSIRManagerEmail);
+        }
+        elseif (isset($wkf->managerEmail) && is_string($wkf->managerEmail)) {
+          $ownerEmail = $this->normalizeEmailValue((string) $wkf->managerEmail);
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      $ownerEmail = '';
+    }
+
+    $this->wkfOwnerEmailCache[$wkfUri] = $ownerEmail;
+    return $ownerEmail;
+  }
+
+  /**
+   * Resolve affiliation organization label for an owner email.
+   */
+  protected function resolveOwnerAffiliationOrganizationLabelByEmail(string $ownerEmail): string {
+    $ownerEmail = $this->normalizeEmailValue($ownerEmail);
+    if ($ownerEmail === '') {
+      return 'N/A';
+    }
+
+    $cacheKey = $ownerEmail;
+    if (array_key_exists($cacheKey, $this->ownerAffiliationLabelByEmailCache)) {
+      return $this->ownerAffiliationLabelByEmailCache[$cacheKey];
+    }
+
+    $label = 'N/A';
+
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $rawPeople = $api->listByManagerEmail('person', $ownerEmail, 200, 0);
+      $people = $api->parseObjectResponse($rawPeople, 'listByManagerEmail');
+
+      $candidates = [];
+      if (is_array($people)) {
+        foreach ($people as $person) {
+          if (!is_object($person)) {
+            continue;
+          }
+          $personEmail = $this->extractPersonEmail($person);
+          if ($personEmail !== '' && $personEmail === $ownerEmail) {
+            $candidates[] = $person;
+          }
+        }
+      }
+
+      if (empty($candidates)) {
+        // Fallback: search broader person set by email match.
+        $rawAllPeople = $api->listByKeyword('person', '_', 500, 0);
+        $allPeople = $api->parseObjectResponse($rawAllPeople, 'listByKeyword');
+        if (is_array($allPeople)) {
+          foreach ($allPeople as $person) {
+            if (!is_object($person)) {
+              continue;
+            }
+            $personEmail = $this->extractPersonEmail($person);
+            if ($personEmail !== '' && $personEmail === $ownerEmail) {
+              $candidates[] = $person;
+            }
+          }
+        }
+      }
+
+      foreach ($candidates as $person) {
+        $affiliationUri = $this->extractPersonAffiliationUri($person);
+        if ($affiliationUri === '') {
+          continue;
+        }
+
+        $rawOrg = $api->getUri($affiliationUri);
+        $org = $api->parseObjectResponse($rawOrg, 'getUri');
+
+        if (is_object($org) && isset($org->label) && is_string($org->label) && trim((string) $org->label) !== '') {
+          $label = trim((string) $org->label);
+          break;
+        }
+
+        $label = Utils::namespaceUri($affiliationUri);
+        if (trim($label) !== '') {
+          break;
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      $label = 'N/A';
+    }
+
+    if ($label === '') {
+      $label = 'N/A';
+    }
+    $this->ownerAffiliationLabelByEmailCache[$cacheKey] = $label;
+
+    return $label;
+  }
+
+  /**
+   * Normalize an email value for robust equality checks.
+   */
+  protected function normalizeEmailValue(string $value): string {
+    $email = trim($value);
+    if ($email === '') {
+      return '';
+    }
+    if (stripos($email, 'mailto:') === 0) {
+      $email = trim(substr($email, 7));
+    }
+    return strtolower($email);
+  }
+
+  /**
+   * Extract person email from common person payload fields.
+   */
+  protected function extractPersonEmail($person): string {
+    if (!is_object($person)) {
+      return '';
+    }
+
+    foreach (['mbox', 'hasEmail', 'email'] as $field) {
+      if (!isset($person->{$field})) {
+        continue;
+      }
+
+      $value = $person->{$field};
+      if (is_string($value)) {
+        $email = $this->normalizeEmailValue($value);
+        if ($email !== '') {
+          return $email;
+        }
+      }
+      elseif (is_array($value)) {
+        foreach ($value as $entry) {
+          if (!is_string($entry)) {
+            continue;
+          }
+          $email = $this->normalizeEmailValue($entry);
+          if ($email !== '') {
+            return $email;
+          }
+        }
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Extract affiliation URI from a person payload.
+   */
+  protected function extractPersonAffiliationUri($person): string {
+    if (!is_object($person)) {
+      return '';
+    }
+
+    if (isset($person->hasAffiliationUri) && is_string($person->hasAffiliationUri)) {
+      return trim((string) $person->hasAffiliationUri);
+    }
+
+    if (isset($person->hasAffiliation) && is_object($person->hasAffiliation) && isset($person->hasAffiliation->uri) && is_string($person->hasAffiliation->uri)) {
+      return trim((string) $person->hasAffiliation->uri);
+    }
+
+    return '';
+  }
+
+  /**
+   * Resolve Process Stem URI for WKF card display.
+   */
+  protected function resolveWkfProcessStemUriForCard(string $wkfUri): string {
+    $context = $this->getPersistedPhase1ContextByWkfUri($wkfUri);
+
+    if (isset($context['processStemUri']) && is_string($context['processStemUri'])) {
+      $uri = trim($context['processStemUri']);
+      if ($uri !== '') {
+        return $uri;
+      }
+    }
+
+    if (isset($context['phase1CoreContext']) && is_string($context['phase1CoreContext'])) {
+      $core = (string) $context['phase1CoreContext'];
+      $matches = [];
+      if (preg_match('/^Clinical\s+Process\s+URI:\s*(.+)$/mi', $core, $matches) === 1 && !empty($matches[1])) {
+        return trim((string) $matches[1]);
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Resolve task count for a WKF by trying process URI candidates.
+   *
+   * @return array{count:?int,process_uri:string}
+   */
+  protected function resolveWkfTaskCountAndProcessUri(string $wkfUri): array {
+    $persistedCount = $this->getPersistedWkfTaskCount($wkfUri);
+
+    if ($wkfUri === '' || !\Drupal::moduleHandler()->moduleExists('ctt') || !\Drupal::hasService('ctt.hasco_client')) {
+      $localCount = $this->resolveWkfTaskCountFromLocalContext($wkfUri);
+      $best = $this->pickBestTaskCount($persistedCount, $localCount, NULL);
+      return ['count' => $best, 'process_uri' => ''];
+    }
+
+    $client = \Drupal::service('ctt.hasco_client');
+    $bestCount = NULL;
+    $bestUri = '';
+
+    foreach ($this->buildWkfProcessUriCandidates($wkfUri) as $candidate) {
+      try {
+        $tasks = $client->getTasksByProcess($candidate);
+        if (!is_array($tasks)) {
+          continue;
+        }
+
+        $count = count($tasks);
+        if ($bestCount === NULL || $count > $bestCount) {
+          $bestCount = $count;
+          $bestUri = $candidate;
+        }
+      }
+      catch (\Throwable $e) {
+        continue;
+      }
+    }
+
+    $localCount = $this->resolveWkfTaskCountFromLocalContext($wkfUri);
+    $best = $this->pickBestTaskCount($persistedCount, $localCount, $bestCount);
+
+    return ['count' => $best, 'process_uri' => $bestUri];
+  }
+
+  /**
+   * Resolve most recent persisted authoritative task count from task updates.
+   */
+  protected function getPersistedWkfTaskCount(string $wkfUri): ?int {
+    $normalized = Utils::plainUri($wkfUri) ?: trim($wkfUri);
+    if ($normalized === '') {
+      return NULL;
+    }
+
+    $store = \Drupal::keyValue('rep.wkf.task_count.by_uri');
+    $entry = $store->get($normalized, NULL);
+
+    if (is_array($entry) && isset($entry['count']) && is_numeric($entry['count'])) {
+      $count = (int) $entry['count'];
+      return $count >= 0 ? $count : NULL;
+    }
+
+    if (is_numeric($entry)) {
+      $count = (int) $entry;
+      return $count >= 0 ? $count : NULL;
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Pick highest non-null task count among known sources.
+   */
+  protected function pickBestTaskCount(?int $persistedCount, ?int $localCount, ?int $apiCount): ?int {
+    $best = NULL;
+    foreach ([$persistedCount, $localCount, $apiCount] as $candidate) {
+      if ($candidate === NULL) {
+        continue;
+      }
+      if ($best === NULL || $candidate > $best) {
+        $best = $candidate;
+      }
+    }
+    return $best;
+  }
+
+  /**
+   * Resolve Tasks row count from locally stored WKF TSV contexts.
+   */
+  protected function resolveWkfTaskCountFromLocalContext(string $wkfUri): ?int {
+    foreach ($this->getWkfWorkbookCandidateContents($wkfUri) as $content) {
+      $count = $this->countTasksRowsFromWorkbookTsv((string) $content);
+      if ($count !== NULL) {
+        return $count;
+      }
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Resolve number of interactive/auto tasks from local WKF TSV contexts.
+   */
+  protected function resolveWkfInteractiveAutoTaskCountFromLocalContext(string $wkfUri): ?int {
+    foreach ($this->getWkfWorkbookCandidateContents($wkfUri) as $content) {
+      $count = $this->countInteractiveAutoTasksFromWorkbookTsv((string) $content);
+      if ($count !== NULL) {
+        return $count;
+      }
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Resolve number of used components from local WKF TSV contexts.
+   */
+  protected function resolveWkfUsedComponentsCountFromLocalContext(string $wkfUri): ?int {
+    foreach ($this->getWkfWorkbookCandidateContents($wkfUri) as $content) {
+      $count = $this->countUsedComponentsFromWorkbookTsv((string) $content);
+      if ($count !== NULL) {
+        return $count;
+      }
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Resolve number of scenario properties with values from local WKF TSV contexts.
+   */
+  protected function resolveWkfScenarioPropsCountFromLocalContext(string $wkfUri): ?int {
+    foreach ($this->getWkfWorkbookCandidateContents($wkfUri) as $content) {
+      $count = $this->countScenarioPropsFromWorkbookTsv((string) $content);
+      if ($count !== NULL) {
+        return $count;
+      }
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Collect workbook-like WKF TSV candidates from local stores.
+   *
+   * @return array<int, string>
+   */
+  protected function getWkfWorkbookCandidateContents(string $wkfUri): array {
+    $scope = $this->resolveWkfScopeFromUri($wkfUri);
+    $candidates = [];
+
+    $workingStore = \Drupal::keyValue('rep.wkf.phase_working_copy.by_scope');
+    $working = $workingStore->get($scope, []);
+    if (is_array($working) && isset($working['wkfContent']) && is_string($working['wkfContent'])) {
+      $candidates[] = $working['wkfContent'];
+    }
+
+    $session = \Drupal::request()->getSession();
+    if ($session !== NULL) {
+      $panelStore = $session->get('rep.wkf.validation.panel.by_scope', []);
+      if (is_array($panelStore) && isset($panelStore[$scope]) && is_array($panelStore[$scope])) {
+        $panel = $panelStore[$scope];
+        if (isset($panel['wkfCopyContent']) && is_string($panel['wkfCopyContent'])) {
+          $candidates[] = $panel['wkfCopyContent'];
+        }
+      }
+    }
+
+    $phase1 = $this->getPersistedPhase1ContextByWkfUri($wkfUri);
+    if (isset($phase1['phase1WkfTableTsv']) && is_string($phase1['phase1WkfTableTsv'])) {
+      $candidates[] = $phase1['phase1WkfTableTsv'];
+    }
+
+    return $candidates;
+  }
+
+  /**
+   * Count data rows in the Tasks sheet inside workbook-like TSV content.
+   */
+  protected function countTasksRowsFromWorkbookTsv(string $workbookTsv): ?int {
+    $text = str_replace(["\r\n", "\r"], "\n", trim($workbookTsv));
+    if ($text === '') {
+      return NULL;
+    }
+
+    $tasksBody = '';
+    if (preg_match('/^### SHEET:\s*Tasks\s*$\n(.*?)(?=^### SHEET:\s*|\z)/ms', $text, $match) === 1) {
+      $tasksBody = trim((string) ($match[1] ?? ''));
+    }
+    else {
+      // Fallback: content may already be plain Tasks TSV.
+      $tasksBody = $text;
+    }
+
+    if ($tasksBody === '') {
+      return NULL;
+    }
+
+    $lines = explode("\n", $tasksBody);
+    if (count($lines) < 1) {
+      return NULL;
+    }
+
+    $header = trim((string) $lines[0]);
+    if ($header === '' || strpos($header, "\t") === FALSE) {
+      return NULL;
+    }
+
+    $rows = 0;
+    for ($i = 1; $i < count($lines); $i++) {
+      if (trim((string) $lines[$i]) !== '') {
+        $rows++;
+      }
+    }
+
+    return $rows;
+  }
+
+  /**
+   * Count Tasks rows whose rdf:type is interactive or automated/manual.
+   */
+  protected function countInteractiveAutoTasksFromWorkbookTsv(string $workbookTsv): ?int {
+    $text = str_replace(["\r\n", "\r"], "\n", trim($workbookTsv));
+    if ($text === '') {
+      return NULL;
+    }
+
+    $tasksBody = '';
+    if (preg_match('/^### SHEET:\s*Tasks\s*$\n(.*?)(?=^### SHEET:\s*|\z)/ms', $text, $match) === 1) {
+      $tasksBody = trim((string) ($match[1] ?? ''));
+    }
+    else {
+      $tasksBody = $text;
+    }
+
+    if ($tasksBody === '') {
+      return NULL;
+    }
+
+    $lines = explode("\n", $tasksBody);
+    if (count($lines) < 1) {
+      return NULL;
+    }
+
+    $header = trim((string) $lines[0]);
+    if ($header === '' || strpos($header, "\t") === FALSE) {
+      return NULL;
+    }
+
+    $headerCols = array_map('trim', explode("\t", $header));
+    $typeColIdx = -1;
+    foreach ($headerCols as $idx => $columnName) {
+      $normalized = $this->normalizeWorkbookHeaderColumn($columnName);
+      if ($normalized === 'rdf:type') {
+        $typeColIdx = (int) $idx;
+        break;
+      }
+    }
+
+    if ($typeColIdx < 0) {
+      return NULL;
+    }
+
+    $rows = 0;
+    for ($i = 1; $i < count($lines); $i++) {
+      $line = (string) $lines[$i];
+      if (trim($line) === '') {
+        continue;
+      }
+      $cols = explode("\t", $line);
+      $typeValue = isset($cols[$typeColIdx]) ? trim((string) $cols[$typeColIdx]) : '';
+      if ($this->isInteractiveOrAutoTaskType($typeValue)) {
+        $rows++;
+      }
+    }
+
+    return $rows;
+  }
+
+  /**
+   * Determine whether rdf:type matches interactive or automated/manual task.
+   */
+  protected function isInteractiveOrAutoTaskType(string $typeValue): bool {
+    $normalized = strtolower(trim($typeValue));
+    if ($normalized === '') {
+      return FALSE;
+    }
+
+    return strpos($normalized, 'interactiontask') !== FALSE
+      || strpos($normalized, 'automatedtask') !== FALSE
+      || strpos($normalized, 'applicationtask') !== FALSE
+      || strpos($normalized, 'manualtask') !== FALSE;
+  }
+
+  /**
+   * Count unique used components from Tasks sheet required-instrument column.
+   */
+  protected function countUsedComponentsFromWorkbookTsv(string $workbookTsv): ?int {
+    $text = str_replace(["\r\n", "\r"], "\n", trim($workbookTsv));
+    if ($text === '') {
+      return NULL;
+    }
+
+    $tasksBody = '';
+    if (preg_match('/^### SHEET:\s*Tasks\s*$\n(.*?)(?=^### SHEET:\s*|\z)/ms', $text, $match) === 1) {
+      $tasksBody = trim((string) ($match[1] ?? ''));
+    }
+    else {
+      $tasksBody = $text;
+    }
+
+    if ($tasksBody === '') {
+      return NULL;
+    }
+
+    $lines = explode("\n", $tasksBody);
+    if (count($lines) < 1) {
+      return NULL;
+    }
+
+    $header = trim((string) $lines[0]);
+    if ($header === '' || strpos($header, "\t") === FALSE) {
+      return NULL;
+    }
+
+    $headerCols = array_map('trim', explode("\t", $header));
+    $componentColIdx = -1;
+    foreach ($headerCols as $idx => $columnName) {
+      $normalized = $this->normalizeWorkbookHeaderColumn($columnName);
+      if ($normalized === 'vstoi:hasrequiredinstrument') {
+        $componentColIdx = (int) $idx;
+        break;
+      }
+    }
+
+    if ($componentColIdx < 0) {
+      return NULL;
+    }
+
+    $uniqueComponents = [];
+    for ($i = 1; $i < count($lines); $i++) {
+      $line = (string) $lines[$i];
+      if (trim($line) === '') {
+        continue;
+      }
+
+      $cols = explode("\t", $line);
+      if (!isset($cols[$componentColIdx])) {
+        continue;
+      }
+
+      $rawCell = trim((string) $cols[$componentColIdx]);
+      if ($rawCell === '') {
+        continue;
+      }
+
+      $parts = preg_split('/\s*[;,|]\s*/', $rawCell);
+      if (!is_array($parts) || empty($parts)) {
+        $parts = [$rawCell];
+      }
+
+      foreach ($parts as $part) {
+        $token = trim((string) $part);
+        if ($token === '') {
+          continue;
+        }
+        $uniqueComponents[strtolower($token)] = TRUE;
+      }
+    }
+
+    return count($uniqueComponents);
+  }
+
+  /**
+   * Count STD scenario-property columns that have at least one value.
+   */
+  protected function countScenarioPropsFromWorkbookTsv(string $workbookTsv): ?int {
+    $text = str_replace(["\r\n", "\r"], "\n", trim($workbookTsv));
+    if ($text === '') {
+      return NULL;
+    }
+
+    $stdBody = '';
+    if (preg_match('/^### SHEET:\s*STD\s*$\n(.*?)(?=^### SHEET:\s*|\z)/ms', $text, $match) === 1) {
+      $stdBody = trim((string) ($match[1] ?? ''));
+    }
+    else {
+      $stdBody = $text;
+    }
+
+    if ($stdBody === '') {
+      return NULL;
+    }
+
+    $lines = explode("\n", $stdBody);
+    if (count($lines) < 1) {
+      return NULL;
+    }
+
+    $header = trim((string) $lines[0]);
+    if ($header === '' || strpos($header, "\t") === FALSE) {
+      return NULL;
+    }
+
+    $headerCols = array_map('trim', explode("\t", $header));
+    $targetIdx = [];
+    foreach ($headerCols as $idx => $columnName) {
+      $normalized = $this->normalizeWorkbookHeaderColumn($columnName);
+      // Exclude identifier column; all other STD columns are properties.
+      if ($normalized === '' || $normalized === 'hasuri') {
+        continue;
+      }
+      $targetIdx[$normalized] = (int) $idx;
+    }
+
+    if (empty($targetIdx)) {
+      return NULL;
+    }
+
+    $filledProperties = [];
+    for ($i = 1; $i < count($lines); $i++) {
+      $line = (string) $lines[$i];
+      if (trim($line) === '') {
+        continue;
+      }
+
+      $cols = explode("\t", $line);
+      foreach ($targetIdx as $propertyKey => $idx) {
+        if (!isset($cols[$idx])) {
+          continue;
+        }
+        if (trim((string) $cols[$idx]) !== '') {
+          $filledProperties[$propertyKey] = TRUE;
+        }
+      }
+    }
+
+    return count($filledProperties);
+  }
+
+  /**
+   * Normalize workbook header name for tolerant matching.
+   */
+  protected function normalizeWorkbookHeaderColumn(string $column): string {
+    $normalized = strtolower(trim($column));
+    $normalized = preg_replace('/\s+/', '', $normalized);
+    return is_string($normalized) ? $normalized : '';
+  }
+
+  /**
+   * Build process URI candidates for one WKF.
+   *
+   * @return array<int, string>
+   */
+  protected function buildWkfProcessUriCandidates(string $wkfUri): array {
+    $candidates = [];
+
+    $normalized = Utils::plainUri($wkfUri) ?: trim($wkfUri);
+    if ($normalized === '') {
+      return [];
+    }
+
+    $context = $this->getPersistedPhase1ContextByWkfUri($wkfUri);
+
+    if (isset($context['processUri']) && is_string($context['processUri']) && trim($context['processUri']) !== '') {
+      $candidates[] = trim($context['processUri']);
+    }
+
+    if (isset($context['phase1CoreContext']) && is_string($context['phase1CoreContext'])) {
+      $core = $context['phase1CoreContext'];
+      $matches = [];
+      if (preg_match('/^Phase I Process URI:\s*(.+)$/mi', $core, $matches) === 1 && !empty($matches[1])) {
+        $candidates[] = trim((string) $matches[1]);
+      }
+    }
+
+    if (stripos($normalized, '/PROC/') !== FALSE) {
+      $candidates[] = $normalized;
+    }
+    else {
+      $base = rtrim($normalized, '/');
+      $candidates[] = $base . '/PROC/0001';
+      $candidates[] = $base . '/PROC/PROC001';
+    }
+
+    if (preg_match('/^pmsr:WKF(.+)$/i', $normalized, $matches) === 1 && !empty($matches[1])) {
+      $wkfCode = 'WKF' . trim((string) $matches[1]);
+      $candidates[] = 'https://pmsr.net/ont/' . $wkfCode . '/PROC/0001';
+      $candidates[] = 'https://pmsr.net/ont/' . $wkfCode . '/PROC/PROC001';
+      $candidates[] = 'http://pmsr.net/ont/' . $wkfCode . '/PROC/0001';
+      $candidates[] = 'http://pmsr.net/ont/' . $wkfCode . '/PROC/PROC001';
+      $candidates[] = 'pmsr:/' . $wkfCode . '/PROC/0001';
+      $candidates[] = 'pmsr:/' . $wkfCode . '/PROC/PROC001';
+    }
+
+    $unique = [];
+    $result = [];
+    foreach ($candidates as $candidate) {
+      $candidate = trim((string) $candidate);
+      if ($candidate === '') {
+        continue;
+      }
+      $key = strtolower($candidate);
+      if (isset($unique[$key])) {
+        continue;
+      }
+      $unique[$key] = TRUE;
+      $result[] = $candidate;
+    }
+
+    return $result;
+  }
 
   /**
    * {@inheritdoc}

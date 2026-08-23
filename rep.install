@@ -98,6 +98,44 @@ function rep_schema() {
       'created' => ['created'],
     ],
   ];
+
+  $schema['rep_wkf_phase_state'] = [
+    'description' => 'Current public WKF phase by WKF scope.',
+    'fields' => [
+      'scope' => [
+        'description' => 'Deterministic WKF scope key (wkf_<sha1-prefix>).',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+      ],
+      'wkf_uri' => [
+        'description' => 'Normalized WKF URI.',
+        'type' => 'varchar',
+        'length' => 512,
+        'not null' => FALSE,
+      ],
+      'public_phase' => [
+        'description' => 'Current public phase (2..4).',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 2,
+      ],
+      'updated' => [
+        'description' => 'Unix timestamp of last phase update.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+    ],
+    'primary key' => ['scope'],
+    'indexes' => [
+      'wkf_uri' => ['wkf_uri'],
+      'public_phase' => ['public_phase'],
+      'updated' => ['updated'],
+    ],
+  ];
   return $schema;
 }
 
@@ -135,5 +173,62 @@ function rep_update_9010() {
   $sm = $db->schema();
   if (! $sm->tableExists('rep_org_edit_suggestions')) {
     $sm->createTable('rep_org_edit_suggestions', $schema_def);
+  }
+}
+
+/**
+ * Update #9011: Create rep_wkf_phase_state table if missing.
+ */
+function rep_update_9011() {
+  $schema_def = rep_schema()['rep_wkf_phase_state'];
+  $db = \Drupal::database();
+  $sm = $db->schema();
+  if (!$sm->tableExists('rep_wkf_phase_state')) {
+    $sm->createTable('rep_wkf_phase_state', $schema_def);
+  }
+}
+
+/**
+ * Update #9012: Backfill rep_wkf_phase_state from key-value phase store.
+ */
+function rep_update_9012() {
+  $db = \Drupal::database();
+  $sm = $db->schema();
+  if (!$sm->tableExists('rep_wkf_phase_state')) {
+    return;
+  }
+
+  $kv = \Drupal::keyValue('rep.wkf.public_phase.by_scope');
+  if (!method_exists($kv, 'getAll')) {
+    return;
+  }
+
+  $all = $kv->getAll();
+  if (!is_array($all) || empty($all)) {
+    return;
+  }
+
+  foreach ($all as $scope => $entry) {
+    if (!is_string($scope) || trim($scope) === '' || !is_array($entry)) {
+      continue;
+    }
+
+    $phase = isset($entry['phase']) ? (int) $entry['phase'] : 0;
+    if ($phase < 2 || $phase > 4) {
+      continue;
+    }
+
+    $wkfUri = isset($entry['wkfUri']) && is_string($entry['wkfUri'])
+      ? trim($entry['wkfUri'])
+      : '';
+
+    $db->merge('rep_wkf_phase_state')
+      ->key(['scope' => trim($scope)])
+      ->fields([
+        'wkf_uri' => $wkfUri,
+        'public_phase' => $phase,
+        'updated' => time(),
+      ])
+      ->execute();
   }
 }

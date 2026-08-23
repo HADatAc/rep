@@ -58,6 +58,7 @@ class WkfDraftDownloadController extends ControllerBase {
     }
 
     $sourceDocumentContext = 'Supporting document filename: ' . $sourceDocumentName;
+    $persistedSource = $this->persistUploadedSourceDocument($source_document, $sourceDocumentName);
     $sourceDocumentContent = '';
     if (!$this->isSourceDocumentMetadataOnly($source_document_content_override)) {
       $sourceDocumentContent = $source_document_content_override;
@@ -71,6 +72,7 @@ class WkfDraftDownloadController extends ControllerBase {
         400
       );
     }
+    $persistedSourceText = $this->persistSourceDocumentTextArtifact($sourceDocumentContent, $sourceDocumentName);
     $phase1CoreContext = $this->buildPhase1CoreContext($wkf_name, $process_stem_uri, $safe_label, $filename, $base_uri . '/PROC/0001');
 
     $uploadOutcome = $this->createAndSubmitWkfTemplate(
@@ -82,7 +84,12 @@ class WkfDraftDownloadController extends ControllerBase {
       $sourceDocumentContext,
       $phase1CoreContext,
       $sourceDocumentContent,
-      $phase1WkfTableTsv
+      $phase1WkfTableTsv,
+      $sourceDocumentName,
+      (string) ($persistedSource['uri'] ?? ''),
+      (string) ($persistedSource['mime'] ?? ''),
+      (string) ($persistedSourceText['uri'] ?? ''),
+      (string) ($persistedSourceText['name'] ?? '')
     );
 
     $response = new Response($xlsx_binary, 200, [
@@ -101,7 +108,7 @@ class WkfDraftDownloadController extends ControllerBase {
   /**
    * Creates a WKF MT/DataFile and submits it for DRAFT ingestion.
    */
-  protected function createAndSubmitWkfTemplate(string $wkfName, string $filename, string $xlsxBinary, string $processStemUri, string $processStemLabel, string $sourceDocumentContext = '', string $phase1CoreContext = '', string $sourceDocumentContent = '', string $phase1WkfTableTsv = ''): array {
+  protected function createAndSubmitWkfTemplate(string $wkfName, string $filename, string $xlsxBinary, string $processStemUri, string $processStemLabel, string $sourceDocumentContext = '', string $phase1CoreContext = '', string $sourceDocumentContent = '', string $phase1WkfTableTsv = '', string $sourceDocumentName = '', string $sourceDocumentFileUri = '', string $sourceDocumentMimeType = '', string $sourceTextFileUri = '', string $sourceTextFileName = ''): array {
     if ($xlsxBinary === '') {
       return ['ok' => false, 'message' => 'Generated workbook is empty.'];
     }
@@ -185,6 +192,11 @@ class WkfDraftDownloadController extends ControllerBase {
         'wkfName' => $wkfName,
         'processStemUri' => $processStemUri,
         'processStemLabel' => $processStemLabel,
+        'sourceDocumentName' => $sourceDocumentName,
+        'sourceDocumentFileUri' => $sourceDocumentFileUri,
+        'sourceDocumentMimeType' => $sourceDocumentMimeType,
+        'sourceTextFileUri' => $sourceTextFileUri,
+        'sourceTextFileName' => $sourceTextFileName,
         'sourceDocumentContext' => $sourceDocumentContext,
         'sourceDocumentContent' => $sourceDocumentContent,
         'phase1CoreContext' => $phase1CoreContext,
@@ -220,7 +232,7 @@ class WkfDraftDownloadController extends ControllerBase {
   }
 
   /**
-   * Build a stable Phase I context block for later Phase II-V packet generation.
+  * Build a stable Phase I context block for later Phase II-IV packet generation.
    */
   protected function buildPhase1CoreContext(string $wkfName, string $processStemUri, string $processStemLabel, string $generatedFileName, string $processUri): string {
     $lines = [
@@ -244,6 +256,101 @@ class WkfDraftDownloadController extends ControllerBase {
 
     $store = \Drupal::keyValue('rep.wkf.phase1.context.by_uri');
     $store->set($normalizedUri, $context);
+  }
+
+  /**
+   * Persist uploaded source file for later Source viewer usage.
+   *
+   * @return array{uri:string,mime:string}
+   */
+  protected function persistUploadedSourceDocument($uploadedFile, string $sourceDocumentName): array {
+    if (!is_object($uploadedFile) || !method_exists($uploadedFile, 'getRealPath')) {
+      return ['uri' => '', 'mime' => ''];
+    }
+
+    $path = (string) $uploadedFile->getRealPath();
+    if ($path === '' || !is_readable($path)) {
+      return ['uri' => '', 'mime' => ''];
+    }
+
+    $bytes = @file_get_contents($path);
+    if (!is_string($bytes) || $bytes === '') {
+      return ['uri' => '', 'mime' => ''];
+    }
+
+    $fileSystem = \Drupal::service('file_system');
+    $directory = 'private://wkf_phase1_sources';
+    $prepared = $fileSystem->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+    if (!$prepared) {
+      return ['uri' => '', 'mime' => ''];
+    }
+
+    $safeName = preg_replace('/[^A-Za-z0-9._-]+/', '_', trim($sourceDocumentName));
+    if (!is_string($safeName) || $safeName === '') {
+      $safeName = 'source_document.bin';
+    }
+
+    $persistedName = date('YmdHis') . '-' . $safeName;
+    $targetUri = $directory . '/' . $persistedName;
+    $savedUri = $fileSystem->saveData($bytes, $targetUri, FileSystemInterface::EXISTS_RENAME);
+    if ($savedUri === FALSE || !is_string($savedUri) || $savedUri === '') {
+      return ['uri' => '', 'mime' => ''];
+    }
+
+    $mime = '';
+    if (method_exists($uploadedFile, 'getClientMimeType')) {
+      $mime = trim((string) $uploadedFile->getClientMimeType());
+    }
+    if ($mime === '') {
+      $guessedMime = @mime_content_type($path);
+      $mime = is_string($guessedMime) ? trim($guessedMime) : '';
+    }
+
+    return [
+      'uri' => $savedUri,
+      'mime' => $mime,
+    ];
+  }
+
+  /**
+   * Persist extracted source text payload as a txt artifact.
+   *
+   * @return array{uri:string,name:string}
+   */
+  protected function persistSourceDocumentTextArtifact(string $sourceDocumentContent, string $sourceDocumentName): array {
+    $content = trim($sourceDocumentContent);
+    if ($content === '') {
+      return ['uri' => '', 'name' => ''];
+    }
+
+    $fileSystem = \Drupal::service('file_system');
+    $directory = 'private://wkf_phase1_sources_txt';
+    $prepared = $fileSystem->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+    if (!$prepared) {
+      return ['uri' => '', 'name' => ''];
+    }
+
+    $baseName = trim((string) pathinfo($sourceDocumentName, PATHINFO_FILENAME));
+    if ($baseName === '') {
+      $baseName = 'source_document';
+    }
+    $safeBase = preg_replace('/[^A-Za-z0-9._-]+/', '_', $baseName);
+    if (!is_string($safeBase) || $safeBase === '') {
+      $safeBase = 'source_document';
+    }
+
+    $txtFileName = $safeBase . '.txt';
+    $persistedName = date('YmdHis') . '-' . $txtFileName;
+    $targetUri = $directory . '/' . $persistedName;
+    $savedUri = $fileSystem->saveData($content . "\n", $targetUri, FileSystemInterface::EXISTS_RENAME);
+    if ($savedUri === FALSE || !is_string($savedUri) || $savedUri === '') {
+      return ['uri' => '', 'name' => $txtFileName];
+    }
+
+    return [
+      'uri' => $savedUri,
+      'name' => $txtFileName,
+    ];
   }
 
   /**

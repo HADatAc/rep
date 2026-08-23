@@ -266,6 +266,32 @@ rep.wkf_phase1_download:
   options:
     no_cache: 'TRUE'
 
+rep.wkf_source_view:
+  path: 'rep/wkf/source/{wkfuri}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfSourceController::view'
+    _title: 'WKF Source Document'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+    parameters:
+      wkfuri:
+        type: string
+
+rep.wkf_source_text_view:
+  path: 'rep/wkf/source/{wkfuri}/txt'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfSourceController::viewText'
+    _title: 'WKF Source Text'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+    parameters:
+      wkfuri:
+        type: string
+
 rep.wkf_phase_packet_build:
   path: 'rep/wkf/phase/packet/{phase}'
   defaults:
@@ -373,6 +399,16 @@ rep.wkf_sheet_update:
   defaults:
     _controller: '\Drupal\rep\Controller\WkfPhasePacketController::updateSheet'
     _title: 'Apply WKF Sheet Update'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
+rep.wkf_current_download:
+  path: 'rep/wkf/current/download/{wkfuri}'
+  defaults:
+    _controller: '\Drupal\rep\Controller\WkfPhasePacketController::downloadCurrentWkf'
+    _title: 'Download Current WKF'
   requirements:
     _permission: 'access content'
   options:

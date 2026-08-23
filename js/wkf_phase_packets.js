@@ -57,11 +57,7 @@
     }
   }
 
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text);
-    }
-
+  function legacyCopyToClipboard(text) {
     return new Promise(function (resolve, reject) {
       try {
         var textArea = document.createElement('textarea');
@@ -83,6 +79,16 @@
         reject(err);
       }
     });
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(function () {
+        return legacyCopyToClipboard(text);
+      });
+    }
+
+    return legacyCopyToClipboard(text);
   }
 
   function getText(selector) {
@@ -314,24 +320,52 @@
       };
     }
 
-    var originalText = button.textContent;
+    function getControlLabel(el) {
+      if (!el) {
+        return '';
+      }
+
+      var tag = String(el.tagName || '').toUpperCase();
+      if (tag === 'INPUT') {
+        return String(el.value || '').trim();
+      }
+
+      return String(el.textContent || '').trim();
+    }
+
+    function setControlLabel(el, label) {
+      if (!el) {
+        return;
+      }
+
+      var text = String(label || '');
+      var tag = String(el.tagName || '').toUpperCase();
+      if (tag === 'INPUT') {
+        el.value = text;
+        return;
+      }
+
+      el.textContent = text;
+    }
+
+    var originalText = getControlLabel(button);
     var originalDisabled = !!button.disabled;
 
     return {
       setBusy: function () {
         button.disabled = true;
-        button.textContent = busyLabel || 'Building...';
+        setControlLabel(button, busyLabel || 'Building...');
       },
       setCopied: function () {
         button.disabled = true;
-        button.textContent = copiedLabel || 'Copied';
+        setControlLabel(button, copiedLabel || 'Copied');
         setTimeout(function () {
-          button.textContent = originalText;
+          setControlLabel(button, originalText);
           button.disabled = originalDisabled;
-        }, 1400);
+        }, 2500);
       },
       reset: function () {
-        button.textContent = originalText;
+        setControlLabel(button, originalText);
         button.disabled = originalDisabled;
       }
     };
@@ -694,7 +728,7 @@
 
   function applyPhaseResponse() {
     var phase = parseInt(getText('#wkf-phase-response-phase') || '0', 10);
-    if (!(phase >= 2 && phase <= 5)) {
+    if (!(phase >= 2 && phase <= 4)) {
       alert('Invalid phase for response apply.');
       return;
     }
@@ -765,6 +799,94 @@
       });
   }
 
+  function downloadTextFile(text, fileName, mimeType) {
+    var blob = new Blob([text], { type: mimeType || 'text/plain;charset=utf-8' });
+    var href = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = href;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+  }
+
+  function decodeTsvFromDataUrl(text) {
+    var input = String(text || '').trim();
+    if (!input) {
+      return '';
+    }
+
+    var dataUrlMatch = input.match(/data:text\/plain;charset=utf-8,([^\s)"']+)/i);
+    if (!dataUrlMatch || !dataUrlMatch[1]) {
+      return '';
+    }
+
+    try {
+      return decodeURIComponent(String(dataUrlMatch[1] || ''));
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function extractTsvFromResponseText(text) {
+    var raw = String(text || '');
+    if (!raw.trim()) {
+      return '';
+    }
+
+    var fromDataUrl = decodeTsvFromDataUrl(raw);
+    if (fromDataUrl) {
+      return fromDataUrl;
+    }
+
+    var fenced = raw.match(/^```(?:tsv|text)?\s*\n([\s\S]*?)\n```\s*$/i);
+    if (fenced && fenced[1]) {
+      return String(fenced[1]);
+    }
+
+    return raw;
+  }
+
+  function tsvFileNameForPhase(phase) {
+    if (phase === 3) {
+      return 'phase3-std-response.tsv';
+    }
+    if (phase === 2) {
+      return 'phase2-tasks-response.tsv';
+    }
+    if (phase === 4) {
+      return 'phase4-sim-tasks-response.tsv';
+    }
+    return 'wkf-response.tsv';
+  }
+
+  function savePhaseResponseAsTsv() {
+    var phase = parseInt(getText('#wkf-phase-response-phase') || '0', 10);
+    var textarea = document.getElementById('wkf-phase-response-input');
+    var statusBox = document.getElementById('wkf-phase-response-status-msg');
+    var responseText = textarea ? String(textarea.value || '') : '';
+
+    if (!responseText.trim()) {
+      alert('Paste ChatGPT response text first.');
+      return;
+    }
+
+    var tsvText = extractTsvFromResponseText(responseText);
+    if (!tsvText.trim()) {
+      alert('Could not extract TSV content from response text.');
+      return;
+    }
+
+    var fileName = tsvFileNameForPhase(phase);
+    downloadTextFile(tsvText, fileName, 'text/tab-separated-values;charset=utf-8');
+
+    if (statusBox) {
+      statusBox.textContent = 'Saved ' + fileName + ' for upload.';
+      statusBox.className = 'small mt-2 text-success';
+    }
+  }
+
   function inferBaseUrl() {
     var base = (Drupal && Drupal.url) ? Drupal.url('') : '/';
     if (!base) {
@@ -783,23 +905,11 @@
     if (phase === 4) {
       return '#phase4PromptText';
     }
-    if (phase === 5) {
-      return '#phase5PromptText';
-    }
     return '';
   }
 
   function mapPublicPhaseToBackendPhase(publicPhase) {
-    if (publicPhase === 2) {
-      return 2;
-    }
-    if (publicPhase === 3) {
-      return 4;
-    }
-    if (publicPhase === 4) {
-      return 5;
-    }
-    return 0;
+    return publicPhase;
   }
 
   function findPhaseSelectorForWkf(wkfUri, triggerElement) {
@@ -843,7 +953,10 @@
     var uriEl = document.getElementById('wkf-sheet-update-wkf-uri');
     var typeEl = document.getElementById('wkf-sheet-update-type');
     var phaseEl = document.getElementById('wkf-sheet-update-phase');
-    var inputEl = document.getElementById('wkf-sheet-update-input');
+    var scenarioFileEl = document.getElementById('wkf-sheet-update-scenario-file');
+    var fileEl = document.getElementById('wkf-sheet-update-file');
+    var scenarioFileBlockEl = document.getElementById('wkf-sheet-update-scenario-file-block');
+    var taskFileBlockEl = document.getElementById('wkf-sheet-update-task-file-block');
     var statusEl = document.getElementById('wkf-sheet-update-status');
 
     if (titleEl) {
@@ -851,8 +964,8 @@
     }
     if (hintEl) {
       hintEl.textContent = updateType === 'scenario'
-        ? 'Use this in official Phase III. Paste full TSV rows for STD sheet; this replaces the current STD sheet content.'
-        : 'Use this in Phase II and official Phase IV. Paste full TSV rows for Tasks sheet; this replaces the current Tasks sheet content.';
+        ? 'Use this in official Phase III. Load a .tsv FILE for STD sheet; system merges uploaded scenario properties with current WKF STD content.'
+        : 'Use this in Phase II and official Phase IV. Load a .tsv FILE for Tasks sheet; this replaces the current Tasks sheet content.';
     }
     if (uriEl) {
       uriEl.value = wkfUri || '';
@@ -863,8 +976,17 @@
     if (phaseEl) {
       phaseEl.value = String(publicPhase || '');
     }
-    if (inputEl) {
-      inputEl.value = '';
+    if (scenarioFileEl) {
+      scenarioFileEl.value = '';
+    }
+    if (fileEl) {
+      fileEl.value = '';
+    }
+    if (scenarioFileBlockEl) {
+      scenarioFileBlockEl.classList.toggle('d-none', updateType !== 'scenario');
+    }
+    if (taskFileBlockEl) {
+      taskFileBlockEl.classList.toggle('d-none', updateType !== 'task_model');
     }
     if (statusEl) {
       statusEl.textContent = '';
@@ -879,7 +1001,10 @@
     var wkfUri = getText('#wkf-sheet-update-wkf-uri');
     var updateType = getText('#wkf-sheet-update-type');
     var phase = parseInt(getText('#wkf-sheet-update-phase') || '0', 10);
-    var tsvContent = getText('#wkf-sheet-update-input');
+    var scenarioFileInput = document.getElementById('wkf-sheet-update-scenario-file');
+    var scenarioTsvFile = (scenarioFileInput && scenarioFileInput.files && scenarioFileInput.files.length > 0) ? scenarioFileInput.files[0] : null;
+    var tsvFileInput = document.getElementById('wkf-sheet-update-file');
+    var tsvFile = (tsvFileInput && tsvFileInput.files && tsvFileInput.files.length > 0) ? tsvFileInput.files[0] : null;
     var statusEl = document.getElementById('wkf-sheet-update-status');
 
     if (!wkfUri) {
@@ -890,12 +1015,41 @@
       alert('Unknown sheet update type.');
       return;
     }
-    if (!tsvContent) {
-      if (statusEl) {
-        statusEl.textContent = 'Paste TSV content before applying update.';
-        statusEl.className = 'small mt-2 text-danger';
+    if (updateType === 'task_model') {
+      if (!tsvFile) {
+        if (statusEl) {
+          statusEl.textContent = 'Load a .tsv file before applying Task Model Update.';
+          statusEl.className = 'small mt-2 text-danger';
+        }
+        return;
       }
-      return;
+    } else {
+      if (!scenarioTsvFile) {
+        if (statusEl) {
+          statusEl.textContent = 'Load a .tsv file before applying Scenario Update.';
+          statusEl.className = 'small mt-2 text-danger';
+        }
+        return;
+      }
+      var scenarioName = String(scenarioTsvFile.name || '').toLowerCase();
+      if (!scenarioName.endsWith('.tsv')) {
+        if (statusEl) {
+          statusEl.textContent = 'Scenario Update accepts only .tsv files.';
+          statusEl.className = 'small mt-2 text-danger';
+        }
+        return;
+      }
+    }
+
+    if (updateType === 'task_model') {
+      var taskName = String(tsvFile.name || '').toLowerCase();
+      if (!taskName.endsWith('.tsv')) {
+        if (statusEl) {
+          statusEl.textContent = 'Task Model Update accepts only .tsv files.';
+          statusEl.className = 'small mt-2 text-danger';
+        }
+        return;
+      }
     }
 
     if (statusEl) {
@@ -904,19 +1058,23 @@
     }
 
     var endpoint = inferBaseUrl() + '/rep/wkf/sheet/update';
-    fetch(endpoint, {
+    var requestOptions = {
       method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        wkfUri: wkfUri,
-        updateType: updateType,
-        phase: phase,
-        tsvContent: tsvContent
-      })
-    })
+      credentials: 'same-origin'
+    };
+
+    var formData = new FormData();
+    formData.append('wkfUri', wkfUri);
+    formData.append('updateType', updateType);
+    formData.append('phase', String(phase || 0));
+    if (updateType === 'task_model') {
+      formData.append('tsvFile', tsvFile);
+    } else {
+      formData.append('tsvFile', scenarioTsvFile);
+    }
+    requestOptions.body = formData;
+
+    fetch(endpoint, requestOptions)
       .then(function (resp) { return resp.json(); })
       .then(function (json) {
         if (!json || !json.success) {
@@ -926,26 +1084,115 @@
         var validationSummary = '';
         var isTaskModel = (updateType === 'task_model');
         var isScenario = (updateType === 'scenario');
-        var requiresValidation = isTaskModel || isScenario;
+        var requiresValidation = false;
+        var hasValidationResult = !!(json.validation && typeof json.validation === 'object');
         var validationValid = true;
-        if (requiresValidation) {
+        if (hasValidationResult) {
           validationValid = !!(json.validation && json.validation.valid);
           validationSummary = (json.validation && json.validation.summary) ? String(json.validation.summary) : '';
-          if (!validationValid) {
+          if (requiresValidation && !validationValid) {
             throw new Error(validationSummary || 'Sheet validation failed after apply.');
+          }
+        }
+
+        var advisorySummary = '';
+        if (json.validationAdvisory && typeof json.validationAdvisory === 'object') {
+          advisorySummary = String(json.validationAdvisory.summary || '').trim();
+        }
+        if (!validationValid && !advisorySummary) {
+          advisorySummary = validationSummary || 'WKF validation failed.';
+        }
+        var appliedTasksRows = null;
+        if (isTaskModel && Object.prototype.hasOwnProperty.call(json, 'appliedTasksRows')) {
+          var parsedRows = parseInt(json.appliedTasksRows, 10);
+          if (!isNaN(parsedRows) && parsedRows >= 0) {
+            appliedTasksRows = parsedRows;
+          }
+        }
+        var mergeSummary = '';
+        var mergeStats = null;
+        if (isTaskModel && json.taskMerge && typeof json.taskMerge === 'object') {
+          mergeStats = json.taskMerge;
+        } else if (isScenario && json.scenarioMerge && typeof json.scenarioMerge === 'object') {
+          mergeStats = json.scenarioMerge;
+        }
+        if (mergeStats) {
+          var addedRows = parseInt(mergeStats.addedRows, 10);
+          var updatedRows = parseInt(mergeStats.updatedRows, 10);
+          var unchangedRows = parseInt(mergeStats.unchangedRows, 10);
+          var mergedRows = parseInt(mergeStats.mergedRows, 10);
+          var addedFields = parseInt(mergeStats.addedFields, 10);
+          var updatedFields = parseInt(mergeStats.updatedFields, 10);
+          var newlyPopulatedProperties = 0;
+          if (isScenario && mergeStats.propertyFieldChanges && typeof mergeStats.propertyFieldChanges === 'object') {
+            Object.keys(mergeStats.propertyFieldChanges).forEach(function (propLabel) {
+              var entry = mergeStats.propertyFieldChanges[propLabel];
+              var added = entry && Object.prototype.hasOwnProperty.call(entry, 'added')
+                ? parseInt(entry.added, 10)
+                : 0;
+              if (!isNaN(added) && added > 0) {
+                newlyPopulatedProperties += 1;
+              }
+            });
+          }
+          var parts = [];
+          if (!isNaN(addedRows) && addedRows >= 0) {
+            parts.push('added ' + String(addedRows));
+          }
+          if (!isNaN(updatedRows) && updatedRows >= 0) {
+            parts.push('updated ' + String(updatedRows));
+          }
+          if (!isNaN(unchangedRows) && unchangedRows >= 0) {
+            parts.push('unchanged ' + String(unchangedRows));
+          }
+          if (!isNaN(mergedRows) && mergedRows >= 0) {
+            parts.push('total ' + String(mergedRows));
+          }
+          if (isScenario) {
+            if (!isNaN(addedFields) && addedFields >= 0) {
+              parts.push('new values into empty cells ' + String(addedFields));
+            }
+            if (!isNaN(updatedFields) && updatedFields >= 0) {
+              parts.push('changed existing values ' + String(updatedFields));
+            }
+            parts.push('properties newly populated ' + String(newlyPopulatedProperties));
+            if ((isNaN(addedFields) || addedFields === 0) && (isNaN(updatedFields) || updatedFields === 0)) {
+              parts.push('no new property values were added');
+            }
+          } else {
+            if (!isNaN(addedFields) && addedFields >= 0) {
+              parts.push('fields added ' + String(addedFields));
+            }
+            if (!isNaN(updatedFields) && updatedFields >= 0) {
+              parts.push('fields updated ' + String(updatedFields));
+            }
+          }
+          if (parts.length > 0) {
+            mergeSummary = ' Merge result: ' + parts.join(', ') + '.';
           }
         }
 
         if (statusEl) {
           var statusMessage = json.applyMessage || 'Sheet update applied successfully.';
+          if (isTaskModel && appliedTasksRows !== null) {
+            statusMessage += ' Applied Tasks rows: ' + String(appliedTasksRows) + '.';
+          }
           if (requiresValidation && validationSummary) {
             statusMessage += ' Validation: ' + validationSummary;
           }
+          if (isTaskModel && advisorySummary) {
+            statusMessage += ' Warning: ' + advisorySummary;
+          }
+          if ((isTaskModel || isScenario) && mergeSummary) {
+            statusMessage += mergeSummary;
+          }
           statusEl.textContent = statusMessage;
-          statusEl.className = 'small mt-2 text-success';
+          statusEl.className = (advisorySummary)
+            ? 'small mt-2 text-warning'
+            : 'small mt-2 text-success';
         }
 
-        if (requiresValidation) {
+        if (isTaskModel || isScenario) {
           var nextPublicPhase = parseInt((json.nextPublicPhase || phase || 0), 10);
           var selector = findPhaseSelectorForWkf(wkfUri, null);
           if (selector && nextPublicPhase >= 2 && nextPublicPhase <= 4) {
@@ -959,7 +1206,28 @@
           }
 
           var successLabel = isScenario ? 'Scenario Update' : 'Task Model Update';
-          alert(successLabel + ' succeeded and validation passed.');
+          if (advisorySummary) {
+            var warningMsg = successLabel + ' applied.';
+            if (appliedTasksRows !== null) {
+              warningMsg += ' Applied Tasks rows: ' + String(appliedTasksRows) + '.';
+            }
+            if (mergeSummary) {
+              warningMsg += mergeSummary;
+            }
+            warningMsg += ' WKF validation warning: ' + advisorySummary;
+            alert(warningMsg);
+          } else if (requiresValidation) {
+            alert(successLabel + ' succeeded and validation passed.');
+          } else {
+            var successMsg = successLabel + ' applied successfully.';
+            if (isTaskModel && appliedTasksRows !== null) {
+              successMsg += ' Applied Tasks rows: ' + String(appliedTasksRows) + '.';
+            }
+            if ((isTaskModel || isScenario) && mergeSummary) {
+              successMsg += mergeSummary;
+            }
+            alert(successMsg);
+          }
         }
 
         refreshPacketHistory().catch(function () {
@@ -980,7 +1248,7 @@
   }
 
   function buildPhasePacket(phase, promptSelector, wkfUriOverride, triggerButton) {
-    if (!(phase >= 2 && phase <= 5)) {
+    if (!(phase >= 2 && phase <= 4)) {
       alert('Invalid phase for packet generation.');
       return;
     }
@@ -1027,7 +1295,10 @@
     if (isMetadataOnlySourceDoc(sourceDoc)) {
       sourceDoc = '';
     }
-    var validationMessages = getText('#wkf-validation-copy-source');
+    var validationMessages = '';
+    if (phase === 2 || phase === 3) {
+      validationMessages = getText('#wkf-validation-copy-source');
+    }
     var wkfContent = getText('#wkf-validation-wkf-source');
     if (!wkfContent) {
       wkfContent = getText('#wkf-phase1-core-context');
@@ -1097,12 +1368,24 @@
           throw new Error('Packet was generated but is empty.');
         }
 
-        return copyToClipboard(packetText).then(function () {
-          uiState.setCopied();
-          refreshPacketHistory().catch(function () {
-            // Silent history refresh failure.
+        return copyToClipboard(packetText)
+          .then(function () {
+            uiState.setCopied();
+            refreshPacketHistory().catch(function () {
+              // Silent history refresh failure.
+            });
+          })
+          .catch(function () {
+            uiState.reset();
+            var fileName = String(json.fileName || ('wkf-phase-' + String(phase) + '-packet.txt'));
+            showPacketModal(packetText, fileName);
+            var output = document.getElementById('wkf-phase-packet-output');
+            if (output && typeof output.select === 'function') {
+              output.focus();
+              output.select();
+            }
+            alert('Packet generated, but automatic clipboard copy was blocked by the browser. The packet is open and selected; press Cmd+C to copy.');
           });
-        });
       })
       .catch(function (err) {
         uiState.reset();
@@ -1165,7 +1448,7 @@
           var publicPhase = selector ? parseInt(selector.value || '0', 10) : 0;
           var phase = mapPublicPhaseToBackendPhase(publicPhase);
 
-          if (!(phase >= 2 && phase <= 5)) {
+          if (!(phase >= 2 && phase <= 4)) {
             alert('Select a valid phase first.');
             return;
           }
@@ -1305,6 +1588,12 @@
       once('wkf-phase-response-apply', '#wkf-phase-response-apply', context).forEach(function (btn) {
         btn.addEventListener('click', function () {
           applyPhaseResponse();
+        });
+      });
+
+      once('wkf-phase-response-save-tsv', '#wkf-phase-response-save-tsv', context).forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          savePhaseResponseAsTsv();
         });
       });
 

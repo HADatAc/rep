@@ -61,19 +61,17 @@ class REPSelectWKFForm extends REPSelectMTForm {
       ? ($lastValidationValid ? 'PASS' : 'FAIL')
       : 'N/A';
 
-    $phase3Enabled = TRUE;
+    $phase3Enabled = ($hasValidation && $lastValidationValid);
     $phase4Enabled = ($hasValidation && $lastValidationValid);
-    $phase5Enabled = ($hasValidation && $lastValidationValid);
 
-    $phase3PromptDisabledAttr = '';
-    $phase4PromptDisabledAttr = $phase4Enabled
+    $phase3PromptDisabledAttr = $phase3Enabled
       ? ''
       : ' disabled aria-disabled="true" title="Official Phase III opens after successful validation of the current WKF version."';
-    $phase5PromptDisabledAttr = $phase5Enabled
+    $phase4PromptDisabledAttr = $phase4Enabled
       ? ''
       : ' disabled aria-disabled="true" title="Official Phase IV opens after successful validation of the current WKF version."';
 
-    $phaseGateHint = 'Official phases are II, III, and IV. Task-model verification/correction is optional and can run when needed.';
+    $phaseGateHint = 'Official phases are II, III, and IV.';
 
     $form['wkf_validation_panel_wrapper'] = [
       '#type' => 'container',
@@ -190,6 +188,24 @@ class REPSelectWKFForm extends REPSelectMTForm {
       '),
     ];
 
+    $form['wkf_generation_section']['phase_grid']['phase3'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['col'], 'style' => 'min-width:240px;'],
+    ];
+    $form['wkf_generation_section']['phase_grid']['phase3']['card'] = [
+      '#type' => 'markup',
+      '#markup' => Markup::create('
+        <div class="card h-100 shadow-sm">
+          <div class="card-body d-flex flex-column gap-2">
+            <h6 class="card-title">Phase III - Properties Extraction</h6>
+            <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase3-instructions">Instruction</button>
+            <p class="small text-muted mb-2">Extract and encode detailed properties into the same core WKF.</p>
+            <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase3PromptModal"' . $phase3PromptDisabledAttr . '>Open Prompt</button>
+          </div>
+        </div>
+      '),
+    ];
+
     $form['wkf_generation_section']['phase_grid']['phase4'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['col'], 'style' => 'min-width:240px;'],
@@ -199,28 +215,10 @@ class REPSelectWKFForm extends REPSelectMTForm {
       '#markup' => Markup::create('
         <div class="card h-100 shadow-sm">
           <div class="card-body d-flex flex-column gap-2">
-            <h6 class="card-title">Phase III - Properties Extraction</h6>
-            <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase4-instructions">Instruction</button>
-            <p class="small text-muted mb-2">Extract and encode detailed properties into the same core WKF.</p>
-            <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase4PromptModal"' . $phase4PromptDisabledAttr . '>Open Prompt</button>
-          </div>
-        </div>
-      '),
-    ];
-
-    $form['wkf_generation_section']['phase_grid']['phase5'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['col'], 'style' => 'min-width:240px;'],
-    ];
-    $form['wkf_generation_section']['phase_grid']['phase5']['card'] = [
-      '#type' => 'markup',
-      '#markup' => Markup::create('
-        <div class="card h-100 shadow-sm">
-          <div class="card-body d-flex flex-column gap-2">
             <h6 class="card-title">Phase IV - Simulations Assignments</h6>
-            <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase5-instructions">Instruction</button>
+            <button type="button" class="btn btn-outline-info btn-sm open-wkf-phase-instructions-window" data-instructions-target="#wkf-phase4-instructions">Instruction</button>
             <p class="small text-muted mb-2">Assign simulation assets and finalize WKF ingestion readiness.</p>
-            <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase5PromptModal"' . $phase5PromptDisabledAttr . '>Open Prompt</button>
+            <button type="button" class="btn btn-primary btn-sm mt-auto" data-bs-toggle="modal" data-bs-target="#wkfPhase4PromptModal"' . $phase4PromptDisabledAttr . '>Open Prompt</button>
           </div>
         </div>
       '),
@@ -240,18 +238,18 @@ class REPSelectWKFForm extends REPSelectMTForm {
       '#type' => 'markup',
       '#markup' => Markup::create('
         <div id="wkf-phase1-instructions" class="d-none">
-          <div class="instructions-content-phase" data-lang="en"><h5>Phase I - Core WKF Generation</h5><p>Fill the small form and generate a real ingestion-ready Draft WKF (version 1) directly from the panel.</p><ul><li>Provide a Core WKF Name.</li><li>Select a Clinical Process from the hierarchy used in Scenario Search.</li><li>Download the generated WKF file and reuse it in Phases II to V.</li></ul></div>
+          <div class="instructions-content-phase" data-lang="en"><h5>Phase I - Core WKF Generation</h5><p>Fill the small form and generate a real ingestion-ready Draft WKF (version 1) directly from the panel.</p><ul><li>Provide a Core WKF Name.</li><li>Select a Clinical Process from the hierarchy used in Scenario Search.</li><li>Download the generated WKF file and reuse it in Phases II to IV.</li></ul></div>
           <div class="instructions-content-phase" data-lang="pt"><h5>Phase I - Core WKF Generation</h5><p>Preencha o formulario e gere/baixe um WKF draft real diretamente do painel. Anexe o documento original no ChatGPT e use o WKF base gerado para as fases seguintes.</p><ul><li>Foque em entidades e relacoes estruturais.</li><li>Evite detalhes que pertencem as fases posteriores.</li><li>Baixe o WKF core para reutilizacao.</li></ul></div>
         </div>
         <div id="wkf-phase2-instructions" class="d-none">
           <div class="instructions-content-phase" data-lang="en"><h5>Phase II - Task Model Generation</h5><p>Use the original document and the Phase I core WKF together. Ask ChatGPT to derive and encode task-model semantics into the same WKF.</p></div>
           <div class="instructions-content-phase" data-lang="pt"><h5>Phase II - Task Model Generation</h5><p>Use o documento original e o WKF core da Fase I. Solicite ao ChatGPT a geracao do modelo de tarefas no mesmo WKF.</p></div>
         </div>
-        <div id="wkf-phase4-instructions" class="d-none">
+        <div id="wkf-phase3-instructions" class="d-none">
           <div class="instructions-content-phase" data-lang="en"><h5>Phase III - Properties Extraction</h5><p>Inspect detailed attributes from the source document and encode them into the existing WKF without breaking previously generated structure.</p></div>
           <div class="instructions-content-phase" data-lang="pt"><h5>Phase III - Properties Extraction</h5><p>Extraia propriedades detalhadas do documento e codifique no WKF existente sem quebrar a estrutura das fases anteriores.</p></div>
         </div>
-        <div id="wkf-phase5-instructions" class="d-none">
+        <div id="wkf-phase4-instructions" class="d-none">
           <div class="instructions-content-phase" data-lang="en"><h5>Phase IV - Simulations Assignments</h5><p>Complete simulation assignments and final readiness checks so the WKF can be ingested into PMSR.</p></div>
           <div class="instructions-content-phase" data-lang="pt"><h5>Phase IV - Simulations Assignments</h5><p>Finalize atribuicoes de simulacao e verificacoes finais para ingestao do WKF no PMSR.</p></div>
         </div>
@@ -263,14 +261,12 @@ class REPSelectWKFForm extends REPSelectMTForm {
     ];
 
     $phase2_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE2-TASKS-TSV.md';
-    $phase3_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE3-TASK-MODEL-CORRECTION.md';
-    $phase4_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE3-STD-TSV.md';
-    $phase5_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE4-TASKS-USES-COMPONENT-TSV.md';
+    $phase3_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE3-STD-TSV.md';
+    $phase4_prompt_path = DRUPAL_ROOT . '/' . $pmsr_module_path . '/prompts/PROMPT-WKF-PHASE4-TASKS-USES-COMPONENT-TSV.md';
 
     $phase2_prompt = file_exists($phase2_prompt_path) ? file_get_contents($phase2_prompt_path) : "PHASE II - TASK MODEL GENERATION\n\nUse the original document and the Phase I core WKF.\nEncode task model details into the same WKF and return the updated file.";
-    $phase3_prompt = file_exists($phase3_prompt_path) ? file_get_contents($phase3_prompt_path) : "OPTIONAL ACTIVITY - TASK MODEL VERIFICATION\n\nUse the original document and the current WKF to verify/correct task-model issues only when needed. Return only the Tasks sheet TSV (header + rows).";
-    $phase4_prompt = file_exists($phase4_prompt_path) ? file_get_contents($phase4_prompt_path) : "PHASE III - PROPERTIES EXTRACTION\n\nUse the original document and the current WKF from previous phases.\nExtract missing properties and encode them in the same WKF. Return the updated file.";
-    $phase5_prompt = file_exists($phase5_prompt_path) ? file_get_contents($phase5_prompt_path) : "PHASE IV - SIMULATIONS ASSIGNMENTS\n\nUse the original document and the current WKF.\nAssign simulation mappings and finalize ingestion-readiness fields. Return the final WKF file.";
+    $phase3_prompt = file_exists($phase3_prompt_path) ? file_get_contents($phase3_prompt_path) : "PHASE III - PROPERTIES EXTRACTION\n\nUse the original document and the current WKF from previous phases.\nExtract missing properties and encode them in the same WKF. Return the updated file.";
+    $phase4_prompt = file_exists($phase4_prompt_path) ? file_get_contents($phase4_prompt_path) : "PHASE IV - SIMULATIONS ASSIGNMENTS\n\nUse the original document and the current WKF.\nAssign simulation mappings and finalize ingestion-readiness fields. Return the final WKF file.";
 
     $form['wkf_generation_section']['phase1_prompt_modal'] = [
       '#type' => 'markup',
@@ -327,7 +323,7 @@ class REPSelectWKFForm extends REPSelectMTForm {
           <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title" id="wkfPhase3PromptModalLabel">Optional Activity - Task Model Verification Prompt</h5>
+                <h5 class="modal-title" id="wkfPhase3PromptModalLabel">Phase III - Properties Extraction Prompt</h5>
                 <div class="ms-auto d-flex gap-2">
                   <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase3PromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
                   <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -335,7 +331,7 @@ class REPSelectWKFForm extends REPSelectMTForm {
               </div>
               <div class="modal-body">
                 <div class="alert alert-info">
-                  <i class="fas fa-info-circle"></i> Use this to review and correct task model inconsistencies before property extraction.
+                  <i class="fas fa-info-circle"></i> Use this with the original document and current WKF to extract and encode detailed properties.
                 </div>
                 <pre id="phase3PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase3_prompt . '</pre>
               </div>
@@ -352,7 +348,7 @@ class REPSelectWKFForm extends REPSelectMTForm {
           <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title" id="wkfPhase4PromptModalLabel">Phase III - Properties Extraction Prompt</h5>
+                <h5 class="modal-title" id="wkfPhase4PromptModalLabel">Phase IV - Simulations Assignments Prompt</h5>
                 <div class="ms-auto d-flex gap-2">
                   <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase4PromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
                   <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -360,34 +356,9 @@ class REPSelectWKFForm extends REPSelectMTForm {
               </div>
               <div class="modal-body">
                 <div class="alert alert-info">
-                  <i class="fas fa-info-circle"></i> Use this with the original document and current WKF to extract and encode detailed properties.
-                </div>
-                <pre id="phase4PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase4_prompt . '</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      '),
-    ];
-
-    $form['wkf_generation_section']['phase5_prompt_modal'] = [
-      '#type' => 'markup',
-      '#markup' => Markup::create('
-        <div class="modal fade" id="wkfPhase5PromptModal" tabindex="-1" aria-labelledby="wkfPhase5PromptModalLabel" aria-hidden="true">
-          <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="wkfPhase5PromptModalLabel">Phase IV - Simulations Assignments Prompt</h5>
-                <div class="ms-auto d-flex gap-2">
-                  <button type="button" class="btn btn-primary wkf-copy-prompt" data-source="#phase5PromptText"><i class="fas fa-copy"></i> Copy to Clipboard</button>
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-              </div>
-              <div class="modal-body">
-                <div class="alert alert-info">
                   <i class="fas fa-info-circle"></i> Use this final phase prompt with the original document and current WKF to complete PMSR ingestion readiness.
                 </div>
-                <pre id="phase5PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase5_prompt . '</pre>
+                <pre id="phase4PromptText" class="p-3 bg-light border rounded" style="white-space: pre-wrap;">' . $phase4_prompt . '</pre>
               </div>
             </div>
           </div>
@@ -438,6 +409,7 @@ class REPSelectWKFForm extends REPSelectMTForm {
               <div class="modal-header">
                 <h5 class="modal-title" id="wkfPhaseResponseModalLabel">Apply ChatGPT Response to WKF</h5>
                 <div class="ms-auto d-flex gap-2">
+                  <button type="button" class="btn btn-outline-primary" id="wkf-phase-response-save-tsv">Save as .tsv</button>
                   <button type="button" class="btn btn-success" id="wkf-phase-response-apply">Apply Response</button>
                   <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
@@ -496,8 +468,16 @@ class REPSelectWKFForm extends REPSelectMTForm {
                 <input type="hidden" id="wkf-sheet-update-type" value="" />
                 <input type="hidden" id="wkf-sheet-update-phase" value="" />
                 <div class="small text-muted mb-2" id="wkf-sheet-update-hint"></div>
-                <label for="wkf-sheet-update-input" class="form-label">Paste TSV content</label>
-                <textarea id="wkf-sheet-update-input" class="form-control" rows="14" placeholder="Paste TSV rows here..."></textarea>
+                <div id="wkf-sheet-update-scenario-file-block">
+                  <label for="wkf-sheet-update-scenario-file" class="form-label">Load Scenario sheet (.tsv FILE)</label>
+                  <input type="file" id="wkf-sheet-update-scenario-file" class="form-control" accept=".tsv,text/tab-separated-values,text/plain" />
+                  <div class="form-text">Upload the full STD sheet TSV file. System merges this file with current WKF STD content.</div>
+                </div>
+                <div id="wkf-sheet-update-task-file-block" class="d-none">
+                  <label for="wkf-sheet-update-file" class="form-label">Load Tasks sheet (.tsv FILE)</label>
+                  <input type="file" id="wkf-sheet-update-file" class="form-control" accept=".tsv,text/tab-separated-values,text/plain" />
+                  <div class="form-text">Upload the full Tasks sheet TSV file. Validation runs before apply.</div>
+                </div>
                 <div id="wkf-sheet-update-status" class="small mt-2 text-muted"></div>
               </div>
             </div>
