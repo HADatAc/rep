@@ -604,11 +604,14 @@ class REPSelectMTForm extends FormBase {
 
       $this->buildCardView($form['cards_lazy_wrapper'], $form_state, $header, $output);
 
+      $visible_count = is_array($this->getList()) ? count($this->getList()) : 0;
+      $total_count = max((int) $this->getListSize(), $visible_count);
+
       $form['cards_lazy_wrapper']['records_count'] = [
         '#type' => 'item',
         '#markup' => $this->t('<div id="count-cards" style="font-weight:bold; margin-top:10px; padding-right:2rem;">Currently viewing @count of @total @class</div>', [
-          '@count' => count($this->getList()),
-          '@total' => (int) $this->getListSize(),
+          '@count' => $visible_count,
+          '@total' => $total_count,
           '@class' => $this->plural_class_name,
         ]),
       ];

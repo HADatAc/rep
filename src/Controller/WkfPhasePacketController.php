@@ -78,6 +78,7 @@ class WkfPhasePacketController extends ControllerBase {
    * Build packet text payload for a WKF phase.
    */
   public function buildPacket(int $phase, Request $request): JsonResponse {
+    $phase = $this->normalizeLegacyPhase($phase);
     if ($phase < 2 || $phase > 4) {
       return new JsonResponse([
         'success' => FALSE,
@@ -152,9 +153,10 @@ class WkfPhasePacketController extends ControllerBase {
       $versionLabel = trim($sessionContext['versionLabel']);
     }
 
-    $promptText = $promptOverride !== ''
-      ? $promptOverride
-      : $this->getPhasePromptText($phase);
+    $promptText = $this->getPhasePromptText($phase);
+    if ($promptOverride !== '' && $this->isPromptOverrideCompatibleWithPhase($promptOverride, $phase)) {
+      $promptText = $promptOverride;
+    }
     $latestWorkbookTsv = $this->resolveCurrentWkfWorkbookContent($request, $wkfUri, $scope);
     if ($latestWorkbookTsv === '') {
       if ($wkfContent !== '') {
@@ -313,7 +315,10 @@ class WkfPhasePacketController extends ControllerBase {
       $lines[] = '';
     }
 
+    $suggestedTsvFileName = $this->buildSuggestedPhaseTsvFileName($phase, $wkfUri);
+
     $lines[] = 'RESPONSE CONTRACT';
+    $lines[] = 'SUGGESTED_OUTPUT_FILENAME: ' . $suggestedTsvFileName;
     if ($phase === 2) {
       $lines[] = 'Using SOURCE_DOCUMENT_CONTENT, PHASE1_TASKS_SHEET_TSV, and the rules in WKF_SPEC_V3_CONTENT, generate the updated Phase II Tasks sheet as a .tsv FILE artifact.';
       $lines[] = 'Return the .tsv FILE content (the exact file body), not a description and not a copy-link wrapper.';
@@ -606,6 +611,7 @@ class WkfPhasePacketController extends ControllerBase {
    * Apply a ChatGPT phase response into WKF content and optionally validate.
    */
   public function applyResponse(int $phase, Request $request): JsonResponse {
+    $phase = $this->normalizeLegacyPhase($phase);
     if ($phase < 2 || $phase > 4) {
       return new JsonResponse([
         'success' => FALSE,
@@ -946,6 +952,57 @@ class WkfPhasePacketController extends ControllerBase {
       'scope' => $scope,
       'deletedCount' => $deletedCount,
     ]);
+  }
+
+  /**
+   * Normalize legacy public phase numbering to current backend phases.
+   */
+  private function normalizeLegacyPhase(int $phase): int {
+    if ($phase === 5) {
+      return 4;
+    }
+    if ($phase === 1) {
+      return 2;
+    }
+    return $phase;
+  }
+
+  /**
+   * Build deterministic suggested output TSV filename for Phase II-IV packets.
+   */
+  protected function buildSuggestedPhaseTsvFileName(int $phase, string $wkfUri): string {
+    $wkfHash = $this->extractWkfHashFromUri($wkfUri);
+    if ($phase === 2) {
+      return 'WKF' . $wkfHash . '_Phase2_tasks.tsv';
+    }
+    if ($phase === 3) {
+      return 'WKF' . $wkfHash . '_Phase3_std.tsv';
+    }
+    if ($phase === 4) {
+      return 'WKF' . $wkfHash . '_Phase4_tasks.tsv';
+    }
+
+    return 'WKF' . $wkfHash . '_Phase' . $phase . '_response.tsv';
+  }
+
+  /**
+   * Extract WKF hash digits from URI; fallback to stable numeric hash token.
+   */
+  protected function extractWkfHashFromUri(string $wkfUri): string {
+    $uri = trim($wkfUri);
+    if ($uri === '') {
+      return 'UNKNOWN';
+    }
+
+    if (preg_match('/\\bWKF(\\d{6,})\\b/i', $uri, $wkfMatch) === 1) {
+      return (string) ($wkfMatch[1] ?? 'UNKNOWN');
+    }
+
+    if (preg_match('/(\\d{6,})/', $uri, $digitsMatch) === 1) {
+      return (string) ($digitsMatch[1] ?? 'UNKNOWN');
+    }
+
+    return sprintf('%u', crc32($uri));
   }
 
   /**
@@ -2936,6 +2993,36 @@ class WkfPhasePacketController extends ControllerBase {
     }
 
     return 'Use the current WKF and source document to complete Phase ' . $phase . ' requirements and return the full updated WKF.';
+  }
+
+  /**
+   * Accept a prompt override only when it does not explicitly target a
+   * different phase than the backend phase being built.
+   */
+  protected function isPromptOverrideCompatibleWithPhase(string $promptOverride, int $phase): bool {
+    $text = trim($promptOverride);
+    if ($text === '') {
+      return false;
+    }
+
+    $expectedMarkerMap = [
+      2 => 'II',
+      3 => 'III',
+      4 => 'IV',
+    ];
+    $expectedMarker = $expectedMarkerMap[$phase] ?? '';
+    if ($expectedMarker === '') {
+      return true;
+    }
+
+    if (preg_match('/\bPHASE\s+(II|III|IV)\b/i', $text, $match) === 1) {
+      $declared = strtoupper((string) ($match[1] ?? ''));
+      if ($declared !== $expectedMarker) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**

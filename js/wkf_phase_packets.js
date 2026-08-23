@@ -848,21 +848,65 @@
     return raw;
   }
 
-  function tsvFileNameForPhase(phase) {
-    if (phase === 3) {
-      return 'phase3-std-response.tsv';
+  function deterministicNumericHash(value) {
+    var input = String(value || '');
+    if (!input) {
+      return '0';
     }
-    if (phase === 2) {
-      return 'phase2-tasks-response.tsv';
+
+    // FNV-1a variant for stable unsigned numeric hash.
+    var hash = 2166136261;
+    for (var i = 0; i < input.length; i++) {
+      hash ^= input.charCodeAt(i);
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
     }
-    if (phase === 4) {
-      return 'phase4-sim-tasks-response.tsv';
+
+    return String(hash >>> 0);
+  }
+
+  function extractWkfHashFromUri(wkfUri) {
+    var uri = String(wkfUri || '').trim();
+    if (!uri) {
+      return 'UNKNOWN';
     }
-    return 'wkf-response.tsv';
+
+    var wkfDigits = uri.match(/\bWKF(\d{6,})\b/i);
+    if (wkfDigits && wkfDigits[1]) {
+      return String(wkfDigits[1]);
+    }
+
+    var genericDigits = uri.match(/(\d{6,})/);
+    if (genericDigits && genericDigits[1]) {
+      return String(genericDigits[1]);
+    }
+
+    return deterministicNumericHash(uri);
+  }
+
+  function tsvFileNameForPhase(phase, wkfUri) {
+    var wkfHash = extractWkfHashFromUri(wkfUri);
+    var phaseNumber = parseInt(phase || 0, 10);
+
+    if (!(phaseNumber >= 2 && phaseNumber <= 4)) {
+      return 'WKF' + wkfHash + '_Phase' + String(phaseNumber || 0) + '_response.tsv';
+    }
+
+    if (phaseNumber === 3) {
+      return 'WKF' + wkfHash + '_Phase3_std.tsv';
+    }
+    if (phaseNumber === 2) {
+      return 'WKF' + wkfHash + '_Phase2_tasks.tsv';
+    }
+    if (phaseNumber === 4) {
+      return 'WKF' + wkfHash + '_Phase4_tasks.tsv';
+    }
+    return 'WKF' + wkfHash + '_Phase' + String(phaseNumber || 0) + '_response.tsv';
   }
 
   function savePhaseResponseAsTsv() {
     var phase = parseInt(getText('#wkf-phase-response-phase') || '0', 10);
+    syncActiveWkfUriFromSelection();
+    var wkfUri = getText('#wkf-active-uri') || getSessionValue('rep_wkf_active_uri_context');
     var textarea = document.getElementById('wkf-phase-response-input');
     var statusBox = document.getElementById('wkf-phase-response-status-msg');
     var responseText = textarea ? String(textarea.value || '') : '';
@@ -878,7 +922,7 @@
       return;
     }
 
-    var fileName = tsvFileNameForPhase(phase);
+    var fileName = tsvFileNameForPhase(phase, wkfUri);
     downloadTextFile(tsvText, fileName, 'text/tab-separated-values;charset=utf-8');
 
     if (statusBox) {
@@ -909,7 +953,15 @@
   }
 
   function mapPublicPhaseToBackendPhase(publicPhase) {
-    return publicPhase;
+    var phase = parseInt(publicPhase || '0', 10);
+    // Backward compatibility for stale clients still posting legacy values.
+    if (phase === 5) {
+      return 4;
+    }
+    if (phase === 1) {
+      return 2;
+    }
+    return phase;
   }
 
   function findPhaseSelectorForWkf(wkfUri, triggerElement) {
@@ -1248,6 +1300,7 @@
   }
 
   function buildPhasePacket(phase, promptSelector, wkfUriOverride, triggerButton) {
+    phase = mapPublicPhaseToBackendPhase(phase);
     if (!(phase >= 2 && phase <= 4)) {
       alert('Invalid phase for packet generation.');
       return;
@@ -1435,7 +1488,7 @@
 
       once('wkf-phase-packet-build', '.wkf-build-phase-packet', context).forEach(function (button) {
         button.addEventListener('click', function () {
-          var phase = parseInt(button.getAttribute('data-phase') || '0', 10);
+          var phase = mapPublicPhaseToBackendPhase(parseInt(button.getAttribute('data-phase') || '0', 10));
           var promptSelector = button.getAttribute('data-prompt-source') || '';
           buildPhasePacket(phase, promptSelector, '', button);
         });

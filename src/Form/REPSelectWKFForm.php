@@ -153,7 +153,7 @@ class REPSelectWKFForm extends REPSelectMTForm {
             <div class="mb-2">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <label for="phase1ClinicalProcess" class="form-label mb-0">Clinical Process</label>
-                <a href="' . $knowledgeGraphHierarchyUrl . '" class="small open-tree-modal" data-url="' . $knowledgeGraphHierarchyUrl . '" data-elementtype="[&quot;workflowstem&quot;]" data-dialog-type="modal" data-field-id="phase1ClinicalProcess">Knowledge Graph Hierarchy</a>
+                <a href="' . $knowledgeGraphHierarchyUrl . '" class="small open-tree-modal" data-url="' . $knowledgeGraphHierarchyUrl . '" data-elementtype="[&quot;workflowstem&quot;]" data-dialog-type="modal" data-field-id="phase1ClinicalProcess">Hierarchy</a>
               </div>
               <select id="phase1ClinicalProcess" class="form-select form-select-sm">
                 <option value="">Select clinical process...</option>
