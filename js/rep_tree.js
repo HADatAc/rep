@@ -73,7 +73,13 @@
         $trigger.data('tree-capture-bound', true);
 
         $trigger.on('click', function (e) {
+          var triggerFieldId = String($trigger.data('field-id') || '').trim();
           var passedValue = $trigger.data('search-value') || '';
+          // Phase I clinical-process picker must open unfiltered; otherwise
+          // stale selected values collapse the tree to a single branch.
+          if (triggerFieldId === 'phase1ClinicalProcess') {
+            passedValue = '';
+          }
           // // console.log('[tree] .open-tree-modal clicked → data-search-value =', passedValue);
 
           // Remove any old “No results” message
@@ -82,6 +88,9 @@
           // Ensure drupalSettings.rep_tree exists
           if (!drupalSettings.rep_tree) {
             drupalSettings.rep_tree = {};
+          }
+          if (triggerFieldId !== '') {
+            drupalSettings.rep_tree.fieldId = triggerFieldId;
           }
           drupalSettings.rep_tree.searchValue = passedValue;
           // Reset internal flag to force re-initialization of jsTree
@@ -261,6 +270,10 @@
         // --------------------------------------------------------------
         var rawSearchValue = (drupalSettings.rep_tree && drupalSettings.rep_tree.searchValue) || '';
         var initialSearchValue = expandPrefix(rawSearchValue);
+        var initialFieldId = $treeRoot.data('field-id') || $('#tree-root').data('field-id') || (drupalSettings.rep_tree && drupalSettings.rep_tree.fieldId) || '';
+        if (initialFieldId === 'phase1ClinicalProcess') {
+          initialSearchValue = '';
+        }
         if (!drupalSettings.rep_tree) {
           drupalSettings.rep_tree = {};
         }
@@ -945,159 +958,41 @@
 
         // --------------------------------------------------------------
         // resetTree()
-        //    - Destroys/recreates jsTree in “top-level only” state.
+        //    - Performs a deterministic hard reset using the same
+        //      initialization pipeline as first load.
         // --------------------------------------------------------------
         function resetTree() {
-          // console.log("[tree] resetTree called: destroying and re-initializing jsTree.");
+          // console.log("[tree] resetTree called: hard reset.");
+          var $resetButton = $('#reset-tree');
+          var defaultResetText = String($resetButton.data('default-label') || $resetButton.text() || 'Reset Tree').trim();
+          $resetButton.data('default-label', defaultResetText);
+          $resetButton.prop('disabled', true).addClass('disabled').text('Resetting...');
+
+          initialSearchDone = false;
+          initialSearchValue = '';
+          if (drupalSettings.rep_tree) {
+            drupalSettings.rep_tree.searchValue = '';
+          }
+
           $('#search_input').val('');
+          $('#search_input').prop('disabled', true);
           $('#clear-search').hide();
-          $treeRoot.jstree('destroy').empty();
+          $('#wait-message').show();
+          $treeRoot.hide();
 
-          $treeRoot.jstree({
-            core: {
-              check_callback: true,
-              data: function (node, cb) {
-                if (node.id === '#') {
-                  // Top-level (branches)
-                  var branches = getFilteredBranches();
-                  var arr = branches.map(function (branch) {
-                    var prefixed = namespacePrefixUri(branch.uri);
-                    return {
-                      id: branch.id,
-                      text: setNodeText(branch),
-                      label: branch.label,
-                      uri: branch.uri,
-                      typeNamespace: branch.typeNamespace || '',
-                      data: {
-                        originalLabel: branch.label + setTitleSuffix(branch),
-                        originalPrefixLabel: namespacePrefixUri(branch.uri) + branch.label + setTitleSuffix(branch),
-                        originalUri: branch.uri + setTitleSuffix(branch),
-                        originalPrefixUri: namespaceUri(branch.uri) + setTitleSuffix(branch),
-                        prefix: prefixed,
-                        typeNamespace: branch.typeNamespace || '',
-                        comment: branch.comment || '',
-                        hasWebDocument: branch.hasWebDocument,
-                        hasImageUri: branch.hasImageUri
-                      },
-                      icon: 'fas fa-folder',
-                      hasStatus: branch.hasStatus,
-                      hasSIRManagerEmail: branch.hasSIRManagerEmail,
-                      hasWebDocument: branch.hasWebDocument,
-                      hasImageUri: branch.hasImageUri,
-                      children: true,
-                      state: { opened: false }
-                    };
-                  });
-                  // console.log("[tree] resetTree → root data length =", arr.length);
-                  cb(arr);
-                } else {
-                  // Fetch children via AJAX
-                  // console.log("[tree] resetTree fetching children for", node.original.uri);
-                  $.ajax({
-                    url: drupalSettings.rep_tree.apiEndpoint,
-                    type: 'GET',
-                    data: {
-                      nodeUri: node.original.uri,
-                      elementtype: drupalSettings.rep_tree.elementType,
-                      field_id: getTreeFieldId()
-                    },
-                    dataType: 'json',
-                    success: function (data) {
-  // NOTE: if the expanded node is a top-level branch (node.parent === '#')
-  // we may "promote" one level to skip the duplicated child.
-  var isTopLevelBranch = (node.parent === '#');
-  var shouldPromote = false;
-  var promotionTargetUri = null;
-
-  if (isTopLevelBranch && Array.isArray(data) && data.length > 0) {
-    var first = data[0];
-
-                      // Promote ONLY when backend returns the same node URI as a child
-                      // (self-duplication). Do not promote by label/superUri, because
-                      // valid roots such as ComponentStemEntryPoint would become empty.
-    var rootUri   = (node.original && node.original.uri)   ? node.original.uri   : null;
-                      var childUri  = (first && first.uri) ? first.uri : null;
-
-                      if (childUri && rootUri && childUri === rootUri) {
-      shouldPromote = true;
-                        promotionTargetUri = childUri;
-    }
-  }
-
-  // Helper to convert items to jsTree nodes and return them.
-  function processAndReturn(list) {
-    var temp = [];
-    var seen = new Set();
-    (list || []).forEach(function (item) {
-      var key = (item.uri || '').trim().toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      var nodeObj = buildChildNode(item, node, hideDraft, hideDeprecated);
-      if (!nodeObj.skip) temp.push(nodeObj);
-    });
-    cb(temp);
-  }
-
-  if (shouldPromote && promotionTargetUri) {
-    // Second hop: fetch grandchildren from promoted child.
-    $.ajax({
-      url: drupalSettings.rep_tree.apiEndpoint,
-      type: 'GET',
-      data: {
-        nodeUri: promotionTargetUri,
-        elementtype: drupalSettings.rep_tree.elementType,
-        field_id: getTreeFieldId()
-      },
-      dataType: 'json',
-      success: function (grandchildren) {
-        processAndReturn(grandchildren);
-      },
-      error: function () {
-        console.warn('[tree] promotion hop failed for', promotionTargetUri, '→ falling back to original children.');
-        processAndReturn(data);
-      }
-    });
-  } else {
-    // Normal path.
-    processAndReturn(data);
-  }
-},
-
-                    error: function () {
-                      console.error("[tree] jsTree error fetching children for", node.original.uri);
-                      cb([]);
-                    }
-                  });
-                }
-              }
-            },
-            plugins: ['search', 'wholerow', 'sort'],
-            sort: function (a, b) {
-              var ta = this.get_node(a).text.toLowerCase();
-              var tb = this.get_node(b).text.toLowerCase();
-              return ta > tb ? 1 : (ta < tb ? -1 : 0);
-            },
-            search: {
-              case_sensitive: false,
-              show_only_matches: true,
-              show_only_matches_children: true,
-              search_callback: function (str, node) {
-                var term = str.toLowerCase();
-                if (node.text.toLowerCase().includes(term)) return true;
-                if (node.data.typeNamespace && node.data.typeNamespace.toLowerCase().includes(term)) {
-                  return true;
-                }
-                return false;
-              }
+          // Remove jsTree/event residue before rebuilding through the
+          // canonical initializeJstree flow.
+          $treeRoot.off('.jstree');
+          try {
+            if ($treeRoot.data('jstree')) {
+              $treeRoot.jstree('destroy');
             }
-          });
+          } catch (err) {
+            // Ignore destroy exceptions and proceed with clean init.
+          }
+          $treeRoot.empty();
 
-          $treeRoot.on('ready.jstree', function () {
-            // console.log("[tree] resetTree ready.jstree event fired");
-            attachTreeEventListeners();
-            bindRenderingModeChange();
-          });
+          initializeJstree();
         }
 
         // --------------------------------------------------------------
@@ -1362,6 +1257,10 @@
           // Once jsTree is ready, attach listeners and decide populateTree vs. search
           $treeRoot.on('ready.jstree', function () {
             // console.log("[tree] ready.jstree event fired");
+            var $resetButton = $('#reset-tree');
+            var defaultResetText = String($resetButton.data('default-label') || 'Reset Tree');
+            $resetButton.prop('disabled', false).removeClass('disabled').text(defaultResetText);
+
             attachTreeEventListeners();
             bindRenderingModeChange();
             $treeRoot.on('load_node.jstree', resetActivityTimeout);

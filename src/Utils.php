@@ -140,6 +140,10 @@ class Utils {
       return '';
     }
 
+    if (stripos($value, 'pmsr:') === 0) {
+      $value = self::PMSR_CANONICAL_BASE . ltrim(substr($value, 5), '/');
+    }
+
     $value = preg_replace('#^https?://pmsr\.net/ont/pmsr/?#i', self::PMSR_CANONICAL_BASE, $value);
     if (!is_string($value)) {
       return trim((string) ($uri ?? ''));

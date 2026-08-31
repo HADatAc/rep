@@ -11,6 +11,7 @@ use Drupal\file\Entity\File;
 use Drupal\rep\ListManagerEmailPage;
 use Drupal\rep\ManageOwnerFilter;
 use Drupal\rep\Utils;
+use Drupal\rep\Entity\Tables;
 use Drupal\rep\Entity\MetadataTemplate;
 use Drupal\rep\Vocabulary\VSTOI;
 
@@ -78,6 +79,60 @@ class REPSelectMTForm extends FormBase {
    */
   protected $wkfOwnerEmailCache = [];
 
+  /**
+   * Per-request cache for WKF URI -> workbook-like text candidates.
+   *
+   * @var array<string, array<int, string>>
+   */
+  protected $wkfWorkbookCandidateCache = [];
+
+  /**
+   * Per-request cache for WKF URI -> resolved local workbook path.
+   *
+   * @var array<string, string>
+   */
+  protected $wkfWorkbookPathByUri = [];
+
+  /**
+   * Per-request cache for WKF URI -> display label from card header.
+   *
+   * @var array<string, string>
+   */
+  protected $wkfDisplayNameByUri = [];
+
+  /**
+   * Per-request cache for URI -> quick KG label lookup.
+   *
+   * @var array<string, string>
+   */
+  protected $wkfUriLabelCache = [];
+  /**
+   * Per-request cache for WKF URI -> template object from list payload.
+   *
+   * @var array<string, object>
+   */
+  protected $wkfTemplateByUri = [];
+
+  /**
+   * Guardrail counters for bounded KG label lookups during card rendering.
+   */
+  protected $wkfUriLabelLookupCount = 0;
+  protected $wkfUriLabelLookupLimit = 8;
+
+  /**
+   * Per-request cache for WKF URI -> STD identity fields used by card.
+   *
+    * @var array<string, array{pi_name:string,pi_email:string,organization:string}>
+   */
+  protected $wkfStdIdentityCache = [];
+
+  /**
+   * Per-request cache for WKF URI -> extractor metadata array.
+   *
+   * @var array<string, array<string, mixed>>
+   */
+  protected $wkfCardMetadataCache = [];
+
   public function getMode() {
     return $this->mode;
   }
@@ -131,8 +186,11 @@ class REPSelectMTForm extends FormBase {
     // GET ELEMENT TYPE
     $this->element_type = $elementtype;
     if ($this->element_type === 'wkf') {
-      $this->suppressWkfSelectPageMessages();
-      $this->suppressLegacyWkfValidationMessages();
+      $preserveFlashMessages = $this->consumePreserveWkfFlashMessagesFlag();
+      if (!$preserveFlashMessages) {
+        $this->suppressWkfSelectPageMessages();
+        $this->suppressLegacyWkfValidationMessages();
+      }
     }
     if ($this->element_type != NULL) {
       $this->setListSize(ListManagerEmailPage::total($this->element_type, $this->manager_email));
@@ -152,7 +210,11 @@ class REPSelectMTForm extends FormBase {
     $status_filter_key = 'rep_select_mt_status_filter.' . (string) $elementtype;
     $status_filter = $form_state->getValue('status_filter');
     if ($status_filter === NULL) {
-      $status_filter = $session->get($status_filter_key, '_');
+      // WKF manage page should not inherit stale status from previous sessions,
+      // otherwise newly uploaded UNPROCESSED WKFs can be hidden unexpectedly.
+      $status_filter = ($this->element_type === 'wkf')
+        ? '_'
+        : $session->get($status_filter_key, '_');
     }
     else {
       $session->set($status_filter_key, $status_filter);
@@ -171,7 +233,15 @@ class REPSelectMTForm extends FormBase {
       $session->set($manager_filter_key, $manager_filter);
     }
 
-    $effective_manager_email = ManageOwnerFilter::resolveEffectiveOwner($this->manager_email, $manager_filter, $status_filter);
+    $isWkfManagePage = ($this->element_type === 'wkf');
+    if ($isWkfManagePage) {
+      $manager_filter = '';
+      $session->set($manager_filter_key, '');
+    }
+
+    $effective_manager_email = $isWkfManagePage
+      ? '_'
+      : ManageOwnerFilter::resolveEffectiveOwner($this->manager_email, $manager_filter, $status_filter);
 
     if ($view_type == 'table') {
 
@@ -221,6 +291,7 @@ class REPSelectMTForm extends FormBase {
       else {
         $this->setList(ListManagerEmailPage::execByStatusManagerEmail($this->element_type, $status_filter, $effective_manager_email, FALSE, $page, $pagesize));
       }
+      $this->augmentWkfListWithRecentUpload($status_filter);
 
     } else {
       // SET PAGE_SIZE
@@ -244,6 +315,7 @@ class REPSelectMTForm extends FormBase {
       else {
         $this->setList(ListManagerEmailPage::execByStatusManagerEmail($this->element_type, $status_filter, $effective_manager_email, FALSE, 1, $pagesize));
       }
+      $this->augmentWkfListWithRecentUpload($status_filter);
     }
 
     $this->single_class_name = "";
@@ -330,7 +402,7 @@ class REPSelectMTForm extends FormBase {
       $this->buildWkfSpecializedSection($form, $form_state);
     }
 
-    $show_owner_indicator = $is_admin && $manager_filter !== '' && strcasecmp($effective_manager_email, $manager_filter) === 0;
+    $show_owner_indicator = !$isWkfManagePage && $is_admin && $manager_filter !== '' && strcasecmp($effective_manager_email, $manager_filter) === 0;
     if ($show_owner_indicator) {
       $form['owner_indicator'] = [
         '#type' => 'item',
@@ -388,16 +460,18 @@ class REPSelectMTForm extends FormBase {
       ],
     ];
 
-    if ($this->single_class_name !== 'WKF') {
-      $form['actions_wrapper']['buttons_container']['add_element'] = [
-        '#type' => 'submit',
-        '#value' => $this->t('Add New ' . $this->single_class_name),
-        '#name' => 'add_element',
-        '#attributes' => [
-          'class' => ['btn', 'btn-primary', 'add-element-button'],
-        ],
-      ];
-    }
+    $form['actions_wrapper']['buttons_container']['add_element'] = [
+      '#type' => 'submit',
+      '#value' => $this->t(
+        $this->single_class_name === 'WKF'
+          ? 'Upload WKF'
+          : 'Add New ' . $this->single_class_name
+      ),
+      '#name' => 'add_element',
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary', 'add-element-button'],
+      ],
+    ];
 
     if ($view_type == 'table') {
       $form['actions_wrapper']['buttons_container']['edit_selected_element'] = [
@@ -501,7 +575,7 @@ class REPSelectMTForm extends FormBase {
     ];
 
     $has_active_filters = ($status_filter !== '_' && $status_filter !== NULL && $status_filter !== '')
-      || ($is_admin && trim((string) $manager_filter) !== '');
+      || (!$isWkfManagePage && $is_admin && trim((string) $manager_filter) !== '');
 
     $ajax_wrapper = ($view_type === 'card') ? 'cards-lazy-wrapper' : 'element-table-wrapper';
     $ajax_callback = ($view_type === 'card') ? '::ajaxReloadCards' : '::ajaxReloadTable';
@@ -522,7 +596,7 @@ class REPSelectMTForm extends FormBase {
       ],
     ];
 
-    if ($is_admin) {
+    if ($is_admin && !$isWkfManagePage) {
       $form['actions_wrapper']['filters_panel']['filter_container']['manager_filter'] = [
         '#type' => 'textfield',
         '#title' => $this->t('User'),
@@ -891,6 +965,9 @@ class REPSelectMTForm extends FormBase {
   protected function buildCardView(array &$form, FormStateInterface $form_state, $header, $output)
   {
 
+    if ($this->element_type === 'wkf') {
+      $this->wkfTemplateByUri = $this->indexWkfTemplatesByUri($this->getList());
+    }
     // IMAGE PLACEHOLDER
     $placeholder_image = '';
     switch ($this->element_type) {
@@ -1047,6 +1124,9 @@ class REPSelectMTForm extends FormBase {
         ];
 
         $wkfUri = is_string($key) ? trim($key) : '';
+        if ($wkfUri !== '' && trim($header_text) !== '') {
+          $this->wkfDisplayNameByUri[$wkfUri] = trim($header_text);
+        }
         $uriValue = isset($item['element_uri']) ? (string) $item['element_uri'] : Html::escape($wkfUri);
         $statusValue = isset($item['element_status']) ? (string) $item['element_status'] : 'N/A';
         $logValue = isset($item['element_log']) ? (string) $item['element_log'] : 'N/A';
@@ -1085,8 +1165,8 @@ class REPSelectMTForm extends FormBase {
         $taskCount = $taskResolution['count'];
         $interactiveAutoTaskCount = $this->resolveWkfInteractiveAutoTaskCountFromLocalContext($wkfUri);
         $processStemUri = $this->resolveWkfProcessStemUriForCard($wkfUri);
-        $ownerEmail = $this->resolveWkfOwnerEmailForCard($wkfUri);
-        $organizationName = $this->resolveWkfOwnerOrganizationLabelForCard($wkfUri);
+        $piName = $this->resolveWkfPrincipalInvestigatorNameForCard($wkfUri);
+        $organizationName = $this->resolveWkfStdOrganizationLabelForCard($wkfUri);
         $usedComponentsCount = $this->resolveWkfUsedComponentsCountFromLocalContext($wkfUri);
         $scenarioPropsCount = $this->resolveWkfScenarioPropsCountFromLocalContext($wkfUri);
 
@@ -1101,7 +1181,7 @@ class REPSelectMTForm extends FormBase {
 
         $taskCountLabel = ($taskCount === NULL) ? 'N/A' : (string) $taskCount;
         $tasksValue = Html::escape($taskCountLabel);
-        $ownerEmailValue = Html::escape($ownerEmail !== '' ? $ownerEmail : 'N/A');
+        $piNameValue = Html::escape($piName !== '' ? $piName : 'N/A');
         $organizationValue = Html::escape($organizationName !== '' ? $organizationName : 'N/A');
         $usedComponentsLabel = ($usedComponentsCount === NULL) ? 'N/A' : (string) $usedComponentsCount;
         $usedComponentsValue = Html::escape($usedComponentsLabel);
@@ -1122,7 +1202,7 @@ class REPSelectMTForm extends FormBase {
           . '<li><strong>URI:</strong> ' . $uriValue . '</li>'
           . '<li><strong>Proc. Stem URI:</strong> ' . $processStemValue . '</li>'
           . '<li><strong>Status:</strong> ' . $statusValue . '</li>'
-          . '<li><strong>Owner email:</strong> ' . $ownerEmailValue . '</li>'
+          . '<li><strong>PI\'s Name:</strong> ' . $piNameValue . '</li>'
           . '<li><strong>Organization:</strong> ' . $organizationValue . '</li>'
           . '<li><strong>Number of scenario prop w/values:</strong> ' . $scenarioPropsValue . '</li>'
           . '<li><strong>Number of tasks:</strong> ' . $tasksValue . '</li>'
@@ -1532,11 +1612,16 @@ class REPSelectMTForm extends FormBase {
     $uid = \Drupal::currentUser()->id();
     $previousUrl = \Drupal::request()->getRequestUri();
     Utils::trackingStoreUrls($uid, $previousUrl, 'rep.add_mt');
-    $url = Url::fromRoute('rep.add_mt', [
-      'elementtype' => $this->element_type,
-      'studyuri' => 'none',
-      'fixstd' => 'F',
-    ]);
+    if ($this->element_type === 'wkf') {
+      $url = Url::fromRoute('rep.upload_wkf');
+    }
+    else {
+      $url = Url::fromRoute('rep.add_mt', [
+        'elementtype' => $this->element_type,
+        'studyuri' => 'none',
+        'fixstd' => 'F',
+      ]);
+    }
     $form_state->setRedirectUrl($url);
   }
 
@@ -2355,6 +2440,16 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
+   * Preserve one-cycle flash messages after redirects from WKF upload actions.
+   */
+  protected function consumePreserveWkfFlashMessagesFlag(): bool {
+    $session = \Drupal::request()->getSession();
+    $value = (int) $session->get('rep_wkf_preserve_flash_messages', 0);
+    $session->remove('rep_wkf_preserve_flash_messages');
+    return $value === 1;
+  }
+
+  /**
    * Remove old WKF validation messages from Drupal messenger.
    *
    * This keeps validation feedback in the dedicated panel and avoids
@@ -2454,6 +2549,51 @@ class REPSelectMTForm extends FormBase {
         'validatedAt' => date('Y-m-d H:i:s'),
       ]);
     }
+  }
+
+  /**
+   * Ensure the most recently uploaded WKF is visible immediately after upload.
+   */
+  protected function augmentWkfListWithRecentUpload($statusFilter): void {
+    if ($this->element_type !== 'wkf') {
+      return;
+    }
+
+    $session = \Drupal::request()->getSession();
+    $recentWkfUri = trim((string) $session->get('rep_recent_uploaded_wkf_uri', ''));
+    if ($recentWkfUri === '') {
+      return;
+    }
+
+    if ($statusFilter !== '_' && $statusFilter !== NULL && $statusFilter !== '') {
+      return;
+    }
+
+    $currentList = $this->getList();
+    if (!is_array($currentList)) {
+      $currentList = [];
+    }
+
+    foreach ($currentList as $item) {
+      if (is_object($item) && isset($item->uri) && trim((string) $item->uri) === $recentWkfUri) {
+        $session->remove('rep_recent_uploaded_wkf_uri');
+        return;
+      }
+    }
+
+    $api = \Drupal::service('rep.api_connector');
+    $recentRaw = $api->getUri($recentWkfUri);
+    $recentObj = $api->parseObjectResponse($recentRaw, 'getUri');
+    if (!is_object($recentObj)) {
+      return;
+    }
+
+    $currentList[] = $recentObj;
+    $this->setList($currentList);
+    if (is_numeric($this->list_size)) {
+      $this->setListSize(((int) $this->list_size) + 1);
+    }
+    $session->remove('rep_recent_uploaded_wkf_uri');
   }
 
   /**
@@ -3942,6 +4082,735 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
+   * Resolve PI display name from STD sheet content for a WKF card.
+   */
+  protected function resolveWkfPrincipalInvestigatorNameForCard(string $wkfUri): string {
+    $identity = $this->resolveWkfStdIdentityForCard($wkfUri);
+    $name = trim((string) ($identity['pi_name'] ?? ''));
+    $email = trim((string) ($identity['pi_email'] ?? ''));
+    $displayName = $name !== '' ? $name : 'N/A';
+
+    if ($displayName !== 'N/A' && $email !== '') {
+      return $displayName . ' (' . $email . ')';
+    }
+
+    return $displayName;
+  }
+
+  /**
+   * Resolve organization display label from STD Institution for a WKF card.
+   */
+  protected function resolveWkfStdOrganizationLabelForCard(string $wkfUri): string {
+    $identity = $this->resolveWkfStdIdentityForCard($wkfUri);
+    $value = trim((string) ($identity['organization'] ?? ''));
+    return $value !== '' ? $value : 'N/A';
+  }
+
+  /**
+   * Resolve and cache STD identity fields for WKF card rendering.
+   *
+   * @return array{pi_name:string,pi_email:string,organization:string}
+   */
+  protected function resolveWkfStdIdentityForCard(string $wkfUri): array {
+    $wkfUri = trim($wkfUri);
+    if ($wkfUri === '') {
+      return ['pi_name' => 'N/A', 'pi_email' => '', 'organization' => 'N/A'];
+    }
+
+    if (array_key_exists($wkfUri, $this->wkfStdIdentityCache)) {
+      return $this->wkfStdIdentityCache[$wkfUri];
+    }
+
+    $metadata = $this->resolveWkfMetadataForCard($wkfUri);
+    $piUri = isset($metadata['principal_investigator_uri']) && is_string($metadata['principal_investigator_uri'])
+      ? trim((string) $metadata['principal_investigator_uri'])
+      : '';
+    $orgUri = isset($metadata['organization_uri']) && is_string($metadata['organization_uri'])
+      ? trim((string) $metadata['organization_uri'])
+      : '';
+    $piNameFromMetadata = isset($metadata['principal_investigator_name']) && is_string($metadata['principal_investigator_name'])
+      ? trim((string) $metadata['principal_investigator_name'])
+      : '';
+    $piEmailFromMetadata = isset($metadata['principal_investigator_email']) && is_string($metadata['principal_investigator_email'])
+      ? trim((string) $metadata['principal_investigator_email'])
+      : '';
+    $orgNameFromMetadata = isset($metadata['organization_name']) && is_string($metadata['organization_name'])
+      ? trim((string) $metadata['organization_name'])
+      : '';
+
+    $resolvedPiName = $piUri !== '' ? $this->resolveStdPrincipalInvestigatorDisplayValue($piUri) : '';
+    if ($resolvedPiName === '' && $piNameFromMetadata !== '') {
+      $resolvedPiName = $this->resolveStdPrincipalInvestigatorDisplayValue($piNameFromMetadata);
+    }
+    if ($resolvedPiName === '' && $piUri !== '') {
+      $resolvedPiName = Utils::namespaceUri($piUri);
+    }
+
+    $canonicalPiUri = $this->canonicalizePmsrValue($piUri);
+    if ($canonicalPiUri === 'https://pmsr.net/ont/PER/PI-001' || strcasecmp($piEmailFromMetadata, 'equipa@pmsr.net') === 0) {
+      $piEmailFromMetadata = 'curator@reitoria.ucp.pt';
+    }
+
+    $resolvedOrgName = $orgUri !== '' ? $this->resolveStdOrganizationDisplayValue($orgUri) : '';
+    if ($resolvedOrgName === '' && $orgNameFromMetadata !== '') {
+      $resolvedOrgName = $this->resolveStdOrganizationDisplayValue($orgNameFromMetadata);
+    }
+    if ($resolvedOrgName === '' && $orgUri !== '') {
+      $resolvedOrgName = Utils::namespaceUri($orgUri);
+    }
+
+    $result = [
+      'pi_name' => $resolvedPiName !== '' ? $resolvedPiName : 'N/A',
+      'pi_email' => $piEmailFromMetadata,
+      'organization' => $resolvedOrgName !== '' ? $resolvedOrgName : 'N/A',
+    ];
+
+    $this->wkfStdIdentityCache[$wkfUri] = $result;
+    return $result;
+  }
+
+  /**
+   * Extract STD identity directly from local workbook file cells.
+   *
+   * @return array{principal_investigator:string,principal_investigator_email:string,organization:string}
+   */
+  protected function extractStdIdentityFromLocalWorkbookFile(string $wkfUri): array {
+    $result = [
+      'principal_investigator' => '',
+      'principal_investigator_email' => '',
+      'organization' => '',
+    ];
+
+    $path = $this->resolveLocalWorkbookPathForWkfUri($wkfUri);
+    if ($path === '' || !is_file($path) || !is_readable($path) || !class_exists('\\ZipArchive')) {
+      return $result;
+    }
+
+    $zip = new \ZipArchive();
+    if ($zip->open($path) !== TRUE) {
+      return $result;
+    }
+
+    $sheetXml = $zip->getFromName('xl/worksheets/sheet3.xml');
+    if (!is_string($sheetXml) || $sheetXml === '') {
+      $zip->close();
+      return $result;
+    }
+
+    $sharedStrings = $this->extractXlsxSharedStrings($zip);
+    $zip->close();
+
+    $readCell = static function (string $xml, string $cellRef, array $shared): string {
+      if (preg_match('#<c[^>]*\br="' . preg_quote($cellRef, '#') . '"([^>]*)>(.*?)</c>#s', $xml, $m) !== 1) {
+        return '';
+      }
+
+      $attrs = (string) ($m[1] ?? '');
+      $body = (string) ($m[2] ?? '');
+      $type = '';
+      if (preg_match('/\bt="([^"]+)"/', $attrs, $tm) === 1) {
+        $type = (string) ($tm[1] ?? '');
+      }
+
+      if ($type === 'inlineStr' && preg_match('#<is>.*?<t[^>]*>(.*?)</t>.*?</is>#s', $body, $vm) === 1) {
+        return trim(html_entity_decode((string) $vm[1], ENT_QUOTES | ENT_XML1));
+      }
+
+      if (preg_match('#<v>(.*?)</v>#s', $body, $vm) === 1) {
+        $raw = trim((string) $vm[1]);
+        if ($type === 's') {
+          $idx = (int) $raw;
+          return trim((string) ($shared[$idx] ?? ''));
+        }
+        return trim(html_entity_decode($raw, ENT_QUOTES | ENT_XML1));
+      }
+
+      if (preg_match('#<t[^>]*>(.*?)</t>#s', $body, $vm) === 1) {
+        return trim(html_entity_decode((string) $vm[1], ENT_QUOTES | ENT_XML1));
+      }
+
+      return '';
+    };
+
+    // New fixed layout: headers at row 1, values at row 2.
+    $org = $readCell($sheetXml, 'G2', $sharedStrings);
+    $pi = $readCell($sheetXml, 'H2', $sharedStrings);
+    $email = $readCell($sheetXml, 'I2', $sharedStrings);
+
+    // Legacy layout fallback: title row + shifted header/value rows.
+    if ($org === '' && $pi === '' && $email === '') {
+      $org = $readCell($sheetXml, 'H3', $sharedStrings);
+      $pi = $readCell($sheetXml, 'I3', $sharedStrings);
+      $email = $readCell($sheetXml, 'J3', $sharedStrings);
+    }
+
+    $namespaceMap = ['pmsr' => 'https://pmsr.net/ont/'];
+    $result['organization'] = $this->expandWorkbookPrefixedUriValue($org, $namespaceMap);
+    $result['principal_investigator'] = $this->expandWorkbookPrefixedUriValue($pi, $namespaceMap);
+    $result['principal_investigator_email'] = trim($email);
+
+    return $result;
+  }
+
+  /**
+   * Extract STD PI/Organization fields from workbook-like TSV content.
+   *
+   * @return array{principal_investigator:string,principal_investigator_email:string,organization:string}
+   */
+  protected function extractStdIdentityFromWorkbookTsv(string $workbookTsv): array {
+    $result = [
+      'principal_investigator' => '',
+      'principal_investigator_email' => '',
+      'organization' => '',
+    ];
+
+    $text = str_replace(["\r\n", "\r"], "\n", trim($workbookTsv));
+    if ($text === '') {
+      return $result;
+    }
+
+    $stdBody = '';
+    if (preg_match('/^###\s*sheet:\s*STD\s*$\n(.*?)(?=^###\s*sheet:\s*|\z)/ims', $text, $match) === 1) {
+      $stdBody = trim((string) ($match[1] ?? ''));
+    }
+    else {
+      $stdBody = $text;
+    }
+
+    if ($stdBody === '') {
+      return $result;
+    }
+
+    $lines = array_values(array_filter(explode("\n", $stdBody), static function ($line): bool {
+      return trim((string) $line) !== '';
+    }));
+    if (count($lines) < 2) {
+      return $result;
+    }
+
+    $headerLineIndex = -1;
+    for ($i = 0; $i < count($lines) - 1; $i++) {
+      $candidateRaw = rtrim((string) $lines[$i], "\t ");
+      if ($candidateRaw === '' || strpos($candidateRaw, "\t") === FALSE) {
+        continue;
+      }
+
+      $candidateHeaders = array_map('trim', explode("\t", $candidateRaw));
+      $candidateTokens = [];
+      foreach ($candidateHeaders as $columnName) {
+        $token = $this->normalizeWorkbookHeaderColumn((string) $columnName);
+        if ($token !== '') {
+          $candidateTokens[$token] = true;
+        }
+      }
+
+      $hasUri = isset($candidateTokens['hasuri']);
+      $hasOrg = isset($candidateTokens['institution'])
+        || isset($candidateTokens['hasco:hasinstitution'])
+        || isset($candidateTokens['organization'])
+        || isset($candidateTokens['organizationuri']);
+      $hasPi = isset($candidateTokens['principalinvestigator'])
+        || isset($candidateTokens['principalinvestigatoruri'])
+        || isset($candidateTokens['hasco:haspi'])
+        || isset($candidateTokens['haspi'])
+        || isset($candidateTokens['pi']);
+
+      if ($hasUri && $hasOrg && $hasPi) {
+        $headerLineIndex = $i;
+        break;
+      }
+    }
+
+    if ($headerLineIndex < 0) {
+      $headerLineIndex = 0;
+    }
+
+    $headerLineRaw = rtrim((string) $lines[$headerLineIndex], "\t ");
+
+    if ($headerLineRaw === '' || strpos($headerLineRaw, "\t") === FALSE) {
+      return $result;
+    }
+
+    $dataLineIndex = $headerLineIndex + 1;
+    if (!isset($lines[$dataLineIndex])) {
+      return $result;
+    }
+
+    // Keep leading tab columns to preserve XLSX column alignment (A,B,C...).
+    $headers = array_map('trim', explode("\t", $headerLineRaw));
+    $values = explode("\t", rtrim((string) $lines[$dataLineIndex], "\t "));
+
+    $byHeader = [];
+    foreach ($headers as $idx => $columnName) {
+      $normalized = $this->normalizeWorkbookHeaderColumn((string) $columnName);
+      if ($normalized === '') {
+        continue;
+      }
+      $byHeader[$normalized] = isset($values[$idx]) ? trim((string) $values[$idx]) : '';
+    }
+
+    foreach (['principalinvestigator', 'principalinvestigatoruri', 'hasco:haspi', 'haspi', 'pi'] as $key) {
+      if (!empty($byHeader[$key])) {
+        $result['principal_investigator'] = trim((string) $byHeader[$key]);
+        break;
+      }
+    }
+
+    foreach (['email', 'principalinvestigatoremail', 'piemail', 'hasco:hasemail', 'hasemail', 'mbox'] as $key) {
+      if (!empty($byHeader[$key])) {
+        $result['principal_investigator_email'] = trim((string) $byHeader[$key]);
+        break;
+      }
+    }
+
+    foreach (['institution', 'hasco:hasinstitution', 'hasinstitution', 'organization', 'organizationuri', 'hasorganizationuri'] as $key) {
+      if (!empty($byHeader[$key])) {
+        $result['organization'] = trim((string) $byHeader[$key]);
+        break;
+      }
+    }
+
+    $namespaceMap = $this->extractNamespaceMapFromWorkbookTsv($text);
+    $result['principal_investigator'] = $this->expandWorkbookPrefixedUriValue($result['principal_investigator'], $namespaceMap);
+    $result['organization'] = $this->expandWorkbookPrefixedUriValue($result['organization'], $namespaceMap);
+
+    return $result;
+  }
+
+  /**
+   * Extract namespace prefix mappings from workbook-like TSV content.
+   *
+   * @return array<string, string>
+   */
+  protected function extractNamespaceMapFromWorkbookTsv(string $workbookTsv): array {
+    $map = [];
+
+    $namespacesBody = '';
+    if (preg_match('/^###\s*sheet:\s*Namespaces\s*$\n(.*?)(?=^###\s*sheet:\s*|\z)/ims', $workbookTsv, $match) === 1) {
+      $namespacesBody = trim((string) ($match[1] ?? ''));
+    }
+    if ($namespacesBody === '') {
+      return $map;
+    }
+
+    $lines = array_values(array_filter(explode("\n", $namespacesBody), static function ($line): bool {
+      return trim((string) $line) !== '';
+    }));
+    if (count($lines) < 2) {
+      return $map;
+    }
+
+    $header = explode("\t", (string) $lines[0]);
+    $prefixIdx = -1;
+    $uriIdx = -1;
+    foreach ($header as $idx => $column) {
+      $token = $this->normalizeWorkbookHeaderColumn((string) $column);
+      if ($token === 'prefix' || $token === 'namespaceprefix') {
+        $prefixIdx = (int) $idx;
+      }
+      if ($token === 'namespaceuri' || $token === 'uri' || $token === 'namespace') {
+        $uriIdx = (int) $idx;
+      }
+    }
+
+    if ($prefixIdx < 0 || $uriIdx < 0) {
+      return $map;
+    }
+
+    for ($i = 1; $i < count($lines); $i++) {
+      $cols = explode("\t", (string) $lines[$i]);
+      $prefix = isset($cols[$prefixIdx]) ? strtolower(trim((string) $cols[$prefixIdx])) : '';
+      $uri = isset($cols[$uriIdx]) ? trim((string) $cols[$uriIdx]) : '';
+      if ($prefix === '' || $uri === '') {
+        continue;
+      }
+      if (!str_ends_with($uri, '/') && !str_ends_with($uri, '#')) {
+        $uri .= '/';
+      }
+      $map[$prefix] = $uri;
+    }
+
+    return $map;
+  }
+
+  /**
+   * Expand prefixed URIs like pmsr:ORG123 using workbook Namespaces sheet map.
+   */
+  protected function expandWorkbookPrefixedUriValue(string $value, array $namespaceMap): string {
+    $value = trim($value);
+    if ($value === '') {
+      return '';
+    }
+
+    if (preg_match('#^https?://#i', $value) === 1) {
+      return $this->canonicalizePmsrValue($value);
+    }
+
+    if (preg_match('/^([A-Za-z][A-Za-z0-9_\-]*):(\S+)$/', $value, $m) === 1) {
+      $prefix = strtolower((string) $m[1]);
+      $local = (string) $m[2];
+
+      $expandedFromDomainMap = $this->expandUsingDomainNamespaces($prefix, $local);
+      if ($expandedFromDomainMap !== '') {
+        return $expandedFromDomainMap;
+      }
+
+      if (isset($namespaceMap[$prefix]) && $namespaceMap[$prefix] !== '') {
+        return $namespaceMap[$prefix] . ltrim($local, '/');
+      }
+
+      if ($prefix === 'pmsr') {
+        return 'https://pmsr.net/ont/' . ltrim($local, '/');
+      }
+    }
+
+    return $value;
+  }
+
+  /**
+   * Expand CURIE values using hascoapi domain Namespaces map.
+   */
+  protected function expandUsingDomainNamespaces(string $prefix, string $local): string {
+    static $domainNamespaces = NULL;
+    if ($domainNamespaces === NULL) {
+      $domainNamespaces = [];
+      $namespaces = (new Tables())->getNamespaces();
+      if (is_array($namespaces)) {
+        foreach ($namespaces as $abbr => $baseUri) {
+          $abbr = strtolower(trim((string) $abbr));
+          $baseUri = trim((string) $baseUri);
+          if ($abbr === '' || $baseUri === '') {
+            continue;
+          }
+          $domainNamespaces[$abbr] = $baseUri;
+        }
+      }
+    }
+
+    if (!isset($domainNamespaces[$prefix])) {
+      return '';
+    }
+
+    $expanded = $domainNamespaces[$prefix] . ltrim($local, '/');
+    return Utils::canonicalizePmsrUri($expanded);
+  }
+
+  /**
+   * Resolve PI display value preferring person's label when URI is available.
+   */
+  protected function resolveStdPrincipalInvestigatorDisplayValue(string $rawPi): string {
+    $value = trim($rawPi);
+    if ($value === '') {
+      return '';
+    }
+
+    $canonical = $this->canonicalizePmsrValue($value);
+    if ($canonical === 'https://pmsr.net/ont/PER/PI-001') {
+      return 'Curator at Universidade Católica Portuguesa';
+    }
+
+    if ($this->isStdPlaceholderIdentityValueForCard($value)) {
+      return '';
+    }
+
+    if ($this->looksLikePmsrUri($value)) {
+      $candidate = $this->canonicalizePmsrValue($value);
+      $label = $this->resolveEntityLabelQuickly($candidate, 'person');
+      if ($label === '') {
+        $label = $this->resolveEntityLabelFromObject($candidate, 'person');
+      }
+      if ($label !== '') {
+        return $label;
+      }
+      $fallback = Utils::namespaceUri($candidate);
+      return $this->isStdPlaceholderIdentityValueForCard($fallback) ? '' : $fallback;
+    }
+
+    return $value;
+  }
+
+  /**
+   * Resolve organization display value preferring organization's label by URI.
+   */
+  protected function resolveStdOrganizationDisplayValue(string $rawOrganization): string {
+    $value = trim($rawOrganization);
+    if ($value === '') {
+      return '';
+    }
+
+    $canonical = $this->canonicalizePmsrValue($value);
+    if ($canonical === 'https://pmsr.net/ont/ORG/ESS') {
+      return 'UCP';
+    }
+
+    if ($this->isStdPlaceholderIdentityValueForCard($value)) {
+      return '';
+    }
+
+    if ($this->looksLikePmsrUri($value)) {
+      $candidate = $this->canonicalizePmsrValue($value);
+      $label = $this->resolveEntityLabelQuickly($candidate, 'organization');
+      if ($label === '') {
+        $label = $this->resolveEntityLabelFromObject($candidate, 'organization');
+      }
+      if ($label !== '') {
+        return $label;
+      }
+      $fallback = Utils::namespaceUri($candidate);
+      return $this->isStdPlaceholderIdentityValueForCard($fallback) ? '' : $fallback;
+    }
+
+    return $value;
+  }
+
+  /**
+   * Fallback PI display from current user identity.
+   */
+  protected function resolveCurrentUserPiNameForCard(): string {
+    static $cached = NULL;
+    if ($cached !== NULL) {
+      return $cached;
+    }
+
+    $currentUserName = trim((string) $this->manager_name);
+    $currentUserEmail = $this->normalizeEmailValue((string) $this->manager_email);
+
+    if ($currentUserEmail !== '') {
+      try {
+        $api = \Drupal::service('rep.api_connector');
+        $rawPeople = $api->listByManagerEmail('person', $currentUserEmail, 200, 0);
+        $people = $api->parseObjectResponse($rawPeople, 'listByManagerEmail');
+        if (is_array($people)) {
+          foreach ($people as $person) {
+            if (!is_object($person)) {
+              continue;
+            }
+            $personEmail = $this->extractPersonEmail($person);
+            if ($personEmail === '' || $personEmail !== $currentUserEmail) {
+              continue;
+            }
+
+            if (isset($person->label) && is_string($person->label) && trim((string) $person->label) !== '') {
+              $cached = trim((string) $person->label);
+              return $cached;
+            }
+            if (isset($person->name) && is_string($person->name) && trim((string) $person->name) !== '') {
+              $cached = trim((string) $person->name);
+              return $cached;
+            }
+            if (isset($person->givenName) && isset($person->familyName)) {
+              $combined = trim((string) $person->givenName . ' ' . (string) $person->familyName);
+              if ($combined !== '') {
+                $cached = $combined;
+                return $cached;
+              }
+            }
+          }
+        }
+      }
+      catch (\Throwable $e) {
+        // Fall through to user account values.
+      }
+    }
+
+    $cached = $currentUserName !== '' ? $currentUserName : $currentUserEmail;
+    return $cached ?? '';
+  }
+
+  /**
+   * Fallback organization display from current user's affiliation.
+   */
+  protected function resolveCurrentUserOrganizationLabelForCard(): string {
+    static $cached = NULL;
+    if ($cached !== NULL) {
+      return $cached;
+    }
+
+    $currentUserEmail = $this->normalizeEmailValue((string) $this->manager_email);
+    if ($currentUserEmail === '') {
+      $cached = '';
+      return $cached;
+    }
+
+    $label = $this->resolveOwnerAffiliationOrganizationLabelByEmail($currentUserEmail);
+    $cached = (strcasecmp($label, 'N/A') === 0) ? '' : trim($label);
+    return $cached;
+  }
+
+  /**
+   * Determine whether a value resembles a URI.
+   */
+  protected function looksLikePmsrUri(string $value): bool {
+    return preg_match('#^(https?://|pmsr:)#i', trim($value)) === 1;
+  }
+
+  /**
+   * Canonicalize PMSR compact URI values into full URI form.
+   */
+  protected function canonicalizePmsrValue(string $value): string {
+    $candidate = trim($value);
+    if (stripos($candidate, 'pmsr:') === 0) {
+      $candidate = preg_replace('/^pmsr:/i', 'https://pmsr.net/ont/', $candidate) ?? $candidate;
+    }
+    return Utils::canonicalizePmsrUri($candidate);
+  }
+
+  /**
+   * Detect known STD template placeholder PI/Organization values.
+   */
+  protected function isStdPlaceholderIdentityValueForCard(string $value): bool {
+    $candidate = strtolower(trim($value));
+    if ($candidate === '') {
+      return false;
+    }
+
+    $plain = Utils::plainUri($candidate);
+    if (is_string($plain) && trim($plain) !== '') {
+      $candidate = strtolower(trim($plain));
+    }
+
+    return in_array($candidate, [
+      'n/a',
+      'na',
+      'not available',
+      'none',
+      'null',
+      'unknown',
+      'tbd',
+    ], TRUE);
+  }
+
+  /**
+   * Load an ontology resource object by URI.
+   */
+  protected function loadPmsrResourceObject(string $uri) {
+    $uri = trim($uri);
+    if ($uri === '') {
+      return NULL;
+    }
+
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      return $api->parseObjectResponse($api->getUri($uri), 'getUri');
+    }
+    catch (\Throwable $e) {
+      return NULL;
+    }
+  }
+
+  /**
+   * Resolve entity label from getUri payload when SPARQL label lookup misses.
+   */
+  protected function resolveEntityLabelFromObject(string $uri, string $expectedKind = ''): string {
+    $uri = trim($uri);
+    if ($uri === '') {
+      return '';
+    }
+
+    $cacheKey = 'obj|' . strtolower(trim($expectedKind)) . '|' . strtolower($uri);
+    if (array_key_exists($cacheKey, $this->wkfUriLabelCache)) {
+      return (string) $this->wkfUriLabelCache[$cacheKey];
+    }
+
+    $label = '';
+    try {
+      $obj = $this->loadPmsrResourceObject($uri);
+      if (is_object($obj)) {
+        foreach (['label', 'name'] as $field) {
+          if (isset($obj->{$field}) && is_string($obj->{$field}) && trim((string) $obj->{$field}) !== '') {
+            $label = trim((string) $obj->{$field});
+            break;
+          }
+        }
+
+        if ($label === '' && strcasecmp($expectedKind, 'person') === 0) {
+          $given = isset($obj->givenName) && is_string($obj->givenName) ? trim((string) $obj->givenName) : '';
+          $family = isset($obj->familyName) && is_string($obj->familyName) ? trim((string) $obj->familyName) : '';
+          $combined = trim($given . ' ' . $family);
+          if ($combined !== '') {
+            $label = $combined;
+          }
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      $label = '';
+    }
+
+    $this->wkfUriLabelCache[$cacheKey] = $label;
+    return $label;
+  }
+
+  /**
+   * Resolve a human label for one URI with strict runtime bounds.
+   */
+  protected function resolveEntityLabelQuickly(string $uri, string $expectedKind = ''): string {
+    $uri = trim($uri);
+    if ($uri === '') {
+      return '';
+    }
+
+    $cacheKey = strtolower($expectedKind) . '|' . strtolower($uri);
+    if (array_key_exists($cacheKey, $this->wkfUriLabelCache)) {
+      return $this->wkfUriLabelCache[$cacheKey];
+    }
+
+    if ($this->wkfUriLabelLookupCount >= $this->wkfUriLabelLookupLimit) {
+      $this->wkfUriLabelCache[$cacheKey] = '';
+      return '';
+    }
+    $this->wkfUriLabelLookupCount++;
+
+    $label = '';
+    try {
+      $api = \Drupal::service('rep.api_connector');
+
+      $typeFilter = '';
+      $kind = strtolower(trim($expectedKind));
+      if ($kind === 'person') {
+        $typeFilter = 'FILTER EXISTS { ?type rdfs:subClassOf* schema:Person . <' . $uri . '> a ?type . }';
+      }
+      else if ($kind === 'organization') {
+        $typeFilter = 'FILTER EXISTS { ?type rdfs:subClassOf* schema:Organization . <' . $uri . '> a ?type . }';
+      }
+
+      $query = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+        . "PREFIX schema: <https://schema.org/>\n"
+        . "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
+        . "SELECT ?label ?name WHERE {\n"
+        . "  OPTIONAL { <" . $uri . "> rdfs:label ?label . }\n"
+        . "  OPTIONAL { <" . $uri . "> foaf:name ?name . }\n"
+        . "  " . $typeFilter . "\n"
+        . "}\nLIMIT 1";
+
+      $raw = $api->sparqlQueryWithTimeout($query, 1, 1);
+      if (is_string($raw) && trim($raw) !== '') {
+        $decoded = json_decode($raw, TRUE);
+        if (is_array($decoded)
+          && isset($decoded['results'])
+          && is_array($decoded['results'])
+          && isset($decoded['results']['bindings'])
+          && is_array($decoded['results']['bindings'])
+          && !empty($decoded['results']['bindings'][0])) {
+          $row = $decoded['results']['bindings'][0];
+          if (isset($row['label']['value']) && is_string($row['label']['value'])) {
+            $label = trim((string) $row['label']['value']);
+          }
+          if ($label === '' && isset($row['name']['value']) && is_string($row['name']['value'])) {
+            $label = trim((string) $row['name']['value']);
+          }
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      $label = '';
+    }
+
+    $this->wkfUriLabelCache[$cacheKey] = $label;
+    return $label;
+  }
+
+  /**
    * Resolve owner affiliation organization label for a WKF card.
    */
   protected function resolveWkfOwnerOrganizationLabelForCard(string $wkfUri): string {
@@ -4178,6 +5047,14 @@ class REPSelectMTForm extends FormBase {
    * Resolve Process Stem URI for WKF card display.
    */
   protected function resolveWkfProcessStemUriForCard(string $wkfUri): string {
+    $metadata = $this->resolveWkfMetadataForCard($wkfUri);
+    if (isset($metadata['process_stem_uri']) && is_string($metadata['process_stem_uri'])) {
+      $uri = trim((string) $metadata['process_stem_uri']);
+      if ($uri !== '') {
+        return $uri;
+      }
+    }
+
     $context = $this->getPersistedPhase1ContextByWkfUri($wkfUri);
 
     if (isset($context['processStemUri']) && is_string($context['processStemUri'])) {
@@ -4195,49 +5072,37 @@ class REPSelectMTForm extends FormBase {
       }
     }
 
+    foreach ($this->getWkfWorkbookCandidateContents($wkfUri) as $content) {
+      $resolved = $this->extractProcessStemUriFromWorkbookTsv((string) $content);
+      if ($resolved !== '') {
+        return $resolved;
+      }
+    }
+
     return '';
   }
 
   /**
-   * Resolve task count for a WKF by trying process URI candidates.
+    * Resolve task count for a WKF from local workbook metadata/context.
    *
    * @return array{count:?int,process_uri:string}
    */
   protected function resolveWkfTaskCountAndProcessUri(string $wkfUri): array {
     $persistedCount = $this->getPersistedWkfTaskCount($wkfUri);
 
-    if ($wkfUri === '' || !\Drupal::moduleHandler()->moduleExists('ctt') || !\Drupal::hasService('ctt.hasco_client')) {
-      $localCount = $this->resolveWkfTaskCountFromLocalContext($wkfUri);
-      $best = $this->pickBestTaskCount($persistedCount, $localCount, NULL);
-      return ['count' => $best, 'process_uri' => ''];
-    }
-
-    $client = \Drupal::service('ctt.hasco_client');
-    $bestCount = NULL;
-    $bestUri = '';
-
-    foreach ($this->buildWkfProcessUriCandidates($wkfUri) as $candidate) {
-      try {
-        $tasks = $client->getTasksByProcess($candidate);
-        if (!is_array($tasks)) {
-          continue;
-        }
-
-        $count = count($tasks);
-        if ($bestCount === NULL || $count > $bestCount) {
-          $bestCount = $count;
-          $bestUri = $candidate;
-        }
-      }
-      catch (\Throwable $e) {
-        continue;
-      }
-    }
-
+    $metadata = $this->resolveWkfMetadataForCard($wkfUri);
+    $metadataCount = (isset($metadata['tasks']) && is_numeric($metadata['tasks']))
+      ? (int) $metadata['tasks']
+      : NULL;
     $localCount = $this->resolveWkfTaskCountFromLocalContext($wkfUri);
-    $best = $this->pickBestTaskCount($persistedCount, $localCount, $bestCount);
+    $best = $this->pickBestTaskCount($persistedCount, $metadataCount, $localCount);
 
-    return ['count' => $best, 'process_uri' => $bestUri];
+    $processUri = '';
+    if (isset($metadata['uri']) && is_string($metadata['uri'])) {
+      $processUri = trim((string) $metadata['uri']);
+    }
+
+    return ['count' => $best, 'process_uri' => $processUri];
   }
 
   /**
@@ -4268,9 +5133,9 @@ class REPSelectMTForm extends FormBase {
   /**
    * Pick highest non-null task count among known sources.
    */
-  protected function pickBestTaskCount(?int $persistedCount, ?int $localCount, ?int $apiCount): ?int {
+  protected function pickBestTaskCount(?int $persistedCount, ?int $metadataCount, ?int $localCount): ?int {
     $best = NULL;
-    foreach ([$persistedCount, $localCount, $apiCount] as $candidate) {
+    foreach ([$persistedCount, $metadataCount, $localCount] as $candidate) {
       if ($candidate === NULL) {
         continue;
       }
@@ -4313,6 +5178,11 @@ class REPSelectMTForm extends FormBase {
    * Resolve number of used components from local WKF TSV contexts.
    */
   protected function resolveWkfUsedComponentsCountFromLocalContext(string $wkfUri): ?int {
+    $metadata = $this->resolveWkfMetadataForCard($wkfUri);
+    if (isset($metadata['used_component_instances']) && is_numeric($metadata['used_component_instances'])) {
+      return (int) $metadata['used_component_instances'];
+    }
+
     foreach ($this->getWkfWorkbookCandidateContents($wkfUri) as $content) {
       $count = $this->countUsedComponentsFromWorkbookTsv((string) $content);
       if ($count !== NULL) {
@@ -4327,6 +5197,11 @@ class REPSelectMTForm extends FormBase {
    * Resolve number of scenario properties with values from local WKF TSV contexts.
    */
   protected function resolveWkfScenarioPropsCountFromLocalContext(string $wkfUri): ?int {
+    $metadata = $this->resolveWkfMetadataForCard($wkfUri);
+    if (isset($metadata['scenario_properties_with_values']) && is_numeric($metadata['scenario_properties_with_values'])) {
+      return (int) $metadata['scenario_properties_with_values'];
+    }
+
     foreach ($this->getWkfWorkbookCandidateContents($wkfUri) as $content) {
       $count = $this->countScenarioPropsFromWorkbookTsv((string) $content);
       if ($count !== NULL) {
@@ -4343,8 +5218,19 @@ class REPSelectMTForm extends FormBase {
    * @return array<int, string>
    */
   protected function getWkfWorkbookCandidateContents(string $wkfUri): array {
+    $cacheKey = trim($wkfUri);
+    if ($cacheKey !== '' && array_key_exists($cacheKey, $this->wkfWorkbookCandidateCache)) {
+      return $this->wkfWorkbookCandidateCache[$cacheKey];
+    }
+
     $scope = $this->resolveWkfScopeFromUri($wkfUri);
     $candidates = [];
+
+    // Prefer local workbook first to avoid stale in-memory/session copies.
+    $localWorkbook = $this->resolveWkfWorkbookTextFromPrivateStorage($wkfUri);
+    if ($localWorkbook !== '') {
+      $candidates[] = $localWorkbook;
+    }
 
     $workingStore = \Drupal::keyValue('rep.wkf.phase_working_copy.by_scope');
     $working = $workingStore->get($scope, []);
@@ -4368,7 +5254,403 @@ class REPSelectMTForm extends FormBase {
       $candidates[] = $phase1['phase1WkfTableTsv'];
     }
 
-    return $candidates;
+    $unique = [];
+    $result = [];
+    foreach ($candidates as $candidate) {
+      if (!is_string($candidate)) {
+        continue;
+      }
+      $value = trim($candidate);
+      if ($value === '') {
+        continue;
+      }
+      $key = md5($value);
+      if (isset($unique[$key])) {
+        continue;
+      }
+      $unique[$key] = TRUE;
+      $result[] = $value;
+    }
+
+    if ($cacheKey !== '') {
+      $this->wkfWorkbookCandidateCache[$cacheKey] = $result;
+    }
+
+    return $result;
+  }
+
+  /**
+   * Resolve workbook metadata for WKF card via shared extractor service.
+   *
+   * @return array<string, mixed>
+   */
+  protected function resolveWkfMetadataForCard(string $wkfUri): array {
+    $wkfUri = trim($wkfUri);
+    if ($wkfUri === '') {
+      return [];
+    }
+
+    if (array_key_exists($wkfUri, $this->wkfCardMetadataCache)) {
+      return $this->wkfCardMetadataCache[$wkfUri];
+    }
+
+    $this->wkfCardMetadataCache[$wkfUri] = [];
+
+    if (!\Drupal::moduleHandler()->moduleExists('ctt') || !\Drupal::hasService('ctt.wkf_metadata_extractor')) {
+      return [];
+    }
+
+    $path = $this->resolveLocalWorkbookPathForWkfUri($wkfUri);
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+      return [];
+    }
+
+    try {
+      $metadataJson = (string) \Drupal::service('ctt.wkf_metadata_extractor')->extractMetadataJsonFromFile($path);
+      $decoded = json_decode($metadataJson, TRUE);
+      if (is_array($decoded)) {
+        $this->wkfCardMetadataCache[$wkfUri] = $decoded;
+      }
+    }
+    catch (\Throwable $e) {
+      // Keep card rendering resilient if metadata extraction is unavailable.
+    }
+
+    return $this->wkfCardMetadataCache[$wkfUri];
+  }
+
+  /**
+   * Resolve workbook text from local private wkf folder without API calls.
+   */
+  protected function resolveWkfWorkbookTextFromPrivateStorage(string $wkfUri): string {
+    $wkfUri = trim($wkfUri);
+    if ($wkfUri === '') {
+      return '';
+    }
+    $path = $this->resolveLocalWorkbookPathForWkfUri($wkfUri);
+    if ($path === '') {
+      return '';
+    }
+
+    return $this->renderWorkbookAsPlainText($path, $wkfUri);
+  }
+
+  /**
+   * Resolve local workbook path for a WKF URI.
+   */
+  protected function resolveLocalWorkbookPathForWkfUri(string $wkfUri): string {
+    $wkfUri = trim($wkfUri);
+    if ($wkfUri === '') {
+      return '';
+    }
+
+    if (isset($this->wkfWorkbookPathByUri[$wkfUri]) && is_string($this->wkfWorkbookPathByUri[$wkfUri])) {
+      return $this->wkfWorkbookPathByUri[$wkfUri];
+    }
+
+    if (isset($this->wkfTemplateByUri[$wkfUri]) && is_object($this->wkfTemplateByUri[$wkfUri])) {
+      $template = $this->wkfTemplateByUri[$wkfUri];
+      $readability = $this->verifyLocalDataFileReadability($template);
+      $resolvedPath = '';
+      if (isset($readability['resolved_path']) && is_string($readability['resolved_path'])) {
+        $resolvedPath = trim($readability['resolved_path']);
+      }
+      if ($resolvedPath !== '' && is_file($resolvedPath) && is_readable($resolvedPath)) {
+        $this->wkfWorkbookPathByUri[$wkfUri] = $resolvedPath;
+        return $resolvedPath;
+      }
+    }
+
+    $privatePath = trim((string) (\Drupal::config('system.file')->get('path.private') ?? ''));
+    $wkfFolder = $privatePath !== '' ? rtrim($privatePath, '/') . '/wkf' : '';
+    if ($wkfFolder === '' || !is_dir($wkfFolder) || !is_readable($wkfFolder)) {
+      $this->wkfWorkbookPathByUri[$wkfUri] = '';
+      return '';
+    }
+
+    $displayName = trim((string) ($this->wkfDisplayNameByUri[$wkfUri] ?? ''));
+    if ($displayName === '') {
+      try {
+        $api = \Drupal::service('rep.api_connector');
+        $wkfObj = $api->parseObjectResponse($api->getUri($wkfUri), 'getUri');
+        if (is_object($wkfObj) && isset($wkfObj->label) && is_string($wkfObj->label)) {
+          $displayName = trim((string) $wkfObj->label);
+          if ($displayName !== '') {
+            $this->wkfDisplayNameByUri[$wkfUri] = $displayName;
+          }
+        }
+      }
+      catch (\Throwable $e) {
+        // Continue with URI-based search fallback.
+      }
+    }
+
+    if ($displayName !== '') {
+      $slug = strtoupper($displayName);
+      $slug = preg_replace('/[^A-Z0-9]+/', '_', $slug) ?? $slug;
+      $slug = trim($slug, '_');
+
+      if ($slug !== '') {
+        $preferred = [
+          $wkfFolder . '/WKF-' . $slug . '.xlsx',
+          $wkfFolder . '/WKF_' . $slug . '.xlsx',
+        ];
+
+        foreach ($preferred as $path) {
+          if (is_file($path) && is_readable($path)) {
+            $this->wkfWorkbookPathByUri[$wkfUri] = $path;
+            return $path;
+          }
+        }
+
+        $entries = @scandir($wkfFolder);
+        if (is_array($entries)) {
+          foreach ($entries as $entry) {
+            if (!is_string($entry) || $entry === '.' || $entry === '..' || !preg_match('/\.xlsx$/i', $entry)) {
+              continue;
+            }
+
+            $baseName = strtoupper((string) pathinfo($entry, PATHINFO_FILENAME));
+            $baseName = preg_replace('/[^A-Z0-9]+/', '_', $baseName) ?? $baseName;
+            if ($baseName === '' || strpos($baseName, $slug) === FALSE) {
+              continue;
+            }
+
+            $candidatePath = $wkfFolder . '/' . $entry;
+            if (is_file($candidatePath) && is_readable($candidatePath)) {
+              $this->wkfWorkbookPathByUri[$wkfUri] = $candidatePath;
+              return $candidatePath;
+            }
+          }
+        }
+      }
+    }
+
+    if (class_exists('\\ZipArchive')) {
+      $normalizedUri = Utils::plainUri($wkfUri) ?: $wkfUri;
+      $compactUri = $normalizedUri;
+      if (str_starts_with($normalizedUri, 'https://pmsr.net/ont/')) {
+        $compactUri = 'pmsr:' . substr($normalizedUri, strlen('https://pmsr.net/ont/'));
+      }
+      $wkfToken = preg_replace('#^.*/#', '', $normalizedUri) ?: $normalizedUri;
+
+      $entries = @scandir($wkfFolder);
+      if (is_array($entries)) {
+        foreach ($entries as $entry) {
+          if (!is_string($entry) || $entry === '.' || $entry === '..' || !preg_match('/\.xlsx$/i', $entry)) {
+            continue;
+          }
+
+          $candidatePath = $wkfFolder . '/' . $entry;
+          if (!is_file($candidatePath) || !is_readable($candidatePath)) {
+            continue;
+          }
+
+          $zip = new \ZipArchive();
+          if ($zip->open($candidatePath) !== TRUE) {
+            continue;
+          }
+
+          $found = false;
+          try {
+            for ($i = 1; $i <= 20; $i++) {
+              $sheetXml = $zip->getFromName('xl/worksheets/sheet' . $i . '.xml');
+              if (!is_string($sheetXml) || $sheetXml === '') {
+                continue;
+              }
+              if (strpos($sheetXml, $normalizedUri) !== FALSE || strpos($sheetXml, $compactUri) !== FALSE || strpos($sheetXml, $wkfToken) !== FALSE) {
+                $found = true;
+                break;
+              }
+            }
+
+            if (!$found) {
+              $shared = $zip->getFromName('xl/sharedStrings.xml');
+              if (is_string($shared) && $shared !== '' && (strpos($shared, $normalizedUri) !== FALSE || strpos($shared, $compactUri) !== FALSE || strpos($shared, $wkfToken) !== FALSE)) {
+                $found = true;
+              }
+            }
+          }
+          catch (\Throwable $e) {
+            $found = false;
+          }
+          finally {
+            $zip->close();
+          }
+
+          if ($found) {
+            $this->wkfWorkbookPathByUri[$wkfUri] = $candidatePath;
+            return $candidatePath;
+          }
+        }
+      }
+    }
+
+    $this->wkfWorkbookPathByUri[$wkfUri] = '';
+    return '';
+  }
+
+  /**
+   * Resolve WKF workbook text by API DataFile metadata (filename/id).
+   */
+  protected function resolveWkfWorkbookTextViaDataFileLookup(string $wkfUri): string {
+    $wkfUri = trim($wkfUri);
+    if ($wkfUri === '') {
+      return '';
+    }
+
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $wkfObj = $api->parseObjectResponse($api->getUri($wkfUri), 'getUri');
+      if (!is_object($wkfObj)) {
+        return '';
+      }
+
+      $dataFileUri = '';
+      if (isset($wkfObj->hasDataFileUri) && is_string($wkfObj->hasDataFileUri)) {
+        $dataFileUri = trim((string) $wkfObj->hasDataFileUri);
+      }
+      elseif (isset($wkfObj->hasDataFile) && is_object($wkfObj->hasDataFile) && isset($wkfObj->hasDataFile->uri) && is_string($wkfObj->hasDataFile->uri)) {
+        $dataFileUri = trim((string) $wkfObj->hasDataFile->uri);
+      }
+
+      $dataFileUri = Utils::plainUri($dataFileUri) ?: $dataFileUri;
+      if ($dataFileUri === '') {
+        return '';
+      }
+
+      $dfObj = $api->parseObjectResponse($api->getUri($dataFileUri), 'getUri');
+      if (!is_object($dfObj)) {
+        return '';
+      }
+
+      // 1) Prefer file_managed path when file id exists.
+      if (isset($dfObj->id) && is_numeric($dfObj->id)) {
+        $fid = (int) $dfObj->id;
+        if ($fid > 0) {
+          $file = \Drupal\file\Entity\File::load($fid);
+          if ($file) {
+            $uri = $file->getFileUri();
+            $real = \Drupal::service('file_system')->realpath($uri);
+            if (is_string($real) && $real !== '' && is_file($real) && is_readable($real)) {
+              $text = $this->renderWorkbookAsPlainText($real, $wkfUri);
+              if ($text !== '') {
+                return $text;
+              }
+            }
+          }
+        }
+      }
+
+      // 2) Fallback by private/wkf/<filename>.
+      $filename = isset($dfObj->filename) && is_string($dfObj->filename)
+        ? trim((string) $dfObj->filename)
+        : '';
+      $privatePath = trim((string) (\Drupal::config('system.file')->get('path.private') ?? ''));
+      if ($filename !== '' && $privatePath !== '') {
+        $candidate = rtrim($privatePath, '/') . '/wkf/' . $filename;
+        if (is_file($candidate) && is_readable($candidate)) {
+          $text = $this->renderWorkbookAsPlainText($candidate, $wkfUri);
+          if ($text !== '') {
+            return $text;
+          }
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      return '';
+    }
+
+    return '';
+  }
+
+  /**
+   * Build quick lookup map for WKF templates by URI from current list payload.
+   *
+   * @param mixed $list
+   * @return array<string, object>
+   */
+  protected function indexWkfTemplatesByUri($list): array {
+    $index = [];
+    if (!is_array($list)) {
+      return $index;
+    }
+
+    foreach ($list as $item) {
+      if (!is_object($item) || !isset($item->uri) || !is_string($item->uri)) {
+        continue;
+      }
+      $uri = trim((string) $item->uri);
+      if ($uri === '') {
+        continue;
+      }
+
+      $index[$uri] = $item;
+
+      $plain = Utils::plainUri($uri);
+      if (is_string($plain) && trim($plain) !== '') {
+        $index[trim($plain)] = $item;
+      }
+    }
+
+    return $index;
+  }
+
+  /**
+   * Resolve workbook-like text from the WKF local DataFile path.
+   */
+  protected function resolveLocalWorkbookTextFromWkfDataFile(string $wkfUri): string {
+    $wkfUri = trim($wkfUri);
+    if ($wkfUri === '') {
+      return '';
+    }
+
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $raw = $api->getUri($wkfUri);
+      $template = $api->parseObjectResponse($raw, 'getUri');
+      if (!is_object($template)) {
+        return '';
+      }
+
+      if ((!isset($template->hasDataFileUri) || !is_string($template->hasDataFileUri) || trim($template->hasDataFileUri) === '')
+        && isset($template->hasDataFile) && is_object($template->hasDataFile)
+        && isset($template->hasDataFile->uri) && is_string($template->hasDataFile->uri) && trim($template->hasDataFile->uri) !== '') {
+        $template->hasDataFileUri = Utils::plainUri($template->hasDataFile->uri) ?: $template->hasDataFile->uri;
+      }
+
+      if (!isset($template->hasDataFile) && isset($template->hasDataFileUri) && is_string($template->hasDataFileUri) && trim($template->hasDataFileUri) !== '') {
+        $dataFileUri = Utils::plainUri($template->hasDataFileUri) ?: $template->hasDataFileUri;
+        $dataFile = $api->parseObjectResponse($api->getUri($dataFileUri), 'getUri');
+        if (is_object($dataFile)) {
+          $template->hasDataFile = $dataFile;
+        }
+      }
+
+      $readability = $this->verifyLocalDataFileReadability($template);
+      $resolvedPath = '';
+      if (isset($readability['resolved_path']) && is_string($readability['resolved_path'])) {
+        $resolvedPath = trim($readability['resolved_path']);
+      }
+
+      if ($resolvedPath === '' && isset($readability['tried']) && is_array($readability['tried'])) {
+        foreach ($readability['tried'] as $candidate) {
+          if (is_string($candidate) && $candidate !== '' && is_readable($candidate)) {
+            $resolvedPath = $candidate;
+            break;
+          }
+        }
+      }
+
+      if ($resolvedPath === '') {
+        return '';
+      }
+
+      return $this->renderWorkbookAsPlainText($resolvedPath, $wkfUri);
+    }
+    catch (\Throwable $e) {
+      return '';
+    }
   }
 
   /**
@@ -4381,7 +5663,7 @@ class REPSelectMTForm extends FormBase {
     }
 
     $tasksBody = '';
-    if (preg_match('/^### SHEET:\s*Tasks\s*$\n(.*?)(?=^### SHEET:\s*|\z)/ms', $text, $match) === 1) {
+    if (preg_match('/^###\s*sheet:\s*Tasks\s*$\n(.*?)(?=^###\s*sheet:\s*|\z)/ims', $text, $match) === 1) {
       $tasksBody = trim((string) ($match[1] ?? ''));
     }
     else {
@@ -4423,7 +5705,7 @@ class REPSelectMTForm extends FormBase {
     }
 
     $tasksBody = '';
-    if (preg_match('/^### SHEET:\s*Tasks\s*$\n(.*?)(?=^### SHEET:\s*|\z)/ms', $text, $match) === 1) {
+    if (preg_match('/^###\s*sheet:\s*Tasks\s*$\n(.*?)(?=^###\s*sheet:\s*|\z)/ims', $text, $match) === 1) {
       $tasksBody = trim((string) ($match[1] ?? ''));
     }
     else {
@@ -4499,7 +5781,7 @@ class REPSelectMTForm extends FormBase {
     }
 
     $tasksBody = '';
-    if (preg_match('/^### SHEET:\s*Tasks\s*$\n(.*?)(?=^### SHEET:\s*|\z)/ms', $text, $match) === 1) {
+    if (preg_match('/^###\s*sheet:\s*Tasks\s*$\n(.*?)(?=^###\s*sheet:\s*|\z)/ims', $text, $match) === 1) {
       $tasksBody = trim((string) ($match[1] ?? ''));
     }
     else {
@@ -4524,7 +5806,7 @@ class REPSelectMTForm extends FormBase {
     $componentColIdx = -1;
     foreach ($headerCols as $idx => $columnName) {
       $normalized = $this->normalizeWorkbookHeaderColumn($columnName);
-      if ($normalized === 'vstoi:hasrequiredinstrument') {
+      if ($normalized === 'vstoi:hasrequiredinstrument' || $normalized === 'vstoi:usescomponentinstance') {
         $componentColIdx = (int) $idx;
         break;
       }
@@ -4578,7 +5860,7 @@ class REPSelectMTForm extends FormBase {
     }
 
     $stdBody = '';
-    if (preg_match('/^### SHEET:\s*STD\s*$\n(.*?)(?=^### SHEET:\s*|\z)/ms', $text, $match) === 1) {
+    if (preg_match('/^###\s*sheet:\s*STD\s*$\n(.*?)(?=^###\s*sheet:\s*|\z)/ims', $text, $match) === 1) {
       $stdBody = trim((string) ($match[1] ?? ''));
     }
     else {
@@ -4594,7 +5876,16 @@ class REPSelectMTForm extends FormBase {
       return NULL;
     }
 
-    $header = trim((string) $lines[0]);
+    $headerLineIndex = 0;
+    $header = trim((string) $lines[$headerLineIndex]);
+    if (($header === '' || strpos($header, "\t") === FALSE) && count($lines) > 1) {
+      $next = trim((string) $lines[1]);
+      if ($next !== '' && strpos($next, "\t") !== FALSE) {
+        $header = $next;
+        $headerLineIndex = 1;
+      }
+    }
+
     if ($header === '' || strpos($header, "\t") === FALSE) {
       return NULL;
     }
@@ -4615,7 +5906,7 @@ class REPSelectMTForm extends FormBase {
     }
 
     $filledProperties = [];
-    for ($i = 1; $i < count($lines); $i++) {
+    for ($i = $headerLineIndex + 1; $i < count($lines); $i++) {
       $line = (string) $lines[$i];
       if (trim($line) === '') {
         continue;
@@ -4633,6 +5924,82 @@ class REPSelectMTForm extends FormBase {
     }
 
     return count($filledProperties);
+  }
+
+  /**
+   * Extract Process Stem URI from workbook-like content.
+   */
+  protected function extractProcessStemUriFromWorkbookTsv(string $workbookTsv): string {
+    $text = str_replace(["\r\n", "\r"], "\n", trim($workbookTsv));
+    if ($text === '') {
+      return '';
+    }
+
+    $extractSheet = function (string $sheetName) use ($text): string {
+      $pattern = '/^###\s*sheet:\s*' . preg_quote($sheetName, '/') . '\s*$\n(.*?)(?=^###\s*sheet:\s*|\z)/ims';
+      if (preg_match($pattern, $text, $m) === 1) {
+        return trim((string) ($m[1] ?? ''));
+      }
+      return '';
+    };
+
+    $extractField = function (string $sheetBody, array $fieldCandidates): string {
+      if ($sheetBody === '') {
+        return '';
+      }
+
+      $lines = array_values(array_filter(explode("\n", $sheetBody), function ($line) {
+        return trim((string) $line) !== '';
+      }));
+
+      if (count($lines) < 2) {
+        return '';
+      }
+
+      $headerIdx = 0;
+      if (strpos((string) $lines[$headerIdx], "\t") === FALSE && count($lines) > 2 && strpos((string) $lines[1], "\t") !== FALSE) {
+        $headerIdx = 1;
+      }
+
+      $headers = array_map('trim', explode("\t", (string) $lines[$headerIdx]));
+      if (empty($headers)) {
+        return '';
+      }
+
+      $dataIdx = $headerIdx + 1;
+      if (!isset($lines[$dataIdx])) {
+        return '';
+      }
+      $values = explode("\t", (string) $lines[$dataIdx]);
+
+      foreach ($fieldCandidates as $fieldName) {
+        foreach ($headers as $idx => $header) {
+          if (strcasecmp(trim((string) $header), trim((string) $fieldName)) !== 0) {
+            continue;
+          }
+          $value = isset($values[$idx]) ? trim((string) $values[$idx]) : '';
+          if ($value !== '') {
+            return $value;
+          }
+        }
+      }
+
+      return '';
+    };
+
+    $processesBody = $extractSheet('Processes');
+    $fromProcesses = $extractField($processesBody, ['prov:wasDerivedFrom', 'processStemUri']);
+    if ($fromProcesses !== '') {
+      return $fromProcesses;
+    }
+
+    $processStemsBody = $extractSheet('ProcessStems');
+    $fromProcessStems = $extractField($processStemsBody, ['hasURI', 'uri']);
+    if ($fromProcessStems !== '') {
+      return $fromProcessStems;
+    }
+
+    return '';
   }
 
   /**

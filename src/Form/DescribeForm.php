@@ -145,6 +145,23 @@
       $message = "<b>FAILED TO RETRIEVE ELEMENT FROM PROVIDED URI</b>";
     }
 
+    $organizationCuratorMarkup = NULL;
+    if ($this->getElement() != NULL && ((string) ($this->getElement()->hascoTypeUri ?? '') === SCHEMA::ORGANIZATION)) {
+      $orgUri = (string) ($this->getElement()->uri ?? '');
+      if ($orgUri !== '') {
+        $curatorResponse = $api->getCuratorByOrganization($orgUri);
+        $curator = $api->parseObjectResponse($curatorResponse, 'getCuratorByOrganization');
+        if (is_object($curator) && !empty($curator->uri)) {
+          $curatorUri = (string) $curator->uri;
+          $curatorLabel = trim((string) (($curator->label ?? '') !== '' ? $curator->label : (($curator->givenName ?? '') . ' ' . ($curator->familyName ?? ''))));
+          if ($curatorLabel === '') {
+            $curatorLabel = Utils::namespaceUri($curatorUri);
+          }
+          $organizationCuratorMarkup = Utils::describeAnchor($curatorUri, $curatorLabel);
+        }
+      }
+    }
+
     // Instantiate tables
     $tables = new Tables;
 
@@ -241,6 +258,14 @@
           }
         }
       }
+    }
+
+    if ($organizationCuratorMarkup !== NULL) {
+      $form['organization_curator'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t('<b>Curator</b>: @curator<br><br>', ['@curator' => '___CURATOR_ANCHOR___']),
+      ];
+      $form['organization_curator']['#markup'] = str_replace('___CURATOR_ANCHOR___', $organizationCuratorMarkup, $form['organization_curator']['#markup']);
     }
 
 

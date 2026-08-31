@@ -144,6 +144,34 @@ class ListManagerEmailPage {
     }));
   }
 
+  /**
+   * Best-effort WKF recency sort (newest first) using URI numeric suffix.
+   */
+  private static function sortWkfByRecency(array $items): array {
+    usort($items, function ($a, $b) {
+      $uriA = strtolower(trim((string) self::extractField($a, 'uri')));
+      $uriB = strtolower(trim((string) self::extractField($b, 'uri')));
+
+      $idA = 0;
+      $idB = 0;
+      if ($uriA !== '' && preg_match('/(\d+)(?!.*\d)/', $uriA, $mA) === 1) {
+        $idA = (int) $mA[1];
+      }
+      if ($uriB !== '' && preg_match('/(\d+)(?!.*\d)/', $uriB, $mB) === 1) {
+        $idB = (int) $mB[1];
+      }
+
+      if ($idA !== $idB) {
+        return ($idA < $idB) ? 1 : -1;
+      }
+
+      // Deterministic fallback for equal/unknown numeric suffixes.
+      return strcmp($uriB, $uriA);
+    });
+
+    return $items;
+  }
+
   private static function isAllOwnersToken($manageremail): bool {
     $value = strtolower(trim((string) $manageremail));
     return $value === '' || $value === '_' || $value === 'all';
@@ -378,7 +406,16 @@ class ListManagerEmailPage {
       }
     }
 
-    $elements = self::fallbackListByKeyword($api, $listElementType, $isAllOwners ? '_' : $manageremail, '_', FALSE, (int) $pagesize, (int) $offset);
+    if ($isWkf && $isAllOwners) {
+      $bulkSize = max(200, ((int) $pagesize) * 20);
+      $bulk = self::fallbackListByKeyword($api, $listElementType, '_', '_', FALSE, $bulkSize, 0);
+      $bulk = self::filterWkfRecords($bulk);
+      $bulk = self::sortWkfByRecency($bulk);
+      $elements = array_slice($bulk, (int) $offset, max(0, (int) $pagesize));
+    }
+    else {
+      $elements = self::fallbackListByKeyword($api, $listElementType, $isAllOwners ? '_' : $manageremail, '_', FALSE, (int) $pagesize, (int) $offset);
+    }
 
     if ($isWkf) {
       $rawCount = self::countItems($elements);

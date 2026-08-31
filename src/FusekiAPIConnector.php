@@ -1637,6 +1637,17 @@ class FusekiAPIConnector {
   }
 
   /**
+   * Return process task graph payload (flat tasks list with usesComponentInstance).
+   */
+  public function processTasks($processUri) {
+    $endpoint = "/hascoapi/api/process/".rawurlencode($processUri)."/tasks";
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
+  /**
    *    TASKS
    */
 
@@ -2052,6 +2063,15 @@ class FusekiAPIConnector {
     return $this->perform_http_request($method,$api_url.$endpoint,$data);
   }
 
+  public function getCuratorByOrganization($uri) {
+    $endpoint = "/hascoapi/api/organization/curator/".
+      urlencode($uri);
+    $method = "GET";
+    $api_url = $this->getApiUrl();
+    $data = $this->getHeader();
+    return $this->perform_http_request($method,$api_url.$endpoint,$data);
+  }
+
   /**
    *   PERSON
    */
@@ -2271,6 +2291,17 @@ class FusekiAPIConnector {
    */
 
   public function streamByStudyState( $studyuri, $state, $pageSize, $offset) {
+    $studyuri = trim((string) $studyuri);
+    if ($studyuri === '') {
+      return json_encode([
+        'isSuccessful' => false,
+        'error' => [
+          'code' => 'invalid_argument',
+          'message' => 'Missing study URI for streamByStudyState.',
+        ],
+      ]);
+    }
+
     $endpoint = "/hascoapi/api/stream/bystudy/".
       rawurlencode($studyuri)."/".
       rawurlencode($state)."/".
@@ -2283,6 +2314,17 @@ class FusekiAPIConnector {
   }
 
   public function streamSizeByStudyState( $studyuri, $state) {
+    $studyuri = trim((string) $studyuri);
+    if ($studyuri === '') {
+      return json_encode([
+        'isSuccessful' => false,
+        'error' => [
+          'code' => 'invalid_argument',
+          'message' => 'Missing study URI for streamSizeByStudyState.',
+        ],
+      ]);
+    }
+
     $endpoint = "/hascoapi/api/stream/bystudy/total/".
       rawurlencode($studyuri)."/".
       rawurlencode($state);

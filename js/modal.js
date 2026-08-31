@@ -13,7 +13,11 @@
           const fieldId = $(this).data('field-id') || $('#tree-root').data('field-id');
           const forceFreshHierarchy = fieldId === 'phase1ClinicalProcess';
           const elementtype = $(this).data('elementtype');
-          const searchValue = $(this).val();
+          const rawSearchValue = $(this).val();
+          // For Phase I clinical process hierarchy, opening pre-filtered by
+          // the current field value hides sibling branches and looks like a
+          // broken/replaced tree. Open unfiltered instead.
+          const searchValue = fieldId === 'phase1ClinicalProcess' ? '' : rawSearchValue;
 
           $('#tree-root').data('field-id', fieldId);
 
@@ -314,35 +318,17 @@
             .then(function (data) {
               var uri = String((data.node && data.node.uri) || '').trim();
               var label = String((data.node && data.node.label) || nodeName || '').trim();
-              var optionText = label + ' (' + uri + ')';
+              var parentContextUri = parentUri;
+              var parentContextLabel = selectedLabel;
 
-              if ($field.length && $field.is('select')) {
-                var $opt = $field.find('option').filter(function () {
-                  return $(this).val() === uri;
-                }).first();
-
-                if (!$opt.length) {
-                  $opt = $('<option>', { value: uri, text: optionText });
-                  $field.append($opt);
-                } else {
-                  $opt.text(optionText);
-                }
-
-                $field.find('option').prop('selected', false);
-                $opt.prop('selected', true);
-                $field.val(uri).trigger('change').trigger('input');
-              }
-
-              if ($field.length) {
-                $field.data('rep-tree-committed', true);
-              }
-
-              // Update selection context so user can keep creating siblings quickly.
+              // Keep parent selection context so consecutive creates append
+              // siblings under the same parent (instead of nesting under the
+              // just-created child).
               $selectButton
                 .prop('disabled', false)
                 .removeClass('disabled')
-                .data('selected-value', uri)
-                .data('selected-label', label)
+                .data('selected-value', parentContextUri || uri)
+                .data('selected-label', parentContextLabel || selectedLabel || label)
                 .data('field-id', fieldId);
 
               var $tree = $('#tree-root');
@@ -350,7 +336,77 @@
                 var tree = $tree.jstree(true);
                 if (tree) {
                   try {
-                    tree.refresh();
+                    var flat = tree.get_json('#', { flat: true }) || [];
+                    var parentNode = null;
+                    var childNode = null;
+
+                    function nodeUri(node) {
+                      if (!node) {
+                        return '';
+                      }
+                      if (node.original && node.original.uri) {
+                        return String(node.original.uri).trim();
+                      }
+                      if (node.data && node.data.originalUri) {
+                        return String(node.data.originalUri).trim();
+                      }
+                      if (node.data && node.data.realUri) {
+                        return String(node.data.realUri).trim();
+                      }
+                      if (node.uri) {
+                        return String(node.uri).trim();
+                      }
+                      return '';
+                    }
+
+                    flat.forEach(function (n) {
+                      var nUri = nodeUri(n);
+                      if (!nUri) {
+                        return;
+                      }
+                      if (!parentNode && parentContextUri && nUri === parentContextUri) {
+                        parentNode = n;
+                      }
+                      if (!childNode && uri && nUri === uri) {
+                        childNode = n;
+                      }
+                    });
+
+                    if (parentNode && !childNode) {
+                      tree.create_node(parentNode.id, {
+                        text: label,
+                        label: label,
+                        uri: uri,
+                        hasStatus: 'http://hadatac.org/ont/vstoi#Draft',
+                        hasSIRManagerEmail: (drupalSettings.rep_tree && drupalSettings.rep_tree.managerEmail) ? drupalSettings.rep_tree.managerEmail : '',
+                        children: true,
+                        original: {
+                          uri: uri,
+                          label: label,
+                          superUri: parentContextUri,
+                          isCategory: false,
+                          hasStatus: 'http://hadatac.org/ont/vstoi#Draft',
+                          hasSIRManagerEmail: (drupalSettings.rep_tree && drupalSettings.rep_tree.managerEmail) ? drupalSettings.rep_tree.managerEmail : ''
+                        },
+                        data: {
+                          originalLabel: label,
+                          originalPrefixLabel: label,
+                          originalUri: uri,
+                          originalPrefixUri: uri,
+                          realUri: uri,
+                          typeNamespace: '',
+                          comment: '',
+                          hasWebDocument: '',
+                          hasImageUri: ''
+                        }
+                      }, 'last');
+
+                      tree.open_node(parentNode.id);
+                      tree.deselect_all();
+                      tree.select_node(parentNode.id);
+                    } else {
+                      tree.refresh();
+                    }
                   } catch (refreshErr) {
                     // Ignore tree refresh errors.
                   }
@@ -365,6 +421,158 @@
             })
             .finally(function () {
               $createButton.prop('disabled', false).text(defaultButtonText);
+            });
+        });
+    }
+  };
+
+  Drupal.behaviors.repTreeReparentSubNode = {
+    attach: function (context, settings) {
+      var $repairButton = $('#repair-sub-node-btn', context);
+      if (!$repairButton.length) {
+        return;
+      }
+
+      var $status = $('#repair-sub-node-status', context);
+      var defaultButtonText = String($repairButton.text() || 'Repair Parent Link').trim();
+
+      function setStatus(message, kind) {
+        if (!$status.length) {
+          return;
+        }
+        $status.removeClass('text-success text-danger text-muted');
+        if (kind === 'success') {
+          $status.addClass('text-success');
+        } else if (kind === 'error') {
+          $status.addClass('text-danger');
+        } else {
+          $status.addClass('text-muted');
+        }
+        $status.text(String(message || ''));
+      }
+
+      $repairButton
+        .off('click.repTreeReparentSubNode')
+        .on('click.repTreeReparentSubNode', function (e) {
+          e.preventDefault();
+
+          var endpoint = (typeof drupalSettings !== 'undefined' && drupalSettings.rep_tree && drupalSettings.rep_tree.reparentProcessStemEndpoint)
+            ? String(drupalSettings.rep_tree.reparentProcessStemEndpoint)
+            : '/rep/tree/processstem/reparent';
+
+          var $selectButton = $('#select-tree-node');
+          var selectedRaw = String($selectButton.data('selected-value') || '').trim();
+          var match = selectedRaw.match(/\[(https?:\/\/[^\]]+)\]\s*$/);
+          var parentUri = match && match[1] ? String(match[1]).trim() : selectedRaw;
+          if (!parentUri) {
+            setStatus('Select the intended parent node first.', 'error');
+            return;
+          }
+
+          var $childInput = $('#repair-sub-node-uri');
+          var childUri = String($childInput.val() || '').trim();
+          if (!childUri) {
+            setStatus('Enter the existing child URI to repair.', 'error');
+            return;
+          }
+
+          if (childUri === parentUri) {
+            setStatus('Child URI cannot be the same as parent URI.', 'error');
+            return;
+          }
+
+          setStatus('Repairing parent link...', 'info');
+          $repairButton.prop('disabled', true).text('Repairing...');
+
+          fetch(endpoint, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              childUri: childUri,
+              parentUri: parentUri
+            })
+          })
+            .then(function (resp) {
+              return resp.json().catch(function () { return {}; }).then(function (data) {
+                if (!resp.ok || !data || data.success !== true || !data.node || !data.node.uri) {
+                  var msg = data && data.error ? data.error : 'Failed to repair parent link.';
+                  throw new Error(msg);
+                }
+                return data;
+              });
+            })
+            .then(function (data) {
+              var oldParent = String((data.node && data.node.previousSuperUri) || '').trim();
+              if (oldParent) {
+                setStatus('Parent link repaired successfully.', 'success');
+              } else {
+                setStatus('Parent link set successfully.', 'success');
+              }
+
+              var $tree = $('#tree-root');
+              if ($tree.length && $tree.data('jstree')) {
+                var tree = $tree.jstree(true);
+                if (tree) {
+                  try {
+                      var fixedChildUri = String((data.node && data.node.uri) || childUri || '').trim();
+                      var flat = tree.get_json('#', { flat: true }) || [];
+                      var parentNode = null;
+                      var childNode = null;
+
+                      function nodeUri(node) {
+                        if (!node) {
+                          return '';
+                        }
+                        if (node.original && node.original.uri) {
+                          return String(node.original.uri).trim();
+                        }
+                        if (node.data && node.data.originalUri) {
+                          return String(node.data.originalUri).trim();
+                        }
+                        if (node.data && node.data.realUri) {
+                          return String(node.data.realUri).trim();
+                        }
+                        if (node.uri) {
+                          return String(node.uri).trim();
+                        }
+                        return '';
+                      }
+
+                      flat.forEach(function (n) {
+                        var nUri = nodeUri(n);
+                        if (!nUri) {
+                          return;
+                        }
+                        if (!parentNode && nUri === parentUri) {
+                          parentNode = n;
+                        }
+                        if (!childNode && fixedChildUri && nUri === fixedChildUri) {
+                          childNode = n;
+                        }
+                      });
+
+                      if (parentNode && childNode) {
+                        tree.move_node(childNode.id, parentNode.id, 'last');
+                        tree.open_node(parentNode.id);
+                        tree.deselect_all();
+                        tree.select_node(parentNode.id);
+                      } else {
+                        tree.refresh();
+                      }
+                  } catch (refreshErr) {
+                    // Ignore tree refresh errors.
+                  }
+                }
+              }
+            })
+            .catch(function (err) {
+              setStatus('Repair failed: ' + err.message, 'error');
+            })
+            .finally(function () {
+              $repairButton.prop('disabled', false).text(defaultButtonText);
             });
         });
     }

@@ -159,6 +159,143 @@ class TreeController extends ControllerBase {
   }
 
   /**
+   * Repairs a process-stem node by changing only its parent superUri.
+   */
+  public function reparentProcessStemSubNode(Request $request): JsonResponse {
+    $payload = json_decode((string) $request->getContent(), TRUE);
+    if (!is_array($payload)) {
+      $payload = $request->request->all();
+    }
+
+    $childUri = trim((string) ($payload['childUri'] ?? ''));
+    $parentUri = trim((string) ($payload['parentUri'] ?? ''));
+
+    if ($childUri === '' || $parentUri === '') {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => 'Both childUri and parentUri are required.',
+      ], 400);
+    }
+
+    if ($childUri === $parentUri) {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => 'childUri and parentUri cannot be the same URI.',
+      ], 400);
+    }
+
+    $api = \Drupal::service('rep.api_connector');
+    $existing = $api->parseObjectResponse($api->getUri($childUri), 'getUri');
+    if (!is_object($existing)) {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => 'Could not load child node from API using childUri.',
+      ], 404);
+    }
+
+    $existingUri = trim((string) ($existing->uri ?? ''));
+    if ($existingUri === '') {
+      $existingUri = $childUri;
+    }
+
+    $existingLabel = trim((string) ($existing->label ?? ''));
+    if ($existingLabel === '') {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => 'Child node has no label and cannot be safely updated.',
+      ], 409);
+    }
+
+    $previousParentUri = trim((string) ($existing->superUri ?? ''));
+    if ($previousParentUri === $parentUri) {
+      return new JsonResponse([
+        'success' => TRUE,
+        'node' => [
+          'uri' => $existingUri,
+          'label' => $existingLabel,
+          'superUri' => $parentUri,
+          'previousSuperUri' => $previousParentUri,
+        ],
+      ]);
+    }
+
+    $typeUri = trim((string) ($existing->typeUri ?? VSTOI::PROCESS_STEM));
+    if ($typeUri === '') {
+      $typeUri = VSTOI::PROCESS_STEM;
+    }
+
+    $hascoTypeUri = trim((string) ($existing->hascoTypeUri ?? $typeUri));
+    if ($hascoTypeUri === '') {
+      $hascoTypeUri = $typeUri;
+    }
+
+    $currentUserEmail = (string) \Drupal::currentUser()->getEmail();
+    $managerEmail = trim((string) ($existing->hasSIRManagerEmail ?? ''));
+    if ($managerEmail === '') {
+      $managerEmail = $currentUserEmail;
+    }
+
+    $status = trim((string) ($existing->hasStatus ?? VSTOI::DRAFT));
+    if ($status === '') {
+      $status = VSTOI::DRAFT;
+    }
+
+    $comment = trim((string) ($existing->comment ?? ''));
+    if ($comment === '') {
+      $comment = 'Re-parented from Knowledge Graph Hierarchy.';
+    }
+
+    $body = [
+      'uri' => $existingUri,
+      'typeUri' => $typeUri,
+      'hascoTypeUri' => $hascoTypeUri,
+      'label' => $existingLabel,
+      'comment' => $comment,
+      'superUri' => $parentUri,
+      'hasStatus' => $status,
+      'hasSIRManagerEmail' => $managerEmail,
+    ];
+
+    if (isset($existing->namedGraph) && trim((string) $existing->namedGraph) !== '') {
+      $body['namedGraph'] = (string) $existing->namedGraph;
+    }
+    if (isset($existing->hasVersion) && trim((string) $existing->hasVersion) !== '') {
+      $body['hasVersion'] = (string) $existing->hasVersion;
+    }
+
+    $json = json_encode($body);
+    if (!is_string($json) || $json === '') {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => 'Could not serialize process stem repair payload.',
+      ], 500);
+    }
+
+    $updated = $api->parseObjectResponse($api->workflowstemAdd($json), 'workflowstemAdd');
+    if ($updated === NULL) {
+      $updated = $api->parseObjectResponse($api->elementAdd('processstem', $json), 'elementAdd');
+    }
+
+    if ($updated === NULL) {
+      $detail = method_exists($api, 'getErrorMessage') ? trim((string) $api->getErrorMessage()) : '';
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => $detail !== '' ? $detail : 'Failed to re-parent process stem node.',
+      ], 500);
+    }
+
+    return new JsonResponse([
+      'success' => TRUE,
+      'node' => [
+        'uri' => $existingUri,
+        'label' => $existingLabel,
+        'superUri' => $parentUri,
+        'previousSuperUri' => $previousParentUri,
+      ],
+    ]);
+  }
+
+  /**
    * Formats API list payloads to jsTree-compatible selectable leaves.
    */
   private function formatTreeItems(array $elements, $defaultManagerEmail = '') {
@@ -939,9 +1076,13 @@ class TreeController extends ControllerBase {
     // Phase I clinical-process modal expects a grouped hierarchy (not a flat
     // list), so skip this shortcut for that field and let instance hierarchy
     // handling below shape categories/children.
+    $isStdScenarioProcessField = is_string($fieldId)
+      && str_starts_with($fieldId, 'std-filter-process-');
+
     if (in_array($elementtype, ['processstem', 'workflowstem'], true)
       && in_array($nodeUri, [VSTOI::PROCESS_STEM, EntryPoints::CLASS_EP_PMSR], true)
-      && $fieldId !== 'phase1ClinicalProcess') {
+      && $fieldId !== 'phase1ClinicalProcess'
+      && !$isStdScenarioProcessField) {
       $items = $this->getManagerOwnedItems($elementtype);
       if (!empty($items)) {
         return new JsonResponse($items);
@@ -982,11 +1123,13 @@ class TreeController extends ControllerBase {
       && $fieldId === 'phase1ClinicalProcess'
       && in_array($elementtype, ['workflowstem', 'processstem'], true)) {
       $normalizedNodeUri = $this->normalizePmsrOntologyUri((string) $nodeUri);
+      // Keep custom instance hierarchy only at true roots. For intermediate
+      // clinical categories (e.g., SimulationProcessStem), defer to KG
+      // children so newly created process stems append instead of replacing
+      // existing class descendants in the branch view.
       $rootAnchors = [
         EntryPoints::CLASS_EP_PMSR,
         VSTOI::PROCESS_STEM,
-        'https://pmsr.net/ont/SimulationProcessStem',
-        'https://pmsr.net/ont/MedicalSimulationProcessStem',
       ];
       if (!in_array($normalizedNodeUri, $rootAnchors, true)) {
         $useInstanceHierarchy = false;
@@ -1132,6 +1275,54 @@ class TreeController extends ControllerBase {
       $children = [$fallback];
     }
 
+    // For Phase I clinical-process hierarchy, merge KG class-children with
+    // process-stem instance children under the same parent node. This prevents
+    // branch collapse to a single draft instance when one source is partial.
+    if ($fieldId === 'phase1ClinicalProcess'
+      && in_array($elementtype, ['workflowstem', 'processstem'], true)) {
+      $instanceEntryPoint = $elementtype === 'workflowstem'
+        ? EntryPoints::CLASS_EP_PMSR
+        : VSTOI::PROCESS_STEM;
+      $instanceChildren = $this->getInstanceHierarchyItems($nodeUri, $elementtype, $instanceEntryPoint);
+
+      if (is_array($instanceChildren) && !empty($instanceChildren)) {
+        $mergedChildren = [];
+        foreach (array_merge($children, $instanceChildren) as $child) {
+          if (!is_object($child) || empty($child->uri)) {
+            continue;
+          }
+
+          $key = $this->normalizePmsrOntologyUri((string) $child->uri);
+          if ($key === '') {
+            $key = trim((string) $child->uri);
+          }
+          if ($key === '') {
+            continue;
+          }
+
+          if (!isset($mergedChildren[$key])) {
+            $mergedChildren[$key] = $child;
+            continue;
+          }
+
+          $existing = $mergedChildren[$key];
+          if (empty($existing->label) && !empty($child->label)) {
+            $existing->label = $child->label;
+          }
+          if (empty($existing->typeNamespace) && !empty($child->typeNamespace)) {
+            $existing->typeNamespace = $child->typeNamespace;
+          }
+          if (empty($existing->superUri) && !empty($child->superUri)) {
+            $existing->superUri = $child->superUri;
+          }
+          $existing->children = !empty($existing->children) || !empty($child->children);
+          $mergedChildren[$key] = $existing;
+        }
+
+        $children = array_values($mergedChildren);
+      }
+    }
+
     $tables       = new Tables(\Drupal::database());
     $all_mappings = $tables->getAllMappings();
     $mapped_nodes = [];
@@ -1158,7 +1349,7 @@ class TreeController extends ControllerBase {
     usort($items, function($a, $b) {
       return strcasecmp($a->label, $b->label);
     });
-    return new JsonResponse(array_values($pool));
+    return new JsonResponse($items);
   }
 
   public function getNode(Request $request) {

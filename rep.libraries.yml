@@ -26,7 +26,7 @@ scrollable_table:
     theme:
       css/scrollable_table.css: {}
 rep_tree:
-  version: 1.5
+  version: 1.6
   css:
     theme:
       https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css: {}
@@ -36,7 +36,7 @@ rep_tree:
   dependencies:
     - core/jquery
 rep_modal:
-  version: 1.4
+  version: 1.5
   js:
     js/modal.js: {}
   dependencies:

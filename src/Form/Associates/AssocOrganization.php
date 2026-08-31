@@ -300,19 +300,6 @@ class AssocOrganization {
 
         if ($matchesScope) {
           $indexed[(string) $item->uri] = $item;
-          continue;
-        }
-
-        $uri = (string) $item->uri;
-        if (!isset($indexed[$uri])) {
-          $copy = clone $item;
-          $baseLabel = trim((string) ($copy->label ?? ''));
-          if ($baseLabel === '') {
-            $baseLabel = $uri;
-          }
-          $displayPartOf = $partOf !== '' ? $partOf : 'missing';
-          $copy->label = $baseLabel . ' [partOf mismatch: ' . $displayPartOf . ']';
-          $indexed[$uri] = $copy;
         }
       }
 
@@ -501,9 +488,207 @@ class AssocOrganization {
     return '';
   }
 
-  private static function buildPeopleRows(array $items): array {
+  private static function fetchOrganizationCurator($api, string $organizationUri) {
+    $organizationUri = trim($organizationUri);
+    if ($organizationUri === '') {
+      return NULL;
+    }
+
+    $rawCurator = $api->getCuratorByOrganization($organizationUri);
+    $curator = $api->parseObjectResponse($rawCurator, 'getCuratorByOrganization');
+    return is_object($curator) ? $curator : NULL;
+  }
+
+  private static function projectContainsOrganization($project, string $organizationUri): bool {
+    if (!is_object($project)) {
+      return FALSE;
+    }
+
+    $organizationKey = self::normalizeUriKey($organizationUri);
+    if ($organizationKey === '') {
+      return FALSE;
+    }
+
+    $candidates = [];
+
+    if (isset($project->contributorUris) && is_array($project->contributorUris)) {
+      foreach ($project->contributorUris as $contributorUri) {
+        if (is_string($contributorUri)) {
+          $candidates[] = $contributorUri;
+        }
+        elseif (is_object($contributorUri) && !empty($contributorUri->uri)) {
+          $candidates[] = (string) $contributorUri->uri;
+        }
+      }
+    }
+
+    if (isset($project->contributors) && is_array($project->contributors)) {
+      foreach ($project->contributors as $contributor) {
+        if (is_object($contributor) && !empty($contributor->uri)) {
+          $candidates[] = (string) $contributor->uri;
+        }
+        elseif (is_string($contributor)) {
+          $candidates[] = $contributor;
+        }
+      }
+    }
+
+    foreach ($candidates as $candidateUri) {
+      if (self::normalizeUriKey((string) $candidateUri) === $organizationKey) {
+        return TRUE;
+      }
+    }
+
+    return FALSE;
+  }
+
+  private static function listProjectsForOrganization($api, string $organizationUri): array {
+    $organizationUri = trim($organizationUri);
+    if ($organizationUri === '') {
+      return [];
+    }
+
+    $projects = [];
+    $pageSize = self::INSTANCE_FETCH_PAGE_SIZE;
+    $offset = 0;
+
+    // Use direct keyword endpoints to avoid OAuth social-list dependency for
+    // internal organization membership checks.
+    $totalProjects = self::parseTotalValue($api->listSizeByKeyword('project', '_'));
+    $target = ($totalProjects > 0) ? min($totalProjects, self::INSTANCE_SCAN_LIMIT) : self::INSTANCE_FETCH_LIMIT;
+
+    while ($offset < $target) {
+      $chunk = self::parseListBody($api->listByKeyword('project', '_', $pageSize, $offset));
+      if (empty($chunk)) {
+        break;
+      }
+
+      foreach ($chunk as $project) {
+        if (!is_object($project) || empty($project->uri)) {
+          continue;
+        }
+        if (!self::projectContainsOrganization($project, $organizationUri)) {
+          continue;
+        }
+        $projects[(string) $project->uri] = $project;
+      }
+
+      if (count($chunk) < $pageSize) {
+        break;
+      }
+
+      $offset += $pageSize;
+    }
+
+    $items = array_values($projects);
+    usort($items, function ($a, $b) {
+      $labelA = is_object($a) ? (string) ($a->label ?? $a->name ?? $a->uri ?? '') : '';
+      $labelB = is_object($b) ? (string) ($b->label ?? $b->name ?? $b->uri ?? '') : '';
+      return strcasecmp($labelA, $labelB);
+    });
+
+    return $items;
+  }
+
+  private static function appendProjectMembershipSection(array &$form, array $projects): void {
+    $t = \Drupal::service('string_translation');
+    $total = count($projects);
+
+    $form['org_project_membership'] = [
+      '#type' => 'container',
+    ];
+
+    $statusText = $total > 0 ? $t->translate('Yes') : $t->translate('No');
+    $form['org_project_membership']['status'] = [
+      '#type' => 'markup',
+      '#markup' => $t->translate('<b>Belongs to project</b>: @status<br><br>', [
+        '@status' => (string) $statusText,
+      ]),
+    ];
+
+    if ($total <= 0) {
+      return;
+    }
+
+    $form['org_project_membership']['begin'] = [
+      '#type' => 'markup',
+      '#markup' => $t->translate('<b>Projects (total of @total):</b><ul>', [
+        '@total' => (string) $total,
+      ]),
+    ];
+
+    foreach ($projects as $index => $project) {
+      if (!is_object($project) || empty($project->uri)) {
+        continue;
+      }
+
+      $projectUri = (string) $project->uri;
+      $projectLabel = trim((string) ($project->label ?? $project->name ?? ''));
+      if ($projectLabel === '') {
+        $projectLabel = Utils::namespaceUri($projectUri);
+      }
+
+      $form['org_project_membership']['project_' . $index] = [
+        '#type' => 'markup',
+        '#markup' => Markup::create('<li>' . Utils::link($projectLabel, $projectUri) . '</li>'),
+      ];
+    }
+
+    $form['org_project_membership']['end'] = [
+      '#type' => 'markup',
+      '#markup' => $t->translate('</ul><br>'),
+    ];
+  }
+
+  private static function mergeCuratorIntoAffiliations(array $affiliations, $curator): array {
+    if (!is_object($curator)) {
+      return $affiliations;
+    }
+
+    $curatorUri = trim((string) ($curator->uri ?? ''));
+    $curatorEmail = self::extractPersonEmail($curator);
+    $curatorLabel = strtolower(trim(self::extractPersonLabel($curator)));
+
+    if ($curatorUri === '' && $curatorEmail === '' && $curatorLabel === '') {
+      return $affiliations;
+    }
+
+    foreach ($affiliations as $person) {
+      if (!is_object($person)) {
+        continue;
+      }
+
+      $personUri = trim((string) ($person->uri ?? ''));
+      if ($curatorUri !== '' && $personUri === $curatorUri) {
+        return $affiliations;
+      }
+
+      $personEmail = self::extractPersonEmail($person);
+      if ($curatorEmail !== '' && $personEmail !== '' && $personEmail === $curatorEmail) {
+        return $affiliations;
+      }
+
+      $personLabel = strtolower(trim(self::extractPersonLabel($person)));
+      if ($curatorLabel !== '' && $personLabel !== '' && $personLabel === $curatorLabel) {
+        return $affiliations;
+      }
+    }
+
+    $affiliations[] = $curator;
+    usort($affiliations, function ($a, $b) {
+      return strcasecmp(self::extractPersonLabel($a), self::extractPersonLabel($b));
+    });
+
+    return $affiliations;
+  }
+
+  private static function buildPeopleRows(array $items, $curator = NULL): array {
     $rows = [];
     $index = 0;
+    $curatorUri = is_object($curator) ? trim((string) ($curator->uri ?? '')) : '';
+    $curatorEmail = is_object($curator) ? self::extractPersonEmail($curator) : '';
+    $curatorLabel = is_object($curator) ? strtolower(trim(self::extractPersonLabel($curator))) : '';
+    $normalizedCuratorUri = self::normalizeUriKey($curatorUri);
 
     foreach ($items as $person) {
       if (!is_object($person)) {
@@ -511,32 +696,52 @@ class AssocOrganization {
       }
 
       $uri = trim((string) ($person->uri ?? ''));
-      if ($uri === '') {
+      $label = self::extractPersonLabel($person);
+      $name = self::extractPersonName($person);
+      $email = self::extractPersonEmail($person);
+
+      if ($uri === '' && $label === '' && $name === '' && $email === '') {
         continue;
       }
 
-      $label = self::extractPersonLabel($person);
       if ($label === '') {
-        $label = Utils::namespaceUri($uri);
+        $label = ($uri !== '') ? Utils::namespaceUri($uri) : '';
       }
 
-      $name = self::extractPersonName($person);
-      $email = self::extractPersonEmail($person);
-      $rowKey = $uri !== '' ? $uri : ('person_' . $index);
+      $isCurator = 'No';
+      if ($normalizedCuratorUri !== '' && $uri !== '' && self::normalizeUriKey($uri) === $normalizedCuratorUri) {
+        $isCurator = 'Yes';
+      }
+      elseif ($curatorEmail !== '' && $email !== '' && $email === $curatorEmail) {
+        $isCurator = 'Yes';
+      }
+      elseif ($curatorLabel !== '' && $label !== '' && strtolower(trim($label)) === $curatorLabel) {
+        $isCurator = 'Yes';
+      }
+      $rowKey = $uri !== '' ? $uri : ('curator_' . $index);
       $index++;
 
+      $uriCell = $uri !== ''
+        ? Markup::create(Utils::describeAnchor($uri, Utils::namespaceUri($uri)))
+        : Html::escape('-');
+
+      $labelCell = ($uri !== '' && $label !== '')
+        ? Markup::create(Utils::describeAnchor($uri, $label))
+        : Html::escape($label !== '' ? $label : '-');
+
       $rows[$rowKey] = [
-        'person_uri' => Markup::create(Utils::describeAnchor($uri, Utils::namespaceUri($uri))),
-        'person_label' => Markup::create(Utils::describeAnchor($uri, $label)),
+        'person_uri' => $uriCell,
+        'person_label' => $labelCell,
         'person_name' => Html::escape($name),
         'person_email' => Html::escape($email),
+        'person_is_curator' => Html::escape($isCurator),
       ];
     }
 
     return $rows;
   }
 
-  private static function appendPeopleSection(array &$form, string $sectionKey, string $title, array $items): void {
+  private static function appendPeopleSection(array &$form, string $sectionKey, string $title, array $items, $curator = NULL): void {
     if (empty($items)) {
       return;
     }
@@ -544,7 +749,7 @@ class AssocOrganization {
     $t = \Drupal::service('string_translation');
     $searchInputId = $sectionKey . '-search-input';
     $searchWrapId = $sectionKey . '-search-wrap';
-    $rows = self::buildPeopleRows($items);
+    $rows = self::buildPeopleRows($items, $curator);
 
     if (empty($rows)) {
       return;
@@ -591,6 +796,7 @@ class AssocOrganization {
         'person_label' => t('Label'),
         'person_name' => t('Name'),
         'person_email' => t('Email'),
+        'person_is_curator' => t('Is Curator'),
       ],
       '#rows' => $rows,
       '#attributes' => [
@@ -734,14 +940,25 @@ class AssocOrganization {
     /*
       *    ORGANIZATION's PEOPLE
       */
+    $projects = self::listProjectsForOrganization($api, (string) $element->uri);
+    self::appendProjectMembershipSection($form, $projects);
+
     $affiliations = self::listAffiliatedPeople($api, (string) $element->uri);
+    $curator = NULL;
+    if (!empty($projects)) {
+      // Business rule: only enforce curator when organization is part of at least one project.
+      $curator = self::fetchOrganizationCurator($api, (string) $element->uri);
+      $affiliations = self::mergeCuratorIntoAffiliations($affiliations, $curator);
+    }
+
     if (!empty($affiliations)) {
       $form['#attached']['library'][] = 'rep/describe_instance_tables';
       self::appendPeopleSection(
         $form,
         'org_affiliated_people',
         'Affiliated People',
-        $affiliations
+        $affiliations,
+        $curator
       );
     }
     /*
@@ -796,10 +1013,12 @@ class AssocOrganization {
       );
     }
 
-    // ORGANIZATION's platform/laboratory instances should be scoped by hasco:partOf.
+    // ORGANIZATION's platform/laboratory instances should be strictly scoped by hasco:partOf.
     $platformInstances = self::listPlatformInstancesByPartOf($api, (string) $element->uri);
     if (!empty($platformInstances)) {
       $form['#attached']['library'][] = 'rep/describe_instance_tables';
+      $preferredPlatformIsLaboratory = (stripos((string) $preferredPlatform, 'laboratory') !== FALSE);
+
       self::appendInstanceSection(
         $form,
         'org_platform_instances',
@@ -808,20 +1027,18 @@ class AssocOrganization {
         $platformInstances
       );
 
-      $laboratoryInstances = self::filterLaboratoryInstances($platformInstances);
-      if (empty($laboratoryInstances)) {
-        // Fallback: when lab typing metadata is sparse, expose platform instances
-        // under the laboratory section to keep organization associations visible.
-        $laboratoryInstances = $platformInstances;
-      }
-      if (!empty($laboratoryInstances)) {
-        self::appendInstanceSection(
-          $form,
-          'org_laboratory_instances',
-          'platforminstance',
-          'Has Laboratory instances',
-          $laboratoryInstances
-        );
+      // Avoid duplicate sections when preferred platform name is already "Laboratory".
+      if (!$preferredPlatformIsLaboratory) {
+        $laboratoryInstances = self::filterLaboratoryInstances($platformInstances);
+        if (!empty($laboratoryInstances)) {
+          self::appendInstanceSection(
+            $form,
+            'org_laboratory_instances',
+            'platforminstance',
+            'Has Laboratory instances',
+            $laboratoryInstances
+          );
+        }
       }
     }
 

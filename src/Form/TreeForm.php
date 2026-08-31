@@ -447,6 +447,7 @@ class TreeForm extends FormBase {
     $isProcessStemHierarchy = in_array(strtolower((string) $firstType), ['workflowstem', 'processstem'], TRUE);
     if ($isProcessStemHierarchy) {
       $form['#attached']['drupalSettings']['rep_tree']['createProcessStemEndpoint'] = Url::fromRoute('rep.tree_create_processstem_subnode')->toString();
+      $form['#attached']['drupalSettings']['rep_tree']['reparentProcessStemEndpoint'] = Url::fromRoute('rep.tree_reparent_processstem_subnode')->toString();
     }
 
     if ($mode == 'browse')
@@ -656,6 +657,37 @@ class TreeForm extends FormBase {
               'placeholder' => $this->t('Enter process stem name'),
               'button_label' => $this->t('Create Sub-Node'),
               'helper_text' => $this->t('Creates a child node under the currently selected process stem.'),
+            ],
+          ];
+
+          $form['repair_sub_node'] = [
+            '#type' => 'inline_template',
+            '#template' => '
+              <div class="mt-1 mb-3">
+                <label for="repair-sub-node-uri" class="form-label mb-1">{{ field_label }}</label>
+                <div class="input-group input-group-sm">
+                  <input type="text"
+                         id="repair-sub-node-uri"
+                         class="form-control"
+                         placeholder="{{ placeholder }}"
+                         aria-label="{{ field_label }}" />
+                  <button type="button"
+                          id="repair-sub-node-btn"
+                          class="btn btn-outline-secondary"
+                          data-field-id="{{ field_id }}">
+                    {{ button_label }}
+                  </button>
+                </div>
+                <small class="text-muted d-block mt-1">{{ helper_text }}</small>
+                <div id="repair-sub-node-status" class="small mt-1" aria-live="polite"></div>
+              </div>',
+            '#context' => [
+              'field_id' => 
+                \Drupal::request()->query->get('field_id'),
+              'field_label' => $this->t('Existing child URI to re-parent'),
+              'placeholder' => $this->t('Paste existing process stem URI'),
+              'button_label' => $this->t('Repair Parent Link'),
+              'helper_text' => $this->t('Select the intended parent in the tree, then repair an already created child URI.'),
             ],
           ];
         }

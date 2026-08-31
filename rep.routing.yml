@@ -200,6 +200,16 @@ rep.tree_create_processstem_subnode:
   options:
     no_cache: 'TRUE'
 
+rep.tree_reparent_processstem_subnode:
+  path: '/rep/tree/processstem/reparent'
+  defaults:
+    _controller: '\Drupal\rep\Controller\TreeController::reparentProcessStemSubNode'
+    _title: 'Re-parent Process Stem Sub-Node'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: 'TRUE'
+
 rep.webdocdownload:
   path: '/rep/webdocdownload/{instrumenturi}'
   defaults:
@@ -209,6 +219,16 @@ rep.webdocdownload:
     _permission: 'access content'
 
 # MT CRUD options
+
+rep.upload_wkf:
+  path: 'rep/manage/updatewkf'
+  defaults:
+    _form: '\Drupal\rep\Form\UploadWKFForm'
+  requirements:
+    _permission: 'access content'
+    _custom_access_check: 'TRUE'
+  options:
+    no_cache: 'TRUE'
 
 rep.add_mt:
   path: 'rep/manage/addmt/{elementtype}/{studyuri}/{fixstd}'
