@@ -1015,7 +1015,9 @@
               data: {
                 keyword: searchTerm,
                 superuri: drupalSettings.rep_tree.superclass,
-                typeNameSpace: searchTerm
+                typeNameSpace: searchTerm,
+                elementtype: drupalSettings.rep_tree.elementType,
+                field_id: getTreeFieldId()
               },
               dataType: 'json',
               success: function (data) {

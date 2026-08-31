@@ -1374,12 +1374,67 @@ class TreeController extends ControllerBase {
 
     $superUri = $request->query->get('superuri');
     $keyword = $request->query->get('keyword');
+    $elementtype = strtolower(trim((string) $request->query->get('elementtype', '')));
 
     $data = $api->parseObjectResponse($api->getSubclassesKeyword($superUri, $keyword),'getSubclassesKeyword');
 
     // Validate and format the data
     if (!is_array($data)) {
       $data = [];
+    }
+
+    // Searching in the "Available Simulator Graph Hierarchy" should discover
+    // ontology classes and instrument definitions, but not instrument
+    // instances.
+    if ($elementtype === 'instrument') {
+      $keywordText = trim((string) $keyword);
+      if ($keywordText !== '') {
+        $instrumentMatches = $api->parseObjectResponse(
+          $api->listByKeyword('instrument', $keywordText, 50, 0),
+          'listByKeyword'
+        );
+        if (!is_array($instrumentMatches)) {
+          $instrumentMatches = [];
+        }
+
+        $mergedByUri = [];
+        foreach ($data as $item) {
+          if (!is_object($item) || empty($item->uri)) {
+            continue;
+          }
+          $mergedByUri[(string) $item->uri] = $item;
+        }
+
+        $appendMatches = function (array $items) use (&$mergedByUri): void {
+          foreach ($items as $item) {
+            if (!is_object($item)) {
+              continue;
+            }
+
+            $uri = trim((string) ($item->uri ?? ''));
+            if ($uri === '') {
+              continue;
+            }
+
+            $label = trim((string) ($item->label ?? ''));
+            if ($label === '') {
+              $label = $uri;
+            }
+
+            $mergedByUri[$uri] = (object) [
+              'uri' => $uri,
+              'label' => $label,
+              'superUri' => (string) ($item->superUri ?? ''),
+              'typeNamespace' => (string) ($item->typeNamespace ?? ''),
+              'nodeId' => $uri,
+            ];
+          }
+        };
+
+        $appendMatches($instrumentMatches);
+
+        $data = array_values($mergedByUri);
+      }
     }
 
     // Return a JSON response
