@@ -246,7 +246,56 @@
       }
 
       var $status = $('#create-sub-node-status', context);
+      var $parentLabel = $('#create-sub-node-parent-label', context);
+      var $parentUri = $('#create-sub-node-parent-uri', context);
+      var $selectSuperNodeButton = $('#select-super-node-btn', context);
+      var $nameInput = $('#create-sub-node-name', context);
       var defaultButtonText = String($createButton.text() || 'Create Sub-Node').trim();
+
+      function extractUriFromSelection(raw) {
+        raw = String(raw || '').trim();
+        var match = raw.match(/\[(https?:\/\/[^\]]+)\]\s*$/);
+        return match && match[1] ? String(match[1]).trim() : raw;
+      }
+
+      function updateSelectedParentFields(raw, label) {
+        var uri = extractUriFromSelection(raw);
+        if ($parentUri.length) {
+          $parentUri.val(uri);
+        }
+        if ($parentLabel.length) {
+          $parentLabel.val(uri ? (label ? label + ' (' + uri + ')' : uri) : '');
+        }
+        updateCreateButtonState();
+        return uri;
+      }
+
+      function updateCreateButtonState() {
+        var hasParent = !!String($parentUri.val() || '').trim();
+        var hasName = !!String($nameInput.val() || '').trim();
+        $createButton.prop('disabled', !(hasParent && hasName));
+      }
+
+      $createButton.prop('disabled', true);
+      $nameInput
+        .off('input.repTreeCreateSubNode change.repTreeCreateSubNode')
+        .on('input.repTreeCreateSubNode change.repTreeCreateSubNode', updateCreateButtonState);
+
+      $selectSuperNodeButton
+        .off('click.repTreeSelectSuperNode')
+        .on('click.repTreeSelectSuperNode', function (e) {
+          e.preventDefault();
+
+          var selectedRaw = String($selectSuperNodeButton.data('selected-uri') || '').trim();
+          var selectedLabel = String($selectSuperNodeButton.data('selected-label') || '').trim();
+          var parentUri = updateSelectedParentFields(selectedRaw, selectedLabel);
+          if (!parentUri) {
+            setStatus('Select a super-node in the hierarchy before using this button.', 'error');
+            return;
+          }
+
+          setStatus('Super-node selected.', 'success');
+        });
 
       function setStatus(message, kind) {
         if (!$status.length) {
@@ -275,14 +324,12 @@
           var $selectButton = $('#select-tree-node');
           var selectedRaw = String($selectButton.data('selected-value') || '').trim();
           var selectedLabel = String($selectButton.data('selected-label') || '').trim();
-          var match = selectedRaw.match(/\[(https?:\/\/[^\]]+)\]\s*$/);
-          var parentUri = match && match[1] ? String(match[1]).trim() : selectedRaw;
+          var parentUri = String($parentUri.val() || '').trim();
           if (!parentUri) {
-            setStatus('Select a parent node before creating a sub-node.', 'error');
+            setStatus('Use Select super-node before creating a sub-node.', 'error');
             return;
           }
 
-          var $nameInput = $('#create-sub-node-name');
           var nodeName = String($nameInput.val() || '').trim();
           if (!nodeName) {
             setStatus('Enter the new process stem name.', 'error');
@@ -319,7 +366,7 @@
               var uri = String((data.node && data.node.uri) || '').trim();
               var label = String((data.node && data.node.label) || nodeName || '').trim();
               var parentContextUri = parentUri;
-              var parentContextLabel = selectedLabel;
+              var parentContextLabel = String($parentLabel.val() || selectedLabel || parentContextUri).trim();
 
               // Keep parent selection context so consecutive creates append
               // siblings under the same parent (instead of nesting under the
@@ -420,7 +467,8 @@
               setStatus('Create Sub-Node failed: ' + err.message, 'error');
             })
             .finally(function () {
-              $createButton.prop('disabled', false).text(defaultButtonText);
+              $createButton.text(defaultButtonText);
+              updateCreateButtonState();
             });
         });
     }

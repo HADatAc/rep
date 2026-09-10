@@ -632,6 +632,24 @@ class TreeForm extends FormBase {
             '#type' => 'inline_template',
             '#template' => '
               <div class="mt-2 mb-3">
+                <label for="create-sub-node-parent-label" class="form-label mb-1">{{ parent_field_label }}</label>
+                  <div class="input-group input-group-sm mb-1">
+                    <input type="text"
+                      id="create-sub-node-parent-label"
+                      class="form-control"
+                      readonly="readonly"
+                      placeholder="{{ parent_placeholder }}"
+                      aria-label="{{ parent_field_label }}" />
+                    <button type="button"
+                       id="select-super-node-btn"
+                       class="btn btn-outline-secondary"
+                       disabled="disabled"
+                       data-field-id="{{ field_id }}">
+                      {{ parent_button_label }}
+                    </button>
+                  </div>
+                <input type="hidden" id="create-sub-node-parent-uri" />
+                <small class="text-muted d-block mb-2">{{ parent_helper_text }}</small>
                 <label for="create-sub-node-name" class="form-label mb-1">{{ field_label }}</label>
                 <div class="input-group input-group-sm">
                   <input type="text"
@@ -643,6 +661,7 @@ class TreeForm extends FormBase {
                   <button type="button"
                           id="create-sub-node-btn"
                           class="btn btn-outline-primary"
+                      disabled="disabled"
                           data-field-id="{{ field_id }}">
                     {{ button_label }}
                   </button>
@@ -653,10 +672,14 @@ class TreeForm extends FormBase {
             '#context' => [
               'field_id' => 
                 \Drupal::request()->query->get('field_id'),
+              'parent_field_label' => $this->t('Super-node for new process stem'),
+              'parent_placeholder' => $this->t('Select a super-node in the hierarchy above'),
+              'parent_button_label' => $this->t('Select super-node'),
+              'parent_helper_text' => $this->t('Select the parent process stem in the hierarchy above before creating the child node.'),
               'field_label' => $this->t('New process stem name'),
               'placeholder' => $this->t('Enter process stem name'),
               'button_label' => $this->t('Create Sub-Node'),
-              'helper_text' => $this->t('Creates a child node under the currently selected process stem.'),
+              'helper_text' => $this->t('Creates a child node under the selected super-node.'),
             ],
           ];
 

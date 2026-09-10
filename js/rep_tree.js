@@ -364,7 +364,7 @@
           $treeRoot.on('select_node.jstree', function (e, data) {
             var selectedNode = (data && data.node && data.node.original) ? data.node.original : {};
             var nodeData = (data && data.node && data.node.data) ? data.node.data : {};
-            var currentFieldId = $treeRoot.data('field-id') || $('#tree-root').data('field-id') || '';
+            var currentFieldId = $treeRoot.data('field-id') || $('#tree-root').data('field-id') || (drupalSettings.rep_tree && drupalSettings.rep_tree.fieldId) || '';
             var isPhase1ClinicalField = currentFieldId === 'phase1ClinicalProcess';
 
             var selectedUri = selectedNode.uri || data.node.uri || nodeData.realUri || nodeData.uri || '';
@@ -462,6 +462,18 @@
                   .data('selected-label', selectedLabel || selectedUri)
                   .data('field-id', currentFieldId);
               }
+            }
+
+            var selectedButtonValue = String($selectNodeButton.data('selected-value') || '').trim();
+            var selectedButtonLabel = String($selectNodeButton.data('selected-label') || '').trim();
+            var $selectSuperNodeButton = $treeRoot.closest('form').find('#select-super-node-btn').first();
+            if ($selectSuperNodeButton.length) {
+              var superNodeUri = selectedUriDisplay || selectedButtonValue;
+              var superNodeLabel = selectedLabel || selectedButtonLabel || superNodeUri;
+              $selectSuperNodeButton
+                .prop('disabled', !superNodeUri)
+                .data('selected-uri', superNodeUri)
+                .data('selected-label', superNodeLabel);
             }
 
             // Build node details using the same simulator card layout used in SIR anatomy results.

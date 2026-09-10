@@ -1083,14 +1083,23 @@ class TreeController extends ControllerBase {
       && in_array($nodeUri, [VSTOI::PROCESS_STEM, EntryPoints::CLASS_EP_PMSR], true)
       && $fieldId !== 'phase1ClinicalProcess'
       && !$isStdScenarioProcessField) {
-      $items = $this->getManagerOwnedItems($elementtype);
-      if (!empty($items)) {
-        return new JsonResponse($items);
+      $mergedByUri = [];
+      foreach (array_merge($this->getKeywordRawItems($elementtype), $this->getManagerOwnedRawItems($elementtype)) as $item) {
+        if (is_array($item)) {
+          $item = (object) $item;
+        }
+        if (!is_object($item) || empty($item->uri)) {
+          continue;
+        }
+        $key = $this->normalizePmsrOntologyUri((string) $item->uri);
+        if ($key === '') {
+          $key = (string) $item->uri;
+        }
+        $mergedByUri[$key] = $item;
       }
 
-      $items = $this->getKeywordItems($elementtype);
-      if (!empty($items)) {
-        return new JsonResponse($items);
+      if (!empty($mergedByUri)) {
+        return new JsonResponse($this->formatTreeItems(array_values($mergedByUri), \Drupal::currentUser()->getEmail()));
       }
 
       return new JsonResponse([]);

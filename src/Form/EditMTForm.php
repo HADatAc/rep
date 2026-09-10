@@ -166,6 +166,12 @@ class EditMTForm extends FormBase {
       return;
     }
 
+    if ($this->getElementType() === 'wkf' && !$this->currentUserCanManageWkfEdit($this->getMT())) {
+      \Drupal::messenger()->addError(t('Operation blocked: only the study PI or an admin can edit this WKF.'));
+      self::backUrl();
+      return;
+    }
+
     if (isset($this->getMT()->isMemberOf) && $this->getMT()->isMemberOf != NULL) {
       $this->setStudy($this->getMT()->isMemberOf);
       $this->setStudyUri($this->getMT()->isMemberOfUri);
@@ -295,6 +301,12 @@ class EditMTForm extends FormBase {
       return;
     }
 
+    if ($this->getElementType() === 'wkf' && !$this->currentUserCanManageWkfEdit($this->getMT())) {
+      \Drupal::messenger()->addError(t('Operation blocked: only the study PI or an admin can edit this WKF.'));
+      self::backUrl();
+      return;
+    }
+
     $useremail = \Drupal::currentUser()->getEmail();
 
     $ddUri = NULL;
@@ -371,6 +383,138 @@ class EditMTForm extends FormBase {
       $response->send();
       return;
     }
+  }
+
+  /**
+   * Check whether current user can edit WKF by PI/admin policy.
+   */
+  protected function currentUserCanManageWkfEdit($wkf): bool {
+    $account = \Drupal::currentUser();
+    if ($account->hasPermission('administer site configuration')
+      || $account->hasPermission('administer semantic ontologies')
+      || $account->hasRole('administrator')) {
+      return TRUE;
+    }
+
+    if (!is_object($wkf)) {
+      return FALSE;
+    }
+
+    $studyUri = '';
+    foreach (['isMemberOfUri', 'studyUri', 'hasStudyUri', 'processBasedStudyUri', 'hasProcessBasedStudyUri'] as $field) {
+      if (isset($wkf->{$field}) && is_string($wkf->{$field}) && trim((string) $wkf->{$field}) !== '') {
+        $studyUri = Utils::canonicalizePmsrUri(trim((string) $wkf->{$field}));
+        break;
+      }
+    }
+    if ($studyUri === '' && isset($wkf->isMemberOf) && is_object($wkf->isMemberOf) && isset($wkf->isMemberOf->uri) && is_string($wkf->isMemberOf->uri)) {
+      $studyUri = Utils::canonicalizePmsrUri(trim((string) $wkf->isMemberOf->uri));
+    }
+    if ($studyUri === '') {
+      return FALSE;
+    }
+
+    $currentEmail = $this->normalizeEmailForPiCheck((string) $account->getEmail());
+    if ($currentEmail === '') {
+      return FALSE;
+    }
+
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $study = $api->parseObjectResponse($api->getUri($studyUri), 'getUri');
+      if (!is_object($study)) {
+        return FALSE;
+      }
+
+      $candidateValues = [];
+      foreach (['principalInvestigatorEmail', 'piEmail', 'hasPrincipalInvestigatorEmail', 'contactEmail'] as $field) {
+        if (isset($study->{$field}) && is_string($study->{$field})) {
+          $candidateValues[] = (string) $study->{$field};
+        }
+      }
+      foreach (['principalInvestigator', 'principalInvestigatorUri', 'hasPrincipalInvestigator', 'hasPrincipalInvestigatorUri', 'pi', 'piUri'] as $field) {
+        if (isset($study->{$field})) {
+          $candidateValues[] = $study->{$field};
+        }
+      }
+
+      foreach ($candidateValues as $candidate) {
+        if (is_string($candidate)) {
+          $email = $this->normalizeEmailForPiCheck($candidate);
+          if ($email !== '' && $email === $currentEmail) {
+            return TRUE;
+          }
+          if (preg_match('/^https?:\/\//i', trim($candidate)) === 1) {
+            $person = $api->parseObjectResponse($api->getUri(trim($candidate)), 'getUri');
+            $personEmail = $this->extractPersonEmailForPiCheck($person);
+            if ($personEmail !== '' && $personEmail === $currentEmail) {
+              return TRUE;
+            }
+          }
+          continue;
+        }
+
+        if (is_object($candidate)) {
+          $personEmail = $this->extractPersonEmailForPiCheck($candidate);
+          if ($personEmail !== '' && $personEmail === $currentEmail) {
+            return TRUE;
+          }
+          if (isset($candidate->uri) && is_string($candidate->uri) && trim((string) $candidate->uri) !== '') {
+            $person = $api->parseObjectResponse($api->getUri(trim((string) $candidate->uri)), 'getUri');
+            $personEmail = $this->extractPersonEmailForPiCheck($person);
+            if ($personEmail !== '' && $personEmail === $currentEmail) {
+              return TRUE;
+            }
+          }
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      return FALSE;
+    }
+
+    return FALSE;
+  }
+
+  /**
+   * Normalize candidate email values for PI checks.
+   */
+  protected function normalizeEmailForPiCheck(string $value): string {
+    $email = strtolower(trim($value));
+    if ($email === '') {
+      return '';
+    }
+    if (strpos($email, 'mailto:') === 0) {
+      $email = trim(substr($email, 7));
+    }
+    if (preg_match('/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i', $email, $m) === 1) {
+      return strtolower(trim((string) $m[0]));
+    }
+    return '';
+  }
+
+  /**
+   * Extract person email from common payload fields.
+   */
+  protected function extractPersonEmailForPiCheck($person): string {
+    if (!is_object($person)) {
+      return '';
+    }
+
+    foreach (['mbox', 'hasEmail', 'email', 'hasSIRManagerEmail'] as $field) {
+      if (!isset($person->{$field})) {
+        continue;
+      }
+      $value = $person->{$field};
+      if (is_string($value)) {
+        $email = $this->normalizeEmailForPiCheck($value);
+        if ($email !== '') {
+          return $email;
+        }
+      }
+    }
+
+    return '';
   }
 
 }

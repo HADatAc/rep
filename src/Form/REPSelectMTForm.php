@@ -133,6 +133,13 @@ class REPSelectMTForm extends FormBase {
    */
   protected $wkfCardMetadataCache = [];
 
+  /**
+   * Per-request cache of current user person URIs by email.
+   *
+   * @var array<string, array<int, string>>
+   */
+  protected $currentUserPersonUrisByEmailCache = [];
+
   public function getMode() {
     return $this->mode;
   }
@@ -1630,6 +1637,10 @@ class REPSelectMTForm extends FormBase {
    */
   protected function performEdit($uri, FormStateInterface $form_state)
   {
+    if ($this->element_type === 'wkf' && !$this->assertWkfPiOrAdminAuthorization((string) $uri, 'edit', $form_state)) {
+      return;
+    }
+
     $uid = \Drupal::currentUser()->id();
     $previousUrl = \Drupal::request()->getRequestUri();
     Utils::trackingStoreUrls($uid, $previousUrl, 'rep.edit_mt');
@@ -1650,10 +1661,17 @@ class REPSelectMTForm extends FormBase {
 
     $deleted = 0;
     $failed = 0;
+    $blocked = 0;
     $wkfManagerEmailsToRefresh = [];
 
     foreach ($uris as $raw_uri) {
       $uri = Utils::plainUri($raw_uri) ?: $raw_uri;
+
+      if ($this->element_type === 'wkf' && !$this->canCurrentUserManageWkfForStudy((string) $uri)) {
+        $blocked++;
+        $failed++;
+        continue;
+      }
 
       // Resolve template (best-effort) so we can also clean up its cached DataFile.
       $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
@@ -1764,6 +1782,12 @@ class REPSelectMTForm extends FormBase {
       \Drupal::messenger()->addError(t("Failed to delete the selected " . $this->plural_class_name . "."));
     }
 
+    if ($blocked > 0 && $this->element_type === 'wkf') {
+      \Drupal::messenger()->addError(t('@count WKF operation(s) were blocked. Only the study PI or an admin can delete WKFs.', [
+        '@count' => $blocked,
+      ]));
+    }
+
     if ($this->element_type === 'wkf' && $deleted > 0) {
       if (empty($wkfManagerEmailsToRefresh)) {
         $this->triggerPmsrMembersStatisticsRefreshByManagerEmail($this->manager_email);
@@ -1869,6 +1893,11 @@ class REPSelectMTForm extends FormBase {
     $api = \Drupal::service('rep.api_connector');
     $rawUri = reset($uris);
     $uri = Utils::plainUri($rawUri) ?: $rawUri;
+
+    if ($this->element_type === 'wkf' && !$this->assertWkfPiOrAdminAuthorization((string) $uri, 'ingest', $form_state)) {
+      return;
+    }
+
     $template = $api->parseObjectResponse($api->getUri($uri), 'getUri');
 
     // Fallback: retry with original token in case the selected row already had canonical URI.
@@ -3840,6 +3869,13 @@ class REPSelectMTForm extends FormBase {
     // Expecting a single URI in $uris.
     $uri = reset($uris);
 
+    if ($this->element_type === 'wkf') {
+      $canonicalUri = Utils::plainUri((string) $uri) ?: (string) $uri;
+      if (!$this->assertWkfPiOrAdminAuthorization($canonicalUri, 'uningest', $form_state)) {
+        return;
+      }
+    }
+
     // 1) Retrieve and preserve current MT.
     $newMT = new MetadataTemplate();
     $mt = $api->parseObjectResponse($api->getUri($uri), 'getUri');
@@ -4088,7 +4124,11 @@ class REPSelectMTForm extends FormBase {
     $identity = $this->resolveWkfStdIdentityForCard($wkfUri);
     $name = trim((string) ($identity['pi_name'] ?? ''));
     $email = trim((string) ($identity['pi_email'] ?? ''));
-    $displayName = $name !== '' ? $name : 'N/A';
+    $displayName = ($name !== '' && $name !== 'N/A') ? $name : $this->resolveWkfOwnerPersonLabelForCard($wkfUri);
+    $displayName = $displayName !== '' ? $displayName : 'N/A';
+    if ($email === '') {
+      $email = $this->resolveWkfOwnerEmailForCard($wkfUri);
+    }
 
     if ($displayName !== 'N/A' && $email !== '') {
       return $displayName . ' (' . $email . ')';
@@ -4103,7 +4143,44 @@ class REPSelectMTForm extends FormBase {
   protected function resolveWkfStdOrganizationLabelForCard(string $wkfUri): string {
     $identity = $this->resolveWkfStdIdentityForCard($wkfUri);
     $value = trim((string) ($identity['organization'] ?? ''));
-    return $value !== '' ? $value : 'N/A';
+    if ($value !== '' && $value !== 'N/A') {
+      return $value;
+    }
+    return $this->resolveWkfOwnerOrganizationLabelForCard($wkfUri);
+  }
+
+  /**
+   * Resolve owner person display label for an existing WKF card.
+   */
+  protected function resolveWkfOwnerPersonLabelForCard(string $wkfUri): string {
+    $ownerEmail = $this->resolveWkfOwnerEmailForCard($wkfUri);
+    if ($ownerEmail === '') {
+      return '';
+    }
+
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      foreach ([$api->listByManagerEmail('person', $ownerEmail, 200, 0), $api->listByKeyword('person', '_', 1000, 0)] as $raw) {
+        $people = $api->parseObjectResponse($raw, 'resolveWkfOwnerPersonLabelForCard');
+        if (!is_array($people)) {
+          continue;
+        }
+        foreach ($people as $person) {
+          if (!is_object($person) || $this->extractPersonEmail($person) !== $ownerEmail) {
+            continue;
+          }
+          $label = trim((string) ($person->label ?? $person->name ?? ''));
+          if ($label !== '') {
+            return $label;
+          }
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      return '';
+    }
+
+    return '';
   }
 
   /**
@@ -4989,6 +5066,233 @@ class REPSelectMTForm extends FormBase {
   }
 
   /**
+   * True when current user has admin permission for WKF management actions.
+   */
+  protected function currentUserHasWkfAdminPermission(): bool {
+    $currentUser = \Drupal::currentUser();
+    return $currentUser->hasPermission('administer site configuration')
+      || $currentUser->hasPermission('administer semantic ontologies')
+      || $currentUser->hasRole('administrator');
+  }
+
+  /**
+   * Guard WKF card operations with PI-or-admin authorization.
+   */
+  protected function assertWkfPiOrAdminAuthorization(string $wkfUri, string $operation, FormStateInterface $form_state): bool {
+    if ($this->element_type !== 'wkf') {
+      return TRUE;
+    }
+
+    if ($this->canCurrentUserManageWkfForStudy($wkfUri)) {
+      return TRUE;
+    }
+
+    \Drupal::messenger()->addError(t('Operation blocked: only the study PI or an admin can @operation this WKF.', [
+      '@operation' => $operation,
+    ]));
+    $form_state->setRedirectUrl(static::backSelect($this->element_type, $this->getMode(), $this->studyuri));
+    return FALSE;
+  }
+
+  /**
+   * Check whether current user can manage the target WKF by PI/admin policy.
+   */
+  protected function canCurrentUserManageWkfForStudy(string $wkfUri): bool {
+    if ($this->currentUserHasWkfAdminPermission()) {
+      return TRUE;
+    }
+
+    $wkfUri = Utils::plainUri(trim($wkfUri)) ?: trim($wkfUri);
+    if ($wkfUri === '') {
+      return FALSE;
+    }
+
+    $currentEmail = $this->normalizeEmailValue((string) ($this->manager_email ?? ''));
+    if ($currentEmail === '') {
+      $currentEmail = $this->normalizeEmailValue((string) \Drupal::currentUser()->getEmail());
+    }
+
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $wkf = $api->parseObjectResponse($api->getUri($wkfUri), 'getUri');
+      if (!is_object($wkf)) {
+        return FALSE;
+      }
+
+      $studyUri = $this->extractStudyUriFromWkfObject($wkf);
+      if ($studyUri === '') {
+        return FALSE;
+      }
+
+      $study = $api->parseObjectResponse($api->getUri($studyUri), 'getUri');
+      if (!is_object($study)) {
+        return FALSE;
+      }
+
+      $piCandidates = $this->extractStudyPiCandidates($study, $api);
+      if ($currentEmail !== '' && isset($piCandidates['emails'][$currentEmail])) {
+        return TRUE;
+      }
+
+      $currentPersonUris = $this->resolveCurrentUserPersonUrisByEmail($currentEmail, $api);
+      foreach (array_keys($piCandidates['uris']) as $piUri) {
+        if (in_array($piUri, $currentPersonUris, TRUE)) {
+          return TRUE;
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      return FALSE;
+    }
+
+    return FALSE;
+  }
+
+  /**
+   * Extract study URI from WKF object payload.
+   */
+  protected function extractStudyUriFromWkfObject($wkf): string {
+    if (!is_object($wkf)) {
+      return '';
+    }
+
+    foreach (['isMemberOfUri', 'studyUri', 'hasStudyUri', 'processBasedStudyUri', 'hasProcessBasedStudyUri'] as $field) {
+      if (isset($wkf->{$field}) && is_string($wkf->{$field}) && trim((string) $wkf->{$field}) !== '') {
+        return Utils::canonicalizePmsrUri(trim((string) $wkf->{$field}));
+      }
+    }
+
+    if (isset($wkf->isMemberOf) && is_object($wkf->isMemberOf) && isset($wkf->isMemberOf->uri) && is_string($wkf->isMemberOf->uri)) {
+      return Utils::canonicalizePmsrUri(trim((string) $wkf->isMemberOf->uri));
+    }
+
+    return '';
+  }
+
+  /**
+   * Resolve PI URI/email candidates from study payload.
+   *
+   * @return array{emails: array<string, bool>, uris: array<string, bool>}
+   */
+  protected function extractStudyPiCandidates($study, $api): array {
+    $emails = [];
+    $uris = [];
+
+    if (!is_object($study)) {
+      return ['emails' => $emails, 'uris' => $uris];
+    }
+
+    foreach (['principalInvestigatorEmail', 'piEmail', 'hasPrincipalInvestigatorEmail', 'contactEmail'] as $emailField) {
+      if (isset($study->{$emailField}) && is_string($study->{$emailField})) {
+        $normalized = $this->normalizeEmailValue((string) $study->{$emailField});
+        if ($normalized !== '') {
+          $emails[$normalized] = TRUE;
+        }
+      }
+    }
+
+    foreach (['principalInvestigator', 'principalInvestigatorUri', 'hasPrincipalInvestigator', 'hasPrincipalInvestigatorUri', 'pi', 'piUri'] as $field) {
+      if (!isset($study->{$field})) {
+        continue;
+      }
+      $this->collectPiCandidatesFromValue($study->{$field}, $emails, $uris);
+    }
+
+    foreach (array_keys($uris) as $piUri) {
+      try {
+        $person = $api->parseObjectResponse($api->getUri($piUri), 'getUri');
+        $personEmail = $this->extractPersonEmail($person);
+        if ($personEmail !== '') {
+          $emails[$personEmail] = TRUE;
+        }
+      }
+      catch (\Throwable $e) {
+        continue;
+      }
+    }
+
+    return ['emails' => $emails, 'uris' => $uris];
+  }
+
+  /**
+   * Collect URI/email PI candidates from mixed payload values.
+   */
+  protected function collectPiCandidatesFromValue($value, array &$emails, array &$uris): void {
+    if (is_string($value)) {
+      $candidateEmail = $this->normalizeEmailValue($value);
+      if ($candidateEmail !== '') {
+        $emails[$candidateEmail] = TRUE;
+      }
+      if ($this->looksLikePmsrUri($value)) {
+        $uris[$this->canonicalizePmsrValue($value)] = TRUE;
+      }
+      return;
+    }
+
+    if (!is_object($value)) {
+      return;
+    }
+
+    if (isset($value->uri) && is_string($value->uri) && trim((string) $value->uri) !== '') {
+      $uris[$this->canonicalizePmsrValue((string) $value->uri)] = TRUE;
+    }
+    if (isset($value->hasURI) && is_string($value->hasURI) && trim((string) $value->hasURI) !== '') {
+      $uris[$this->canonicalizePmsrValue((string) $value->hasURI)] = TRUE;
+    }
+
+    $personEmail = $this->extractPersonEmail($value);
+    if ($personEmail !== '') {
+      $emails[$personEmail] = TRUE;
+    }
+  }
+
+  /**
+   * Resolve current user person URIs for PI URI matching.
+   *
+   * @return array<int, string>
+   */
+  protected function resolveCurrentUserPersonUrisByEmail(string $email, $api): array {
+    if ($email === '') {
+      return [];
+    }
+
+    if (array_key_exists($email, $this->currentUserPersonUrisByEmailCache)) {
+      return $this->currentUserPersonUrisByEmailCache[$email];
+    }
+
+    $uris = [];
+    try {
+      $people = $api->parseObjectResponse($api->listByManagerEmail('person', $email, 200, 0), 'listByManagerEmail');
+      if (is_array($people)) {
+        foreach ($people as $person) {
+          if (!is_object($person)) {
+            continue;
+          }
+
+          $personEmail = $this->extractPersonEmail($person);
+          if ($personEmail !== '' && $personEmail !== $email) {
+            continue;
+          }
+
+          if (isset($person->uri) && is_string($person->uri) && trim((string) $person->uri) !== '') {
+            $uris[] = $this->canonicalizePmsrValue((string) $person->uri);
+          }
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      $uris = [];
+    }
+
+    $uris = array_values(array_unique(array_filter($uris, static function ($uri): bool {
+      return is_string($uri) && trim($uri) !== '';
+    })));
+
+    $this->currentUserPersonUrisByEmailCache[$email] = $uris;
+    return $uris;
+  }
+
+  /**
    * Extract person email from common person payload fields.
    */
   protected function extractPersonEmail($person): string {
@@ -5179,7 +5483,8 @@ class REPSelectMTForm extends FormBase {
    */
   protected function resolveWkfUsedComponentsCountFromLocalContext(string $wkfUri): ?int {
     $metadata = $this->resolveWkfMetadataForCard($wkfUri);
-    if (isset($metadata['used_component_instances']) && is_numeric($metadata['used_component_instances'])) {
+    if (isset($metadata['used_component_instances']) && is_numeric($metadata['used_component_instances'])
+      && (int) $metadata['used_component_instances'] > 0) {
       return (int) $metadata['used_component_instances'];
     }
 
@@ -5226,16 +5531,17 @@ class REPSelectMTForm extends FormBase {
     $scope = $this->resolveWkfScopeFromUri($wkfUri);
     $candidates = [];
 
-    // Prefer local workbook first to avoid stale in-memory/session copies.
-    $localWorkbook = $this->resolveWkfWorkbookTextFromPrivateStorage($wkfUri);
-    if ($localWorkbook !== '') {
-      $candidates[] = $localWorkbook;
-    }
-
     $workingStore = \Drupal::keyValue('rep.wkf.phase_working_copy.by_scope');
     $working = $workingStore->get($scope, []);
     if (is_array($working) && isset($working['wkfContent']) && is_string($working['wkfContent'])) {
       $candidates[] = $working['wkfContent'];
+    }
+
+    // Fall back to the persisted workbook only when no applied working copy is
+    // available for this WKF; it can lag behind a completed sheet update.
+    $localWorkbook = $this->resolveWkfWorkbookTextFromPrivateStorage($wkfUri);
+    if ($localWorkbook !== '') {
+      $candidates[] = $localWorkbook;
     }
 
     $session = \Drupal::request()->getSession();
@@ -5766,9 +6072,7 @@ class REPSelectMTForm extends FormBase {
     }
 
     return strpos($normalized, 'interactiontask') !== FALSE
-      || strpos($normalized, 'automatedtask') !== FALSE
-      || strpos($normalized, 'applicationtask') !== FALSE
-      || strpos($normalized, 'manualtask') !== FALSE;
+      || strpos($normalized, 'automatedtask') !== FALSE;
   }
 
   /**

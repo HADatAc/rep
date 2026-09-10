@@ -181,11 +181,14 @@ class WkfPhasePacketController extends ControllerBase {
       if ($stdSheetTsv === '') {
         $stdSheetTsv = $this->extractStdSheetFromAnyTsv($latestWorkbookTsv);
       }
+      if ($phase === 3 && $stdSheetTsv !== '') {
+        $stdSheetTsv = $this->canonicalizeStdSheetForPhase3($stdSheetTsv, $latestWorkbookTsv);
+      }
     }
 
     $instrumentInstanceComponentList = '';
     if ($phase === 4) {
-      $instrumentInstanceComponentList = $this->buildInstrumentInstanceComponentList($wkfUri);
+      $instrumentInstanceComponentList = $this->buildInstrumentInstanceComponentList($wkfUri, $latestWorkbookTsv);
     }
 
     $wkfSpecV3Text = $phase === 2 ? $this->getWkfSpecV3Text() : '';
@@ -212,6 +215,12 @@ class WkfPhasePacketController extends ControllerBase {
       $lines[] = 'Validated at: ' . $validatedAt;
     }
     $lines[] = '';
+    if ($phase === 4) {
+      $lines[] = 'EXECUTION INSTRUCTION';
+      $lines[] = 'Process this as the current Phase IV request. Ignore any prior Phase III request or response in this conversation.';
+      $lines[] = 'Return the complete updated Tasks TSV now, applying the Phase IV component-instance assignment rules below.';
+      $lines[] = '';
+    }
     $lines[] = 'GOAL';
     $lines[] = $this->getPhaseGoal($phase);
     $lines[] = '';
@@ -346,23 +355,30 @@ class WkfPhasePacketController extends ControllerBase {
     elseif ($phase === 4) {
       $lines[] = 'Review BOTH inputs: (1) LATEST_TASKS_SHEET_TSV and (2) INSTRUMENT_INSTANCES_WITH_COMPONENT_INSTANCES.';
       $lines[] = 'Use DEPLOYMENT_COMPONENT_TO_INSTRUMENT_MAP as the primary compatibility source when assigning vstoi:usesComponentInstance.';
-      $lines[] = 'Only assign component instance URIs that appear in the provided organization component inventory.';
-      $lines[] = 'Update the Tasks rows by populating/adjusting values for vstoi:usesComponentInstance where evidence exists.';
+      $lines[] = 'Every vstoi:InteractionTask or vstoi:AutomatedTask MUST receive one or more vstoi:usesComponentInstance URIs from the provided organization inventory.';
+      $lines[] = 'If no exact deployment-compatible component exists, assign the closest semantically relevant URI from the organization inventory; do not change a task type to avoid assignment.';
+      $lines[] = 'Review leaf tasks first: change vstoi:ManualTask to vstoi:InteractionTask only where a learner action or its outcome is directly observable by a compatible simulator component.';
+      $lines[] = 'For secretion aspiration, assess aspirator checks, pre-oxygenation, suction execution, patient-response monitoring, and ventilator/O2 readaptation as potential InteractionTask candidates; keep all non-observable manual work unchanged.';
+      $lines[] = 'Before returning, verify every InteractionTask or AutomatedTask row has one or more vstoi:usesComponentInstance URIs, including rows without an exact deployment match.';
       $lines[] = 'Return ONLY the updated Tasks TSV file body (header row + all task rows), with real TAB separators.';
       $lines[] = 'Treat your response as the literal content of one .tsv file ready for Task Model Update upload.';
       $lines[] = 'Do NOT return markdown links, data URLs, markdown fences, JSON, summaries, or extra prose.';
+      $lines[] = 'Use exactly the same header columns from LATEST_TASKS_SHEET_TSV; do not add vstoi:hasRequiredInstrument or any other extra column.';
+      $lines[] = 'Every data row must have exactly the same number of TAB-separated columns as the header.';
       $lines[] = 'Preserve all existing task rows and relationships unless a change is required to set valid usesComponentInstance values.';
       $lines[] = 'No markdown fences and no extra prose.';
+      $lines[] = '';
+      $lines[] = 'EXECUTE NOW: Return the complete updated Phase IV Tasks TSV only.';
     }
     elseif ($phase === 3) {
       $lines[] = 'Return ONLY the STD TSV file body (header row + all STD rows), using real TAB separators.';
       $lines[] = 'Treat your response as the literal content of one .tsv file.';
       $lines[] = 'Do NOT return markdown links, data URLs, markdown fences, JSON, summaries, or extra prose.';
       $lines[] = 'Preserve canonical row URIs exactly as provided whenever hasURI is already present; do not mint alternate namespaces or replacement URIs.';
-      $lines[] = 'If CURRENT_STD_SHEET_TSV is present, preserve its exact STD header schema/order (including legacy/deprecated columns such as vstoi:hasRequiredInstrument when present).';
-      $lines[] = 'If CURRENT_STD_SHEET_TSV is missing, still return best-effort STD TSV with a stable header that includes: hasURI, vstoi:hasLearningObjectives, vstoi:hasCriticalActions, vstoi:hasDebriefingFocus, Specific Aims, Significance.';
+      $lines[] = 'Use this exact canonical STD header and column order: hasURI, hasco:hasProcess, Study ID, Title, Specific Aims, Significance, Institution, Principal Investigator, Email, Start Date, End Date, vstoi:hasLearningObjectives, vstoi:hasCriticalActions, vstoi:hasDebriefingFocus.';
+      $lines[] = 'Preserve supplied hasURI, hasco:hasProcess, Study ID, Title, Institution, Principal Investigator, and Email values. When hasco:hasProcess is missing, use the current WKF Processes-sheet URI.';
       $lines[] = 'If prior assumptions conflict with current SOURCE_DOCUMENT_CONTENT + PHASE1_WKF_TABLE_TSV, ignore prior assumptions and use current inputs only.';
-      $lines[] = 'If evidence is partial or uncertain, still return a compliant STD TSV using the exact existing STD header and canonical row URIs; keep unchanged values where no new evidence exists.';
+      $lines[] = 'If evidence is partial or uncertain, still return the canonical STD TSV, retaining supplied identity and process values and leaving unsupported optional fields empty.';
       $lines[] = 'Return ABORT only when required inputs are actually missing per the input gate.';
       $lines[] = 'No markdown fences and no extra prose.';
     }
@@ -1392,12 +1408,65 @@ class WkfPhasePacketController extends ControllerBase {
   }
 
   /**
+   * Convert legacy ownership-only STD rows to the canonical Phase III schema.
+   */
+  protected function canonicalizeStdSheetForPhase3(string $stdSheetTsv, string $workbookTsv): string {
+    $parsed = $this->parseGenericSheetTsv($stdSheetTsv);
+    if (empty($parsed['valid'])) {
+      return $stdSheetTsv;
+    }
+
+    $header = ['hasURI', 'hasco:hasProcess', 'Study ID', 'Title', 'Specific Aims', 'Significance', 'Institution', 'Principal Investigator', 'Email', 'Start Date', 'End Date', 'vstoi:hasLearningObjectives', 'vstoi:hasCriticalActions', 'vstoi:hasDebriefingFocus'];
+    $source = $this->buildHeaderLookup($parsed['header']);
+    $target = $this->buildHeaderLookup($header);
+    $process = $this->parseGenericSheetTsv($this->extractSheetBlockFromWorkbookTsv($workbookTsv, 'Processes'));
+    $processLookup = !empty($process['valid']) ? $this->buildHeaderLookup($process['header']) : [];
+    $processRow = !empty($process['rows'][0]) ? $process['rows'][0] : [];
+    $processUri = isset($processLookup['hasuri']) ? trim((string) ($processRow[$processLookup['hasuri']] ?? '')) : '';
+    $processTitle = isset($processLookup['rdfs:label']) ? trim((string) ($processRow[$processLookup['rdfs:label']] ?? '')) : '';
+    $outputRows = [];
+
+    foreach ($parsed['rows'] as $sourceRow) {
+      $row = array_fill(0, count($header), '');
+      foreach ($target as $name => $index) {
+        if (isset($source[$name])) {
+          $row[$index] = trim((string) ($sourceRow[$source[$name]] ?? ''));
+        }
+      }
+      if ($row[$target['email']] === '' && isset($source['principalinvestigatoremail'])) {
+        $row[$target['email']] = trim((string) ($sourceRow[$source['principalinvestigatoremail']] ?? ''));
+      }
+      if ($row[$target['hasco:hasprocess']] === '') {
+        $row[$target['hasco:hasprocess']] = $processUri;
+      }
+      if ($row[$target['title']] === '') {
+        $row[$target['title']] = $processTitle;
+      }
+      if ($row[$target['studyid']] === '') {
+        $base = preg_replace('#/STD/[^/]+$#', '', $row[$target['hasuri']]) ?? '';
+        $token = trim((string) basename($base));
+        $row[$target['studyid']] = $token !== '' ? 'STD-' . $token : 'STD-Generated';
+      }
+      $outputRows[] = $row;
+    }
+
+    $lines = [implode("\t", $header)];
+    foreach ($outputRows as $row) {
+      $lines[] = implode("\t", $row);
+    }
+    return implode("\n", $lines);
+  }
+
+  /**
    * Merge incoming Scenario STD TSV rows into existing workbook STD sheet.
    */
   protected function mergeStdSheetIntoWorkbook(string $workbookTsv, string $incomingStdTsv): array {
     $existingSheet = $this->extractSheetBlockFromWorkbookTsv($workbookTsv, 'STD');
     if ($existingSheet === '') {
       $existingSheet = $this->extractStdSheetFromAnyTsv($workbookTsv);
+    }
+    if ($existingSheet !== '') {
+      $existingSheet = $this->canonicalizeStdSheetForPhase3($existingSheet, $workbookTsv);
     }
 
     $incomingParsed = $this->parseGenericSheetTsv($incomingStdTsv);
@@ -1457,7 +1526,7 @@ class WkfPhasePacketController extends ControllerBase {
     $trackedProperties = [];
     foreach ($targetHeader as $idx => $columnName) {
       $label = trim((string) $columnName);
-      $normalized = $this->normalizeWorkbookHeaderColumn($label);
+      $normalized = $this->normalizeTsvHeaderColumn($label);
       if ($normalized === '' || $normalized === 'hasuri') {
         continue;
       }
@@ -1766,6 +1835,7 @@ class WkfPhasePacketController extends ControllerBase {
       }
 
       $rowCols = explode("\t", $line);
+      $rowCols = $this->normalizeTaskModelRowColumnCount($rowCols, $headerCols, $normalizationNotes, $i + 1);
       if (count($rowCols) > $columnCount) {
         while (count($rowCols) > $columnCount && trim((string) end($rowCols)) === '') {
           array_pop($rowCols);
@@ -1783,6 +1853,8 @@ class WkfPhasePacketController extends ControllerBase {
         $rowCols = array_pad($rowCols, $columnCount, '');
         $paddedRows[] = $i + 1;
       }
+
+      $rowCols = $this->normalizeTaskModelRowValues($rowCols, $headerCols, $normalizationNotes, $i + 1);
 
       $normalizedLines[] = implode("\t", $rowCols);
       $dataRowCount++;
@@ -1802,6 +1874,172 @@ class WkfPhasePacketController extends ControllerBase {
       'normalizationNotes' => $normalizationNotes,
       'normalizedTsv' => $normalizedConsistentTsv,
     ];
+  }
+
+  /**
+   * Repair a common Phase IV LLM output: one extra component column in task rows.
+   */
+  protected function normalizeTaskModelRowColumnCount(array $rowCols, array $headerCols, array &$normalizationNotes, int $rowNumber): array {
+    if (count($rowCols) !== count($headerCols) + 1) {
+      return $rowCols;
+    }
+
+    $lookup = $this->buildHeaderLookup($headerCols);
+    if (!isset($lookup['vstoi:usescomponentinstance']) || isset($lookup['vstoi:hasrequiredinstrument'])) {
+      return $rowCols;
+    }
+
+    $usesIdx = (int) $lookup['vstoi:usescomponentinstance'];
+    $currentUses = trim((string) ($rowCols[$usesIdx] ?? ''));
+    $nextValue = trim((string) ($rowCols[$usesIdx + 1] ?? ''));
+    $looksLikeComponentUris = static function (string $value): bool {
+      if ($value === '') {
+        return FALSE;
+      }
+      foreach (preg_split('/\s*;\s*/', $value) ?: [] as $part) {
+        $part = trim($part);
+        if ($part !== '' && stripos($part, 'http') !== 0) {
+          return FALSE;
+        }
+      }
+      return TRUE;
+    };
+
+    if ($currentUses === '' && $looksLikeComponentUris($nextValue)) {
+      $rowCols[$usesIdx] = $nextValue;
+      array_splice($rowCols, $usesIdx + 1, 1);
+      $normalizationNotes[] = 'Moved extra Phase IV component-instance column into vstoi:usesComponentInstance on row ' . $rowNumber . '.';
+      return $rowCols;
+    }
+
+    if ($currentUses !== '' && ($nextValue === '' || $nextValue === $currentUses || $looksLikeComponentUris($nextValue))) {
+      array_splice($rowCols, $usesIdx + 1, 1);
+      $normalizationNotes[] = 'Removed extra Phase IV component-instance column on row ' . $rowNumber . '.';
+      return $rowCols;
+    }
+
+    return $rowCols;
+  }
+
+  /**
+   * Normalize task row values that are valid data but fragile for WKF ingestion.
+   */
+  protected function normalizeTaskModelRowValues(array $rowCols, array $headerCols, array &$normalizationNotes, int $rowNumber): array {
+    $lookup = $this->buildHeaderLookup($headerCols);
+    $uriIdx = $lookup['hasuri'] ?? -1;
+    $superIdx = $lookup['vstoi:hassupertask'] ?? -1;
+    $subIdx = $lookup['vstoi:hassubtask'] ?? -1;
+    $temporalIdx = $lookup['vstoi:hastemporaldependency'] ?? -1;
+    $usesIdx = $lookup['vstoi:usescomponentinstance'] ?? -1;
+
+    if ($subIdx >= 0 && isset($rowCols[$subIdx])) {
+      $normalized = $this->normalizeTaskModelUriListCell((string) $rowCols[$subIdx]);
+      if ($normalized !== (string) $rowCols[$subIdx]) {
+        $rowCols[$subIdx] = $normalized;
+        $normalizationNotes[] = 'Normalized comma-separated vstoi:hasSubtask URI list on row ' . $rowNumber . '.';
+      }
+    }
+
+    if ($usesIdx >= 0 && isset($rowCols[$usesIdx])) {
+      $normalized = $this->normalizeTaskModelUriListCell((string) $rowCols[$usesIdx]);
+      if ($normalized !== (string) $rowCols[$usesIdx]) {
+        $rowCols[$usesIdx] = $normalized;
+        $normalizationNotes[] = 'Normalized comma-separated vstoi:usesComponentInstance URI list on row ' . $rowNumber . '.';
+      }
+    }
+
+    if ($superIdx >= 0 && $subIdx >= 0 && $temporalIdx >= 0 && $usesIdx >= 0) {
+      $super = trim((string) ($rowCols[$superIdx] ?? ''));
+      $sub = trim((string) ($rowCols[$subIdx] ?? ''));
+      $temporal = trim((string) ($rowCols[$temporalIdx] ?? ''));
+      $uses = trim((string) ($rowCols[$usesIdx] ?? ''));
+
+      if ($super === ''
+        && $this->looksLikeSingleTaskUri($sub)
+        && $this->looksLikeTaskUriList($temporal)
+        && $this->looksLikeTemporalDependency($uses)) {
+        $rowCols[$superIdx] = $sub;
+        $rowCols[$subIdx] = $this->normalizeTaskModelUriListCell($temporal);
+        $rowCols[$temporalIdx] = $uses;
+        $rowCols[$usesIdx] = '';
+        $normalizationNotes[] = 'Repaired shifted hasSupertask/hasSubtask/hasTemporalDependency columns on row ' . $rowNumber . '.';
+      }
+      elseif ($super === ''
+        && $this->looksLikeSingleTaskUri($sub)
+        && $this->looksLikeTaskUriList($temporal)
+        && $uses === '') {
+        $rowCols[$superIdx] = $sub;
+        $rowCols[$subIdx] = $this->normalizeTaskModelUriListCell($temporal);
+        $rowCols[$temporalIdx] = '';
+        $normalizationNotes[] = 'Repaired shifted hasSupertask/hasSubtask columns on row ' . $rowNumber . '.';
+      }
+      elseif ($super === ''
+        && $this->looksLikeSingleTaskUri($sub)
+        && $temporal === '') {
+        $rowCols[$superIdx] = $sub;
+        $rowCols[$subIdx] = '';
+        $normalizationNotes[] = 'Repaired shifted leaf hasSupertask column on row ' . $rowNumber . '.';
+      }
+      elseif ($this->looksLikeTemporalDependency($super) && $temporal === '') {
+        $rowCols[$superIdx] = '';
+        $rowCols[$temporalIdx] = $super;
+        $normalizationNotes[] = 'Moved temporal dependency out of vstoi:hasSupertask on row ' . $rowNumber . '.';
+      }
+    }
+
+    return $rowCols;
+  }
+
+  /**
+   * Normalize multi-URI cells to semicolon separators.
+   */
+  protected function normalizeTaskModelUriListCell(string $value): string {
+    $value = trim($value);
+    if ($value === '') {
+      return '';
+    }
+
+    $parts = preg_split('/\s*[,;|]\s*/', $value) ?: [];
+    $uris = [];
+    foreach ($parts as $part) {
+      $part = trim((string) $part);
+      if ($part !== '') {
+        $uris[] = $part;
+      }
+    }
+
+    if (count($uris) <= 1) {
+      return $value;
+    }
+
+    return implode(';', $uris);
+  }
+
+  protected function looksLikeSingleTaskUri(string $value): bool {
+    $value = trim($value);
+    return preg_match('#^https?://[^\s,;|]+/TSK/[^\s,;|]+$#i', $value) === 1;
+  }
+
+  protected function looksLikeTaskUriList(string $value): bool {
+    $value = trim($value);
+    if ($value === '') {
+      return FALSE;
+    }
+    $parts = preg_split('/\s*[,;|]\s*/', $value) ?: [];
+    if (count(array_filter($parts, static fn($part) => trim((string) $part) !== '')) < 1) {
+      return FALSE;
+    }
+    foreach ($parts as $part) {
+      $part = trim((string) $part);
+      if ($part !== '' && preg_match('#^https?://[^\s,;|]+/TSK/[^\s,;|]+$#i', $part) !== 1) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
+
+  protected function looksLikeTemporalDependency(string $value): bool {
+    return preg_match('/^(after|before|parallel|choice|independent|disables|interrupts)\b/i', trim($value)) === 1;
   }
 
   /**
@@ -1859,6 +2097,43 @@ class WkfPhasePacketController extends ControllerBase {
         ],
       ];
     }
+
+    // Task Model Update uploads are complete Tasks sheets. Treat the submitted
+    // sheet as authoritative so intentionally removed tasks are not retained.
+    $existingUris = [];
+    $existingUriIndex = $this->buildHeaderLookup($existingParsed['header'])['hasuri'] ?? -1;
+    if ($existingUriIndex >= 0) {
+      foreach ($existingParsed['rows'] as $row) {
+        $uri = trim((string) ($row[$existingUriIndex] ?? ''));
+        if ($uri !== '') {
+          $existingUris[$uri] = TRUE;
+        }
+      }
+    }
+    $incomingUriIndex = $this->buildHeaderLookup($incomingParsed['header'])['hasuri'] ?? -1;
+    $addedRows = 0;
+    $updatedRows = 0;
+    foreach ($incomingParsed['rows'] as $row) {
+      $uri = $incomingUriIndex >= 0 ? trim((string) ($row[$incomingUriIndex] ?? '')) : '';
+      if ($uri !== '' && isset($existingUris[$uri])) {
+        $updatedRows++;
+      }
+      else {
+        $addedRows++;
+      }
+    }
+    return [
+      'mergedSheetTsv' => $incomingParsed['normalizedTsv'],
+      'stats' => [
+        'strategy' => 'replace_complete_tasks_sheet',
+        'incomingRowsAccepted' => count($incomingParsed['rows']),
+        'existingRows' => count($existingParsed['rows']),
+        'addedRows' => $addedRows,
+        'updatedRows' => $updatedRows,
+        'unchangedRows' => 0,
+        'mergedRows' => count($incomingParsed['rows']),
+      ],
+    ];
 
     $existingRows = $existingParsed['rows'];
     $targetHeader = $existingParsed['header'];
@@ -2405,10 +2680,10 @@ class WkfPhasePacketController extends ControllerBase {
   /**
    * Build organization-scoped instrument instance list with related component instances.
    */
-  protected function buildInstrumentInstanceComponentList(string $wkfUri): string {
+  protected function buildInstrumentInstanceComponentList(string $wkfUri, string $workbookTsv = ''): string {
     $api = \Drupal::service('rep.api_connector');
 
-    $organizationUri = $this->extractOrganizationUriFromWkf($api, $wkfUri);
+    $organizationUri = $this->extractOrganizationUriFromWkf($api, $wkfUri, $workbookTsv);
     $emails = $this->extractOrganizationManagerEmailsFromWkf($api, $wkfUri);
     if (empty($emails)) {
       $current = trim((string) $this->currentUser()->getEmail());
@@ -2512,18 +2787,59 @@ class WkfPhasePacketController extends ControllerBase {
   /**
    * Resolve WKF organization URI.
    */
-  protected function extractOrganizationUriFromWkf($api, string $wkfUri): string {
-    $normalizedWkfUri = trim($wkfUri);
+  protected function extractOrganizationUriFromWkf($api, string $wkfUri, string $workbookTsv = ''): string {
+    $normalizedWkfUri = Utils::plainUri($wkfUri) ?: trim($wkfUri);
     if ($normalizedWkfUri === '') {
       return '';
     }
 
     $wkf = $api->parseObjectResponse($api->getUri($normalizedWkfUri), 'getUri');
-    if (!is_object($wkf) || empty($wkf->hasOrganizationUri)) {
+    if (is_object($wkf) && !empty($wkf->hasOrganizationUri)) {
+      return trim((string) $wkf->hasOrganizationUri);
+    }
+
+    $stdOrganizationUri = $this->extractOrganizationUriFromStdSheet($workbookTsv);
+    if ($stdOrganizationUri !== '') {
+      return $stdOrganizationUri;
+    }
+
+    $ownerEmails = is_object($wkf) ? $this->extractEmailsFromObject($wkf, ['hasSIRManagerEmail', 'hasWKFManagerEmail', 'mbox', 'hasEmail', 'email']) : [];
+    foreach ($ownerEmails as $email) {
+      $affiliationUri = $this->resolvePersonAffiliationUriByEmail($api, $email);
+      if ($affiliationUri !== '') {
+        return $affiliationUri;
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Resolve organization URI from the workbook STD sheet.
+   */
+  protected function extractOrganizationUriFromStdSheet(string $workbookTsv): string {
+    $stdSheet = $this->extractSheetBlockFromWorkbookTsv($workbookTsv, 'STD');
+    if ($stdSheet === '') {
       return '';
     }
 
-    return trim((string) $wkf->hasOrganizationUri);
+    $parsed = $this->parseGenericSheetTsv($stdSheet);
+    if (empty($parsed['valid']) || empty($parsed['rows'])) {
+      return '';
+    }
+
+    $lookup = $this->buildHeaderLookup($parsed['header']);
+    foreach (['institution', 'hasco:hasinstitution', 'organization', 'organizationuri', 'hasorganizationuri'] as $key) {
+      if (!isset($lookup[$key])) {
+        continue;
+      }
+      $value = trim((string) ($parsed['rows'][0][(int) $lookup[$key]] ?? ''));
+      if ($value !== '') {
+        return Utils::plainUri($value) ?: Utils::canonicalizePmsrUri($value);
+      }
+    }
+
+    return '';
   }
 
   /**
@@ -2537,12 +2853,14 @@ class WkfPhasePacketController extends ControllerBase {
     $indexed = [];
 
     if ($organizationUri !== '') {
-      $organizationItems = $this->loadComponentInstancesByOrganizationUri($organizationUri);
-      foreach ($organizationItems as $item) {
-        if (!is_object($item) || empty($item->uri)) {
-          continue;
+      foreach ($this->resolveOrganizationScopeUris($api, $organizationUri) as $scopeOrganizationUri) {
+        $organizationItems = $this->loadComponentInstancesByOrganizationUri($scopeOrganizationUri);
+        foreach ($organizationItems as $item) {
+          if (!is_object($item) || empty($item->uri)) {
+            continue;
+          }
+          $indexed[(string) $item->uri] = $item;
         }
-        $indexed[(string) $item->uri] = $item;
       }
     }
 
@@ -2557,6 +2875,64 @@ class WkfPhasePacketController extends ControllerBase {
     }
 
     return array_values($indexed);
+  }
+
+  /**
+   * Resolve organization plus suborganizations for component inventory lookup.
+   *
+   * @return array<int, string>
+   */
+  protected function resolveOrganizationScopeUris($api, string $organizationUri): array {
+    $root = Utils::plainUri($organizationUri) ?: Utils::canonicalizePmsrUri($organizationUri);
+    $root = trim($root);
+    if ($root === '') {
+      return [];
+    }
+
+    $seen = [$root => TRUE];
+    $queue = [$root];
+    $maxOrganizations = 200;
+
+    $parentQueue = [$root];
+    while (!empty($parentQueue) && count($seen) < $maxOrganizations) {
+      $current = array_shift($parentQueue);
+      $org = $api->parseObjectResponse($api->getUri($current), 'getUri');
+      if (!is_object($org)) {
+        continue;
+      }
+      $parent = Utils::plainUri((string) ($org->parentOrganizationUri ?? '')) ?: Utils::canonicalizePmsrUri((string) ($org->parentOrganizationUri ?? ''));
+      $parent = trim($parent);
+      if ($parent === '' || isset($seen[$parent])) {
+        continue;
+      }
+      $seen[$parent] = TRUE;
+      $queue[] = $parent;
+      $parentQueue[] = $parent;
+    }
+
+    while (!empty($queue) && count($seen) < $maxOrganizations) {
+      $current = array_shift($queue);
+      $raw = $api->getSubOrganizations($current, 100, 0);
+      $subOrganizations = $api->parseObjectResponse($raw, 'getSubOrganizations');
+      if (!is_array($subOrganizations)) {
+        continue;
+      }
+
+      foreach ($subOrganizations as $organization) {
+        if (!is_object($organization) || empty($organization->uri)) {
+          continue;
+        }
+        $uri = Utils::plainUri((string) $organization->uri) ?: Utils::canonicalizePmsrUri((string) $organization->uri);
+        $uri = trim($uri);
+        if ($uri === '' || isset($seen[$uri])) {
+          continue;
+        }
+        $seen[$uri] = TRUE;
+        $queue[] = $uri;
+      }
+    }
+
+    return array_keys($seen);
   }
 
   /**
@@ -2744,7 +3120,7 @@ class WkfPhasePacketController extends ControllerBase {
    * Resolve organization manager emails from the WKF's organization relation.
    */
   protected function extractOrganizationManagerEmailsFromWkf($api, string $wkfUri): array {
-    $normalizedWkfUri = trim($wkfUri);
+    $normalizedWkfUri = Utils::plainUri($wkfUri) ?: trim($wkfUri);
     if ($normalizedWkfUri === '') {
       return [];
     }
@@ -2834,6 +3210,71 @@ class WkfPhasePacketController extends ControllerBase {
     }
 
     return strtolower($email);
+  }
+
+  /**
+   * Extract normalized email values from an API object.
+   */
+  protected function extractEmailsFromObject($object, array $fields): array {
+    $emails = [];
+    if (!is_object($object)) {
+      return [];
+    }
+
+    foreach ($fields as $field) {
+      if (!isset($object->{$field})) {
+        continue;
+      }
+      $value = $object->{$field};
+      $values = is_array($value) ? $value : [$value];
+      foreach ($values as $entry) {
+        if (!is_string($entry)) {
+          continue;
+        }
+        $email = $this->normalizeManagerEmail($entry);
+        if ($email !== '') {
+          $emails[$email] = TRUE;
+        }
+      }
+    }
+
+    return array_keys($emails);
+  }
+
+  /**
+   * Resolve a person's affiliation organization URI from an email address.
+   */
+  protected function resolvePersonAffiliationUriByEmail($api, string $email): string {
+    $email = $this->normalizeManagerEmail($email);
+    if ($email === '') {
+      return '';
+    }
+
+    foreach ([$api->listByManagerEmail('person', $email, 200, 0), $api->listByKeyword('person', '_', 1000, 0)] as $raw) {
+      $people = $api->parseObjectResponse($raw, 'resolvePersonAffiliationUriByEmail');
+      if (!is_array($people)) {
+        continue;
+      }
+
+      foreach ($people as $person) {
+        if (!is_object($person)) {
+          continue;
+        }
+        $personEmails = $this->extractEmailsFromObject($person, ['hasEmail', 'email', 'mbox', 'hasSIRManagerEmail']);
+        if (!in_array($email, $personEmails, TRUE)) {
+          continue;
+        }
+        $affiliation = trim((string) ($person->hasAffiliationUri ?? ''));
+        if ($affiliation === '' && isset($person->hasAffiliation) && is_object($person->hasAffiliation)) {
+          $affiliation = trim((string) ($person->hasAffiliation->uri ?? ''));
+        }
+        if ($affiliation !== '') {
+          return Utils::plainUri($affiliation) ?: Utils::canonicalizePmsrUri($affiliation);
+        }
+      }
+    }
+
+    return '';
   }
 
   /**
@@ -3157,8 +3598,15 @@ class WkfPhasePacketController extends ControllerBase {
     }
 
     $store = \Drupal::keyValue('rep.wkf.phase1.context.by_uri');
-    $entry = $store->get($normalized, []);
-    return is_array($entry) ? $entry : [];
+    $candidateKeys = [$normalized, trim($wkfUri), Utils::namespaceUri($normalized)];
+    foreach (array_values(array_unique(array_filter($candidateKeys))) as $key) {
+      $entry = $store->get($key, []);
+      if (is_array($entry) && !empty($entry)) {
+        return $entry;
+      }
+    }
+
+    return [];
   }
 
   /**
@@ -3641,7 +4089,13 @@ class WkfPhasePacketController extends ControllerBase {
       return FALSE;
     }
 
-    $fileMeta = $this->createManagedResponseUploadFile($wkfUri, $responseText);
+    $xlsxBinary = (new WkfDraftDownloadController())->buildXlsxFromWorkbookTsv($responseText);
+    if ($xlsxBinary === '') {
+      $message = 'Failed to convert updated WKF content into an XLSX workbook for ingestion.';
+      return FALSE;
+    }
+
+    $fileMeta = $this->createManagedResponseUploadFile($wkfUri, $xlsxBinary);
     if (empty($fileMeta) || empty($fileMeta['id'])) {
       $message = 'Failed to create temporary WKF upload file from ChatGPT response.';
       return FALSE;
@@ -3668,12 +4122,15 @@ class WkfPhasePacketController extends ControllerBase {
     return TRUE;
   }
 
-  protected function createManagedResponseUploadFile(string $wkfUri, string $content): array {
+  protected function createManagedResponseUploadFile(string $wkfUri, string $xlsxBinary): array {
     $local = basename(parse_url($wkfUri, PHP_URL_PATH) ?: $wkfUri);
     if ($local === '') {
       $local = 'wkf';
     }
-    $filename = $local . '-chatgpt-' . date('YmdHis') . '.ttl';
+    if (stripos($local, 'WKF-') !== 0) {
+      $local = 'WKF-' . preg_replace('/^WKF[-_]?/i', '', $local);
+    }
+    $filename = $local . '-chatgpt-' . date('YmdHis') . '.xlsx';
 
     $dir = 'private://wkf_phase_response_uploads';
     $fileSystem = \Drupal::service('file_system');
@@ -3683,7 +4140,7 @@ class WkfPhasePacketController extends ControllerBase {
     }
 
     $uri = $dir . '/' . $filename;
-    $bytes = @file_put_contents($uri, $content);
+    $bytes = @file_put_contents($uri, $xlsxBinary);
     if ($bytes === FALSE) {
       return [];
     }

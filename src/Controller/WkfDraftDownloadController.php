@@ -39,8 +39,9 @@ class WkfDraftDownloadController extends ControllerBase {
     $safe_id = $this->slugifyWkfId($wkf_name);
     $safe_label = $process_stem_label !== '' ? $process_stem_label : 'Selected Clinical Process';
     $base_uri = 'https://pmsr.net/ont/' . $safe_id;
+    $ownership = $this->resolveCurrentUserOwnership();
 
-    $rows = $this->buildWorkbookRows($wkf_name, $safe_id, $base_uri, $process_stem_uri, $safe_label);
+    $rows = $this->buildWorkbookRows($wkf_name, $safe_id, $base_uri, $process_stem_uri, $safe_label, $ownership);
     $xlsx_binary = $this->buildXlsxBinary($rows);
     $phase1WkfTableTsv = $this->buildWorkbookTsvPayload($rows);
 
@@ -89,7 +90,8 @@ class WkfDraftDownloadController extends ControllerBase {
       (string) ($persistedSource['uri'] ?? ''),
       (string) ($persistedSource['mime'] ?? ''),
       (string) ($persistedSourceText['uri'] ?? ''),
-      (string) ($persistedSourceText['name'] ?? '')
+      (string) ($persistedSourceText['name'] ?? ''),
+      $ownership
     );
 
     $response = new Response($xlsx_binary, 200, [
@@ -108,7 +110,7 @@ class WkfDraftDownloadController extends ControllerBase {
   /**
    * Creates a WKF MT/DataFile and submits it for DRAFT ingestion.
    */
-  protected function createAndSubmitWkfTemplate(string $wkfName, string $filename, string $xlsxBinary, string $processStemUri, string $processStemLabel, string $sourceDocumentContext = '', string $phase1CoreContext = '', string $sourceDocumentContent = '', string $phase1WkfTableTsv = '', string $sourceDocumentName = '', string $sourceDocumentFileUri = '', string $sourceDocumentMimeType = '', string $sourceTextFileUri = '', string $sourceTextFileName = ''): array {
+  protected function createAndSubmitWkfTemplate(string $wkfName, string $filename, string $xlsxBinary, string $processStemUri, string $processStemLabel, string $sourceDocumentContext = '', string $phase1CoreContext = '', string $sourceDocumentContent = '', string $phase1WkfTableTsv = '', string $sourceDocumentName = '', string $sourceDocumentFileUri = '', string $sourceDocumentMimeType = '', string $sourceTextFileUri = '', string $sourceTextFileName = '', array $ownership = []): array {
     if ($xlsxBinary === '') {
       return ['ok' => false, 'message' => 'Generated workbook is empty.'];
     }
@@ -201,6 +203,8 @@ class WkfDraftDownloadController extends ControllerBase {
         'sourceDocumentContent' => $sourceDocumentContent,
         'phase1CoreContext' => $phase1CoreContext,
         'phase1WkfTableTsv' => $phase1WkfTableTsv,
+        'principalInvestigatorUri' => (string) ($ownership['principal_investigator_uri'] ?? ''),
+        'institutionUri' => (string) ($ownership['organization_uri'] ?? ''),
         'savedAt' => date('c'),
       ]);
 
@@ -605,7 +609,7 @@ class WkfDraftDownloadController extends ControllerBase {
   /**
    * Build row sets for all mandatory WKF sheets.
    */
-  protected function buildWorkbookRows(string $wkf_name, string $wkf_id, string $base_uri, string $process_stem_uri, string $process_stem_label): array {
+  protected function buildWorkbookRows(string $wkf_name, string $wkf_id, string $base_uri, string $process_stem_uri, string $process_stem_label, array $ownership = []): array {
     $top_task_uri = $base_uri . '/TSK/0001';
     $procedure_label = trim($process_stem_label) !== '' ? trim($process_stem_label) : $wkf_name;
     $top_task_label = 'Performing a ' . $procedure_label;
@@ -613,10 +617,10 @@ class WkfDraftDownloadController extends ControllerBase {
     $info_sheet = [
       ['Attribute', 'Value'],
       ['hasDependencies', '#Namespaces'],
+      ['hasStudyDescription', '#STD'],
       ['ProcessStems', '#ProcessStems'],
       ['Processes', '#Processes'],
       ['Tasks', '#Tasks'],
-      ['RequiredInstruments', '#RequiredInstruments'],
       ['hasVersion', '1'],
     ];
 
@@ -725,7 +729,7 @@ class WkfDraftDownloadController extends ControllerBase {
         'vstoi:hasSupertask',
         'vstoi:hasSubtask',
         'vstoi:hasTemporalDependency',
-        'vstoi:hasRequiredInstrument',
+        'vstoi:usesComponentInstance',
         'hasco:hasImage',
         'hasco:hasWebDocument',
         'vstoi:hasIterationConstraint',
@@ -753,18 +757,146 @@ class WkfDraftDownloadController extends ControllerBase {
       ],
     ];
 
-    $required_instruments = [
-      ['hasURI', 'rdf:type', 'rdfs:label', 'rdfs:comment', 'vstoi:requiresInstrument', 'vstoi:isRequiredBy'],
+    $std = [
+      ['hasURI', 'hasco:hasProcess', 'Study ID', 'Title', 'Specific Aims', 'Significance', 'Institution', 'Principal Investigator', 'Email', 'Start Date', 'End Date', 'vstoi:hasLearningObjectives', 'vstoi:hasCriticalActions', 'vstoi:hasDebriefingFocus'],
+      [
+        $base_uri . '/STD/0001',
+        $base_uri . '/PROC/0001',
+        'STD-' . $wkf_id,
+        $wkf_name,
+        '',
+        '',
+        (string) ($ownership['organization_uri'] ?? ''),
+        (string) ($ownership['principal_investigator_uri'] ?? ''),
+        (string) ($ownership['principal_investigator_email'] ?? ''),
+        '',
+        '',
+        '',
+        '',
+        '',
+      ],
     ];
 
     return [
       'InfoSheet' => $info_sheet,
       'Namespaces' => $namespaces,
+      'STD' => $std,
       'ProcessStems' => $process_stems,
       'Processes' => $processes,
       'Tasks' => $tasks,
-      'RequiredInstruments' => $required_instruments,
     ];
+  }
+
+  /**
+   * Convert workbook-like TSV content into an XLSX binary for WKF ingestion.
+   */
+  public function buildXlsxFromWorkbookTsv(string $workbookTsv): string {
+    $text = str_replace(["\r\n", "\r"], "\n", trim($workbookTsv));
+    if ($text === '') {
+      return '';
+    }
+
+    $sheets = [];
+    $currentSheet = '';
+    foreach (explode("\n", $text) as $line) {
+      if (preg_match('/^###\s*SHEET:\s*(.+?)\s*$/i', $line, $matches) === 1) {
+        $currentSheet = trim((string) ($matches[1] ?? ''));
+        if ($currentSheet !== '' && !isset($sheets[$currentSheet])) {
+          $sheets[$currentSheet] = [];
+        }
+        continue;
+      }
+      if ($currentSheet === '' || trim($line) === '') {
+        continue;
+      }
+      if (strcasecmp($currentSheet, 'InfoSheet') === 0 && preg_match('/^(STD|RequiredInstruments)\t#(STD|RequiredInstruments)\s*$/i', trim($line)) === 1) {
+        continue;
+      }
+      $sheets[$currentSheet][] = array_map('trim', explode("\t", $line));
+    }
+
+    return empty($sheets) ? '' : $this->buildXlsxBinary($sheets);
+  }
+
+  /**
+   * Resolve the logged-in user's person URI and affiliation organization URI.
+   *
+   * @return array{principal_investigator_uri:string,organization_uri:string,principal_investigator_email:string}
+   */
+  protected function resolveCurrentUserOwnership(): array {
+    $ownership = [
+      'principal_investigator_uri' => '',
+      'organization_uri' => '',
+      'principal_investigator_email' => trim((string) $this->currentUser()->getEmail()),
+    ];
+
+    $email = strtolower($ownership['principal_investigator_email']);
+    if ($email === '') {
+      return $ownership;
+    }
+
+    try {
+      $api = \Drupal::service('rep.api_connector');
+      $raw = $api->listByManagerEmail('person', $email, 200, 0);
+      $people = $api->parseObjectResponse($raw, 'listByManagerEmail');
+      if (!is_array($people)) {
+        $people = [];
+      }
+      if (empty($people)) {
+        $raw = $api->listByKeyword('person', '_', 500, 0);
+        $people = $api->parseObjectResponse($raw, 'listByKeyword');
+        if (!is_array($people)) {
+          $people = [];
+        }
+      }
+
+      foreach ($people as $person) {
+        if (!is_object($person) || strtolower($this->extractPersonEmail($person)) !== $email) {
+          continue;
+        }
+        $ownership['principal_investigator_uri'] = $this->normalizeIdentityUri((string) ($person->uri ?? ''));
+        $affiliation = isset($person->hasAffiliationUri) ? (string) $person->hasAffiliationUri : '';
+        if ($affiliation === '' && isset($person->hasAffiliation) && is_object($person->hasAffiliation)) {
+          $affiliation = (string) ($person->hasAffiliation->uri ?? '');
+        }
+        $ownership['organization_uri'] = $this->normalizeIdentityUri($affiliation);
+        break;
+      }
+    }
+    catch (\Throwable $e) {
+      \Drupal::logger('rep')->warning('Could not resolve current user WKF ownership: @message', ['@message' => $e->getMessage()]);
+    }
+
+    return $ownership;
+  }
+
+  /**
+   * Extract a person's email from an API payload.
+   */
+  protected function extractPersonEmail($person): string {
+    foreach (['hasEmail', 'email', 'mbox', 'hasSIRManagerEmail'] as $field) {
+      if (isset($person->{$field}) && is_string($person->{$field}) && trim($person->{$field}) !== '') {
+        return $this->normalizeEmailValue((string) $person->{$field});
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Normalize plain and mailto: email values for identity matching.
+   */
+  protected function normalizeEmailValue(string $email): string {
+    $email = strtolower(trim($email));
+    $email = preg_replace('/^mailto:/i', '', $email) ?? $email;
+    return trim($email);
+  }
+
+  /**
+   * Normalize absolute identity URIs accepted by the WKF metadata extractor.
+   */
+  protected function normalizeIdentityUri(string $uri): string {
+    $uri = Utils::canonicalizePmsrUri(trim($uri));
+    return filter_var($uri, FILTER_VALIDATE_URL) !== FALSE ? $uri : '';
   }
 
   /**

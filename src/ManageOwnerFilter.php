@@ -20,6 +20,33 @@ class ManageOwnerFilter {
     return $account->hasPermission('administer site configuration') || $account->hasPermission('administer users');
   }
 
+  /**
+   * Determine whether $userEmail is the owner/PI of $study, or is an admin.
+   *
+   * Owner is resolved the same way across Scenario Search/Manage Study:
+   * hasSIRManagerEmail, contactEmail, or PI mbox.
+   */
+  public static function isStudyOwnerOrAdmin($study, string $userEmail, bool $isAdmin): bool {
+    if ($isAdmin) {
+      return TRUE;
+    }
+
+    $normalizedEmail = strtolower(trim($userEmail));
+    if ($normalizedEmail === '' || !is_object($study)) {
+      return FALSE;
+    }
+
+    $ownerCandidates = [
+      strtolower(trim((string) ($study->hasSIRManagerEmail ?? ''))),
+      strtolower(trim((string) ($study->contactEmail ?? ''))),
+    ];
+    if (isset($study->pi) && is_object($study->pi)) {
+      $ownerCandidates[] = strtolower(trim((string) ($study->pi->mbox ?? '')));
+    }
+
+    return in_array($normalizedEmail, array_filter($ownerCandidates, static fn($candidate) => $candidate !== ''), TRUE);
+  }
+
   public static function normalizeSelectedEmail(?string $email): string {
     $value = trim((string) $email);
     if ($value === '_' || strcasecmp($value, 'all') === 0) {
